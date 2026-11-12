@@ -21,7 +21,7 @@ export default async function EducationLayout({ children }: { children: React.Re
             </li>
           )}
           <li className="badge badge-outline">
-            Google Kalendář · {integrationModes.calendar === "simulation" ? "simulace" : "ověřený test"}
+            Google Kalendář · {integrationModes.calendar === "simulation" ? "simulace" : "test Google"}
           </li>
           <li className="badge badge-outline">
             Přepis · {integrationModes.transcription === "fixture" ? "ukázkový" : "skutečný test"}

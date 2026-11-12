@@ -12,21 +12,27 @@ export function Topbar({ user, personas }: { user: CurrentUser; personas: Person
       </Link>
       <div className="account">
         <span className="demo-badge" title="Fiktivní data a ukázkové režimy integrací">Ukázka · fiktivní data</span>
-        <form action={switchPersona} className="row">
-          <label className="visually-hidden" htmlFor="persona">
-            Přepnout ukázkovou roli
-          </label>
-          <select id="persona" name="persona" className="select persona-select" defaultValue={user.id}>
-            {personas.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-          <button className="btn btn-small" type="submit">
-            Přepnout roli
-          </button>
-        </form>
+        {user.signedInWith === "google" ? (
+          <span className="small muted" title={user.email}>
+            Přihlášení účtem Google
+          </span>
+        ) : (
+          <form action={switchPersona} className="row">
+            <label className="visually-hidden" htmlFor="persona">
+              Přepnout ukázkovou roli
+            </label>
+            <select id="persona" name="persona" className="select persona-select" defaultValue={user.id}>
+              {personas.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+            <button className="btn btn-small" type="submit">
+              Přepnout roli
+            </button>
+          </form>
+        )}
         <span className="account-name">
           {user.name} · {user.role === "organizer" ? "Organizátor" : "Kolega"}
         </span>

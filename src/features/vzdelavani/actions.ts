@@ -7,8 +7,10 @@ import { EVENT_TYPES, GROUPS } from "@/lib/types";
 import { isValidDateKey, isValidMonthKey, isValidTime } from "@/lib/time";
 import { audit, logError } from "@/server/audit";
 import { getCurrentUser, type CurrentUser } from "@/server/auth/session";
+import { disconnect as disconnectCalendar } from "@/server/calendar/google-auth";
 import { simulateManualEdit } from "@/server/calendar/simulated";
 import { pairWithExisting, requestNewInvite, requestRetry, syncEvent } from "@/server/calendar/sync";
+import { calendarMode } from "@/server/config";
 import { getDb } from "@/server/db/client";
 import { isOrganizer } from "@/server/policy";
 import { resetDatabase } from "@/server/seed";
@@ -160,13 +162,13 @@ export async function deleteDraftAction(_prev: ActionResult | null, formData: Fo
 export async function generateMonthAction(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
   return run(async (user) => {
     const month = z.string().refine(isValidMonthKey).parse(formData.get("month"));
-    const created = await generateMonth(user, month);
-    return {
-      ok: true,
-      message: created
-        ? `Doplněno ${created} ${created === 1 ? "místo" : created < 5 ? "místa" : "míst"} ze šablony. Stávající akce zůstaly beze změny.`
-        : "Měsíc už má všechna místa ze šablony. Nic se nezměnilo.",
-    };
+    const { created, withTopic } = await generateMonth(user, month);
+    if (!created) return { ok: true, message: "Měsíc už má všechna místa ze šablony. Nic se nezměnilo." };
+    const places = `${created} ${created === 1 ? "místo" : created < 5 ? "místa" : "míst"}`;
+    const topicNote = withTopic
+      ? ` U ${withTopic} ${withTopic === 1 ? "termínu" : "termínů"} je předvyplněné doporučené téma podle zájmu, před zveřejněním ho můžete změnit.`
+      : "";
+    return { ok: true, message: `Doplněno ${places} ze šablony. Stávající akce zůstaly beze změny.${topicNote}` };
   });
 }
 
@@ -315,9 +317,22 @@ export async function setSimulationAction(_prev: ActionResult | null, formData: 
 export async function simulateManualEditAction(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
   return run(async (user) => {
     if (!isOrganizer(user)) throw new DomainError("forbidden");
+    // Nástroj ukázky existuje jen nad simulací, skutečný kalendář se takto nemění.
+    if (calendarMode() !== "simulation") throw new DomainError("invalid_state");
     const data = z.object({ externalId: z.string().max(80) }).parse(formObject(formData));
     await simulateManualEdit(await getDb(), data.externalId);
     return { ok: true, message: "V simulovaném Kalendáři se změnil název pozvánky." };
+  });
+}
+
+/** Odpojí Google Kalendář: zneplatní token u Googlu a smaže uložený šifrovaný záznam. */
+export async function disconnectCalendarAction(): Promise<ActionResult> {
+  return run(async (user) => {
+    if (!isOrganizer(user)) throw new DomainError("forbidden");
+    const db = await getDb();
+    await disconnectCalendar(db);
+    await audit(db, user.id, "calendar.disconnected", "settings", "google-calendar");
+    return { ok: true, message: "Google Kalendář je odpojený." };
   });
 }
 

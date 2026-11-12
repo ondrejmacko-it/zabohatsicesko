@@ -4,46 +4,77 @@ Zkopíruj text níže jako první zprávu nové relace Claude Code (repo `ondrej
 
 ---
 
-Pokračuj na demu modulu Vzdělávání. Kód i dokumentace jsou sloučené do `main` (PR #1 a #2). Nečti
-znovu celé zadání ani celý kód. Kontext máš v `README.md` a `docs/predani.md`, pravidla v `CLAUDE.md`.
+Pokračuj na demu modulu Vzdělávání. Nečti znovu celé zadání ani celý kód. Kontext máš v `README.md`,
+`docs/predani.md`, `docs/google-kalendar.md` a `docs/google-prihlaseni.md`, pravidla v `CLAUDE.md`.
+Uživateli tykej, piš přátelsky. Větší změny nejdřív navrhni, nejasnosti se ptej.
 
-Stav Vercelu (tým `maci`, `team_PtkXmFd9hI7UeUYovGkbwZQG`, plán Hobby):
+## Stav kódu
 
-- Projekt `zbc-vzdelavani-demo` (`prj_MYpwzB5KekzHAVwbiUDrZv6CG12i`) napojený na repo. Vercel konektor
-  vrací 403 na zakládání projektů, Vercel REST API jde přes token v síťových tajemstvích prostředí.
-- Vercel Authentication `deploymentType = "all"`, region funkcí `fra1`. Ignored build step přeskakuje
-  produkci: po sloučení PR #2 skončil produkční deploy z `main` (`a1b6eba`) jako `CANCELED`.
-- Neon `neon-zbz-vzdelavani-demo` (fra1, Free) připojený jen k Preview. `SESSION_SECRET` a
-  `DEMO_ACCESS_CODE` jsou sensitive jen pro Preview. Kód zná jen uživatel, necommitovat.
-- Preview se spouští pushem pracovní větve (Git integrace). REST `POST /v13/deployments` s `gitSource`
-  bez `target` vytvořil produkční deploy, nepoužívat.
-- Poslední preview je `READY` z větve `claude/vzdelavani-vercel-preview-52jflw` (`c84ada1`, kód shodný
-  s `main`). Větev je sloučená, uživatel ji zatím záměrně nemaže.
+- `main`: demo se simulovanými integracemi (PR #1 a #2).
+- Větev `ccr-2d4283fa-slno9d` obsahuje v lineární historii i PR #3 (`ccr-f94571c9-6bvs9j`) a Kalendář
+  (`ccr-ed96f52d-3gp38c`): předvyplnění témat, testovací režim Google Kalendáře, přihlášení Google
+  identitou (`LOGIN_MODE=google-test`) a opravy z živého testu. Pro ni je draft PR do `main`. Pokud ho
+  uživatel sloučil, začni novou větví z `main`.
+- Lokálně ověřeno 12. 11. 2026: lint, typová kontrola, 74 z 74 testů, build.
 
-Ověřeno 12. 11. 2026:
+## Živý test 12. 11. 2026 (preview větve `ccr-2d4283fa-slno9d`)
 
-- Lokálně na `c84ada1`: lint, typová kontrola, 32 z 32 testů, build.
-- Na preview (Playwright přes sdílecí odkaz Vercelu): vstup kódem, plán a zveřejnění akce
-  organizátorem, synchronizace Kalendáře, nahrávka vedoucího od kontroly po zveřejnění, omezení
-  účastníků FP a RM, organizátor bez role kontrolora. Žádné 5xx. Podrobnosti jsou v popisu PR #2.
-- Integrace uvnitř dema (Google Kalendář, zpracování nahrávek) běží v označené simulaci, proti
-  skutečným službám se netestovaly.
+- **Google Kalendář: všech 8 kroků prošlo proti skutečnému Googlu**, výsledky v `docs/google-kalendar.md`.
+  Zjištění: Google při změně termínu vynuluje RSVP (text ve Wiki upraven).
+- Opravy po testu: obnova ukázkových dat už neodpojí Kalendář a `/vstup` ukazuje skutečný režim (obojí
+  ověřeno na preview). Automatické odeslání po novém připojení zatím jen testy, živě neověřeno.
+- **Přihlášení Googlem**: uživatel se přihlásil (`session.start.google` v auditu), celý živý test
+  z `docs/google-prihlaseni.md` (5 kroků) zatím neproběhl. Je to první úkol.
+- Ukázková data na preview jsou po testu obnovená do výchozího stavu, Kalendář zůstal připojený.
+  V testovacím kalendáři Googlu zůstaly testovací pozvánky (12. 11., série, 26. 11.), může je smazat uživatel.
 
-Ukázková data v Neonu jsou po testu obnovená (Integrace → Nástroje ukázky → „Obnovit ukázková data“,
-stejná funkce `resetDatabase` jako `npm run db:reset`).
+## Vercel a přístupy
 
-Přístup k preview: Vercel Authentication. Pro automatické testy je potřeba sdílecí odkaz z dashboardu
-(Share, 23 h) a dočasně povolený host preview v síťových pravidlech prostředí. Bypass for Automation a
-deploy hooky blokuje bezpečnostní filtr relace.
+- Tým `maci`, projekt `zbc-vzdelavani-demo`, plán Hobby. Preview se spouští pushem větve, produkci
+  přeskakuje ignored build step. `POST /v13/deployments` nepoužívat (vytvoří produkční deploy).
+- Proměnné pro Preview jsou nastavené (`CALENDAR_MODE`, `LOGIN_MODE`, `GOOGLE_*`, `TOKEN_ENCRYPTION_KEY`,
+  `APP_URL`, `GOOGLE_LOGIN_ACCOUNTS`). Nesecretní zakládá Claude přes API sám, tajemství doplní uživatel.
+- Preview chrání Vercel Authentication. Pro Playwright: sdílecí odkaz z dashboardu (Share, 23 h) a
+  dočasně povolený host preview v síťových pravidlech prostředí (po testu odebrat). Vercel runtime logy
+  přes konektor vrací 403, data jdou číst přes Neon konektor (projekt `neon-zbz-vzdelavani-demo`).
+- Do Wiki se automat dostane jen přístupovým kódem. Kód zná uživatel, nikam ho nezapisuj. Doporučeno
+  ho po testu 12. 11. změnit, protože byl v chatu.
+- Pozor: Google přihlášení a Kalendář sdílí jednoho OAuth klienta.
 
-Úkol: [doplň konkrétní zadání, např. další úpravu dema nebo opakované ověření preview]
+## Další kroky
 
-Otevřené, rozhoduje uživatel:
+1. Živý test přihlášení Googlem (5 kroků, většinu kliká uživatel) a krátké ověření oprav
+   (obnova dat nechá Kalendář připojený, po novém připojení se synchronizace dokončí sama).
+2. Cílový průchod, jak ho popsal uživatel 12. 11. 2026. Nejdřív navrhni a odsouhlas:
+   - Nový uživatel se přihlásí účtem Google a jednou udělí potřebná oprávnění.
+   - Správce ZBC mu ve Wiki přidělí roli a skupiny. To nahradí seznam `GOOGLE_LOGIN_ACCOUNTS` a fiktivní
+     role: správa uživatelů (pozvání nebo schválení, vazba na `sub`, změna role, odebrání).
+   - Podle role vidí jen svůj obsah. Všechny akce, které se ho týkají, dostane do svého Kalendáře jako
+     pozvánku s e-mailem a stejně tak každou změnu. Dnes jdou pozvánky jen testovacím příjemcům a
+     publikum se do hostů nepřenáší, takže je potřeba propojit publikum akce s hosty pozvánky.
+   - Přehledný přístup k zápisům a nahrávkám, na které má oprávnění.
+3. Funkce a design: jednodušší a přehlednější na první pohled, hlavně pro nového uživatele (první
+   přihlášení, prázdné stavy, Moje cesta jako výchozí stránka účastníka).
+4. Nahrávky pro provoz: soukromé úložiště souborů, dlouhé soubory (2 až 2,5 hodiny), dělení pro
+   poskytovatele přepisu, skutečný testovací režim přepisu.
 
-- Token pro `api.vercel.com` v síťových tajemstvích prostředí Default a větev
-  `claude/vzdelavani-vercel-preview-52jflw` zatím zůstávají. Smazat, až preview nebude potřeba.
-- V kořeni `main` je jednobajtový soubor `h` (commit „Create h“), nejspíš omyl.
-- Tento soubor uvádí identifikátory týmu a projektu na Vercelu a název databáze v Neonu. Nejsou to
-  tajemství, u veřejného repa zvážit odstranění.
+## Čeká na odpověď uživatele
+
+- Má přihlášení Googlem fiktivní role a přístupový kód úplně nahradit, nebo nechat ukázkový režim?
+- Kdo smí přidělovat role (jen správce systému, nebo i organizátor) a jak se nový uživatel dostane
+  dovnitř: pozvánkou od správce, nebo žádostí po prvním přihlášení?
+- Pozvánky skutečným lidem: jaká doména účtů (firemní Google Workspace, nebo osobní Gmaily)? Do kterého
+  kalendáře se zapisuje (jeden firemní kalendář vzdělávání, nebo přímo do kalendářů lidí)?
+- Oddělit OAuth klienta pro přihlášení a pro Kalendář?
+- Poskytovatel přepisu (zpracování v EU) a úložiště nahrávek (soukromý Vercel Blob, nebo firemní).
+- Skutečné pravidlo střídání typů ve slotu šablony a zda předvyplňovat téma i tréninkům.
+- Kam trvale uložit zadání (ZIP), aby ho nebylo nutné posílat. Do tohoto veřejného repa ne.
+
+## Úklid, rozhoduje uživatel
+
+- Token pro `api.vercel.com` v síťových tajemstvích prostředí Default a sloučená větev
+  `claude/vzdelavani-vercel-preview-52jflw`.
+- Jednobajtový soubor `h` v kořeni repa (commit „Create h“), nejspíš omyl.
+- Tento soubor uvádí názvy projektů na Vercelu a v Neonu. Nejsou to tajemství, u veřejného repa zvážit.
 
 Respektuj limit kontextu v `CLAUDE.md`. Na `main` nepushuj, merge dělá uživatel přes PR.

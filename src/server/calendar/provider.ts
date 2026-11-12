@@ -13,9 +13,24 @@ export type ExternalEvent = ManagedEventData & {
   id: string;
   attendees: SimAttendee[];
   meetingUrl: string | null;
+  /** Vyplněné u jednoho výskytu opakované události. Cílem změny je vždy tento výskyt, ne série. */
+  recurringEventId?: string | null;
+  originalStartTime?: Date | null;
 };
 
-export type CalendarErrorCode = "calendar_unavailable" | "calendar_revoked" | "calendar_missing" | "attendee_not_allowed";
+export type CalendarErrorCode =
+  | "calendar_unavailable"
+  | "calendar_revoked"
+  | "calendar_missing"
+  | "attendee_not_allowed"
+  /** Kalendář není na serverovém seznamu povolených. */
+  | "calendar_not_allowed"
+  /** Cílem by byla celá opakovaná série. Tu Wiki bez samostatného postupu nemění. */
+  | "calendar_series_master"
+  /** Originál pozvánky vlastní jiný účet, zápis by se nepropsal pozvaným. */
+  | "calendar_not_organizer"
+  /** Testovací režim je zapnutý, ale chybí konfigurace na serveru. */
+  | "calendar_not_configured";
 
 export class CalendarError extends Error {
   constructor(
@@ -29,7 +44,7 @@ export class CalendarError extends Error {
 }
 
 /**
- * Rozhraní ke kalendáři. Simulace i budoucí adaptér Google Calendar API (events.get/insert/patch
+ * Rozhraní ke kalendáři. Simulace i adaptér Google Calendar API (events.get/insert/patch
  * se sendUpdates=all) implementují totéž, synchronizace se o režimu nerozhoduje.
  */
 export interface CalendarProvider {

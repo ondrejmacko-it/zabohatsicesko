@@ -743,6 +743,24 @@ a.item-card:hover {
   gap: 18px;
 }
 
+.gate-google {
+  margin-top: 24px;
+  gap: 10px;
+}
+
+.gate-google h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.gate-google h2:last-child {
+  margin-top: 18px;
+}
+
+.gate-google + .gate-form {
+  margin-top: 10px;
+}
+
 .persona-list {
   display: flex;
   flex-direction: column;

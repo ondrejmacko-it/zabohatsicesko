@@ -11,7 +11,7 @@ const NOTIFICATION: Record<string, string> = { created: "pozvánka odeslána", u
 const describe = (f: ManagedFields) =>
   `${f.summary} · ${formatDayMonth(toDateKey(new Date(f.startsAt)))} ${formatEventTime(new Date(f.startsAt), new Date(f.endsAt), false)}${f.cancelled ? " · zrušeno" : ""}`;
 
-/** Stav vazby na Google Kalendář pro organizátora. V ukázce nad simulací se stejným rozhraním. */
+/** Stav vazby na Google Kalendář pro organizátora. Simulace i testovací režim Googlu mají stejné rozhraní. */
 export function SyncPanelView({ eventId, sync }: { eventId: string; sync: SyncPanel }) {
   const statusBadge =
     sync.status === "synced"
@@ -33,14 +33,25 @@ export function SyncPanelView({ eventId, sync }: { eventId: string; sync: SyncPa
       <div className="spread">
         <h2 id="kalendar">Google Kalendář</h2>
         <span className="row">
-          <span className="badge badge-outline">simulace</span>
+          <span className="badge badge-outline">{sync.mode === "simulation" ? "simulace" : "test Google · jen testovací příjemci"}</span>
           <span className={statusBadge} role="status">
             {statusLabel}
           </span>
         </span>
       </div>
 
-      {sync.calendarUnavailable && <p className="notice notice-danger">Kalendář teď neodpovídá. Údaje o pozvánce nejsou k dispozici.</p>}
+      {sync.calendarUnavailable && (
+        <p className="notice notice-danger">
+          {sync.calendarErrorCode === "calendar_revoked" || sync.calendarErrorCode === "calendar_not_configured" ? (
+            <>
+              {sync.calendarErrorCode === "calendar_revoked" ? "Google Kalendář není připojený." : ERROR_LABELS.calendar_not_configured}{" "}
+              <a href="/vzdelavani/integrace">Otevřít Integrace</a>
+            </>
+          ) : (
+            "Kalendář teď neodpovídá. Údaje o pozvánce nejsou k dispozici."
+          )}
+        </p>
+      )}
       {sync.errorCode && sync.status === "attention" && (
         <p className="notice notice-danger">{ERROR_LABELS[sync.errorCode] ?? "Synchronizace se nepovedla."}</p>
       )}
@@ -85,6 +96,11 @@ export function SyncPanelView({ eventId, sync }: { eventId: string; sync: SyncPa
               <ActionForm action={pairInviteAction} fields={{ id: eventId, externalId: c.id }} label="Spárovat" small />
             </div>
           ))}
+          {sync.mode === "google-test" && (
+            <p className="small muted">
+              Testovací režim: nová pozvánka půjde jen povoleným testovacím příjemcům ({sync.inviteeCount}), ne publiku akce.
+            </p>
+          )}
           <ActionForm action={createInviteAction} fields={{ id: eventId }} label="Vytvořit novou pozvánku" />
         </div>
       )}
@@ -96,6 +112,7 @@ export function SyncPanelView({ eventId, sync }: { eventId: string; sync: SyncPa
             <dd>
               {sync.external.summary}
               <span className="muted small"> · ID {sync.externalId}</span>
+              {sync.seriesInstance && <span className="muted small"> · jeden výskyt série, ostatní termíny se nemění</span>}
             </dd>
             <dt>Hosté</dt>
             <dd>
@@ -111,12 +128,14 @@ export function SyncPanelView({ eventId, sync }: { eventId: string; sync: SyncPa
             )}
             <dt>Oznámení</dt>
             <dd>
-              {sync.notifications.length
-                ? sync.notifications.map((n) => `${NOTIFICATION[n.kind] ?? n.kind} (${n.recipients})`).join(" · ")
-                : "zatím žádné"}
+              {sync.mode === "google-test"
+                ? "Wiki žádá Google o oznámení pozvaným při každé změně. Doručení Google nehlásí."
+                : sync.notifications.length
+                  ? sync.notifications.map((n) => `${NOTIFICATION[n.kind] ?? n.kind} (${n.recipients})`).join(" · ")
+                  : "zatím žádné"}
             </dd>
           </dl>
-          {sync.status === "synced" && sync.externalId && (
+          {sync.mode === "simulation" && sync.status === "synced" && sync.externalId && (
             <details className="small">
               <summary>Nástroje ukázky</summary>
               <div className="section-actions">

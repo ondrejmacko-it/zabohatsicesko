@@ -1,3 +1,4 @@
+import { calendarMode } from "@/server/config";
 import { sql } from "drizzle-orm";
 import seed from "../../demo/seed.json";
 import { isoWeekday, toDateKey } from "@/lib/time";
@@ -10,6 +11,8 @@ import {
   templateSlots,
   topicInterests,
   topics,
+  integrationCredentials,
+  userIdentities,
   users,
 } from "@/server/db/schema";
 import { calendarSummary, snapshotOf } from "@/server/domain/snapshot";
@@ -85,7 +88,8 @@ export async function seedDatabase(tx: Executor): Promise<void> {
     });
     await tx.insert(eventRevisions).values({ eventId: e.id, revision: 1, action: "import", snapshot });
 
-    if ("calendarFixture" in e && e.calendarFixture) {
+    // Ukázkové pozvánky patří simulaci. V testovacím režimu Googlu začínají akce bez vazby a organizátor je spáruje.
+    if (calendarMode() === "simulation" && "calendarFixture" in e && e.calendarFixture) {
       const fixture = e.calendarFixture;
       const summary = calendarSummary(snapshot);
       await tx.insert(simCalendarEvents).values({
@@ -130,6 +134,18 @@ const TABLES = [
 
 /** Smaže všechna data dema a nahraje seed znovu. Jedna transakce, buď vše, nebo nic. */
 export async function resetDatabase(tx: Executor): Promise<void> {
+  // Vazby na účty Google ani připojení Kalendáře nejsou ukázková data. Obě tabulky odkazují na uživatele,
+  // takže je TRUNCATE … CASCADE smaže. Bez jejich obnovení by obnova odhlásila i odpojila Kalendář.
+  const identities = await tx.select().from(userIdentities);
+  const credentials = await tx.select().from(integrationCredentials);
   await tx.execute(sql.raw(`TRUNCATE ${TABLES.join(", ")} RESTART IDENTITY CASCADE`));
   await seedDatabase(tx);
+  const seeded = new Set(seed.users.map((u) => u.id));
+  const kept = identities.filter((identity) => seeded.has(identity.userId));
+  if (kept.length) await tx.insert(userIdentities).values(kept);
+  if (credentials.length) {
+    await tx
+      .insert(integrationCredentials)
+      .values(credentials.map((c) => ({ ...c, connectedBy: c.connectedBy && seeded.has(c.connectedBy) ? c.connectedBy : null })));
+  }
 }

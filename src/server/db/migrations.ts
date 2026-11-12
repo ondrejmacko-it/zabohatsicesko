@@ -204,4 +204,35 @@ CREATE TABLE rate_limits (
 );
 `,
   },
+  {
+    id: "0002_integration_credentials",
+    sql: `
+CREATE TABLE integration_credentials (
+  org_id text NOT NULL,
+  provider text NOT NULL CHECK (provider IN ('google-calendar')),
+  account_email text NOT NULL,
+  encrypted_refresh_token text NOT NULL,
+  scopes text NOT NULL,
+  connected_by text REFERENCES users(id) ON DELETE SET NULL,
+  connected_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (org_id, provider)
+);
+`,
+  },
+  {
+    id: "0003_user_identities",
+    sql: `
+-- Vazba účtu Wiki na stabilní identifikátor u poskytovatele identity (\`sub\`), ne na e-mail.
+CREATE TABLE user_identities (
+  provider text NOT NULL CHECK (provider IN ('google')),
+  subject text NOT NULL,
+  user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  email text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  last_login_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (provider, subject)
+);
+CREATE UNIQUE INDEX user_identities_user_uq ON user_identities (provider, user_id);
+`,
+  },
 ];

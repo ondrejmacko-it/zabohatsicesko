@@ -42,6 +42,8 @@ export async function enterDemo(_prev: GateState, formData: FormData): Promise<G
 export async function switchPersona(formData: FormData): Promise<void> {
   const current = await getCurrentUser();
   if (!current) redirect("/vstup");
+  // Kdo se přihlásil svým účtem Google, vystupuje jen sám za sebe. Cizí roli si zvolit nesmí.
+  if (current.signedInWith === "google") redirect("/");
   const persona = String(formData.get("persona") ?? "");
   const personas = await listPersonas();
   if (personas.some((p) => p.id === persona)) {
