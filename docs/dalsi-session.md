@@ -84,6 +84,11 @@ Uživateli tykej, piš přátelsky. Větší změny nejdřív navrhni, nejasnost
 1. Hotovo 12. 11.: přehled `docs/nahravky-moznosti.md` je v PR #8. Uživatel rozhodl dál ho teď neřešit
    (ověřování na živých stránkách, další kandidáti ani striktnost EU). Možná vznikne vlastní řešení nebo se
    použije firemní systém. Priorita je dodělat web.
+1b. **Chyba k opravě (nalezena 12. 11. při focení):** formulář akce (`ActionForm`) po neúspěšném zveřejnění
+   (chybí téma nebo vedoucí) přepne Typ na Action time a Publikum na Všichni. Opravit a přidat test.
+   Screenshoty všech obrazovek dostal uživatel jako ZIP (složka `screenshots/`, v repu není, čeká na
+   rozhodnutí). Nezachycené stavy: přístupová brána, přihlášení Googlem, čekající žádost, „Vyžaduje
+   pozornost“ se Zkusit synchronizaci znovu, výpadek přepisu.
 2. Společná session s uživatelem: živý test (přihlášení Googlem, čekající žádost na `/sprava`, znovupřipojení
    Kalendáře), potom `CALENDAR_ATTENDEES=audience` na preview a ověření hostů a odkazu na zápis v pozvánce.
    Branch-specific `APP_URL` pro větev PR #8 je nastavená (12. 11.), zbývá redirect URI v Googlu (uživatel).
