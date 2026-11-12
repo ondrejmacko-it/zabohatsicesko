@@ -11,6 +11,11 @@ které měníš, a ověřuj cíleně.
 
 Úkol: zprovozni chráněné preview na Vercelu a pošli mi odkaz. Nic nesmí být veřejně live.
 
+0. Pokud ještě neexistuje, otevři PR z `claude/funkce-vzdelavani-harmonogram` do `main` (česky, podle
+   `.github/pull_request_template.md`, výsledky ověření vezmi z `docs/predani.md`). Push na `main`
+   blokuje ochrana repa, to je záměr. V minulé relaci Vercel konektor vracel 403 na založení projektu
+   a Neon jde zakládat jen přes Vercel Storage.
+
 1. Vercel tým `maci` (`team_PtkXmFd9hI7UeUYovGkbwZQG`), projekt `zbc-vzdelavani-demo` napojený na
    repo. Pokud neexistuje a nemáš oprávnění ho založit, řekni mi to jednou větou a skonči.
 2. Zkontroluj nastavení projektu:
