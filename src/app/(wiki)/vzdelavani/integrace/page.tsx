@@ -13,6 +13,7 @@ import {
   googleLoginConfigProblems,
   integrationModes,
   loginMode,
+  attendeeSource,
 } from "@/server/config";
 import { formatDayMonth, toDateKey } from "@/lib/time";
 import { getDb } from "@/server/db/client";
@@ -124,12 +125,16 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                 <dd>{googleConfig.calendarId}</dd>
                 <dt>Povolené kalendáře</dt>
                 <dd>{googleConfig.allowedCalendarIds.length}</dd>
-                <dt>Testovací příjemci</dt>
-                <dd>{googleConfig.allowedAttendees.length ? googleConfig.allowedAttendees.join(", ") : "žádní, pozvánky vzniknou bez hostů"}</dd>
+                <dt>Hosté pozvánek</dt>
+                <dd>
+                  {attendeeSource() === "audience"
+                    ? "publikum akce: aktivní uživatelé skupiny, pro kterou je akce určená"
+                    : `jen testovací příjemci: ${googleConfig.allowedAttendees.length ? googleConfig.allowedAttendees.join(", ") : "žádní, pozvánky vzniknou bez hostů"}`}
+                </dd>
               </dl>
               <p className="small muted">
                 Wiki žádá jen o oprávnění k událostem. Obnovovací token je uložený šifrovaně na serveru, v aplikaci ani v logu
-                se nezobrazuje. Nové pozvánky jdou jen testovacím příjemcům, seznamy ověřuje server před každým zápisem.
+                se nezobrazuje. Komu pozvánky jdou, určuje nastavení serveru a ověřuje se před každým zápisem. Wiki přidává a odebírá jen své hosty.
               </p>
               <div className="section-actions row">
                 <a className="btn btn-primary" href="/api/google/kalendar/pripojit">

@@ -247,4 +247,11 @@ ALTER TABLE users ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
 CREATE UNIQUE INDEX users_email_uq ON users (org_id, lower(email));
 `,
   },
+  {
+    id: "0005_managed_attendees",
+    sql: `
+-- Hosté pozvánky, které přidala Wiki. Ručně přidané hosty Wiki nespravuje a neodebírá.
+ALTER TABLE calendar_links ADD COLUMN managed_attendees text[];
+`,
+  },
 ];

@@ -122,6 +122,8 @@ export const calendarLinks = pgTable("calendar_links", {
   syncStatus: text("sync_status").$type<"pending" | "synced" | "attention">().notNull(),
   errorCode: text("error_code"),
   conflict: jsonb("conflict").$type<ManagedFields>(),
+  /** Adresy hostů, které do pozvánky přidala Wiki. Jen ty smí později odebrat. */
+  managedAttendees: text("managed_attendees").array(),
   attempts: integer("attempts").notNull(),
   leaseUntil: ts("lease_until"),
   updatedAt: ts("updated_at").notNull().defaultNow(),

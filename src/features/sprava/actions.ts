@@ -1,8 +1,10 @@
 "use server";
 
+import { after } from "next/server";
 import { z } from "zod";
 import { GROUPS, ROLES } from "@/lib/types";
 import { runAction, type ActionResult } from "@/features/shared/run-action";
+import { syncPending } from "@/server/calendar/sync";
 import { inviteUser, rejectRequest, updateAccess } from "@/server/services/users";
 
 // Každá akce znovu ověří session a oprávnění na serveru (services/users.ts) a validuje vstup.
@@ -25,7 +27,8 @@ export async function inviteUserAction(_prev: ActionResult | null, formData: For
       .object({ ...access, email: z.string().trim().toLowerCase().email().max(254), name: z.string().trim().min(2).max(80) })
       .parse({ ...accessOf(formData), email: formData.get("email"), name: formData.get("name") });
     await inviteUser(user, data);
-    return { ok: true, message: `Pozvánka pro ${data.name} je uložená. Pošlete kolegovi odkaz na Wiki.` };
+    after(() => syncPending());
+    return { ok: true, message: `Pozvánka je uložená: ${data.name}. Pošlete kolegovi odkaz na Wiki.` };
   });
 }
 
@@ -35,6 +38,7 @@ export async function updateAccessAction(_prev: ActionResult | null, formData: F
       .object({ ...access, userId, status: z.enum(["active", "disabled"]) })
       .parse({ ...accessOf(formData), userId: formData.get("userId"), status: formData.get("status") });
     await updateAccess(user, data.userId, data);
+    after(() => syncPending());
     return { ok: true, message: data.status === "active" ? "Uloženo." : "Přístup je odebraný." };
   });
 }

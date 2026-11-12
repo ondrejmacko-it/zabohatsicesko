@@ -13,15 +13,16 @@ import {
   type AccessTokenSource,
 } from "@/server/calendar/google-auth";
 import { CalendarError, type ManagedEventData } from "@/server/calendar/provider";
-import { pairWithExisting, pairingCandidates, requestNewInvite, resumeAfterReconnect, syncEvent } from "@/server/calendar/sync";
+import { pairWithExisting, pairingCandidates, requestNewInvite, resumeAfterReconnect, syncEvent, syncPending } from "@/server/calendar/sync";
 import { googleCalendarConfig, googleCalendarConfigProblems } from "@/server/config";
 import { getDb } from "@/server/db/client";
-import { calendarLinks, integrationCredentials } from "@/server/db/schema";
+import { calendarLinks, integrationCredentials, users } from "@/server/db/schema";
 import { snapshotOf } from "@/server/domain/snapshot";
 import { openSecret, sealSecret } from "@/server/integrations/secret-box";
 import { formValuesOf } from "@/server/services/detail";
 import { loadEventRow, updateEvent, type EventInput } from "@/server/services/events";
-import { PUBLISHED_RM, organizer, resetDemo } from "./helpers";
+import { inviteUser, updateAccess } from "@/server/services/users";
+import { PUBLISHED_RM, admin, organizer, resetDemo } from "./helpers";
 
 // Adaptér Google Kalendáře proti napodobenému HTTP. Ověřuje tvar požadavků a chování Wiki,
 // NE skutečné chování Googlu. Živý test podle zadání (část 02) tyto testy nenahrazují.
@@ -485,6 +486,60 @@ describe("testovací režim Google Kalendáře ve Wiki (napodobené HTTP)", () =
     const [created] = [...google.events.values()];
     expect(created!.attendees).toEqual([{ email: RECIPIENT, displayName: RECIPIENT }]);
     expect(await link(PUBLISHED_RM)).toMatchObject({ syncStatus: "synced", externalEventId: created!.id });
+
+    // Pevný seznam příjemců se podle účtů neřídí: nový kolega pozvánku nezmění.
+    await inviteUser(admin, { email: "kolega@example.com", name: "Nový Kolega", role: "member", groups: ["vsichni", "rm"] });
+    expect((await link(PUBLISHED_RM))?.syncStatus).toBe("synced");
+  });
+
+  test("zdroj hostů „publikum“ zve skutečné účty skupiny, fiktivní role ne, a spravuje jen své hosty", async () => {
+    vi.stubEnv("CALENDAR_ATTENDEES", "audience");
+    try {
+      await inviteUser(admin, { email: "Kolega@Example.com", name: "Nový Kolega", role: "member", groups: ["vsichni", "rm"] });
+      await inviteUser(admin, { email: "jina@example.com", name: "Jiná Skupina", role: "member", groups: ["vsichni", "fp"] });
+      await connect();
+      await requestNewInvite(organizer, PUBLISHED_RM);
+      await syncEvent(PUBLISHED_RM);
+      const [created] = [...google.events.values()];
+      expect(created!.attendees).toEqual([{ email: "kolega@example.com", displayName: "Nový Kolega" }]);
+
+      // Kolega odpověděl a organizátor přidal hosta ručně v Kalendáři.
+      google.put({
+        ...created!,
+        attendees: [
+          { email: "kolega@example.com", responseStatus: "accepted" },
+          { email: "host@example.org", responseStatus: "tentative", comment: "dorazím později" },
+        ],
+      });
+      const { id: second } = (await getDb().then((db) => db.select().from(users).where(eq(users.email, "jina@example.com"))))[0]!;
+      await updateAccess(admin, second, { role: "member", groups: ["vsichni", "rm"], status: "active" });
+      expect((await link(PUBLISHED_RM))?.syncStatus).toBe("pending");
+      await syncPending();
+      let patch = google.calls("PATCH").at(-1)!;
+      expect(patch.url.searchParams.get("sendUpdates")).toBe("all");
+      expect(patch.body!.attendees).toEqual([
+        { email: "kolega@example.com", responseStatus: "accepted" },
+        { email: "host@example.org", responseStatus: "tentative", comment: "dorazím později" },
+        { email: "jina@example.com", displayName: "Jiná Skupina" },
+      ]);
+
+      // Odebraný přístup: Wiki odebere svého hosta, ručně přidaný zůstane i s odpovědí.
+      const { id: first } = (await getDb().then((db) => db.select().from(users).where(eq(users.email, "kolega@example.com"))))[0]!;
+      await updateAccess(admin, first, { role: "member", groups: ["vsichni", "rm"], status: "disabled" });
+      await syncPending();
+      patch = google.calls("PATCH").at(-1)!;
+      expect((patch.body!.attendees as Array<{ email: string }>).map((a) => a.email)).toEqual(["host@example.org", "jina@example.com"]);
+      expect((await link(PUBLISHED_RM))?.managedAttendees).toEqual(["jina@example.com"]);
+
+      // Beze změny publika se hosté do Googlu neposílají vůbec.
+      const before = google.calls("PATCH").length;
+      await publishTopic(PUBLISHED_RM, "Jiné téma");
+      await syncEvent(PUBLISHED_RM);
+      expect(google.calls("PATCH")).toHaveLength(before + 1);
+      expect(google.calls("PATCH").at(-1)!.body).not.toHaveProperty("attendees");
+    } finally {
+      vi.stubEnv("CALENDAR_ATTENDEES", "");
+    }
   });
 });
 

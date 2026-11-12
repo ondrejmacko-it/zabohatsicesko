@@ -4,7 +4,7 @@ import type { SimAttendee } from "@/lib/types";
 import type { Executor } from "@/server/db/client";
 import { simCalendarEvents, simCalendarNotifications } from "@/server/db/schema";
 import { readSwitch, simulatedLatency } from "@/server/settings";
-import { CalendarError, type CalendarProvider, type ExternalEvent, type ManagedEventData } from "./provider";
+import { CalendarError, type CalendarProvider, type ExternalEvent, type GuestChange, type ManagedEventData } from "./provider";
 
 type SimRow = typeof simCalendarEvents.$inferSelect;
 
@@ -76,11 +76,20 @@ export class SimulatedCalendar implements CalendarProvider {
     return toExternal(row);
   }
 
-  async patch(calendarId: string, eventId: string, data: ManagedEventData): Promise<ExternalEvent> {
+  async patch(calendarId: string, eventId: string, data: ManagedEventData, guests?: GuestChange): Promise<ExternalEvent> {
     await this.gate();
+    const where = and(eq(simCalendarEvents.calendarId, calendarId), eq(simCalendarEvents.id, eventId));
+    let attendees: SimAttendee[] | undefined;
+    if (guests && (guests.add.length || guests.remove.length)) {
+      const [current] = await this.db.select({ attendees: simCalendarEvents.attendees }).from(simCalendarEvents).where(where).limit(1);
+      if (!current) throw new CalendarError("calendar_missing", false);
+      const removed = new Set(guests.remove);
+      attendees = [...current.attendees.filter((a) => !removed.has(a.email.toLowerCase())), ...guests.add];
+    }
     const [row] = await this.db
       .update(simCalendarEvents)
       .set({
+        ...(attendees ? { attendees } : {}),
         summary: data.summary,
         description: data.description,
         startsAt: data.startsAt,
@@ -89,7 +98,7 @@ export class SimulatedCalendar implements CalendarProvider {
         sequence: sql`${simCalendarEvents.sequence} + 1`,
         updatedAt: new Date(),
       })
-      .where(and(eq(simCalendarEvents.calendarId, calendarId), eq(simCalendarEvents.id, eventId)))
+      .where(where)
       .returning();
     if (!row) throw new CalendarError("calendar_missing", false);
     await this.notify(row, data.cancelled ? "cancelled" : "updated");

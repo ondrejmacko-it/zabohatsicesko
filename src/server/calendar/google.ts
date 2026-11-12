@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import type { SimAttendee } from "@/lib/types";
 import { logError } from "@/server/audit";
 import type { AccessTokenSource, FetchLike } from "./google-auth";
-import { CalendarError, type CalendarProvider, type ExternalEvent, type ManagedEventData } from "./provider";
+import { CalendarError, type CalendarProvider, type ExternalEvent, type GuestChange, type ManagedEventData } from "./provider";
 
 // Adaptér Google Calendar API v3 pro testovací režim. Zatím ověřený jen proti napodobenému HTTP
 // v tests/google-calendar.test.ts, živý test podle zadání (část 02) čeká na testovací účty.
@@ -26,7 +26,8 @@ type GoogleEvent = {
   recurringEventId?: string;
   originalStartTime?: GoogleDate;
   organizer?: { email?: string; self?: boolean };
-  attendees?: Array<{ email?: string; displayName?: string; responseStatus?: string; resource?: boolean }>;
+  /** Další pole hosta (komentář, počet doprovodu) se při úpravě hostů posílají zpět beze změny. */
+  attendees?: Array<Record<string, unknown> & { email?: string; displayName?: string; responseStatus?: string; resource?: boolean }>;
   hangoutLink?: string;
   conferenceData?: { entryPoints?: Array<{ entryPointType?: string; uri?: string }> };
 };
@@ -34,8 +35,8 @@ type GoogleEvent = {
 export type GoogleCalendarOptions = {
   tokens: AccessTokenSource;
   allowedCalendarIds: readonly string[];
-  /** Přesné adresy testovacích příjemců malými písmeny. */
-  allowedAttendees: readonly string[];
+  /** Přesné adresy testovacích příjemců malými písmeny. `null`: hosty určuje publikum akce ve Wiki. */
+  allowedAttendees: readonly string[] | null;
   fetchImpl?: FetchLike;
 };
 
@@ -97,6 +98,13 @@ export class GoogleCalendar implements CalendarProvider {
 
   private assertCalendar(calendarId: string): void {
     if (!this.options.allowedCalendarIds.includes(calendarId)) throw new CalendarError("calendar_not_allowed", false);
+  }
+
+  /** Druhá kontrola příjemců těsně před zápisem. První dělá synchronizace při sestavení seznamu. */
+  private assertAttendees(attendees: readonly SimAttendee[]): void {
+    const allowed = this.options.allowedAttendees;
+    if (!allowed) return;
+    if (attendees.some((a) => !allowed.includes(a.email.toLowerCase()))) throw new CalendarError("attendee_not_allowed", false);
   }
 
   private async request(
@@ -162,9 +170,7 @@ export class GoogleCalendar implements CalendarProvider {
   }
 
   async create(calendarId: string, key: string, data: ManagedEventData, attendees: SimAttendee[]): Promise<ExternalEvent> {
-    // Druhá kontrola příjemců těsně před zápisem. První dělá synchronizace při sestavení seznamu.
-    const allowed = new Set(this.options.allowedAttendees);
-    if (attendees.some((a) => !allowed.has(a.email.toLowerCase()))) throw new CalendarError("attendee_not_allowed", false);
+    this.assertAttendees(attendees);
 
     const id = eventIdForKey(key);
     const { status, body } = await this.request("POST", calendarId, "", {
@@ -183,7 +189,8 @@ export class GoogleCalendar implements CalendarProvider {
     return data.cancelled && !created.cancelled ? this.patch(calendarId, created.id, data) : created;
   }
 
-  async patch(calendarId: string, eventId: string, data: ManagedEventData): Promise<ExternalEvent> {
+  async patch(calendarId: string, eventId: string, data: ManagedEventData, guests?: GuestChange): Promise<ExternalEvent> {
+    if (guests) this.assertAttendees(guests.add);
     const current = await this.getRaw(calendarId, eventId);
     if (!current) throw new CalendarError("calendar_missing", false);
     // Hlavní událost série nese pravidlo opakování. Zápis do ní by změnil všechny termíny.
@@ -193,7 +200,19 @@ export class GoogleCalendar implements CalendarProvider {
 
     const { status, body } = await this.request("PATCH", calendarId, `/${encodeURIComponent(eventId)}`, {
       query: { sendUpdates: "all" },
-      body: managedBody(data),
+      body: {
+        ...managedBody(data),
+        // Seznam hostů Google nahrazuje celý. Stávající hosté se proto posílají zpět tak, jak přišli
+        // (včetně odpovědí), jen bez odebraných a s přidanými. Bez změny hostů se pole neposílá vůbec.
+        ...(guests && (guests.add.length || guests.remove.length)
+          ? {
+              attendees: [
+                ...(current.attendees ?? []).filter((a) => !guests.remove.includes((a.email ?? "").toLowerCase())),
+                ...guests.add.map((a) => ({ email: a.email, displayName: a.name })),
+              ],
+            }
+          : {}),
+      },
       // Podmíněný zápis: změna provedená mezi čtením a zápisem se nepřepíše, další pokus ji uvidí.
       ifMatch: current.etag,
     });

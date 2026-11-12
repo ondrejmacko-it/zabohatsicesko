@@ -41,6 +41,7 @@ simulace, testovací režim zapíná `CALENDAR_MODE=google-test`.
 | `GOOGLE_CALENDAR_ID` | Testovací kalendář, do kterého Wiki zapisuje. |
 | `GOOGLE_ALLOWED_CALENDAR_IDS` | Povolené kalendáře oddělené čárkou. Musí obsahovat `GOOGLE_CALENDAR_ID`. |
 | `GOOGLE_ALLOWED_ATTENDEES` | Celé adresy testovacích příjemců oddělené čárkou. |
+| `CALENDAR_ATTENDEES` | Nepovinné. Prázdné: pozvánky jdou jen testovacím příjemcům. `audience`: Wiki zve aktivní účty skupiny, pro kterou je akce určená (i pozvané před prvním přihlášením, bez fiktivních rolí), při změně skupin nebo odebrání přístupu upraví budoucí pozvánky a rozešle změnu. Ručně přidané hosty a odpovědi nemění. Po přepnutí se stávající pozvánky srovnají při nejbližším zveřejnění změny nebo změně účtu ve skupině. |
 | `TOKEN_ENCRYPTION_KEY` | 32 náhodných bajtů v base64 (`openssl rand -base64 32`). |
 | `APP_URL` | Veřejná adresa nasazení, ze které se skládá přesměrovací adresa i odkaz v pozvánce. |
 

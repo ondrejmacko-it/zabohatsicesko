@@ -1,14 +1,15 @@
 import { and, eq, isNull, lt, or, sql } from "drizzle-orm";
 import { addDays, fromPragueLocal, toDateKey } from "@/lib/time";
-import type { EventSnapshot, SimAttendee } from "@/lib/types";
+import type { EventSnapshot } from "@/lib/types";
 import { audit, logError } from "@/server/audit";
-import { calendarMode, config, googleCalendarConfig } from "@/server/config";
+import { attendeeSource, calendarMode, config, googleCalendarConfig, now } from "@/server/config";
 import { getDb, type Db } from "@/server/db/client";
-import { calendarLinks, events, users, type ManagedFields } from "@/server/db/schema";
+import { calendarLinks, events, type ManagedFields } from "@/server/db/schema";
 import { calendarSummary } from "@/server/domain/snapshot";
 import { loadEventRow } from "@/server/services/events";
 import { DomainError } from "@/server/services/errors";
 import { isOrganizer, type Viewer } from "@/server/policy";
+import { audienceAttendees, planGuests, samePlan } from "./attendees";
 import { GoogleCalendar } from "./google";
 import { storedAccessToken } from "./google-auth";
 import { CalendarError, type CalendarProvider, type ExternalEvent, type ManagedEventData } from "./provider";
@@ -17,8 +18,6 @@ import { targetCalendarId } from "./target";
 
 const MAX_ATTEMPTS = 3;
 const LEASE_SEC = 60;
-/** V simulaci smí pozvánka jít jen na fiktivní adresy. Ověřuje se na serveru před zápisem. */
-const SIMULATION_ATTENDEE_DOMAIN = "@example.invalid";
 
 /** Poskytovatel, který při každém volání ohlásí chybějící konfiguraci. Nikdy nespadne zpět do simulace. */
 const unconfigured = new Proxy({} as CalendarProvider, {
@@ -34,7 +33,7 @@ export function calendarProvider(db: Db): CalendarProvider {
   return new GoogleCalendar({
     tokens: storedAccessToken(db, cfg),
     allowedCalendarIds: cfg.allowedCalendarIds,
-    allowedAttendees: cfg.allowedAttendees,
+    allowedAttendees: attendeeSource() === "audience" ? null : cfg.allowedAttendees,
   });
 }
 
@@ -58,24 +57,6 @@ const managed = (data: ManagedEventData | ExternalEvent): ManagedFields => ({
 
 const sameManaged = (a: ManagedFields, b: ManagedFields) =>
   a.summary === b.summary && a.startsAt === b.startsAt && a.endsAt === b.endsAt && a.cancelled === b.cancelled;
-
-/**
- * Komu půjde nová pozvánka. V simulaci aktivním fiktivním rolím z publika akce (skutečné účty
- * z pozvánek simulace nikdy neosloví). V testovacím režimu Googlu jen povoleným testovacím příjemcům.
- */
-async function inviteAttendees(db: Db, audience: string): Promise<SimAttendee[]> {
-  const cfg = googleCalendarConfig();
-  if (cfg) return cfg.allowedAttendees.map((email) => ({ email, name: email, responseStatus: "needsAction" as const }));
-  const rows = await db
-    .select()
-    .from(users)
-    .where(and(eq(users.orgId, config.orgId), eq(users.origin, "demo"), eq(users.status, "active")));
-  const attendees = rows
-    .filter((u) => u.groups.includes(audience))
-    .map((u) => ({ email: u.email, name: u.name, responseStatus: "needsAction" as const }));
-  if (attendees.some((a) => !a.email.endsWith(SIMULATION_ATTENDEE_DOMAIN))) throw new CalendarError("attendee_not_allowed", false);
-  return attendees;
-}
 
 /** Zámek na úrovni akce: souběžné synchronizace téže akce se serializují. */
 async function acquireLease(db: Db, eventId: string) {
@@ -124,8 +105,9 @@ export async function syncEvent(eventId: string, options: { force?: boolean } = 
 
       const desired = desiredData(eventId, snapshot);
       let external: ExternalEvent;
+      let managedAttendees: string[];
       try {
-        external = await pushToCalendar(db, provider, current, desired, snapshot, options.force === true);
+        ({ external, managedAttendees } = await pushToCalendar(db, provider, current, desired, snapshot, options.force === true));
       } catch (error) {
         if (error instanceof ConflictDetected) {
           await markAttention(db, eventId, "external_change", attempts, error.external);
@@ -150,6 +132,7 @@ export async function syncEvent(eventId: string, options: { force?: boolean } = 
           externalEventId: external.id,
           syncedRevision: revision,
           syncedFields: managed(external),
+          managedAttendees,
           syncStatus: "synced",
           errorCode: null,
           conflict: null,
@@ -176,6 +159,8 @@ class ConflictDetected extends Error {
   }
 }
 
+type Pushed = { external: ExternalEvent; managedAttendees: string[] };
+
 async function pushToCalendar(
   db: Db,
   provider: CalendarProvider,
@@ -183,21 +168,49 @@ async function pushToCalendar(
   desired: ManagedEventData,
   snapshot: EventSnapshot,
   force: boolean,
-): Promise<ExternalEvent> {
+): Promise<Pushed> {
+  const guests = await audienceAttendees(db, snapshot.audience);
+  const previouslyManaged = link.managedAttendees ?? [];
+
+  /** Propíše spravovaná pole a hosty do existující pozvánky. Beze změny nic neposílá. */
+  const reconcile = async (external: ExternalEvent): Promise<Pushed> => {
+    // Hosté se upravují jen u budoucích platných akcí. Proběhlé a zrušené pozvánky zůstanou, jak jsou.
+    const upcoming = !desired.cancelled && desired.startsAt > now();
+    const plan = upcoming
+      ? planGuests(guests, external.attendees, previouslyManaged)
+      : { add: [], remove: [], managed: previouslyManaged };
+    if (sameManaged(managed(external), managed(desired)) && external.description === desired.description && samePlan(plan)) {
+      return { external, managedAttendees: plan.managed };
+    }
+    return { external: await provider.patch(link.calendarId, external.id, desired, plan), managedAttendees: plan.managed };
+  };
+
   if (!link.externalEventId) {
     // Nejasný výsledek předchozího pokusu: nejdřív ověřit, zda událost už nevznikla.
     const key = `${config.orgId}:${link.eventId}`;
     const existing = await provider.findByKey(link.calendarId, key);
-    if (existing) return sameManaged(managed(existing), managed(desired)) ? existing : provider.patch(link.calendarId, existing.id, desired);
-    return provider.create(link.calendarId, key, desired, await inviteAttendees(db, snapshot.audience));
+    if (existing) return reconcile(existing);
+    return {
+      external: await provider.create(link.calendarId, key, desired, guests),
+      managedAttendees: guests.map((g) => g.email.toLowerCase()),
+    };
   }
   const external = await provider.get(link.calendarId, link.externalEventId);
   if (!external) throw new CalendarError("calendar_missing", false);
   if (!force && link.syncedFields && !sameManaged(managed(external), link.syncedFields)) {
     throw new ConflictDetected(managed(external));
   }
-  if (sameManaged(managed(external), managed(desired)) && external.description === desired.description) return external;
-  return provider.patch(link.calendarId, link.externalEventId, desired);
+  return reconcile(external);
+}
+
+/** Dožene akce čekající ve frontě, například po změně skupin uživatele. Opakované volání je bezpečné. */
+export async function syncPending(): Promise<void> {
+  const db = await getDb();
+  const pending = await db
+    .select({ eventId: calendarLinks.eventId })
+    .from(calendarLinks)
+    .where(eq(calendarLinks.syncStatus, "pending"));
+  for (const { eventId } of pending) await syncEvent(eventId);
 }
 
 // ——— Akce organizátora nad vazbou ———

@@ -96,11 +96,11 @@ export function SyncPanelView({ eventId, sync }: { eventId: string; sync: SyncPa
               <ActionForm action={pairInviteAction} fields={{ id: eventId, externalId: c.id }} label="Spárovat" small />
             </div>
           ))}
-          {sync.mode === "google-test" && (
-            <p className="small muted">
-              Testovací režim: nová pozvánka půjde jen povoleným testovacím příjemcům ({sync.inviteeCount}), ne publiku akce.
-            </p>
-          )}
+          <p className="small muted">
+            {sync.attendeeSource === "allowlist"
+              ? `Testovací režim: nová pozvánka půjde jen povoleným testovacím příjemcům (${sync.inviteeCount}), ne publiku akce.`
+              : `Nová pozvánka půjde publiku akce (${sync.inviteeCount}). Hosty, které přidáte ručně v Kalendáři, Wiki nemění.`}
+          </p>
           <ActionForm action={createInviteAction} fields={{ id: eventId }} label="Vytvořit novou pozvánku" />
         </div>
       )}

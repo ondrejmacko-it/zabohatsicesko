@@ -18,6 +18,8 @@ export type ExternalEvent = ManagedEventData & {
   originalStartTime?: Date | null;
 };
 
+export type GuestChange = { add: SimAttendee[]; remove: readonly string[] };
+
 export type CalendarErrorCode =
   | "calendar_unavailable"
   | "calendar_revoked"
@@ -52,8 +54,11 @@ export interface CalendarProvider {
   /** Hledá událost podle stabilního klíče vytvoření. Chrání před duplicitou po nejasném výsledku. */
   findByKey(calendarId: string, key: string): Promise<ExternalEvent | null>;
   create(calendarId: string, key: string, data: ManagedEventData, attendees: SimAttendee[]): Promise<ExternalEvent>;
-  /** Změní jen spravovaná pole a požádá o oznámení pozvaným. */
-  patch(calendarId: string, eventId: string, data: ManagedEventData): Promise<ExternalEvent>;
+  /**
+   * Změní jen spravovaná pole a požádá o oznámení pozvaným. Hosty mění jen podle `guests`:
+   * přidá chybějící a odebere vyjmenované adresy, ostatní hosté a jejich odpovědi zůstanou.
+   */
+  patch(calendarId: string, eventId: string, data: ManagedEventData, guests?: GuestChange): Promise<ExternalEvent>;
   /** Kandidáti na spárování v daném dni (pražský čas). */
   listBetween(calendarId: string, from: Date, to: Date): Promise<ExternalEvent[]>;
 }

@@ -1,7 +1,8 @@
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, test } from "vitest";
 import { SimulatedCalendar, simulateManualEdit } from "@/server/calendar/simulated";
-import { pairWithExisting, pairingCandidates, requestNewInvite, requestRetry, syncEvent } from "@/server/calendar/sync";
+import { planGuests } from "@/server/calendar/attendees";
+import { pairWithExisting, pairingCandidates, requestNewInvite, requestRetry, syncEvent, syncPending } from "@/server/calendar/sync";
 import { DEMO_CALENDAR_ID } from "@/server/seed";
 import { getDb } from "@/server/db/client";
 import { calendarLinks, events, simCalendarEvents, simCalendarNotifications, topics } from "@/server/db/schema";
@@ -18,9 +19,11 @@ import {
   updateEvent,
   type EventInput,
 } from "@/server/services/events";
+import { updateAccess } from "@/server/services/users";
 import { monthOf, toDateKey } from "@/lib/time";
+import type { Group } from "@/lib/types";
 import { writeSwitch } from "@/server/settings";
-import { PUBLISHED_RM, organizer, outsider, participant, resetDemo } from "./helpers";
+import { PUBLISHED_RM, admin, organizer, outsider, participant, resetDemo } from "./helpers";
 
 beforeEach(resetDemo);
 
@@ -57,11 +60,51 @@ describe("úprava zveřejněné akce a Kalendář", () => {
     const invite = all[0]!;
     expect(invite.id).toBe("demo-existing-rm-1112");
     expect(invite.summary).toBe("Trénink RM: Nové téma tréninku");
-    expect(invite.attendees).toEqual([{ email: "demo-mimo-skupinu@example.invalid", name: "Účastník RM", responseStatus: "accepted" }]);
+    // Původní host i jeho odpověď zůstávají, Wiki jen doplnila chybějící publikum akce.
+    expect(invite.attendees[0]).toEqual({ email: "demo-mimo-skupinu@example.invalid", name: "Účastník RM", responseStatus: "accepted" });
+    expect(invite.attendees.map((a) => a.email).sort()).toEqual(
+      ["demo-mimo-skupinu", "demo-organizator", "demo-spravce", "demo-vedouci"].map((id) => `${id}@example.invalid`),
+    );
     expect(invite.meetingUrl).toBe("https://example.invalid/meeting/demo");
     expect(await notifications(invite.id)).toHaveLength(1);
     row = (await loadEventRow(await getDb(), PUBLISHED_RM))!;
     expect((await link(PUBLISHED_RM))?.syncedRevision).toBe(row.publishedRevision);
+  });
+
+  test("změna skupin upraví hosty budoucí pozvánky, ruční hosté a odpovědi zůstanou", async () => {
+    const emails = async () => (await simEvents())[0]!.attendees.map((a) => a.email.split("@")[0]).sort();
+    const setGroups = (userId: string, groups: Group[]) => updateAccess(admin, userId, { role: "member", groups, status: "active" });
+
+    await setGroups("demo-ucastnik", ["vsichni", "fp", "rm"]);
+    expect((await link(PUBLISHED_RM))?.syncStatus).toBe("pending");
+    await syncPending();
+    expect(await emails()).toEqual(["demo-mimo-skupinu", "demo-organizator", "demo-spravce", "demo-ucastnik", "demo-vedouci"]);
+    expect((await link(PUBLISHED_RM))?.managedAttendees).toContain("demo-ucastnik@example.invalid");
+    expect((await link(PUBLISHED_RM))?.managedAttendees).not.toContain("demo-mimo-skupinu@example.invalid");
+
+    // Hosta, kterého přidala Wiki, při odchodu ze skupiny zase odebere. Oznámení jde při každé změně hostů.
+    await setGroups("demo-ucastnik", ["vsichni", "fp"]);
+    await syncPending();
+    expect(await emails()).toEqual(["demo-mimo-skupinu", "demo-organizator", "demo-spravce", "demo-vedouci"]);
+    expect(await notifications("demo-existing-rm-1112")).toHaveLength(2);
+
+    // Host z původní pozvánky nebyl přidaný Wiki: zůstane i po odchodu ze skupiny, včetně odpovědi.
+    await setGroups("demo-mimo-skupinu", ["vsichni"]);
+    await syncPending();
+    expect((await simEvents())[0]!.attendees[0]).toMatchObject({ email: "demo-mimo-skupinu@example.invalid", responseStatus: "accepted" });
+
+    // Odebraný přístup znamená i konec pozvánek.
+    await updateAccess(admin, "demo-vedouci", { role: "member", groups: ["vsichni", "rm"], status: "disabled" });
+    await syncPending();
+    expect(await emails()).not.toContain("demo-vedouci");
+  });
+
+  test("plán hostů přidá chybějící a odebere jen hosty, které přidala Wiki", () => {
+    const guest = (email: string) => ({ email, name: email, responseStatus: "needsAction" as const });
+    const plan = planGuests([guest("a@x"), guest("b@x")], [guest("B@x"), guest("rucni@x"), guest("stary@x")], ["stary@x", "pryc@x"]);
+    expect(plan.add.map((a) => a.email)).toEqual(["a@x"]);
+    expect(plan.remove).toEqual(["stary@x"]);
+    expect(plan.managed).toEqual(["a@x"]);
   });
 
   test("souběžná změna se starší revizí neprojde", async () => {
