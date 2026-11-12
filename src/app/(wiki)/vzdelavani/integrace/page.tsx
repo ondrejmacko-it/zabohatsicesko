@@ -61,10 +61,10 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
           <tbody>
             <tr>
               <td>Google Kalendář</td>
-              <td>{integrationModes.calendar === "simulation" ? "Simulace" : "Testovací režim Google · neověřeno proti Googlu"}</td>
+              <td>{integrationModes.calendar === "simulation" ? "Simulace" : "Testovací režim Google · živý test 12. 11. 2026"}</td>
               <td>
                 {googleTest
-                  ? "Adaptér Google Calendar API prošel testy proti napodobenému HTTP. Živý test se skutečným účtem zatím neproběhl."
+                  ? "Živý test se skutečným účtem prošel 12. 11. 2026: spárování, změna tématu a času, výskyt série, nová pozvánka, ruční změna v Kalendáři i odvolání přístupu. Pozvánky jdou jen testovacím příjemcům."
                   : "Identita pozvánky, hosté a RSVP, oznámení, opakování bez duplicit, pořadí revizí a chyby. Ověřeno proti simulaci, ne proti skutečnému Google účtu."}
               </td>
             </tr>

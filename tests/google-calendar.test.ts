@@ -13,7 +13,7 @@ import {
   type AccessTokenSource,
 } from "@/server/calendar/google-auth";
 import { CalendarError, type ManagedEventData } from "@/server/calendar/provider";
-import { pairWithExisting, pairingCandidates, requestNewInvite, syncEvent } from "@/server/calendar/sync";
+import { pairWithExisting, pairingCandidates, requestNewInvite, resumeAfterReconnect, syncEvent } from "@/server/calendar/sync";
 import { googleCalendarConfig, googleCalendarConfigProblems } from "@/server/config";
 import { getDb } from "@/server/db/client";
 import { calendarLinks, integrationCredentials } from "@/server/db/schema";
@@ -406,6 +406,31 @@ describe("testovací režim Google Kalendáře ve Wiki (napodobené HTTP)", () =
     await syncEvent(PUBLISHED_RM);
     expect(await link(PUBLISHED_RM)).toMatchObject({ syncStatus: "attention", errorCode: "calendar_revoked" });
     expect(google.events.size).toBe(0);
+
+    // Po novém připojení se zastavená akce vrátí do fronty sama, bez ručního opakování.
+    await connect();
+    expect(await resumeAfterReconnect(db)).toEqual([PUBLISHED_RM]);
+    await syncEvent(PUBLISHED_RM);
+    expect(await link(PUBLISHED_RM)).toMatchObject({ syncStatus: "synced", errorCode: null });
+    expect(google.events.size).toBe(1);
+  });
+
+  test("po novém připojení se neobnoví akce zastavené jinou chybou než odvoláním přístupu", async () => {
+    await connect();
+    const db = await getDb();
+    await requestNewInvite(organizer, PUBLISHED_RM);
+    await db
+      .update(calendarLinks)
+      .set({ syncStatus: "attention", errorCode: "external_change" })
+      .where(eq(calendarLinks.eventId, PUBLISHED_RM));
+    expect(await resumeAfterReconnect(db)).toEqual([]);
+    expect(await link(PUBLISHED_RM)).toMatchObject({ syncStatus: "attention", errorCode: "external_change" });
+  });
+
+  test("obnova ukázkových dat nechá Kalendář připojený", async () => {
+    await connect();
+    const db = await resetDemo();
+    expect(await connectionStatus(db)).toMatchObject({ accountEmail: expect.any(String) });
   });
 
   test("spárování s výskytem série: změna tématu upraví jen tento termín, opakování nic nezdvojí", async () => {

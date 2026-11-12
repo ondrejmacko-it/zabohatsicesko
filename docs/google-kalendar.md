@@ -1,8 +1,8 @@
 # Google Kalendář · testovací režim
 
-Stav k 12. 11. 2026: adaptér je napsaný a prošel testy proti napodobenému HTTP
-(`tests/google-calendar.test.ts`). **Proti skutečnému Googlu ověřen nebyl.** Živý test podle zadání
-(část 02) čeká na testovací účty a OAuth klienta. Výchozí režim dema zůstává simulace.
+Stav k 12. 11. 2026: adaptér prošel testy proti napodobenému HTTP (`tests/google-calendar.test.ts`)
+a **živým testem proti skutečnému Googlu** na preview (výsledky níže). Výchozí režim dema zůstává
+simulace, testovací režim zapíná `CALENDAR_MODE=google-test`.
 
 ## Jak to funguje
 
@@ -22,7 +22,9 @@ Stav k 12. 11. 2026: adaptér je napsaný a prošel testy proti napodobenému HT
 - Seznam povolených kalendářů a testovacích příjemců ověřuje server před každým voláním. V testovacím
   režimu jde nová pozvánka **jen testovacím příjemcům**, skutečné publikum akce se neosloví.
 - Odvolání přístupu u Googlu integraci odpojí i ve Wiki. Akce ukáže „Vyžaduje pozornost“ a po novém
-  připojení se odešle nejnovější zveřejněná verze.
+  připojení se nejnovější zveřejněná verze odešle sama (`resumeAfterReconnect`). Akce zastavené jinou
+  chybou, například ruční změnou v Kalendáři, dál rozhoduje organizátor.
+- Obnova ukázkových dat připojení Kalendáře ani vazby na Google účty nemaže.
 
 ## Co nastavit po dodání přístupů
 
@@ -61,6 +63,27 @@ Organizátor a jeden testovací příjemce. Každý krok zapsat jako ověřený,
 7. Upravit název přímo v Google Kalendáři. Wiki ukáže rozdíl a nabídne přepsání.
 8. V nastavení Google účtu odebrat aplikaci přístup. Další synchronizace skončí stavem „Vyžaduje
    pozornost“ s výzvou k připojení, po připojení projde.
+
+## Výsledek živého testu 12. 11. 2026
+
+Preview větve `ccr-2d4283fa-slno9d`, účet organizátora `zbc.test.spravce`, příjemce `zbc.test.uzivatel`,
+testovací kalendář „Vzdělávání test“. Wiki ovládal Playwright, Google kontroloval uživatel.
+
+| # | Krok | Výsledek |
+|---|---|---|
+| — | Připojení OAuth, šifrovaný token, kontrola seznamů | Ověřeno. Pomohlo vynucení výběru účtu (`prompt=consent select_account`). |
+| 1 | Spárování pozvánky s Tréninkem RM | Ověřeno. Stejné ID, host, přijaté RSVP i Meet zůstaly, popis má odkaz na Wiki. |
+| 2 | Změna tématu | Ověřeno. Stejná pozvánka, příjemci přišlo oznámení. |
+| 3 | Změna času | Ověřeno, s rozdílem: **Google při změně termínu vynuluje RSVP** a žádá o novou odpověď. Text ve Wiki upraven. |
+| 4 | Stejné zveřejnění znovu | Ověřeno. Jedna pozvánka, žádné další oznámení. |
+| 5 | Výskyt série: spárovat, změnit, zrušit | Ověřeno. ID výskytu `…_20261113T153000Z`, ostatní termíny beze změny. Spárování přepíše čas výskytu časem z Wiki. |
+| 6 | Nová pozvánka | Ověřeno. Google přijal vlastní ID z Wiki, hostem je jen testovací příjemce, Meet se nezakládá. |
+| 7 | Změna názvu v Googlu | Ověřeno. „Vyžaduje pozornost“ s rozdílem, přepsání hodnotami z Wiki prošlo. |
+| 8 | Odebrání přístupu | Ověřeno. Wiki se odpojila a ukázala výzvu k připojení. Po novém připojení bylo nutné ruční opakování, opraveno. |
+
+Nalezené chyby (opravené na téže větvi, s testy): obnova ukázkových dat mazala připojení Kalendáře
+(`TRUNCATE … CASCADE` přes cizí klíč na uživatele) a po novém připojení se zastavené akce samy
+neodeslaly. Opravy zatím nebyly znovu ověřeny živě.
 
 ## Co testy proti napodobenému HTTP neříkají
 

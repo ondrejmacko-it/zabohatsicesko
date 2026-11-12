@@ -11,6 +11,7 @@ import {
   templateSlots,
   topicInterests,
   topics,
+  integrationCredentials,
   userIdentities,
   users,
 } from "@/server/db/schema";
@@ -133,11 +134,18 @@ const TABLES = [
 
 /** Smaže všechna data dema a nahraje seed znovu. Jedna transakce, buď vše, nebo nic. */
 export async function resetDatabase(tx: Executor): Promise<void> {
-  // Vazby na účty Google nejsou ukázková data. Bez jejich zachování by obnova odhlásila i toho, kdo ji spustil.
+  // Vazby na účty Google ani připojení Kalendáře nejsou ukázková data. Obě tabulky odkazují na uživatele,
+  // takže je TRUNCATE … CASCADE smaže. Bez jejich obnovení by obnova odhlásila i odpojila Kalendář.
   const identities = await tx.select().from(userIdentities);
+  const credentials = await tx.select().from(integrationCredentials);
   await tx.execute(sql.raw(`TRUNCATE ${TABLES.join(", ")} RESTART IDENTITY CASCADE`));
   await seedDatabase(tx);
   const seeded = new Set(seed.users.map((u) => u.id));
   const kept = identities.filter((identity) => seeded.has(identity.userId));
   if (kept.length) await tx.insert(userIdentities).values(kept);
+  if (credentials.length) {
+    await tx
+      .insert(integrationCredentials)
+      .values(credentials.map((c) => ({ ...c, connectedBy: c.connectedBy && seeded.has(c.connectedBy) ? c.connectedBy : null })));
+  }
 }

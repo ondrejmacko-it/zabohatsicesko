@@ -33,7 +33,7 @@ export function SyncPanelView({ eventId, sync }: { eventId: string; sync: SyncPa
       <div className="spread">
         <h2 id="kalendar">Google Kalendář</h2>
         <span className="row">
-          <span className="badge badge-outline">{sync.mode === "simulation" ? "simulace" : "test Google · neověřeno proti Googlu"}</span>
+          <span className="badge badge-outline">{sync.mode === "simulation" ? "simulace" : "test Google · jen testovací příjemci"}</span>
           <span className={statusBadge} role="status">
             {statusLabel}
           </span>

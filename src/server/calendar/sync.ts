@@ -216,6 +216,20 @@ export async function requestRetry(viewer: Viewer, eventId: string): Promise<voi
   await audit(db, viewer.id, "calendar.retry", "event", eventId);
 }
 
+/**
+ * Po novém připojení účtu vrátí do fronty akce, které zastavilo odvolání přístupu.
+ * Ostatní chyby (například ruční změnu v Kalendáři) dál řeší organizátor sám.
+ * @returns ID akcí, které má volající znovu synchronizovat
+ */
+export async function resumeAfterReconnect(db: Db): Promise<string[]> {
+  const resumed = await db
+    .update(calendarLinks)
+    .set({ syncStatus: "pending", attempts: 0, errorCode: null, updatedAt: new Date() })
+    .where(and(eq(calendarLinks.syncStatus, "attention"), eq(calendarLinks.errorCode, "calendar_revoked")))
+    .returning({ eventId: calendarLinks.eventId });
+  return resumed.map((r) => r.eventId);
+}
+
 /** Organizátor výslovně rozhodl založit novou pozvánku pro zveřejněnou akci bez vazby. */
 export async function requestNewInvite(viewer: Viewer, eventId: string): Promise<void> {
   requireOrganizer(viewer);

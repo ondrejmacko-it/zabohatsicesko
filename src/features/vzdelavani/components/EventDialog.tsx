@@ -50,6 +50,7 @@ export function EventDialog(props: Props) {
 }
 
 const MANAGED: Array<keyof EventFormValues> = ["type", "label", "topicTitle", "date", "endDate", "startTime", "endTime"];
+const TERM_FIELDS: Array<keyof EventFormValues> = ["date", "endDate", "startTime", "endTime"];
 
 function EventForm({ mode, id, revision, initial, published, people, topics, inviteeCount, onClose }: Props & { onClose: () => void }) {
   const router = useRouter();
@@ -69,7 +70,11 @@ function EventForm({ mode, id, revision, initial, published, people, topics, inv
   const dirty = JSON.stringify({ ...values, endDate: multiDay ? values.endDate : null }) !== JSON.stringify(initial);
   const isHoliday = values.type === "holiday";
   const incomplete = !isHoliday && (!values.topicTitle.trim() || !values.leadId);
-  const calendarChange = published !== null && MANAGED.some((key) => (key === "endDate" ? (multiDay ? values.endDate : null) : values[key]) !== published[key]);
+  const changed = (key: keyof EventFormValues) =>
+    published !== null && (key === "endDate" ? (multiDay ? values.endDate : null) : values[key]) !== published[key];
+  const calendarChange = MANAGED.some(changed);
+  // Google při změně termínu vynuluje odpovědi pozvaných a požádá je o novou (ověřeno živým testem).
+  const termChange = TERM_FIELDS.some(changed);
   const suggestions = topics.filter((t) => topicFitsAudience(t.audience, values.audience)).slice(0, 3);
 
   useEffect(() => {
@@ -258,7 +263,10 @@ function EventForm({ mode, id, revision, initial, published, people, topics, inv
                   />
                   <span>
                     Změna zasáhne pozvané ({inviteeCount}). Po zveřejnění se upraví stávající pozvánka v Kalendáři a
-                    Google pošle oznámení. Hosté, jejich odpovědi a odkaz na schůzku zůstanou.
+                    Google pošle oznámení. Hosté a odkaz na schůzku zůstanou.{" "}
+                    {termChange
+                      ? "Mění se termín, proto Google požádá pozvané o novou odpověď."
+                      : "Odpovědi pozvaných zůstanou."}
                   </span>
                 </label>
               ) : (

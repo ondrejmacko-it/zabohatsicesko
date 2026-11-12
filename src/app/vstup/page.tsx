@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { listPersonas } from "@/server/auth/personas";
-import { config, googleLoginConfig } from "@/server/config";
+import { calendarMode, config, googleLoginConfig } from "@/server/config";
 import { GateForm } from "./GateForm";
 
 export const metadata: Metadata = { title: "Vstup do ukázky" };
@@ -29,7 +29,10 @@ export default async function GatePage({ searchParams }: { searchParams: Promise
         <div className="panel gate-panel">
           <h1>Ukázka modulu Vzdělávání</h1>
           <p className="page-sub">
-            Prototyp pracuje výhradně s fiktivními daty. Kalendář a přepis běží v označeném ukázkovém režimu.
+            Prototyp pracuje výhradně s fiktivními daty.{" "}
+            {calendarMode() === "google-test"
+              ? "Kalendář běží v testovacím režimu Googlu jen s testovacími příjemci, přepis v ukázkovém režimu."
+              : "Kalendář a přepis běží v označeném ukázkovém režimu."}
           </p>
           {googleLoginConfig() && (
             <section className="stack gate-google" aria-labelledby="google-prihlaseni">
