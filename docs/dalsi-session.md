@@ -39,7 +39,8 @@ Přístup k preview: Vercel Authentication. Pro automatické testy je potřeba s
 (Share, 23 h) a dočasně povolený host preview v síťových pravidlech prostředí. Bypass for Automation a
 deploy hooky blokuje bezpečnostní filtr relace.
 
-Rozpracováno (draft PR #3, větev `ccr-f94571c9-6bvs9j`, čeká na ruční merge uživatelem):
+Rozpracováno (draft PR #3, větev `ccr-f94571c9-6bvs9j`, čeká na ruční merge uživatelem; pokud už je
+sloučený, založ novou větev z `main`):
 
 - `CLAUDE.md` má trvalou podmínku (ptát se při nejistotě, maximálně splnit zadání).
 - Generování měsíce předvyplní budoucím termínům firemního vzdělávání doporučené téma
@@ -52,11 +53,21 @@ Porovnání se zadáním (uživatel dodal ZIP, do repa nepatří). K nasaditelno
 2. Skutečný přepis a zápis, soukromé úložiště souborů a dlouhé nahrávky (dnes limit 4 MB a 15 minut).
 3. Přihlášení firemní Google identitou místo fiktivních rolí.
 
-Další krok: získat od uživatele odpovědi (níže) a začít adaptérem Google Kalendáře.
+Další krok (bez Google účtů, ty uživatel dodá později z PC): připravit vše, co nejde ověřit živě,
+tak aby se po dodání přístupů jen připojilo a ověřilo. Před každou větší částí nejdřív návrh uživateli.
 
-Čeká na odpověď uživatele:
+1. Adaptér Google Kalendáře podle `src/server/calendar/provider.ts` a části 02 zadání: testovací režim,
+   seznam povolených kalendářů a pozvaných ověřený na serveru, práce s jedním výskytem série
+   (`recurringEventId`, `originalStartTime`), šifrované tokeny jen na serveru. Testy proti napodobenému
+   HTTP, v UI i v předání označit „neověřeno proti Googlu“.
+2. Nahrávky pro reálný provoz: soukromé úložiště souborů místo databáze, nahrávání dlouhých souborů
+   (tréninky mají 2 až 2,5 hodiny), dělení pro poskytovatele přepisu. Rozhraní `TranscriptionProvider`
+   doplnit o skutečný testovací režim, jakmile uživatel vybere poskytovatele.
+3. Přihlášení Google identitou (OIDC) připravit jako režim vedle fiktivních rolí.
 
-- Testovací Google účty (organizátor a příjemce) a OAuth klient v Google Cloud.
+Čeká na odpověď uživatele (ptej se průběžně, nedomýšlej):
+
+- Testovací Google účty (organizátor a příjemce) a OAuth klient v Google Cloud: dodá později.
 - Poskytovatel přepisu pro testovací režim (zpracování v EU).
 - Úložiště nahrávek: soukromý Vercel Blob, nebo rovnou úložiště pod účtem firmy.
 - Google přihlášení: náhrada přístupového kódu, nebo druhý režim vedle fiktivních rolí.
