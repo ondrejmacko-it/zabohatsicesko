@@ -26,8 +26,15 @@ Synchronizováno; vedoucí nahrál testovací nahrávku k 11. 11., Ke kontrole �
 200; účastník FP čte zápis bez přepisu a audia; účastník RM dostal „Záznam neexistuje nebo k němu
 nemáte přístup“ (stránka i přímý odkaz 404); organizátor bez role kontrolora audio nezíská. Žádné 5xx.
 
-Data v Neonu jsou po testu změněná (zveřejněná akce i zápis). Pro čistou ukázku je obnoví
-`npm run db:reset` s `DATABASE_URL` z Preview.
+Ukázková data v Neonu jsou po testu obnovená tlačítkem Integrace → Nástroje ukázky → „Obnovit
+ukázková data“ (stejná funkce `resetDatabase` jako `npm run db:reset`, bez čtení `DATABASE_URL`).
+
+Přístup k preview: Vercel Authentication. Pro automatické testy je potřeba sdílecí odkaz z dashboardu
+(Share, 23 h) a dočasně povolený host preview v síťových pravidlech prostředí. Bypass for Automation a
+deploy hooky blokuje bezpečnostní filtr relace.
+
+Další krok: počkat na zadání od uživatele (např. draft PR z `claude/vzdelavani-vercel-preview-52jflw`
+s výsledky ověření, nebo další úpravy dema).
 
 Otevřené: preview běží z větve `claude/vzdelavani-vercel-preview-52jflw` (kód shodný s `main`).
 Token pro `api.vercel.com` je uložený v síťových tajemstvích prostředí Default, po dokončení ho smazat.
