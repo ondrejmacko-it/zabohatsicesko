@@ -35,7 +35,7 @@ export const config = {
     return process.env.PGLITE_DIR ?? ".data/pglite";
   },
   get appUrl() {
-    return (process.env.APP_URL ?? "https://wiki.example.invalid").replace(/\/$/, "");
+    return (process.env.APP_URL?.trim() || "https://wiki.example.invalid").replace(/\/+$/, "");
   },
   /** Demo běží v referenčním čase ze seedu, aby scénář seděl na listopadová data. */
   get useRealClock() {
@@ -56,7 +56,7 @@ export type CalendarMode = "simulation" | "google-test";
  * takže chybějící nebo překlepnutá hodnota nikdy nezačne zapisovat do skutečného kalendáře.
  */
 export function calendarMode(): CalendarMode {
-  return process.env.CALENDAR_MODE === "google-test" ? "google-test" : "simulation";
+  return process.env.CALENDAR_MODE?.trim() === "google-test" ? "google-test" : "simulation";
 }
 
 const list = (value: string | undefined) =>
@@ -124,7 +124,7 @@ export type LoginMode = "demo" | "google-test";
  * Bez `LOGIN_MODE=google-test` se tlačítko Google nenabízí a trasy přihlášení vrací 404.
  */
 export function loginMode(): LoginMode {
-  return process.env.LOGIN_MODE === "google-test" ? "google-test" : "demo";
+  return process.env.LOGIN_MODE?.trim() === "google-test" ? "google-test" : "demo";
 }
 
 export type GoogleLoginConfig = {
