@@ -1,4 +1,5 @@
 import { formatDayMonth } from "@/lib/time";
+import type { EventType } from "@/lib/types";
 
 export type TopicStat = {
   id: string;
@@ -47,4 +48,39 @@ export function rankTopics(stats: TopicStat[]): RankedTopic[] {
         .filter(Boolean)
         .join(" · "),
     }));
+}
+
+/**
+ * Typy, kterým generování měsíce předvyplní téma. Firemní vzdělávání vychází z témat od kolegů,
+ * tréninkům a Action time určuje náplň vedoucí.
+ */
+export const TOPIC_DRIVEN_TYPES: ReadonlySet<EventType> = new Set<EventType>(["education-fp", "education-rm"]);
+
+/** Téma se hodí k akci stejného publika, téma pro všechny ke každé akci. */
+export function topicFitsAudience(topicAudience: string, eventAudience: string): boolean {
+  return topicAudience === eventAudience || topicAudience === "vsichni";
+}
+
+/**
+ * Návrh témat pro nové termíny ze šablony. Každému termínu (v pořadí, jak jdou za sebou) přiřadí
+ * nejvýše doporučené téma jeho publika, o které má někdo zájem a které ještě není naplánované.
+ * Jedno téma se v jednom běhu použije nejvýš jednou. Je to jen předvyplnění návrhu, rozhoduje organizátor.
+ */
+export function suggestTopics(
+  slots: ReadonlyArray<{ generationKey: string; type: EventType; audience: string }>,
+  ranked: ReadonlyArray<RankedTopic>,
+  plannedTopicIds: ReadonlySet<string>,
+): Map<string, RankedTopic> {
+  const used = new Set(plannedTopicIds);
+  const result = new Map<string, RankedTopic>();
+  for (const slot of slots) {
+    if (!TOPIC_DRIVEN_TYPES.has(slot.type)) continue;
+    const topic = ranked.find(
+      (t) => t.interestCount > 0 && t.nextPlanned === null && !used.has(t.id) && topicFitsAudience(t.audience, slot.audience),
+    );
+    if (!topic) continue;
+    used.add(topic.id);
+    result.set(slot.generationKey, topic);
+  }
+  return result;
 }

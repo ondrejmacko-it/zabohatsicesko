@@ -25,7 +25,7 @@ Stav Vercelu (tým `maci`, `team_PtkXmFd9hI7UeUYovGkbwZQG`, plán Hobby):
 
 Ověřeno 12. 11. 2026:
 
-- Lokálně na `c84ada1`: lint, typová kontrola, 32 z 32 testů, build.
+- Lokálně na `c84ada1` (stav `main`): lint, typová kontrola, 32 z 32 testů, build.
 - Na preview (Playwright přes sdílecí odkaz Vercelu): vstup kódem, plán a zveřejnění akce
   organizátorem, synchronizace Kalendáře, nahrávka vedoucího od kontroly po zveřejnění, omezení
   účastníků FP a RM, organizátor bez role kontrolora. Žádné 5xx. Podrobnosti jsou v popisu PR #2.
@@ -39,11 +39,28 @@ Přístup k preview: Vercel Authentication. Pro automatické testy je potřeba s
 (Share, 23 h) a dočasně povolený host preview v síťových pravidlech prostředí. Bypass for Automation a
 deploy hooky blokuje bezpečnostní filtr relace.
 
-Rozpracováno: větev `ccr-f94571c9-6bvs9j` přidává do `CLAUDE.md` trvalou podmínku (ptát se při
-nejistotě, maximálně splnit zadání) a aktualizuje tento soubor. Čeká na PR a ruční merge uživatelem.
+Rozpracováno (draft PR #3, větev `ccr-f94571c9-6bvs9j`, čeká na ruční merge uživatelem):
 
-Další krok: projít s uživatelem zadání bod po bodu proti demu (zadání není v repu, uživatel ho musí
-dodat nebo shrnout požadavky) a domluvit větší změny, které uživatel navrhne.
+- `CLAUDE.md` má trvalou podmínku (ptát se při nejistotě, maximálně splnit zadání).
+- Generování měsíce předvyplní budoucím termínům firemního vzdělávání doporučené téma
+  (`suggestTopics` v `src/server/domain/topics.ts`). Lokálně: lint, typová kontrola, 34 z 34 testů,
+  build, ruční průchod generováním prosince. Na preview zatím neověřeno.
+
+Porovnání se zadáním (uživatel dodal ZIP, do repa nepatří). K nasaditelnosti chybí, v tomto pořadí:
+
+1. Skutečný adaptér Google Kalendáře v testovacím režimu a živý test podle části 02.
+2. Skutečný přepis a zápis, soukromé úložiště souborů a dlouhé nahrávky (dnes limit 4 MB a 15 minut).
+3. Přihlášení firemní Google identitou místo fiktivních rolí.
+
+Další krok: získat od uživatele odpovědi (níže) a začít adaptérem Google Kalendáře.
+
+Čeká na odpověď uživatele:
+
+- Testovací Google účty (organizátor a příjemce) a OAuth klient v Google Cloud.
+- Poskytovatel přepisu pro testovací režim (zpracování v EU).
+- Úložiště nahrávek: soukromý Vercel Blob, nebo rovnou úložiště pod účtem firmy.
+- Google přihlášení: náhrada přístupového kódu, nebo druhý režim vedle fiktivních rolí.
+- Skutečné pravidlo střídání typů ve slotu a zda předvyplňovat téma i tréninkům.
 
 Otevřené, rozhoduje uživatel:
 

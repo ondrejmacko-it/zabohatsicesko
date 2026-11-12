@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, asc, eq, gte, inArray, lt, sql } from "drizzle-orm";
+import { and, asc, eq, gt, gte, inArray, lt, ne, sql } from "drizzle-orm";
 import { EXTRAORDINARY_TYPES } from "@/lib/labels";
 import { addDays, fromPragueLocal, isoWeekday, monthRange, toDateKey } from "@/lib/time";
 import type { EventType, Group, PlanStatus, SyncStatus } from "@/lib/types";
@@ -16,9 +16,11 @@ import {
 } from "@/server/db/schema";
 import { planMonth } from "@/server/domain/generation";
 import { snapshotOf, type EventRow } from "@/server/domain/snapshot";
+import { suggestTopics } from "@/server/domain/topics";
 import { isOrganizer, visibleEvent, type Viewer } from "@/server/policy";
 import { DEMO_CALENDAR_ID } from "@/server/seed";
 import { DomainError } from "@/server/services/errors";
+import { listTopics } from "@/server/services/topics";
 
 export type EventCard = {
   id: string;
@@ -355,10 +357,31 @@ export async function deleteDraft(viewer: Viewer, id: string, expectedRevision: 
   });
 }
 
-/** Doplní chybějící sloty měsíce podle šablony. Vrací počet nových záznamů. */
-export async function generateMonth(viewer: Viewer, monthKey: string): Promise<number> {
+/** Témata, která už mají budoucí nezrušený termín, včetně rozpracovaných návrhů. */
+async function plannedTopicIds(db: Executor): Promise<Set<string>> {
+  const rows = await db
+    .select({ topicId: events.topicId })
+    .from(events)
+    .where(
+      and(
+        eq(events.orgId, config.orgId),
+        sql`${events.topicId} IS NOT NULL`,
+        ne(events.status, "cancelled"),
+        gt(events.endsAt, now()),
+      ),
+    );
+  return new Set(rows.map((r) => r.topicId as string));
+}
+
+/**
+ * Doplní chybějící sloty měsíce podle šablony. Budoucím termínům firemního vzdělávání předvyplní
+ * doporučené téma podle zájmu a historie. Vše vzniká jako návrh, který organizátor upraví a zveřejní.
+ */
+export async function generateMonth(viewer: Viewer, monthKey: string): Promise<{ created: number; withTopic: number }> {
   requireOrganizer(viewer);
   const db = await getDb();
+  const ranked = await listTopics(viewer);
+  const planned = await plannedTopicIds(db);
   return db.transaction(async (tx) => {
     const slots = await tx.select().from(templateSlots).where(eq(templateSlots.orgId, config.orgId));
     const existing = await tx
@@ -370,9 +393,15 @@ export async function generateMonth(viewer: Viewer, monthKey: string): Promise<n
       .from(generationExclusions)
       .where(eq(generationExclusions.orgId, config.orgId));
     const taken = new Set([...existing, ...excluded].map((r) => r.key as string));
+    const plannedSlots = planMonth(config.orgId, monthKey, slots, taken);
+    const reference = now();
+    const upcoming = plannedSlots.filter((s) => !s.holiday && fromPragueLocal(s.dateKey, s.startTime) > reference);
+    const suggestions = suggestTopics(upcoming, ranked, planned);
     let created = 0;
-    for (const slot of planMonth(config.orgId, monthKey, slots, taken)) {
+    let withTopic = 0;
+    for (const slot of plannedSlots) {
       const holiday = slot.holiday;
+      const topic = suggestions.get(slot.generationKey);
       const startsAt = fromPragueLocal(slot.dateKey, holiday ? "00:00" : slot.startTime);
       const endsAt = holiday ? fromPragueLocal(addDays(slot.dateKey, 1), "00:00") : fromPragueLocal(slot.dateKey, slot.endTime);
       const [row] = await tx
@@ -385,6 +414,8 @@ export async function generateMonth(viewer: Viewer, monthKey: string): Promise<n
           calendarIntent: holiday ? "none" : "create",
           type: slot.type,
           label: slot.label,
+          topicTitle: topic?.name ?? null,
+          topicId: topic?.id ?? null,
           startsAt,
           endsAt,
           allDay: holiday,
@@ -397,11 +428,12 @@ export async function generateMonth(viewer: Viewer, monthKey: string): Promise<n
         .returning();
       if (!row) continue;
       created += 1;
+      if (topic) withTopic += 1;
       await tx.insert(eventRevisions).values({ eventId: row.id, revision: 1, action: "generate", snapshot: snapshotOf(row), actorId: viewer.id });
       if (holiday) await publishInTx(tx, row, viewer.id, "generate");
     }
     if (created) await audit(tx, viewer.id, "plan.generate", "month", monthKey);
-    return created;
+    return { created, withTopic };
   });
 }
 
