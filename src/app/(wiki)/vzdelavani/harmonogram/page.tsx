@@ -66,34 +66,36 @@ export default async function SchedulePage({ searchParams }: { searchParams: Sea
               </Link>
             </div>
             {organizer && (
-              <details className="menu">
-                <summary className="btn">
-                  <Icon name="more" /> Nástroje organizátora
-                </summary>
-                <div className="menu-list organizer-tools">
-                  <EventDialog
-                    mode="create"
-                    initial={{
-                      type: "other",
-                      label: "Jiná akce",
-                      date: newDate,
-                      endDate: null,
-                      startTime: "09:00",
-                      endTime: "11:00",
-                      topicTitle: "",
-                      audience: defaultAudience("other"),
-                      leadId: "",
-                      reviewerId: "",
-                    }}
-                    published={null}
-                    people={people}
-                    topics={topics}
-                    inviteeCount={0}
-                  />
-                  <ActionForm action={generateMonthAction} fields={{ month: monthKey }} label="Doplnit měsíc ze šablony" pendingLabel="Doplňuji…" />
-                  <TemplateDialog slots={template} />
-                </div>
-              </details>
+              <>
+                <EventDialog
+                  mode="create"
+                  initial={{
+                    type: "other",
+                    label: "Jiná akce",
+                    date: newDate,
+                    endDate: null,
+                    startTime: "09:00",
+                    endTime: "11:00",
+                    topicTitle: "",
+                    audience: defaultAudience("other"),
+                    leadId: "",
+                    reviewerId: "",
+                  }}
+                  published={null}
+                  people={people}
+                  topics={topics}
+                  inviteeCount={0}
+                />
+                <details className="menu">
+                  <summary className="btn">
+                    <Icon name="more" /> Nástroje organizátora
+                  </summary>
+                  <div className="menu-list organizer-tools">
+                    <ActionForm action={generateMonthAction} fields={{ month: monthKey }} label="Doplnit měsíc ze šablony" pendingLabel="Doplňuji…" />
+                    <TemplateDialog slots={template} />
+                  </div>
+                </details>
+              </>
             )}
           </div>
         </div>
