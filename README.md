@@ -7,6 +7,10 @@ ze šablony, synchronizace schválených změn do Kalendáře a zápisy z nahrá
 Demo pracuje **výhradně s fiktivními daty**. Google Kalendář běží jako **simulace** a přepis jako
 **ukázkový režim** nad přiloženou syntetickou nahrávkou. Oba stavy jsou v aplikaci viditelně označené.
 
+Vedle simulace je připravený **testovací režim Google Kalendáře** (skutečné Google Calendar API, šifrované
+tokeny, povolené kalendáře a příjemci). Je ověřený jen proti napodobenému HTTP, **ne proti Googlu**.
+Nastavení a postup živého testu jsou v [docs/google-kalendar.md](docs/google-kalendar.md).
+
 | | |
 |---|---|
 | ![Harmonogram](docs/screenshots/harmonogram.png) | ![Detail akce a Kalendář](docs/screenshots/detail-kalendar.png) |
@@ -56,6 +60,8 @@ Vzor je v `.env.example`. Hodnoty tajemství patří do správce tajemství host
 | `APP_URL` | ne | Adresa Wiki pro odkaz v pozvánce. |
 | `DEMO_CLOCK` | ne | `real` = skutečný čas místo ukázkového. |
 | `SIM_LATENCY_MS` | ne | Zpoždění simulací v ms (výchozí 1200). |
+| `CALENDAR_MODE` | ne | `google-test` zapne testovací režim Google Kalendáře. Jinak simulace. |
+| `GOOGLE_*`, `TOKEN_ENCRYPTION_KEY` | v režimu `google-test` | Viz [docs/google-kalendar.md](docs/google-kalendar.md). |
 
 ## Architektura
 
@@ -74,7 +80,7 @@ src/
     ├── auth/                 # podepsaná session, přístupová brána, fiktivní role
     ├── domain/               # šablona měsíce, svátky, doporučení témat, snímek zveřejněné akce
     ├── services/             # akce, témata, nahrávky a zápisy, detail
-    ├── calendar/             # rozhraní poskytovatele Kalendáře, simulace, synchronizace
+    ├── calendar/             # rozhraní poskytovatele Kalendáře, simulace, adaptér Google, synchronizace
     ├── recordings/           # ověření audia, rozhraní přepisu a ukázkový poskytovatel
     └── db/                   # schéma, migrace, připojení
 tests/                        # cílené testy podle scénářů v předání

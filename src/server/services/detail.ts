@@ -4,7 +4,7 @@ import type { EventSnapshot, EventType, Group, SimAttendee } from "@/lib/types";
 import { CalendarError } from "@/server/calendar/provider";
 import { listNotifications } from "@/server/calendar/simulated";
 import { calendarProvider, pairingCandidates } from "@/server/calendar/sync";
-import { config } from "@/server/config";
+import { calendarMode, config, googleCalendarConfig, type CalendarMode } from "@/server/config";
 import { getDb } from "@/server/db/client";
 import { calendarLinks, users, type ManagedFields } from "@/server/db/schema";
 import { calendarSummary, snapshotOf, type EventRow } from "@/server/domain/snapshot";
@@ -46,12 +46,17 @@ export function formValuesOf(snapshot: EventSnapshot): EventFormValues {
 }
 
 export type SyncPanel = {
+  mode: CalendarMode;
+  /** Vazba míří na jeden výskyt opakované události. */
+  seriesInstance: boolean;
   status: "pending" | "synced" | "attention" | "unlinked" | "none";
   errorCode: string | null;
   conflict: { external: ManagedFields; wiki: ManagedFields } | null;
   externalId: string | null;
   external: { summary: string; attendees: SimAttendee[]; meetingUrl: string | null; cancelled: boolean } | null;
   calendarUnavailable: boolean;
+  /** Důvod, proč se nepodařilo načíst údaje z Kalendáře (odpojeno, chybí konfigurace, výpadek). */
+  calendarErrorCode: string | null;
   notifications: Array<{ sequence: number; kind: string; recipients: number; at: string }>;
   candidates: Array<{ id: string; summary: string; startsAt: string; endsAt: string }>;
   inviteeCount: number;
@@ -63,16 +68,21 @@ async function syncPanel(viewer: Viewer, row: EventRow): Promise<SyncPanel | nul
   const [link] = await db.select().from(calendarLinks).where(eq(calendarLinks.eventId, row.id)).limit(1);
   const members = await db.select({ groups: users.groups }).from(users).where(eq(users.orgId, config.orgId));
   const audienceSize = members.filter((u) => u.groups.includes(row.audience)).length;
+  const mode = calendarMode();
   const panel: SyncPanel = {
+    mode,
+    seriesInstance: Boolean(link?.recurringEventId),
     status: !row.published ? "none" : (link?.syncStatus ?? "unlinked"),
     errorCode: link?.errorCode ?? null,
     conflict: null,
     externalId: link?.externalEventId ?? null,
     external: null,
     calendarUnavailable: false,
+    calendarErrorCode: null,
     notifications: [],
     candidates: [],
-    inviteeCount: audienceSize,
+    // V testovacím režimu Googlu jde nová pozvánka jen testovacím příjemcům, ne publiku akce.
+    inviteeCount: mode === "google-test" ? (googleCalendarConfig()?.allowedAttendees.length ?? 0) : audienceSize,
   };
   try {
     if (link?.externalEventId) {
@@ -81,12 +91,15 @@ async function syncPanel(viewer: Viewer, row: EventRow): Promise<SyncPanel | nul
         panel.external = { summary: external.summary, attendees: external.attendees, meetingUrl: external.meetingUrl, cancelled: external.cancelled };
         panel.inviteeCount = external.attendees.length;
       }
-      panel.notifications = (await listNotifications(db, link.externalEventId)).map((n) => ({
-        sequence: n.sequence,
-        kind: n.kind,
-        recipients: n.recipients,
-        at: n.createdAt.toISOString(),
-      }));
+      // Záznam oznámení vede jen simulace. Google doručení nehlásí, žádost o oznámení je součástí zápisu.
+      if (mode === "simulation") {
+        panel.notifications = (await listNotifications(db, link.externalEventId)).map((n) => ({
+          sequence: n.sequence,
+          kind: n.kind,
+          recipients: n.recipients,
+          at: n.createdAt.toISOString(),
+        }));
+      }
     } else if (!link && row.published) {
       panel.candidates = (await pairingCandidates(viewer, row.id)).map((c) => ({
         id: c.id,
@@ -98,6 +111,7 @@ async function syncPanel(viewer: Viewer, row: EventRow): Promise<SyncPanel | nul
   } catch (error) {
     if (!(error instanceof CalendarError)) throw error;
     panel.calendarUnavailable = true;
+    panel.calendarErrorCode = error.code;
   }
   if (link?.conflict && row.published) {
     const published = row.published;

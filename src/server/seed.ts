@@ -1,3 +1,4 @@
+import { calendarMode } from "@/server/config";
 import { sql } from "drizzle-orm";
 import seed from "../../demo/seed.json";
 import { isoWeekday, toDateKey } from "@/lib/time";
@@ -85,7 +86,8 @@ export async function seedDatabase(tx: Executor): Promise<void> {
     });
     await tx.insert(eventRevisions).values({ eventId: e.id, revision: 1, action: "import", snapshot });
 
-    if ("calendarFixture" in e && e.calendarFixture) {
+    // Ukázkové pozvánky patří simulaci. V testovacím režimu Googlu začínají akce bez vazby a organizátor je spáruje.
+    if (calendarMode() === "simulation" && "calendarFixture" in e && e.calendarFixture) {
       const fixture = e.calendarFixture;
       const summary = calendarSummary(snapshot);
       await tx.insert(simCalendarEvents).values({

@@ -39,31 +39,30 @@ Přístup k preview: Vercel Authentication. Pro automatické testy je potřeba s
 (Share, 23 h) a dočasně povolený host preview v síťových pravidlech prostředí. Bypass for Automation a
 deploy hooky blokuje bezpečnostní filtr relace.
 
-Rozpracováno (draft PR #3, větev `ccr-f94571c9-6bvs9j`, čeká na ruční merge uživatelem; pokud už je
-sloučený, založ novou větev z `main`):
+Rozpracováno, čeká na ruční merge uživatelem v tomto pořadí:
 
-- `CLAUDE.md` má trvalou podmínku (ptát se při nejistotě, maximálně splnit zadání).
-- Generování měsíce předvyplní budoucím termínům firemního vzdělávání doporučené téma
-  (`suggestTopics` v `src/server/domain/topics.ts`). Lokálně: lint, typová kontrola, 34 z 34 testů,
-  build, ruční průchod generováním prosince. Na preview zatím neověřeno.
+- Draft PR #3 (větev `ccr-f94571c9-6bvs9j`): trvalá podmínka v `CLAUDE.md` a předvyplnění témat při
+  generování měsíce (`suggestTopics`).
+- Větev `ccr-ed96f52d-3gp38c` (stojí na PR #3): testovací režim Google Kalendáře. Adaptér
+  `src/server/calendar/google.ts`, OAuth a šifrované tokeny `google-auth.ts`, trasy
+  `/api/google/kalendar/pripojit` a `/callback`, sekce připojení v Integracích, migrace
+  `0002_integration_credentials`. Lokálně: lint, typová kontrola, 49 z 49 testů, build, průchod stránkou
+  Integrace v prohlížeči s falešnou konfigurací. **Neověřeno proti Googlu ani na preview.**
+  Popis a postup živého testu: `docs/google-kalendar.md`.
 
-Porovnání se zadáním (uživatel dodal ZIP, do repa nepatří). K nasaditelnosti chybí, v tomto pořadí:
+Zadání: uživatel dodal ZIP, do repa nepatří (repo je veřejné). Pokud v relaci není, vyžádej si ho.
+Části: 01 produkt a UX, 02 Google Kalendář, 03 audio a bezpečnost, 04 ověření a předání, 05 Git,
+06 bezpečnost kódu.
 
-1. Skutečný adaptér Google Kalendáře v testovacím režimu a živý test podle části 02.
-2. Skutečný přepis a zápis, soukromé úložiště souborů a dlouhé nahrávky (dnes limit 4 MB a 15 minut).
-3. Přihlášení firemní Google identitou místo fiktivních rolí.
+Další kroky, před každou částí nejdřív návrh uživateli:
 
-Další krok (bez Google účtů, ty uživatel dodá později z PC): připravit vše, co nejde ověřit živě,
-tak aby se po dodání přístupů jen připojilo a ověřilo. Před každou větší částí nejdřív návrh uživateli.
-
-1. Adaptér Google Kalendáře podle `src/server/calendar/provider.ts` a části 02 zadání: testovací režim,
-   seznam povolených kalendářů a pozvaných ověřený na serveru, práce s jedním výskytem série
-   (`recurringEventId`, `originalStartTime`), šifrované tokeny jen na serveru. Testy proti napodobenému
-   HTTP, v UI i v předání označit „neověřeno proti Googlu“.
+1. Přihlášení Google identitou (OIDC) jako režim vedle fiktivních rolí. Podle části 02 ověřit podpis,
+   issuer, audience, expiraci a ověřený e-mail, účet vázat na stabilní `sub`, role dál z databáze.
+   Uživatel zatím nepotvrdil, zda jde o druhý režim, nebo náhradu přístupového kódu.
 2. Nahrávky pro reálný provoz: soukromé úložiště souborů místo databáze, nahrávání dlouhých souborů
-   (tréninky mají 2 až 2,5 hodiny), dělení pro poskytovatele přepisu. Rozhraní `TranscriptionProvider`
-   doplnit o skutečný testovací režim, jakmile uživatel vybere poskytovatele.
-3. Přihlášení Google identitou (OIDC) připravit jako režim vedle fiktivních rolí.
+   (tréninky mají 2 až 2,5 hodiny), dělení pro poskytovatele přepisu. Skutečný testovací režim přepisu,
+   jakmile uživatel vybere poskytovatele.
+3. Po dodání Google účtů a OAuth klienta: nastavit proměnné na Preview a projít živý test Kalendáře.
 
 Čeká na odpověď uživatele (ptej se průběžně, nedomýšlej):
 
@@ -72,6 +71,7 @@ tak aby se po dodání přístupů jen připojilo a ověřilo. Před každou vě
 - Úložiště nahrávek: soukromý Vercel Blob, nebo rovnou úložiště pod účtem firmy.
 - Google přihlášení: náhrada přístupového kódu, nebo druhý režim vedle fiktivních rolí.
 - Skutečné pravidlo střídání typů ve slotu a zda předvyplňovat téma i tréninkům.
+- Kam trvale uložit zadání, aby ho nebylo nutné posílat (soukromé repo nebo Disk, ne tento repozitář).
 
 Otevřené, rozhoduje uživatel:
 

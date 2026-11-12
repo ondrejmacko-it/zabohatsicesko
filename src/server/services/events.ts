@@ -4,6 +4,7 @@ import { EXTRAORDINARY_TYPES } from "@/lib/labels";
 import { addDays, fromPragueLocal, isoWeekday, monthRange, toDateKey } from "@/lib/time";
 import type { EventType, Group, PlanStatus, SyncStatus } from "@/lib/types";
 import { audit } from "@/server/audit";
+import { targetCalendarId } from "@/server/calendar/target";
 import { config, now } from "@/server/config";
 import { getDb, type Executor } from "@/server/db/client";
 import {
@@ -18,7 +19,6 @@ import { planMonth } from "@/server/domain/generation";
 import { snapshotOf, type EventRow } from "@/server/domain/snapshot";
 import { suggestTopics } from "@/server/domain/topics";
 import { isOrganizer, visibleEvent, type Viewer } from "@/server/policy";
-import { DEMO_CALENDAR_ID } from "@/server/seed";
 import { DomainError } from "@/server/services/errors";
 import { listTopics } from "@/server/services/topics";
 
@@ -217,7 +217,7 @@ async function publishInTx(tx: Executor, row: EventRow, actorId: string, action:
   } else if (row.calendarIntent === "create") {
     await tx.insert(calendarLinks).values({
       eventId: row.id,
-      calendarId: DEMO_CALENDAR_ID,
+      calendarId: targetCalendarId(),
       syncStatus: "pending",
       syncedRevision: 0,
       attempts: 0,

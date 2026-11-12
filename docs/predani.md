@@ -7,6 +7,7 @@ Stav k 12. 11. 2026. Spuštění, proměnné prostředí a architektura jsou v [
 | Integrace | Režim v demu | Co je ověřeno | Co ověřeno není |
 |---|---|---|---|
 | Google Kalendář | **Simulace** se stejným rozhraním jako budoucí adaptér | Identita pozvánky, zachování hostů, RSVP a odkazu na schůzku, jedno oznámení na změnu, opakování bez duplicit, pořadí revizí, výpadek, odvolaný přístup, ruční změna mimo Wiki, zrušení jednoho termínu | Zápis do skutečného Google účtu. Simulovaný krok **nebyl** ověřen proti Google. |
+| Google Kalendář, testovací režim | **Připravený, vypnutý.** Adaptér Google Calendar API se zapíná `CALENDAR_MODE=google-test` | Proti napodobenému HTTP: vytvoření bez duplicit, úprava jen spravovaných polí, jeden výskyt série, odmítnutí zápisu do série a do cizí pozvánky, povolené kalendáře a příjemci, šifrování a obnova tokenu, odvolaný přístup, dělení chyb na přechodné a trvalé | **Neověřeno proti Googlu.** Živý test podle části 02 čeká na testovací účty, postup je v [google-kalendar.md](google-kalendar.md). |
 | Přepis a zápis | **Ukázkový**: zná jen přiloženou syntetickou nahrávku (podle otisku SHA-256) | Celá cesta nahrání → zpracování → kontrola → oprava → zveřejnění, opakované doručení úlohy, nahrazení audia, výpadek a opakování | Skutečný přepis a shrnutí. Jiný soubor skončí čitelnou chybou „nepodporovaný soubor“. |
 | Úložiště nahrávek | Soukromé, v databázi, vydávání jen přes autorizovanou cestu | Přístup vedoucího, zamítnutí účastníka, organizátora bez role a kolegy mimo publikum, i přímým odkazem | Uchovávání a mazání podle pravidel firmy. |
 
@@ -14,7 +15,7 @@ Přepínače chybových stavů jsou v *Vzdělávání → Integrace* (jen organi
 
 ## Ověřené scénáře
 
-Automaticky: `npm test` (34 testů nad skutečnou databází PGlite), lint, typová kontrola a produkční build.
+Automaticky: `npm test` (49 testů nad skutečnou databází PGlite, z toho 15 pro adaptér Google Kalendáře proti napodobenému HTTP), lint, typová kontrola a produkční build.
 Ručně v prohlížeči (Chromium, desktop 1440 px a iPhone 13) celý průchod podle části 04:
 
 1. Špatný přístupový kód je odmítnut. Bez přihlášení vede stránka na vstup a API vrací 401.
@@ -50,10 +51,9 @@ Ručně v prohlížeči (Chromium, desktop 1440 px a iPhone 13) celý průchod p
 
 1. **Přístupy a hosting.** Napojit přihlášení Wiki (firemní Google identita) a role místo fiktivních
    rolí. Oddělená testovací a produkční databáze. Zálohy a obnova.
-2. **Google Kalendář, živý test** podle části 02: testovací kalendář, organizátor a jeden příjemce,
-   existující pozvánka se známým RSVP a odkazem na schůzku. Změna tématu, času, opakované uložení, změna
-   jednoho výskytu série, odpojení oprávnění. Adaptér implementuje rozhraní
-   `src/server/calendar/provider.ts` (events.get / insert / patch se `sendUpdates=all`).
+2. **Google Kalendář, živý test** podle části 02. Adaptér, připojení účtu a testovací režim jsou hotové,
+   zbývá dodat testovací účty a OAuth klienta a projít kroky v [google-kalendar.md](google-kalendar.md).
+   Produkce dostane vlastního OAuth klienta, vlastní klíč a vlastní seznam kalendářů.
 3. **Rozhodnutí s firmou:** kdo vlastní současné pozvánky a ke kterému kalendáři má Wiki zapisovat; zda se
    série převádí, nebo se nové akce zakládají od domluveného data; jak se střídají typy po výjimce.
 

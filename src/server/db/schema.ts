@@ -134,6 +134,21 @@ export const integrationSettings = pgTable(
   (t) => [primaryKey({ columns: [t.orgId, t.key] })],
 );
 
+/** Připojení integrace. Obnovovací token je uložený jen šifrovaně (AES-256-GCM), klíč je mimo databázi. */
+export const integrationCredentials = pgTable(
+  "integration_credentials",
+  {
+    orgId: text("org_id").notNull(),
+    provider: text("provider").$type<"google-calendar">().notNull(),
+    accountEmail: text("account_email").notNull(),
+    encryptedRefreshToken: text("encrypted_refresh_token").notNull(),
+    scopes: text("scopes").notNull(),
+    connectedBy: text("connected_by"),
+    connectedAt: ts("connected_at").notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.orgId, t.provider] })],
+);
+
 export const simCalendarEvents = pgTable("sim_calendar_events", {
   id: text("id").primaryKey(),
   calendarId: text("calendar_id").notNull(),

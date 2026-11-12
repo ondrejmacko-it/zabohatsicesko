@@ -2,24 +2,40 @@ import { and, eq, isNull, lt, or, sql } from "drizzle-orm";
 import { addDays, fromPragueLocal, toDateKey } from "@/lib/time";
 import type { EventSnapshot, SimAttendee } from "@/lib/types";
 import { audit, logError } from "@/server/audit";
-import { config } from "@/server/config";
+import { calendarMode, config, googleCalendarConfig } from "@/server/config";
 import { getDb, type Db } from "@/server/db/client";
 import { calendarLinks, events, users, type ManagedFields } from "@/server/db/schema";
 import { calendarSummary } from "@/server/domain/snapshot";
 import { loadEventRow } from "@/server/services/events";
 import { DomainError } from "@/server/services/errors";
 import { isOrganizer, type Viewer } from "@/server/policy";
-import { DEMO_CALENDAR_ID } from "@/server/seed";
+import { GoogleCalendar } from "./google";
+import { storedAccessToken } from "./google-auth";
 import { CalendarError, type CalendarProvider, type ExternalEvent, type ManagedEventData } from "./provider";
 import { SimulatedCalendar } from "./simulated";
+import { targetCalendarId } from "./target";
 
 const MAX_ATTEMPTS = 3;
 const LEASE_SEC = 60;
-/** V testovacím režimu smí pozvánka jít jen na fiktivní adresy. Ověřuje se na serveru před zápisem. */
-const ALLOWED_ATTENDEE_DOMAIN = "@example.invalid";
+/** V simulaci smí pozvánka jít jen na fiktivní adresy. Ověřuje se na serveru před zápisem. */
+const SIMULATION_ATTENDEE_DOMAIN = "@example.invalid";
+
+/** Poskytovatel, který při každém volání ohlásí chybějící konfiguraci. Nikdy nespadne zpět do simulace. */
+const unconfigured = new Proxy({} as CalendarProvider, {
+  get: () => async () => {
+    throw new CalendarError("calendar_not_configured", false);
+  },
+});
 
 export function calendarProvider(db: Db): CalendarProvider {
-  return new SimulatedCalendar(db);
+  if (calendarMode() === "simulation") return new SimulatedCalendar(db);
+  const cfg = googleCalendarConfig();
+  if (!cfg) return unconfigured;
+  return new GoogleCalendar({
+    tokens: storedAccessToken(db, cfg),
+    allowedCalendarIds: cfg.allowedCalendarIds,
+    allowedAttendees: cfg.allowedAttendees,
+  });
 }
 
 function desiredData(eventId: string, snapshot: EventSnapshot): ManagedEventData {
@@ -43,11 +59,19 @@ const managed = (data: ManagedEventData | ExternalEvent): ManagedFields => ({
 const sameManaged = (a: ManagedFields, b: ManagedFields) =>
   a.summary === b.summary && a.startsAt === b.startsAt && a.endsAt === b.endsAt && a.cancelled === b.cancelled;
 
-async function audienceAttendees(db: Db, audience: string): Promise<SimAttendee[]> {
+/**
+ * Komu půjde nová pozvánka. V simulaci publiku akce (fiktivní adresy). V testovacím režimu Googlu
+ * jen povoleným testovacím příjemcům, skutečné publikum se neosloví.
+ */
+async function inviteAttendees(db: Db, audience: string): Promise<SimAttendee[]> {
+  const cfg = googleCalendarConfig();
+  if (cfg) return cfg.allowedAttendees.map((email) => ({ email, name: email, responseStatus: "needsAction" as const }));
   const rows = await db.select().from(users).where(eq(users.orgId, config.orgId));
-  return rows
+  const attendees = rows
     .filter((u) => u.groups.includes(audience))
     .map((u) => ({ email: u.email, name: u.name, responseStatus: "needsAction" as const }));
+  if (attendees.some((a) => !a.email.endsWith(SIMULATION_ATTENDEE_DOMAIN))) throw new CalendarError("attendee_not_allowed", false);
+  return attendees;
 }
 
 /** Zámek na úrovni akce: souběžné synchronizace téže akce se serializují. */
@@ -162,9 +186,7 @@ async function pushToCalendar(
     const key = `${config.orgId}:${link.eventId}`;
     const existing = await provider.findByKey(link.calendarId, key);
     if (existing) return sameManaged(managed(existing), managed(desired)) ? existing : provider.patch(link.calendarId, existing.id, desired);
-    const attendees = await audienceAttendees(db, snapshot.audience);
-    if (attendees.some((a) => !a.email.endsWith(ALLOWED_ATTENDEE_DOMAIN))) throw new CalendarError("attendee_not_allowed", false);
-    return provider.create(link.calendarId, key, desired, attendees);
+    return provider.create(link.calendarId, key, desired, await inviteAttendees(db, snapshot.audience));
   }
   const external = await provider.get(link.calendarId, link.externalEventId);
   if (!external) throw new CalendarError("calendar_missing", false);
@@ -204,7 +226,7 @@ export async function requestNewInvite(viewer: Viewer, eventId: string): Promise
     await tx.update(events).set({ calendarIntent: "create" }).where(eq(events.id, eventId));
     await tx
       .insert(calendarLinks)
-      .values({ eventId, calendarId: DEMO_CALENDAR_ID, syncStatus: "pending", syncedRevision: 0, attempts: 0 })
+      .values({ eventId, calendarId: targetCalendarId(), syncStatus: "pending", syncedRevision: 0, attempts: 0 })
       .onConflictDoNothing();
     await audit(tx, viewer.id, "calendar.create_intent", "event", eventId);
   });
@@ -222,8 +244,11 @@ export async function pairWithExisting(viewer: Viewer, eventId: string, external
     if (!row?.published) throw new DomainError("invalid_state");
     await tx.insert(calendarLinks).values({
       eventId,
-      calendarId: DEMO_CALENDAR_ID,
+      calendarId: targetCalendarId(),
       externalEventId: external.id,
+      // U opakované události se vazba drží konkrétního výskytu, ostatní termíny série zůstanou.
+      recurringEventId: external.recurringEventId ?? null,
+      originalStartTime: external.originalStartTime ?? null,
       syncedFields: managed(external),
       syncStatus: "pending",
       syncedRevision: 0,
@@ -241,7 +266,7 @@ export async function pairingCandidates(viewer: Viewer, eventId: string): Promis
   if (!row?.published) return [];
   const day = toDateKey(row.startsAt);
   const candidates = await calendarProvider(db).listBetween(
-    DEMO_CALENDAR_ID,
+    targetCalendarId(),
     fromPragueLocal(day, "00:00"),
     fromPragueLocal(addDays(day, 1), "00:00"),
   );
