@@ -1,0 +1,25 @@
+name: Kontrola bezpečnosti
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  citlive-cesty:
+    name: Citlivé cesty v PR
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout přesného commitu PR
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Kontrola změněných cest
+        env:
+          ZBC_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          ZBC_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python3 scripts/overit-zmeny-gitu.py --range "$ZBC_BASE_SHA" "$ZBC_HEAD_SHA"
