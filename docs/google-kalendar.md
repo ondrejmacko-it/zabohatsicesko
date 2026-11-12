@@ -83,7 +83,8 @@ testovací kalendář „Vzdělávání test“. Wiki ovládal Playwright, Googl
 
 Nalezené chyby (opravené na téže větvi, s testy): obnova ukázkových dat mazala připojení Kalendáře
 (`TRUNCATE … CASCADE` přes cizí klíč na uživatele) a po novém připojení se zastavené akce samy
-neodeslaly. Opravy zatím nebyly znovu ověřeny živě.
+neodeslaly. Na preview živě ověřeno: obnova dat nechá Kalendář připojený. Automatické odeslání po novém
+připojení zatím jen testy proti napodobenému Googlu.
 
 ## Co testy proti napodobenému HTTP neříkají
 

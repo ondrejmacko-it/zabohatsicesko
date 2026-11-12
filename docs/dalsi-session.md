@@ -21,12 +21,12 @@ Uživateli tykej, piš přátelsky. Větší změny nejdřív navrhni, nejasnost
 
 - **Google Kalendář: všech 8 kroků prošlo proti skutečnému Googlu**, výsledky v `docs/google-kalendar.md`.
   Zjištění: Google při změně termínu vynuluje RSVP (text ve Wiki upraven).
-- Opravy po testu, zatím neověřené živě: obnova ukázkových dat už neodpojí Kalendář, po novém připojení
-  se akce zastavené odvoláním přístupu odešlou samy, `/vstup` a štítky ukazují skutečný režim.
+- Opravy po testu: obnova ukázkových dat už neodpojí Kalendář a `/vstup` ukazuje skutečný režim (obojí
+  ověřeno na preview). Automatické odeslání po novém připojení zatím jen testy, živě neověřeno.
 - **Přihlášení Googlem**: uživatel se přihlásil (`session.start.google` v auditu), celý živý test
   z `docs/google-prihlaseni.md` (5 kroků) zatím neproběhl. Je to první úkol.
-- Ukázková data na preview jsou po testu změněná (Trénink RM 12. 11. má téma „Živý test: po odebrání
-  přístupu“, 13. 11. je zrušený, 26. 11. má pozvánku). Před ukázkou obnovit v Integracích.
+- Ukázková data na preview jsou po testu obnovená do výchozího stavu, Kalendář zůstal připojený.
+  V testovacím kalendáři Googlu zůstaly testovací pozvánky (12. 11., série, 26. 11.), může je smazat uživatel.
 
 ## Vercel a přístupy
 
