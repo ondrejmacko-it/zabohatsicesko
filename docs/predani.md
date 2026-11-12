@@ -14,7 +14,7 @@ Přepínače chybových stavů jsou v *Vzdělávání → Integrace* (jen organi
 
 ## Ověřené scénáře
 
-Automaticky: `npm test` (32 testů nad skutečnou databází PGlite), lint, typová kontrola a produkční build.
+Automaticky: `npm test` (34 testů nad skutečnou databází PGlite), lint, typová kontrola a produkční build.
 Ručně v prohlížeči (Chromium, desktop 1440 px a iPhone 13) celý průchod podle části 04:
 
 1. Špatný přístupový kód je odmítnut. Bez přihlášení vede stránka na vstup a API vrací 401.
@@ -42,6 +42,9 @@ Ručně v prohlížeči (Chromium, desktop 1440 px a iPhone 13) celý průchod p
 - **Formát data a času** v polích formuláře určuje prohlížeč uživatele.
 - **Střídání typů** ve slotu šablony (např. trénink poradců / portfolio) je zatím podle lichého a sudého
   týdne. Ze vzoru v Numbers pevné pravidlo nevyplývá, organizátor může každý termín změnit ručně.
+
+- **Předvyplnění témat** při generování měsíce se týká jen firemního vzdělávání FP a RM. Tréninkům,
+  Portfolio týmu a Action time téma určuje vedoucí. Rozsah je potřeba potvrdit s firmou.
 
 ## Před pilotem s lidmi (harmonogram)
 

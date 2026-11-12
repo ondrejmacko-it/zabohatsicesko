@@ -28,7 +28,7 @@ serveru) nebo tlačítkem *Vzdělávání → Integrace → Obnovit ukázková d
 | Příkaz | Co dělá |
 |---|---|
 | `npm run lint` · `npm run typecheck` | ESLint a TypeScript |
-| `npm test` | 32 testů: přístupy, plán a revize, Kalendář, témata, nahrávky, čas a session |
+| `npm test` | 34 testů: přístupy, plán a revize, Kalendář, témata, nahrávky, čas a session |
 | `npm run build` | Produkční build (vyžaduje `SESSION_SECRET` a `DEMO_ACCESS_CODE`) |
 | `npm run db:migrate` · `npm run db:reset` | Migrace a seed, nebo obnova ukázkových dat |
 
@@ -93,6 +93,9 @@ Hlavní rozhodnutí:
   nebo výslovně založí novou. Akce založené ve Wiki pozvánku dostanou při zveřejnění.
 - **Šablona doplňuje jen prázdné sloty.** Klíč návrhu je slot + původní datum. Ruční úpravy i přesuny
   zůstanou, smazaný návrh se nevrátí. Svátky ČR vzniknou jako viditelný záznam bez pozvánky.
+- **Témata jdou do návrhu měsíce rovnou.** Budoucím termínům firemního vzdělávání generování předvyplní
+  doporučené téma jejich publika: jen téma se zájemci, které ještě nemá termín, každé nejvýš jednou.
+  Vzniká jako návrh, organizátor ho před zveřejněním změní nebo smaže.
 - **Nahrávka patří k ID akce, ne k odhadu z obsahu.** Rozpoznaný typ obsahu jen doporučí šablonu zápisu
   a upozorní na nesoulad.
 

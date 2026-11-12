@@ -160,13 +160,13 @@ export async function deleteDraftAction(_prev: ActionResult | null, formData: Fo
 export async function generateMonthAction(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
   return run(async (user) => {
     const month = z.string().refine(isValidMonthKey).parse(formData.get("month"));
-    const created = await generateMonth(user, month);
-    return {
-      ok: true,
-      message: created
-        ? `Doplněno ${created} ${created === 1 ? "místo" : created < 5 ? "místa" : "míst"} ze šablony. Stávající akce zůstaly beze změny.`
-        : "Měsíc už má všechna místa ze šablony. Nic se nezměnilo.",
-    };
+    const { created, withTopic } = await generateMonth(user, month);
+    if (!created) return { ok: true, message: "Měsíc už má všechna místa ze šablony. Nic se nezměnilo." };
+    const places = `${created} ${created === 1 ? "místo" : created < 5 ? "místa" : "míst"}`;
+    const topicNote = withTopic
+      ? ` U ${withTopic} ${withTopic === 1 ? "termínu" : "termínů"} je předvyplněné doporučené téma podle zájmu, před zveřejněním ho můžete změnit.`
+      : "";
+    return { ok: true, message: `Doplněno ${places} ze šablony. Stávající akce zůstaly beze změny.${topicNote}` };
   });
 }
 

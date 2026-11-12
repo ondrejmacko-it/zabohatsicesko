@@ -4,7 +4,7 @@ import { SimulatedCalendar, simulateManualEdit } from "@/server/calendar/simulat
 import { pairWithExisting, pairingCandidates, requestNewInvite, requestRetry, syncEvent } from "@/server/calendar/sync";
 import { DEMO_CALENDAR_ID } from "@/server/seed";
 import { getDb } from "@/server/db/client";
-import { calendarLinks, events, simCalendarEvents, simCalendarNotifications } from "@/server/db/schema";
+import { calendarLinks, events, simCalendarEvents, simCalendarNotifications, topics } from "@/server/db/schema";
 import { snapshotOf } from "@/server/domain/snapshot";
 import { formValuesOf } from "@/server/services/detail";
 import { DomainError } from "@/server/services/errors";
@@ -183,9 +183,9 @@ describe("úprava zveřejněné akce a Kalendář", () => {
 
 describe("generování ze šablony", () => {
   test("doplní jen chybějící sloty, svátky a ruční úpravy zachová", async () => {
-    expect(await generateMonth(organizer, "2026-11")).toBe(0);
+    expect((await generateMonth(organizer, "2026-11")).created).toBe(0);
 
-    const created = await generateMonth(organizer, "2026-12");
+    const { created } = await generateMonth(organizer, "2026-12");
     expect(created).toBeGreaterThan(10);
     const december = (await listMonth(organizer, "2026-12")).filter((c) => monthOf(toDateKey(new Date(c.startsAt))) === "2026-12");
     const holidays = december.filter((c) => c.type === "holiday").map((c) => c.startsAt.slice(0, 10));
@@ -199,11 +199,41 @@ describe("generování ze šablony", () => {
     const toDelete = december.find((c) => c.type === "action" && c.startsAt.startsWith("2026-12-08"))!;
     await deleteDraft(organizer, toDelete.id, 1);
 
-    expect(await generateMonth(organizer, "2026-12")).toBe(0);
+    expect((await generateMonth(organizer, "2026-12")).created).toBe(0);
     const edited = (await loadEventRow(db, draft.id))!;
     expect(edited.topicTitle).toBe("Ruční úprava");
     expect(await loadEventRow(db, toDelete.id)).toBeNull();
     const all = await db.select().from(events);
     expect(new Set(all.map((e) => e.generationKey).filter(Boolean)).size).toBe(all.filter((e) => e.generationKey).length);
+  });
+
+  test("firemnímu vzdělávání předvyplní doporučené téma, každé nejvýš jednou a jen jako návrh", async () => {
+    const { withTopic } = await generateMonth(organizer, "2026-12");
+    const db = await getDb();
+    const generated = (await db.select().from(events)).filter((e) => e.generationKey?.includes(":2026-12-"));
+    const suggested = generated.filter((e) => e.topicId !== null);
+
+    expect(withTopic).toBe(suggested.length);
+    expect(suggested.length).toBeGreaterThan(0);
+    expect(suggested.every((e) => e.type.startsWith("education-") && e.status === "draft" && e.published === null)).toBe(true);
+    expect(new Set(suggested.map((e) => e.topicId)).size).toBe(suggested.length);
+
+    const allTopics = await db.select().from(topics);
+    for (const event of suggested) {
+      const topic = allTopics.find((t) => t.id === event.topicId)!;
+      expect(event.topicTitle).toBe(topic.name);
+      expect([event.audience, "vsichni"]).toContain(topic.audience);
+    }
+    // Nejvíc zájemců mezi tématy pro FP má „Otevřené otázky na schůzce“.
+    const firstFp = suggested.filter((e) => e.type === "education-fp").sort((a, b) => +a.startsAt - +b.startsAt)[0];
+    expect(firstFp?.topicId).toBe("topic-questions");
+  });
+
+  test("téma s budoucím termínem v návrhu se podruhé nenavrhne", async () => {
+    const { revision, ...input } = await inputOf(PUBLISHED_RM, { topicTitle: "Otevřené otázky na schůzce", topicId: "topic-questions" });
+    await updateEvent(organizer, PUBLISHED_RM, revision, input, "draft");
+    await generateMonth(organizer, "2026-12");
+    const all = await (await getDb()).select().from(events);
+    expect(all.filter((e) => e.topicId === "topic-questions").map((e) => e.id)).toEqual([PUBLISHED_RM]);
   });
 });

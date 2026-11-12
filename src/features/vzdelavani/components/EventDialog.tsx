@@ -8,6 +8,7 @@ import { Modal } from "@/components/Modal";
 import { GROUP_LABELS, TYPE_LABELS } from "@/lib/labels";
 import { EVENT_TYPES, GROUPS } from "@/lib/types";
 import { defaultAudience } from "@/server/domain/generation";
+import { topicFitsAudience } from "@/server/domain/topics";
 import type { EventFormValues } from "@/server/services/detail";
 import { saveEventAction, type ActionResult } from "../actions";
 
@@ -69,7 +70,7 @@ function EventForm({ mode, id, revision, initial, published, people, topics, inv
   const isHoliday = values.type === "holiday";
   const incomplete = !isHoliday && (!values.topicTitle.trim() || !values.leadId);
   const calendarChange = published !== null && MANAGED.some((key) => (key === "endDate" ? (multiDay ? values.endDate : null) : values[key]) !== published[key]);
-  const suggestions = topics.filter((t) => t.audience === values.audience || t.audience === "vsichni").slice(0, 3);
+  const suggestions = topics.filter((t) => topicFitsAudience(t.audience, values.audience)).slice(0, 3);
 
   useEffect(() => {
     if (!dirty) return;

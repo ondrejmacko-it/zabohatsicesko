@@ -4,6 +4,12 @@
 
 Repo obsahuje samostatné demo modulu Vzdělávání pro firemní Wiki Za bohatší Česko. Pracuje výhradně s fiktivními daty a označenými režimy integrací. Zadání a pracovní podklady (PDF, video, snímky) se do repa nedávají. Pokud se dvě instrukce o větvích nebo ochraně liší, platí tento soubor.
 
+## Podmínka pro každou relaci a každý prompt
+
+- Výsledek musí maximálně splnit zadání. Má být co nejpřehlednější a zároveň co nejsilnější: umět vše, co zadání vyžaduje.
+- Pokud něco nevíš nebo si nejsi jistý (výklad zadání, rozsah, dopad změny, stav integrace), zeptej se uživatele dřív, než budeš pokračovat. Nedomýšlej si a nejistotu neschovávej.
+- Větší změny nejdřív navrhni a projdi s uživatelem, teprve potom je prováděj.
+
 ## Git
 
 - Před každou sérií změn ověř stav, aktivní větev a základ. Pro změny založ vlastní větev z dohodnutého základu. Nikdy nepřepisuj cizí necommitnutou práci. Při souběžné práci použij oddělený worktree, pokud je dostupný.
