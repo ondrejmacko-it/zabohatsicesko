@@ -4,39 +4,54 @@ Zkopíruj text níže jako první zprávu nové relace Claude Code (repo `ondrej
 
 ---
 
-Pokračuj na demu modulu Vzdělávání. Kód je sloučený do `main` (PR #1). Nečti znovu celé zadání ani
-celý kód. Kontext máš v `README.md` a `docs/predani.md`, pravidla v `CLAUDE.md`.
+Pokračuj na demu modulu Vzdělávání. Kód i dokumentace jsou sloučené do `main` (PR #1 a #2). Nečti
+znovu celé zadání ani celý kód. Kontext máš v `README.md` a `docs/predani.md`, pravidla v `CLAUDE.md`.
+
+Trvalá podmínka (je i v `CLAUDE.md`): výsledek musí maximálně splnit zadání, být co nejpřehlednější a
+zároveň co nejsilnější. Pokud něco nevíš nebo si nejsi jistý, zeptej se. Větší změny nejdřív navrhni.
 
 Stav Vercelu (tým `maci`, `team_PtkXmFd9hI7UeUYovGkbwZQG`, plán Hobby):
 
-- Projekt `zbc-vzdelavani-demo` (`prj_MYpwzB5KekzHAVwbiUDrZv6CG12i`) napojený na repo, založený přes
-  Vercel REST API s tokenem uloženým jako síťové tajemství prostředí (Vercel konektor vrací 403 na
-  zakládání projektů).
-- Vercel Authentication `deploymentType = "all"`, ignored build step přeskakuje produkci (první
-  produkční deploy skončil `CANCELED`), region funkcí `fra1`.
+- Projekt `zbc-vzdelavani-demo` (`prj_MYpwzB5KekzHAVwbiUDrZv6CG12i`) napojený na repo. Vercel konektor
+  vrací 403 na zakládání projektů, Vercel REST API jde přes token v síťových tajemstvích prostředí.
+- Vercel Authentication `deploymentType = "all"`, region funkcí `fra1`. Ignored build step přeskakuje
+  produkci: po sloučení PR #2 skončil produkční deploy z `main` (`a1b6eba`) jako `CANCELED`.
 - Neon `neon-zbz-vzdelavani-demo` (fra1, Free) připojený jen k Preview. `SESSION_SECRET` a
   `DEMO_ACCESS_CODE` jsou sensitive jen pro Preview. Kód zná jen uživatel, necommitovat.
-- REST `POST /v13/deployments` s `gitSource` bez `target` vytvořil produkční deploy, proto se preview
-  spouští pushem pracovní větve (Git integrace).
+- Preview se spouští pushem pracovní větve (Git integrace). REST `POST /v13/deployments` s `gitSource`
+  bez `target` vytvořil produkční deploy, nepoužívat.
+- Poslední ověřené preview je `READY` z větve `claude/vzdelavani-vercel-preview-52jflw` (`c84ada1`, kód
+  shodný s `main`). Větev je sloučená, uživatel ji zatím záměrně nemaže.
 
-Ověřeno na preview (12. 11. 2026, Playwright přes sdílecí odkaz Vercelu): špatný kód odmítnut, bez
-přihlášení stránka vede na vstup a API vrací 401; organizátor uložil návrh (přežil obnovení), potvrdil
-dopad a zveřejnil akci 12. 11. → stejná pozvánka `demo-existing-rm-1112`, host s RSVP zůstal, stav
-Synchronizováno; vedoucí nahrál testovací nahrávku k 11. 11., Ke kontrole → oprava → zveřejnění, audio
-200; účastník FP čte zápis bez přepisu a audia; účastník RM dostal „Záznam neexistuje nebo k němu
-nemáte přístup“ (stránka i přímý odkaz 404); organizátor bez role kontrolora audio nezíská. Žádné 5xx.
+Ověřeno 12. 11. 2026:
 
-Ukázková data v Neonu jsou po testu obnovená tlačítkem Integrace → Nástroje ukázky → „Obnovit
-ukázková data“ (stejná funkce `resetDatabase` jako `npm run db:reset`, bez čtení `DATABASE_URL`).
+- Lokálně na `c84ada1`: lint, typová kontrola, 32 z 32 testů, build.
+- Na preview (Playwright přes sdílecí odkaz Vercelu): vstup kódem, plán a zveřejnění akce
+  organizátorem, synchronizace Kalendáře, nahrávka vedoucího od kontroly po zveřejnění, omezení
+  účastníků FP a RM, organizátor bez role kontrolora. Žádné 5xx. Podrobnosti jsou v popisu PR #2.
+- Integrace uvnitř dema (Google Kalendář, zpracování nahrávek) běží v označené simulaci, proti
+  skutečným službám se netestovaly.
+
+Ukázková data v Neonu jsou po testu obnovená (Integrace → Nástroje ukázky → „Obnovit ukázková data“,
+stejná funkce `resetDatabase` jako `npm run db:reset`).
 
 Přístup k preview: Vercel Authentication. Pro automatické testy je potřeba sdílecí odkaz z dashboardu
 (Share, 23 h) a dočasně povolený host preview v síťových pravidlech prostředí. Bypass for Automation a
 deploy hooky blokuje bezpečnostní filtr relace.
 
-Další krok: počkat na zadání od uživatele (např. draft PR z `claude/vzdelavani-vercel-preview-52jflw`
-s výsledky ověření, nebo další úpravy dema).
+Rozpracováno: větev `ccr-f94571c9-6bvs9j` přidává do `CLAUDE.md` trvalou podmínku (ptát se při
+nejistotě, maximálně splnit zadání) a aktualizuje tento soubor. Čeká na PR a ruční merge uživatelem.
 
-Otevřené: preview běží z větve `claude/vzdelavani-vercel-preview-52jflw` (kód shodný s `main`).
-Token pro `api.vercel.com` je uložený v síťových tajemstvích prostředí Default, po dokončení ho smazat.
+Další krok: projít s uživatelem zadání bod po bodu proti demu (zadání není v repu, uživatel ho musí
+dodat nebo shrnout požadavky) a domluvit větší změny, které uživatel navrhne.
 
-Respektuj limit kontextu v `CLAUDE.md`. Na `main` nepushuj.
+Otevřené, rozhoduje uživatel:
+
+- Token pro `api.vercel.com` v síťových tajemstvích prostředí Default a větev
+  `claude/vzdelavani-vercel-preview-52jflw` zatím zůstávají. Smazat, až preview nebude potřeba.
+- V kořeni `main` je jednobajtový soubor `h` (commit „Create h“), nejspíš omyl.
+- Tento soubor uvádí identifikátory týmu a projektu na Vercelu a název databáze v Neonu. Nejsou to
+  tajemství, u veřejného repa zvážit odstranění.
+- Střídání typů ve slotu šablony (lichý a sudý týden) je odhad, pevné pravidlo ze vzoru nevyplývá.
+
+Respektuj limit kontextu v `CLAUDE.md`. Na `main` nepushuj, merge dělá uživatel přes PR.
