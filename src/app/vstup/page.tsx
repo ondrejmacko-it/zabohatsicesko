@@ -7,7 +7,9 @@ import { GateForm } from "./GateForm";
 export const metadata: Metadata = { title: "Vstup do ukázky" };
 
 const GOOGLE_RESULTS: Record<string, string> = {
-  "ucet-neni-povoleny": "Tento účet Google nemá do ukázky přístup. Zkuste jiný účet, nebo požádejte organizátora o přidání.",
+  "ucet-neni-povoleny": "Tento účet Google nemá do Wiki přístup. Zkuste jiný účet, nebo se obraťte na správce ZBC.",
+  "ceka-na-schvaleni":
+    "Žádost o přístup je odeslaná. Jakmile vám správce ZBC přidělí roli a skupiny, přihlaste se znovu stejným účtem.",
   "neplatny-stav": "Přihlášení vypršelo nebo začalo v jiném okně. Zkuste to prosím znovu.",
   zruseno: "Přihlášení účtem Google bylo zrušeno.",
   "nepodarilo-se": "Přihlášení účtem Google se nepodařilo dokončit. Zkuste to prosím znovu.",
@@ -15,7 +17,9 @@ const GOOGLE_RESULTS: Record<string, string> = {
 
 export default async function GatePage({ searchParams }: { searchParams: Promise<{ google?: string }> }) {
   await connection(); // vždy za běhu, nikdy při buildu
-  const googleError = GOOGLE_RESULTS[(await searchParams).google ?? ""];
+  const googleResult = (await searchParams).google ?? "";
+  const googleError = GOOGLE_RESULTS[googleResult];
+  const isPending = googleResult === "ceka-na-schvaleni";
   const personas = await listPersonas();
   return (
     <>
@@ -38,10 +42,11 @@ export default async function GatePage({ searchParams }: { searchParams: Promise
             <section className="stack gate-google" aria-labelledby="google-prihlaseni">
               <h2 id="google-prihlaseni">Přihlášení účtem Google</h2>
               <p className="small muted">
-                Testovací režim pro povolené účty. Google jen ověří, kdo jste. Roli a skupiny určuje Wiki.
+                Google jen ověří, kdo jste. Roli a skupiny přiděluje správce ZBC ve Wiki. Nový účet nejdřív
+                počká na schválení.
               </p>
               {googleError && (
-                <p className="form-error" role="alert">
+                <p className={isPending ? "notice" : "form-error"} role={isPending ? "status" : "alert"}>
                   {googleError}
                 </p>
               )}

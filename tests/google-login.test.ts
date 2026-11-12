@@ -113,9 +113,13 @@ describe("konfigurace přihlášení", () => {
     vi.stubEnv("LOGIN_MODE", "");
     expect(googleLoginConfig()).toBeNull();
     vi.stubEnv("LOGIN_MODE", "google-test");
-    vi.stubEnv("GOOGLE_LOGIN_ACCOUNTS", "");
+    vi.stubEnv("GOOGLE_OAUTH_CLIENT_SECRET", "");
     expect(googleLoginConfig()).toBeNull();
-    expect(googleLoginConfigProblems()).toEqual(["GOOGLE_LOGIN_ACCOUNTS"]);
+    expect(googleLoginConfigProblems()).toEqual(["GOOGLE_OAUTH_CLIENT_SECRET"]);
+    vi.stubEnv("GOOGLE_OAUTH_CLIENT_SECRET", ENV.GOOGLE_OAUTH_CLIENT_SECRET);
+    // Zaváděcí seznam je volitelný. Bez něj pouští dovnitř jen pozvánky a schválené žádosti.
+    vi.stubEnv("GOOGLE_LOGIN_ACCOUNTS", "");
+    expect(googleLoginConfig()?.accounts.size).toBe(0);
     vi.stubEnv("GOOGLE_LOGIN_ACCOUNTS", ENV.GOOGLE_LOGIN_ACCOUNTS);
   });
 
@@ -132,7 +136,7 @@ describe("stav žádosti", () => {
   test("žádá jen identitu, používá PKCE a nonce a platí pro stejný prohlížeč a krátkou dobu", () => {
     const start = beginLogin(googleLoginConfig()!, NOW);
     const url = new URL(start.url);
-    expect(url.searchParams.get("scope")).toBe("openid email");
+    expect(url.searchParams.get("scope")).toBe("openid email profile");
     expect(url.searchParams.get("redirect_uri")).toBe("https://wiki.test.invalid/api/google/prihlaseni/callback");
     expect(url.searchParams.get("code_challenge_method")).toBe("S256");
     const state = url.searchParams.get("state");
@@ -153,7 +157,7 @@ describe("stav žádosti", () => {
 describe("ověření ID tokenu", () => {
   test("přijme platný token a vrátí sub a e-mail malými písmeny", async () => {
     const result = await verifyToken(google.sign(google.claims({ email: "Organizator.Test@Example.com" })));
-    expect(result).toEqual({ ok: true, identity: { sub: "google-sub-organizator", email: ORGANIZER_EMAIL } });
+    expect(result).toEqual({ ok: true, identity: { sub: "google-sub-organizator", email: ORGANIZER_EMAIL, name: null } });
   });
 
   test.each([
@@ -213,8 +217,7 @@ describe("dokončení přihlášení", () => {
     expect(member?.role).toBe("member");
   });
 
-  test("účet mimo seznam, neplatný token a selhání výměny dovnitř nepustí a nic neuloží", async () => {
-    expect(await login({ email: "cizi@example.com", sub: "cizi" })).toEqual({ ok: false, reason: "not_allowed" });
+  test("neplatný token a selhání výměny dovnitř nepustí a nic neuloží", async () => {
     expect(await login({ email_verified: false })).toEqual({ ok: false, reason: "invalid_token" });
     google.nextIdToken = null;
     const cfg = googleLoginConfig()!;
@@ -229,14 +232,19 @@ describe("dokončení přihlášení", () => {
     await login();
     // Adresu později získal jiný účet Google.
     expect(await login({ sub: "jiny-ucet-se-stejnou-adresou" })).toEqual({ ok: false, reason: "account_conflict" });
-    // Tentýž účet Google si změnil adresu na adresu jiného uživatele.
-    expect(await login({ email: MEMBER_EMAIL })).toEqual({ ok: false, reason: "account_conflict" });
-    expect(await identities()).toHaveLength(1);
+    // Tentýž účet Google si změnil adresu na adresu jiného uživatele: rozhoduje `sub`, ne adresa.
+    expect(await login({ email: MEMBER_EMAIL })).toEqual({ ok: true, userId: "demo-organizator" });
+    // Uživatel se svázaným účtem nedostane druhý účet Google, ani přes zaváděcí seznam.
+    await login({ sub: "google-sub-kolega", email: MEMBER_EMAIL });
+    expect(await login({ sub: "dalsi-ucet", email: MEMBER_EMAIL })).toEqual({ ok: false, reason: "account_conflict" });
+    expect(await identities()).toHaveLength(2);
   });
 
   test("do logu jde jen kód důvodu, ne adresa ani sub", async () => {
-    const log = vi.spyOn(console, "error").mockImplementation(() => {});
     await login({ email: "cizi@example.com", sub: "cizi-sub-123" });
+    await (await getDb()).update(users).set({ status: "disabled" }).where(eq(users.email, "cizi@example.com"));
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(await login({ email: "cizi@example.com", sub: "cizi-sub-123" })).toEqual({ ok: false, reason: "not_allowed" });
     const written = log.mock.calls.flat().join(" ");
     expect(written).toContain("not_allowed");
     expect(written).not.toContain("cizi@example.com");
@@ -250,16 +258,12 @@ describe("session z přihlášení Google", () => {
     expect(readSession(encodeSession("demo-organizator", NOW), NOW + 1)).toEqual({ userId: "demo-organizator", method: "demo" });
   });
 
-  test("přestane platit po odebrání ze seznamu, zrušení vazby i vypnutí režimu", async () => {
+  test("přestane platit po zrušení vazby i vypnutí režimu", async () => {
     const db = await getDb();
     expect(await googleSessionAllowed(db, "demo-organizator")).toBe(false);
     await login();
     expect(await googleSessionAllowed(db, "demo-organizator")).toBe(true);
     expect(await googleSessionAllowed(db, "demo-ucastnik")).toBe(false);
-
-    vi.stubEnv("GOOGLE_LOGIN_ACCOUNTS", `${MEMBER_EMAIL}=demo-ucastnik`);
-    expect(await googleSessionAllowed(db, "demo-organizator")).toBe(false);
-    vi.stubEnv("GOOGLE_LOGIN_ACCOUNTS", ENV.GOOGLE_LOGIN_ACCOUNTS);
 
     vi.stubEnv("LOGIN_MODE", "");
     expect(await googleSessionAllowed(db, "demo-organizator")).toBe(false);

@@ -1,7 +1,8 @@
 import { calendarMode } from "@/server/config";
-import { sql } from "drizzle-orm";
+import { ne, sql } from "drizzle-orm";
 import seed from "../../demo/seed.json";
 import { isoWeekday, toDateKey } from "@/lib/time";
+import type { Role } from "@/lib/types";
 import type { Executor } from "@/server/db/client";
 import {
   calendarLinks,
@@ -32,7 +33,7 @@ export async function seedDatabase(tx: Executor): Promise<void> {
       orgId,
       name: u.name,
       email: demoEmail(u.id),
-      role: u.role as "organizer" | "member",
+      role: u.role as Role,
       groups: u.groups,
     })),
   );
@@ -134,18 +135,21 @@ const TABLES = [
 
 /** Smaže všechna data dema a nahraje seed znovu. Jedna transakce, buď vše, nebo nic. */
 export async function resetDatabase(tx: Executor): Promise<void> {
-  // Vazby na účty Google ani připojení Kalendáře nejsou ukázková data. Obě tabulky odkazují na uživatele,
-  // takže je TRUNCATE … CASCADE smaže. Bez jejich obnovení by obnova odhlásila i odpojila Kalendář.
+  // Skutečné účty (pozvánky a žádosti), vazby na Google ani připojení Kalendáře nejsou ukázková data.
+  // Všechno odkazuje na uživatele, takže je TRUNCATE … CASCADE smaže. Bez obnovení by obnova
+  // odhlásila lidi, zahodila jim přidělené role a odpojila Kalendář. Jejich zájmy o témata se obnoví do seedu.
+  const realUsers = await tx.select().from(users).where(ne(users.origin, "demo"));
   const identities = await tx.select().from(userIdentities);
   const credentials = await tx.select().from(integrationCredentials);
   await tx.execute(sql.raw(`TRUNCATE ${TABLES.join(", ")} RESTART IDENTITY CASCADE`));
   await seedDatabase(tx);
-  const seeded = new Set(seed.users.map((u) => u.id));
-  const kept = identities.filter((identity) => seeded.has(identity.userId));
+  if (realUsers.length) await tx.insert(users).values(realUsers);
+  const known = new Set([...seed.users.map((u) => u.id), ...realUsers.map((u) => u.id)]);
+  const kept = identities.filter((identity) => known.has(identity.userId));
   if (kept.length) await tx.insert(userIdentities).values(kept);
   if (credentials.length) {
     await tx
       .insert(integrationCredentials)
-      .values(credentials.map((c) => ({ ...c, connectedBy: c.connectedBy && seeded.has(c.connectedBy) ? c.connectedBy : null })));
+      .values(credentials.map((c) => ({ ...c, connectedBy: c.connectedBy && known.has(c.connectedBy) ? c.connectedBy : null })));
   }
 }

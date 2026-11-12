@@ -235,4 +235,16 @@ CREATE TABLE user_identities (
 CREATE UNIQUE INDEX user_identities_user_uq ON user_identities (provider, user_id);
 `,
   },
+  {
+    id: "0004_user_management",
+    sql: `
+-- Správa uživatelů ve Wiki: role správce, stav účtu a původ (fiktivní role, pozvánka, žádost).
+ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
+ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('admin', 'organizer', 'member'));
+ALTER TABLE users ADD COLUMN status text NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'pending', 'disabled'));
+ALTER TABLE users ADD COLUMN origin text NOT NULL DEFAULT 'demo' CHECK (origin IN ('demo', 'invite', 'request'));
+ALTER TABLE users ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
+CREATE UNIQUE INDEX users_email_uq ON users (org_id, lower(email));
+`,
+  },
 ];

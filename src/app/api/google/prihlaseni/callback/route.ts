@@ -11,6 +11,7 @@ const FAILURES: Record<LoginFailure, string> = {
   invalid_token: "nepodarilo-se",
   not_allowed: "ucet-neni-povoleny",
   account_conflict: "ucet-neni-povoleny",
+  requests_full: "ucet-neni-povoleny",
 };
 
 // Návrat z Googlu. Kód se smění jen tehdy, když stav odpovídá podepsané cookie téhož prohlížeče.
@@ -35,6 +36,10 @@ export async function GET(request: NextRequest) {
   try {
     const db = await getDb();
     const result = await completeLogin(db, cfg, { code, ...pending });
+    if (!result.ok && result.reason === "pending") {
+      if (result.created) await audit(db, result.userId, "user.requested", "user", result.userId);
+      return finish(gateUrl("ceka-na-schvaleni"));
+    }
     if (!result.ok) return finish(gateUrl(FAILURES[result.reason]));
     await audit(db, result.userId, "session.start.google", "user", result.userId);
     const response = finish(`${config.appUrl}/`);

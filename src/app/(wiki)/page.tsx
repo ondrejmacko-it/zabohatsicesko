@@ -2,6 +2,7 @@ import Link from "next/link";
 import { NextEventCard } from "@/features/vzdelavani/components/Schedule";
 import { requireUser } from "@/server/auth/session";
 import { nextEventFor } from "@/server/services/events";
+import { ROLE_LABELS } from "@/lib/labels";
 
 export default async function HomePage() {
   const user = await requireUser();
@@ -10,7 +11,7 @@ export default async function HomePage() {
     <>
       <h1>Dobrý den</h1>
       <p className="page-sub">
-        {user.name} · {user.role === "organizer" ? "Organizátor" : "Kolega"}
+        {user.name} · {ROLE_LABELS[user.role]}
       </p>
       <input
         className="search-field"

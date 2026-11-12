@@ -10,23 +10,33 @@ Uživateli tykej, piš přátelsky. Větší změny nejdřív navrhni, nejasnost
 
 ## Stav kódu
 
-- `main`: demo se simulovanými integracemi (PR #1 a #2).
-- Větev `ccr-2d4283fa-slno9d` obsahuje v lineární historii i PR #3 (`ccr-f94571c9-6bvs9j`) a Kalendář
-  (`ccr-ed96f52d-3gp38c`): předvyplnění témat, testovací režim Google Kalendáře, přihlášení Google
-  identitou (`LOGIN_MODE=google-test`) a opravy z živého testu. Pro ni je draft PR do `main`. Pokud ho
-  uživatel sloučil, začni novou větví z `main`.
-- Lokálně ověřeno 12. 11. 2026: lint, typová kontrola, 74 z 74 testů, build.
+- `main` obsahuje PR #1 až #5 (simulace, testovací režim Kalendáře, přihlášení Googlem).
+- Větev `claude/pensive-johnson-r6i888` (z `main`): **krok A cílového průchodu, správa uživatelů**.
+  Role Správce ZBC (`admin`, persona `demo-spravce`), stránka `/sprava` (čekající žádosti, pozvat kolegu,
+  úprava role a skupin, odebrání a vrácení přístupu), žádost po prvním přihlášení neznámého účtu,
+  `GOOGLE_LOGIN_ACCOUNTS` jen volitelný zaváděcí seznam, migrace `0004_user_management`.
+  Lokálně ověřeno: lint, typová kontrola, 84 z 84 testů, build. **UI `/sprava` zatím nikdo neviděl**
+  (ani screenshot), živě neověřeno. Draft PR zatím není.
 
-## Živý test 12. 11. 2026 (preview větve `ccr-2d4283fa-slno9d`)
+## Odsouhlaseno 12. 11. 2026
 
-- **Google Kalendář: všech 8 kroků prošlo proti skutečnému Googlu**, výsledky v `docs/google-kalendar.md`.
-  Zjištění: Google při změně termínu vynuluje RSVP (text ve Wiki upraven).
-- Opravy po testu: obnova ukázkových dat už neodpojí Kalendář a `/vstup` ukazuje skutečný režim (obojí
-  ověřeno na preview). Automatické odeslání po novém připojení zatím jen testy, živě neověřeno.
-- **Přihlášení Googlem**: uživatel se přihlásil (`session.start.google` v auditu), celý živý test
-  z `docs/google-prihlaseni.md` (5 kroků) zatím neproběhl. Je to první úkol.
-- Ukázková data na preview jsou po testu obnovená do výchozího stavu, Kalendář zůstal připojený.
-  V testovacím kalendáři Googlu zůstaly testovací pozvánky (12. 11., série, 26. 11.), může je smazat uživatel.
+- Hotové demo „jak by to vypadalo v realitě“, fiktivní role a simulace zůstávají jako přepínače.
+- Role smí přidělovat správce i organizátor (roli správce jen správce). Pozvánka i žádost.
+- Zatím osobní Gmaily, jeden firemní kalendář vzdělávání, jeden OAuth klient.
+- E-maily: žádný vlastní poskytovatel. Pozvánky a změny rozesílá Google. Zveřejněný zápis doplní odkaz
+  do pozvánky s rozesláním změny, ve Wiki je to v Moje cesta.
+
+## Živý test (zatím neproběhl)
+
+- Preview staré větve `ccr-2d4283fa-slno9d` má stejný kód jako `main`, na ni míří `APP_URL` i redirect
+  URI v Googlu. Kroky v `docs/google-prihlaseni.md` (pro novou větev už upravené) a ověření
+  automatické synchronizace po znovupřipojení Kalendáře (zrušit přístup v Google účtu, zveřejnit změnu,
+  znovu připojit) čekají na uživatele.
+- Pro preview nové větve: uživatel přidá v Google konzoli redirect URI
+  `https://zbc-vzdelavani-demo-git-claude-pensive-johnson-r6i888-maci.vercel.app/api/google/prihlaseni/callback`
+  (a `/api/google/kalendar/callback`), Claude nastaví branch-specific `APP_URL` přes Vercel API.
+- Pozor: všechny preview sdílí jednu databázi Neon (jen větev `main`). Migrace 0004 je aditivní,
+  starý kód s ní běží, ale po obnově dat uvidí i personu správce.
 
 ## Vercel a přístupy
 
@@ -43,29 +53,18 @@ Uživateli tykej, piš přátelsky. Větší změny nejdřív navrhni, nejasnost
 
 ## Další kroky
 
-1. Živý test přihlášení Googlem (5 kroků, většinu kliká uživatel) a krátké ověření oprav
-   (obnova dat nechá Kalendář připojený, po novém připojení se synchronizace dokončí sama).
-2. Cílový průchod, jak ho popsal uživatel 12. 11. 2026. Nejdřív navrhni a odsouhlas:
-   - Nový uživatel se přihlásí účtem Google a jednou udělí potřebná oprávnění.
-   - Správce ZBC mu ve Wiki přidělí roli a skupiny. To nahradí seznam `GOOGLE_LOGIN_ACCOUNTS` a fiktivní
-     role: správa uživatelů (pozvání nebo schválení, vazba na `sub`, změna role, odebrání).
-   - Podle role vidí jen svůj obsah. Všechny akce, které se ho týkají, dostane do svého Kalendáře jako
-     pozvánku s e-mailem a stejně tak každou změnu. Dnes jdou pozvánky jen testovacím příjemcům a
-     publikum se do hostů nepřenáší, takže je potřeba propojit publikum akce s hosty pozvánky.
-   - Přehledný přístup k zápisům a nahrávkám, na které má oprávnění.
-3. Funkce a design: jednodušší a přehlednější na první pohled, hlavně pro nového uživatele (první
-   přihlášení, prázdné stavy, Moje cesta jako výchozí stránka účastníka).
-4. Nahrávky pro provoz: soukromé úložiště souborů, dlouhé soubory (2 až 2,5 hodiny), dělení pro
-   poskytovatele přepisu, skutečný testovací režim přepisu.
+1. Screenshot a kontrola `/sprava` (lokálně `npm run dev`, persona Správce ZBC ukázky), draft PR kroku A.
+2. Živý test podle bodu výše.
+3. Krok B: hosté pozvánek z publika akce (aktivní uživatelé skupiny, Wiki spravuje jen své hosty,
+   RSVP a ruční hosté zůstanou, změna skupiny upraví budoucí pozvánky, `sendUpdates=all`).
+   Dnes v testu Googlu jdou pozvánky jen na `GOOGLE_ALLOWED_ATTENDEES`, simulace zve jen fiktivní role.
+4. Krok C: stránka Zápisy (jen oprávněné, filtry, hledání) a odkaz na zápis v pozvánce.
+5. Krok D: Moje cesta jako výchozí stránka, menu Moje cesta · Harmonogram · Zápisy · Témata (+ Správa),
+   první přihlášení a prázdné stavy, zjednodušený detail akce.
+6. Nahrávky pro provoz (soukromé úložiště, 2 až 2,5 h, dělení, skutečný přepis).
 
 ## Čeká na odpověď uživatele
 
-- Má přihlášení Googlem fiktivní role a přístupový kód úplně nahradit, nebo nechat ukázkový režim?
-- Kdo smí přidělovat role (jen správce systému, nebo i organizátor) a jak se nový uživatel dostane
-  dovnitř: pozvánkou od správce, nebo žádostí po prvním přihlášení?
-- Pozvánky skutečným lidem: jaká doména účtů (firemní Google Workspace, nebo osobní Gmaily)? Do kterého
-  kalendáře se zapisuje (jeden firemní kalendář vzdělávání, nebo přímo do kalendářů lidí)?
-- Oddělit OAuth klienta pro přihlášení a pro Kalendář?
 - Poskytovatel přepisu (zpracování v EU) a úložiště nahrávek (soukromý Vercel Blob, nebo firemní).
 - Skutečné pravidlo střídání typů ve slotu šablony a zda předvyplňovat téma i tréninkům.
 - Kam trvale uložit zadání (ZIP), aby ho nebylo nutné posílat. Do tohoto veřejného repa ne.

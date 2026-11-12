@@ -1,12 +1,12 @@
-import { createHash, createHmac, createPublicKey, randomBytes, timingSafeEqual, verify, type JsonWebKey } from "node:crypto";
-import { and, eq } from "drizzle-orm";
+import { createHash, createHmac, createPublicKey, randomBytes, randomUUID, timingSafeEqual, verify, type JsonWebKey } from "node:crypto";
+import { and, count, eq, sql } from "drizzle-orm";
 import { logError } from "@/server/audit";
 import { config, googleLoginConfig, type GoogleLoginConfig } from "@/server/config";
 import type { Executor } from "@/server/db/client";
 import { userIdentities, users } from "@/server/db/schema";
 
 // Přihlášení uživatele Google identitou (OpenID Connect, tok s autorizačním kódem a PKCE).
-// Oddělené od OAuth pro Kalendář: žádá jen `openid email`, žádný token se neukládá.
+// Oddělené od OAuth pro Kalendář: žádá jen `openid email profile`, žádný token se neukládá.
 // Google tu říká jen KDO se přihlásil. Role a skupiny zůstávají v databázi Wiki.
 
 const AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
@@ -47,7 +47,7 @@ export function beginLogin(cfg: GoogleLoginConfig, nowSec = Math.floor(Date.now(
     client_id: cfg.clientId,
     redirect_uri: cfg.redirectUri,
     response_type: "code",
-    scope: "openid email",
+    scope: "openid email profile",
     // Vždy nabídnout výběr účtu, aby se tester nepřihlásil omylem jiným účtem z prohlížeče.
     prompt: "select_account",
     state,
@@ -116,7 +116,7 @@ export type IdTokenProblem =
   | "bad_nonce"
   | "email_unverified";
 
-export type VerifiedIdentity = { sub: string; email: string };
+export type VerifiedIdentity = { sub: string; email: string; name: string | null };
 
 const parsePart = (part: string | undefined): Record<string, unknown> | null => {
   try {
@@ -166,20 +166,30 @@ export async function verifyIdToken(
   if (typeof claims.nonce !== "string" || !safeEqual(claims.nonce, expected.nonce)) return fail("bad_nonce");
   if (typeof claims.sub !== "string" || !claims.sub || claims.sub.length > 255) return fail("malformed");
   if (typeof claims.email !== "string" || claims.email_verified !== true) return fail("email_unverified");
-  return { ok: true, identity: { sub: claims.sub, email: claims.email.toLowerCase() } };
+  // Jméno je jen popisek pro správce. Nedůvěryhodný vstup, proto jen krátký prostý text.
+  const name = typeof claims.name === "string" ? claims.name.replace(/[\u0000-\u001f]/g, "").trim().slice(0, 80) : "";
+  return { ok: true, identity: { sub: claims.sub, email: claims.email.toLowerCase(), name: name || null } };
 }
 
 // ——— Dokončení přihlášení ———
 
-export type LoginFailure = "exchange_failed" | "invalid_token" | "not_allowed" | "account_conflict";
-export type LoginResult = { ok: true; userId: string } | { ok: false; reason: LoginFailure };
+export type LoginFailure = "exchange_failed" | "invalid_token" | "not_allowed" | "account_conflict" | "requests_full";
+export type LoginResult =
+  | { ok: true; userId: string }
+  | { ok: false; reason: LoginFailure }
+  /** Účet čeká, až mu správce přidělí roli. Session nevznikne. */
+  | { ok: false; reason: "pending"; userId: string; created: boolean };
+
+/** Kolik nevyřízených žádostí smí čekat najednou. Brání zaplnění databáze libovolnými účty Google. */
+export const MAX_PENDING_REQUESTS = 20;
 
 /**
  * Vymění kód, ověří ID token a najde uživatele Wiki.
  *
- * Kdo smí dovnitř, určuje seznam testovacích účtů (ověřený e-mail → uživatel). Účet se při prvním
- * přihlášení sváže se stabilním `sub`. Když později stejnou adresu získá jiný účet Google, nebo se
- * účet objeví u jiného uživatele, přihlášení se odmítne a vazbu musí vědomě změnit správce.
+ * Pořadí: (1) účet už svázaný přes stabilní `sub`, (2) pozvánka správce na ověřenou adresu nebo
+ * zaváděcí seznam `GOOGLE_LOGIN_ACCOUNTS`, (3) jinak vznikne žádost, kterou schválí správce.
+ * Dovnitř pustí jen aktivní účet. Když stejnou adresu později získá jiný účet Google, nebo se účet
+ * objeví u jiného uživatele, přihlášení se odmítne a vazbu musí vědomě změnit správce.
  */
 export async function completeLogin(
   db: Executor,
@@ -223,39 +233,88 @@ export async function completeLogin(
     return fail("exchange_failed", "jwks_unavailable");
   }
   if (!verified.ok) return fail("invalid_token", verified.problem);
-  const { sub, email } = verified.identity;
+  const { sub, email, name } = verified.identity;
 
-  const userId = cfg.accounts.get(email);
-  if (!userId) return fail("not_allowed");
-  const [user] = await db.select({ id: users.id, orgId: users.orgId }).from(users).where(eq(users.id, userId)).limit(1);
-  if (!user || user.orgId !== config.orgId) return fail("not_allowed", "unknown_user");
+  const identityWhere = and(eq(userIdentities.provider, PROVIDER), eq(userIdentities.subject, sub));
+  const [existing] = await db.select({ userId: userIdentities.userId }).from(userIdentities).where(identityWhere).limit(1);
 
-  // Vložení bez přepsání: při souběhu dvou prvních přihlášení vyhraje jedno a druhé se jen porovná.
-  await db.insert(userIdentities).values({ provider: PROVIDER, subject: sub, userId, email }).onConflictDoNothing();
-  const [bound] = await db
-    .select()
-    .from(userIdentities)
-    .where(and(eq(userIdentities.provider, PROVIDER), eq(userIdentities.subject, sub)))
+  let userId = existing?.userId;
+  if (!userId) {
+    const target = await accountFor(db, cfg, email);
+    if (target === "conflict") return fail("account_conflict");
+    if (target) {
+      userId = target;
+    } else {
+      const request = await createRequest(db, email, name);
+      if (!request) return fail("requests_full");
+      userId = request;
+    }
+    // Vložení bez přepsání: při souběhu dvou prvních přihlášení vyhraje jedno a druhé se jen porovná.
+    await db.insert(userIdentities).values({ provider: PROVIDER, subject: sub, userId, email }).onConflictDoNothing();
+    const [bound] = await db.select().from(userIdentities).where(identityWhere).limit(1);
+    if (!bound || bound.userId !== userId) return fail("account_conflict");
+  }
+
+  const [user] = await db
+    .select({ orgId: users.orgId, status: users.status })
+    .from(users)
+    .where(eq(users.id, userId))
     .limit(1);
-  if (!bound || bound.userId !== userId) return fail("account_conflict");
-  await db
-    .update(userIdentities)
-    .set({ email, lastLoginAt: new Date() })
-    .where(and(eq(userIdentities.provider, PROVIDER), eq(userIdentities.subject, sub)));
+  if (!user || user.orgId !== config.orgId || user.status === "disabled") return fail("not_allowed");
+  await db.update(userIdentities).set({ email, lastLoginAt: new Date() }).where(identityWhere);
+  if (user.status === "pending") return { ok: false, reason: "pending", userId, created: !existing };
   return { ok: true, userId };
 }
 
 /**
- * Platí ještě session založená přes Google? Čte se při každém požadavku, takže odebrání účtu ze
- * seznamu, zrušení vazby nebo vypnutí režimu ukončí přístup hned, ne až po vypršení cookie.
+ * Uživatel, ke kterému se nový účet Google smí svázat: pozvánka na ověřenou adresu, nebo položka
+ * zaváděcího seznamu. Uživatel, který už má svázaný jiný účet Google, je konflikt.
  */
-export async function googleSessionAllowed(db: Executor, userId: string): Promise<boolean> {
-  const cfg = googleLoginConfig();
-  if (!cfg) return false;
-  const [identity] = await db
-    .select({ email: userIdentities.email })
+async function accountFor(db: Executor, cfg: GoogleLoginConfig, email: string): Promise<string | "conflict" | null> {
+  const fromList = cfg.accounts.get(email);
+  const [invited] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(and(eq(users.orgId, config.orgId), sql`lower(${users.email}) = ${email}`, sql`${users.origin} <> 'demo'`))
+    .limit(1);
+  const userId = fromList ?? invited?.id;
+  if (!userId) return null;
+  const [bound] = await db
+    .select({ subject: userIdentities.subject })
     .from(userIdentities)
     .where(and(eq(userIdentities.provider, PROVIDER), eq(userIdentities.userId, userId)))
     .limit(1);
-  return identity !== undefined && cfg.accounts.get(identity.email) === userId;
+  return bound ? "conflict" : userId;
+}
+
+/** Založí čekající žádost. Bez role v obsahu: člen bez skupin, dokud ho správce neschválí. */
+async function createRequest(db: Executor, email: string, name: string | null): Promise<string | null> {
+  const [pending] = await db
+    .select({ n: count() })
+    .from(users)
+    .where(and(eq(users.orgId, config.orgId), eq(users.status, "pending")));
+  if ((pending?.n ?? 0) >= MAX_PENDING_REQUESTS) return null;
+  const id = `u-${randomUUID()}`;
+  const inserted = await db
+    .insert(users)
+    .values({ id, orgId: config.orgId, name: name ?? email.split("@")[0]!, email, role: "member", groups: [], status: "pending", origin: "request" })
+    .onConflictDoNothing()
+    .returning({ id: users.id });
+  // Adresu mezitím obsadil jiný záznam (souběh nebo fiktivní role se stejnou adresou).
+  return inserted[0]?.id ?? null;
+}
+
+/**
+ * Platí ještě session založená přes Google? Čte se při každém požadavku, takže odebrání přístupu,
+ * zrušení vazby nebo vypnutí režimu ukončí přístup hned, ne až po vypršení cookie. Stav účtu
+ * (aktivní, čeká, odebraný) kontroluje `getCurrentUser` pro všechny způsoby přihlášení.
+ */
+export async function googleSessionAllowed(db: Executor, userId: string): Promise<boolean> {
+  if (!googleLoginConfig()) return false;
+  const [identity] = await db
+    .select({ subject: userIdentities.subject })
+    .from(userIdentities)
+    .where(and(eq(userIdentities.provider, PROVIDER), eq(userIdentities.userId, userId)))
+    .limit(1);
+  return identity !== undefined;
 }

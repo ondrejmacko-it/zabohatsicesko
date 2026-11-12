@@ -7,7 +7,22 @@ import { snapshotOf } from "@/server/domain/snapshot";
 
 export type Viewer = { id: string; role: Role; groups: string[] };
 
-export const isOrganizer = (viewer: Viewer) => viewer.role === "organizer";
+/** Plánuje a zveřejňuje. Správce ZBC má stejná práva jako organizátor a navíc spravuje uživatele. */
+export const isOrganizer = (viewer: Viewer) => viewer.role === "organizer" || viewer.role === "admin";
+
+export const isAdmin = (viewer: Viewer) => viewer.role === "admin";
+
+/**
+ * Správu uživatelů (pozvání, schválení, role, skupiny, odebrání) má správce i organizátor.
+ * Roli správce ale smí přidělit, odebrat nebo správci měnit účet jen jiný správce.
+ */
+export const canManageUsers = (viewer: Viewer) => isOrganizer(viewer);
+
+export function canManageAccount(viewer: Viewer, target: { id: string; role: Role }, nextRole?: Role): boolean {
+  if (!canManageUsers(viewer) || target.id === viewer.id) return false;
+  if (isAdmin(viewer)) return true;
+  return target.role !== "admin" && nextRole !== "admin";
+}
 
 /**
  * Co smí uživatel z akce vidět. Organizátor vidí pracovní verzi, ostatní jen zveřejněný snímek
