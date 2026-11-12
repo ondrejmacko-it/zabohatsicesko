@@ -19,8 +19,17 @@ Stav Vercelu (tým `maci`, `team_PtkXmFd9hI7UeUYovGkbwZQG`, plán Hobby):
 - REST `POST /v13/deployments` s `gitSource` bez `target` vytvořil produkční deploy, proto se preview
   spouští pushem pracovní větve (Git integrace).
 
-Další krok: ověřit preview (přihlášení kódem, organizátor zveřejní akci 12. 11. se stavem
-Synchronizováno, vedoucí nahraje `public/demo/testovaci-nahravka.wav` k akci 11. 11. a zveřejní zápis,
-kolega mimo publikum je zamítnut) a výsledek popsat v draftu PR.
+Ověřeno na preview (12. 11. 2026, Playwright přes sdílecí odkaz Vercelu): špatný kód odmítnut, bez
+přihlášení stránka vede na vstup a API vrací 401; organizátor uložil návrh (přežil obnovení), potvrdil
+dopad a zveřejnil akci 12. 11. → stejná pozvánka `demo-existing-rm-1112`, host s RSVP zůstal, stav
+Synchronizováno; vedoucí nahrál testovací nahrávku k 11. 11., Ke kontrole → oprava → zveřejnění, audio
+200; účastník FP čte zápis bez přepisu a audia; účastník RM dostal „Záznam neexistuje nebo k němu
+nemáte přístup“ (stránka i přímý odkaz 404); organizátor bez role kontrolora audio nezíská. Žádné 5xx.
+
+Data v Neonu jsou po testu změněná (zveřejněná akce i zápis). Pro čistou ukázku je obnoví
+`npm run db:reset` s `DATABASE_URL` z Preview.
+
+Otevřené: preview běží z větve `claude/vzdelavani-vercel-preview-52jflw` (kód shodný s `main`).
+Token pro `api.vercel.com` je uložený v síťových tajemstvích prostředí Default, po dokončení ho smazat.
 
 Respektuj limit kontextu v `CLAUDE.md`. Na `main` nepushuj.
