@@ -4,7 +4,7 @@ import type { EventSnapshot } from "@/lib/types";
 import { audit, logError } from "@/server/audit";
 import { attendeeSource, calendarMode, config, googleCalendarConfig, now } from "@/server/config";
 import { getDb, type Db } from "@/server/db/client";
-import { calendarLinks, events, type ManagedFields } from "@/server/db/schema";
+import { calendarLinks, events, minutes, recordings, type ManagedFields } from "@/server/db/schema";
 import { calendarSummary } from "@/server/domain/snapshot";
 import { loadEventRow } from "@/server/services/events";
 import { DomainError } from "@/server/services/errors";
@@ -37,11 +37,24 @@ export function calendarProvider(db: Db): CalendarProvider {
   });
 }
 
-function desiredData(eventId: string, snapshot: EventSnapshot): ManagedEventData {
+async function hasPublishedMinutes(db: Db, eventId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ id: minutes.id })
+    .from(minutes)
+    .innerJoin(recordings, and(eq(recordings.id, minutes.recordingId), isNull(recordings.supersededAt)))
+    .where(and(eq(minutes.eventId, eventId), eq(minutes.status, "published")))
+    .limit(1);
+  return Boolean(row);
+}
+
+function desiredData(eventId: string, snapshot: EventSnapshot, minutesPublished: boolean): ManagedEventData {
+  const url = `${config.appUrl}/vzdelavani/akce/${eventId}`;
   return {
     summary: calendarSummary(snapshot),
     // Do pozvánky jde jen odkaz. Wiki u něj znovu ověří přístup, citlivý obsah v Kalendáři není.
-    description: `Podrobnosti a zápis ve firemní Wiki: ${config.appUrl}/vzdelavani/akce/${eventId}`,
+    description: minutesPublished
+      ? `Zápis z akce je zveřejněný: ${url}#zapis\nPodrobnosti ve firemní Wiki: ${url}`
+      : `Podrobnosti a zápis ve firemní Wiki: ${url}`,
     startsAt: new Date(snapshot.startsAt),
     endsAt: new Date(snapshot.endsAt),
     cancelled: snapshot.status === "cancelled",
@@ -103,7 +116,7 @@ export async function syncEvent(eventId: string, options: { force?: boolean } = 
       if (!row || !snapshot || !current) return;
       if (current.syncedRevision >= revision && current.syncStatus === "synced") return;
 
-      const desired = desiredData(eventId, snapshot);
+      const desired = desiredData(eventId, snapshot, await hasPublishedMinutes(db, eventId));
       let external: ExternalEvent;
       let managedAttendees: string[];
       try {

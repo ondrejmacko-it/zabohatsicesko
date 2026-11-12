@@ -8,6 +8,7 @@ export function SubNav({ showIntegrations }: { showIntegrations: boolean }) {
   const items = [
     { href: "/vzdelavani/moje-cesta", label: "Moje cesta" },
     { href: "/vzdelavani/harmonogram", label: "Harmonogram", also: "/vzdelavani/akce" },
+    { href: "/vzdelavani/zapisy", label: "Zápisy" },
     { href: "/vzdelavani/temata", label: "Témata" },
     ...(showIntegrations ? [{ href: "/vzdelavani/integrace", label: "Integrace" }] : []),
   ];

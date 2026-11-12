@@ -10,16 +10,24 @@ Uživateli tykej, piš přátelsky. Větší změny nejdřív navrhni, nejasnost
 
 ## Stav kódu
 
-- `main` obsahuje PR #1 až #6. Poslední je **krok A cílového průchodu, správa uživatelů**: role
-  Správce ZBC (`admin`, persona `demo-spravce`), stránka `/sprava` (čekající žádosti, pozvat kolegu,
-  úprava role a skupin, odebrání a vrácení přístupu), žádost po prvním přihlášení neznámého účtu,
-  `GOOGLE_LOGIN_ACCOUNTS` jen volitelný zaváděcí seznam, migrace `0004_user_management`.
-- `/sprava` zkontrolováno 12. 11. lokálně v prohlížeči (PGlite, persona Správce ZBC ukázky, šířka 1280
-  a 390): pozvání, změna role, odebrání a vrácení přístupu fungují, organizátor nenabízí roli správce,
-  vedoucí a účastník dostanou 404. Čekající žádost (vzniká jen přihlášením Googlem) vidět nebyla, živě
-  neověřeno.
-- Drobnosti k rozhodnutí: pozvaný, který se ještě nepřihlásil, má štítek „Aktivní“ (vedle textu
-  „Pozvánka čeká na první přihlášení“), hláška „Pozvánka pro Jana Zkušební“ neskloňuje jméno.
+- `main` obsahuje PR #1 až #6 (poslední je krok A, správa uživatelů a stránka `/sprava`).
+- Větev `claude/jolly-goodall-c5hp6c` (z `main`), draft PR: **kroky B, C a D cílového průchodu**.
+  - **B, hosté z publika:** `src/server/calendar/attendees.ts`. Wiki zve aktivní účty skupiny akce a spravuje
+    jen hosty, které sama přidala (`calendar_links.managed_attendees`, migrace `0005_managed_attendees`).
+    Pozvání, změna skupin a odebrání přístupu vrátí budoucí pozvánky do fronty (`syncPending`). V režimu
+    Googlu je výchozí pevný seznam `GOOGLE_ALLOWED_ATTENDEES`, publikum zapíná `CALENDAR_ATTENDEES=audience`
+    (na Vercelu zatím nenastaveno). Pozor: i spárovaná existující pozvánka teď dostane chybějící publikum.
+  - **C, Zápisy:** `/vzdelavani/zapisy` (jen zveřejněné a oprávněné, hledání bez diakritiky, filtr typu a
+    skupiny). Zveřejnění zápisu doplní odkaz do popisu pozvánky a Kalendář rozešle změnu.
+  - **D, Moje cesta:** výchozí stránka modulu (`/vzdelavani` na ni přesměruje): Čeká na vás, Nejbližší akce,
+    Poslední zápisy, prázdné stavy. Menu Moje cesta · Harmonogram · Zápisy · Témata (+ Integrace organizátorovi).
+  - **Přehlednost:** detail akce má nahoře výrazné Kdy · Vede · Pro koho, odkaz zpět vede tam, odkud
+    uživatel přišel (`?odkud=zapisy|moje-cesta`), podrobnosti pozvánky jsou u synchronizované akce sbalené,
+    na `/sprava` je štítek „Pozvaný“.
+- Ověřeno lokálně 12. 11.: lint, typová kontrola, 90 z 90 testů, build, průchod v prohlížeči (PGlite) pro
+  `/sprava`, Moje cesta, Zápisy a detail akce. **Živě proti Googlu neověřeno nic z B a C.**
+- Nedoděláno z přání uživatele na přehlednost: sbalení nástrojů organizátora v Harmonogramu (Nová akce,
+  Doplnit měsíc, Šablona) do jedné nabídky, průchod stránek Témata a Integrace, mobilní kontrola detailu.
 
 ## Odsouhlaseno 12. 11. 2026
 
@@ -56,16 +64,11 @@ Uživateli tykej, piš přátelsky. Větší změny nejdřív navrhni, nejasnost
 
 ## Další kroky
 
-1. Živý test podle bodu výše (včetně čekající žádosti na `/sprava`).
-2. Krok B: hosté pozvánek z publika akce (aktivní uživatelé skupiny, Wiki spravuje jen své hosty,
-   RSVP a ruční hosté zůstanou, změna skupiny upraví budoucí pozvánky, `sendUpdates=all`).
-   Dnes v testu Googlu jdou pozvánky jen na `GOOGLE_ALLOWED_ATTENDEES`, simulace zve jen fiktivní role.
-   Návrh z 12. 11. čeká na souhlas: přepínač příjemců (výchozí zůstává seznam testovacích příjemců),
-   hosté se dnes posílají jen při vzniku pozvánky, `patch` je neupravuje.
-3. Krok C: stránka Zápisy (jen oprávněné, filtry, hledání) a odkaz na zápis v pozvánce.
-4. Krok D: Moje cesta jako výchozí stránka, menu Moje cesta · Harmonogram · Zápisy · Témata (+ Správa),
-   první přihlášení a prázdné stavy, zjednodušený detail akce.
-5. Nahrávky pro provoz (soukromé úložiště, 2 až 2,5 h, dělení, skutečný přepis).
+1. Společná session s uživatelem: živý test (přihlášení Googlem, čekající žádost na `/sprava`, znovupřipojení
+   Kalendáře), potom `CALENDAR_ATTENDEES=audience` na preview a ověření hostů a odkazu na zápis v pozvánce.
+   Preview této větve potřebuje redirect URI v Googlu a branch-specific `APP_URL`.
+2. Dokončit přehlednost podle bodu „Nedoděláno“ výše a projít UI s uživatelem.
+3. Nahrávky pro provoz (soukromé úložiště, 2 až 2,5 h, dělení, skutečný přepis).
 
 ## Čeká na odpověď uživatele
 

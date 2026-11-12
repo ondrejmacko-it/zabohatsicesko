@@ -262,7 +262,10 @@ export async function saveMinutesAction(_prev: ActionResult | null, formData: Fo
       decisions: lines(formData.get("decisions")),
       nextSteps: lines(formData.get("nextSteps")),
     });
-    if (data.intent === "publish") await publishMinutes(user, data.id, data.minutesId, data.version + 1);
+    if (data.intent === "publish") {
+      await publishMinutes(user, data.id, data.minutesId, data.version + 1);
+      after(() => syncEvent(data.id));
+    }
     return { ok: true, message: data.intent === "publish" ? "Zápis je zveřejněný pro publikum akce." : "Úpravy zápisu jsou uložené." };
   });
 }

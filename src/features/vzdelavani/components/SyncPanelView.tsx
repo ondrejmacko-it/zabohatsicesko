@@ -33,7 +33,7 @@ export function SyncPanelView({ eventId, sync }: { eventId: string; sync: SyncPa
       <div className="spread">
         <h2 id="kalendar">Google Kalendář</h2>
         <span className="row">
-          <span className="badge badge-outline">{sync.mode === "simulation" ? "simulace" : "test Google · jen testovací příjemci"}</span>
+          <span className="badge badge-outline">{sync.mode === "simulation" ? "simulace" : sync.attendeeSource === "allowlist" ? "test Google · jen testovací příjemci" : "test Google · publikum akce"}</span>
           <span className={statusBadge} role="status">
             {statusLabel}
           </span>
@@ -106,6 +106,8 @@ export function SyncPanelView({ eventId, sync }: { eventId: string; sync: SyncPa
       )}
 
       {sync.external && (
+        <details className="fold" open={sync.status !== "synced"}>
+          <summary>Podrobnosti pozvánky: hosté ({sync.external.attendees.length}) a oznámení</summary>
         <div className="stack invite">
           <dl className="dl">
             <dt>Pozvánka</dt>
@@ -149,6 +151,7 @@ export function SyncPanelView({ eventId, sync }: { eventId: string; sync: SyncPa
             </details>
           )}
         </div>
+        </details>
       )}
     </section>
   );
