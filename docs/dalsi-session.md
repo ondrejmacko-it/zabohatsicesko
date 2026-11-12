@@ -10,13 +10,16 @@ Uživateli tykej, piš přátelsky. Větší změny nejdřív navrhni, nejasnost
 
 ## Stav kódu
 
-- `main` obsahuje PR #1 až #5 (simulace, testovací režim Kalendáře, přihlášení Googlem).
-- Větev `claude/pensive-johnson-r6i888` (z `main`): **krok A cílového průchodu, správa uživatelů**.
-  Role Správce ZBC (`admin`, persona `demo-spravce`), stránka `/sprava` (čekající žádosti, pozvat kolegu,
+- `main` obsahuje PR #1 až #6. Poslední je **krok A cílového průchodu, správa uživatelů**: role
+  Správce ZBC (`admin`, persona `demo-spravce`), stránka `/sprava` (čekající žádosti, pozvat kolegu,
   úprava role a skupin, odebrání a vrácení přístupu), žádost po prvním přihlášení neznámého účtu,
   `GOOGLE_LOGIN_ACCOUNTS` jen volitelný zaváděcí seznam, migrace `0004_user_management`.
-  Lokálně ověřeno: lint, typová kontrola, 84 z 84 testů, build. **UI `/sprava` zatím nikdo neviděl**
-  (ani screenshot), živě neověřeno. Draft PR zatím není.
+- `/sprava` zkontrolováno 12. 11. lokálně v prohlížeči (PGlite, persona Správce ZBC ukázky, šířka 1280
+  a 390): pozvání, změna role, odebrání a vrácení přístupu fungují, organizátor nenabízí roli správce,
+  vedoucí a účastník dostanou 404. Čekající žádost (vzniká jen přihlášením Googlem) vidět nebyla, živě
+  neověřeno.
+- Drobnosti k rozhodnutí: pozvaný, který se ještě nepřihlásil, má štítek „Aktivní“ (vedle textu
+  „Pozvánka čeká na první přihlášení“), hláška „Pozvánka pro Jana Zkušební“ neskloňuje jméno.
 
 ## Odsouhlaseno 12. 11. 2026
 
@@ -32,8 +35,8 @@ Uživateli tykej, piš přátelsky. Větší změny nejdřív navrhni, nejasnost
   URI v Googlu. Kroky v `docs/google-prihlaseni.md` (pro novou větev už upravené) a ověření
   automatické synchronizace po znovupřipojení Kalendáře (zrušit přístup v Google účtu, zveřejnit změnu,
   znovu připojit) čekají na uživatele.
-- Pro preview nové větve: uživatel přidá v Google konzoli redirect URI
-  `https://zbc-vzdelavani-demo-git-claude-pensive-johnson-r6i888-maci.vercel.app/api/google/prihlaseni/callback`
+- Pro preview jiné větve: uživatel přidá v Google konzoli redirect URI
+  `https://zbc-vzdelavani-demo-git-<větev>-maci.vercel.app/api/google/prihlaseni/callback`
   (a `/api/google/kalendar/callback`), Claude nastaví branch-specific `APP_URL` přes Vercel API.
 - Pozor: všechny preview sdílí jednu databázi Neon (jen větev `main`). Migrace 0004 je aditivní,
   starý kód s ní běží, ale po obnově dat uvidí i personu správce.
@@ -53,15 +56,16 @@ Uživateli tykej, piš přátelsky. Větší změny nejdřív navrhni, nejasnost
 
 ## Další kroky
 
-1. Screenshot a kontrola `/sprava` (lokálně `npm run dev`, persona Správce ZBC ukázky), draft PR kroku A.
-2. Živý test podle bodu výše.
-3. Krok B: hosté pozvánek z publika akce (aktivní uživatelé skupiny, Wiki spravuje jen své hosty,
+1. Živý test podle bodu výše (včetně čekající žádosti na `/sprava`).
+2. Krok B: hosté pozvánek z publika akce (aktivní uživatelé skupiny, Wiki spravuje jen své hosty,
    RSVP a ruční hosté zůstanou, změna skupiny upraví budoucí pozvánky, `sendUpdates=all`).
    Dnes v testu Googlu jdou pozvánky jen na `GOOGLE_ALLOWED_ATTENDEES`, simulace zve jen fiktivní role.
-4. Krok C: stránka Zápisy (jen oprávněné, filtry, hledání) a odkaz na zápis v pozvánce.
-5. Krok D: Moje cesta jako výchozí stránka, menu Moje cesta · Harmonogram · Zápisy · Témata (+ Správa),
+   Návrh z 12. 11. čeká na souhlas: přepínač příjemců (výchozí zůstává seznam testovacích příjemců),
+   hosté se dnes posílají jen při vzniku pozvánky, `patch` je neupravuje.
+3. Krok C: stránka Zápisy (jen oprávněné, filtry, hledání) a odkaz na zápis v pozvánce.
+4. Krok D: Moje cesta jako výchozí stránka, menu Moje cesta · Harmonogram · Zápisy · Témata (+ Správa),
    první přihlášení a prázdné stavy, zjednodušený detail akce.
-6. Nahrávky pro provoz (soukromé úložiště, 2 až 2,5 h, dělení, skutečný přepis).
+5. Nahrávky pro provoz (soukromé úložiště, 2 až 2,5 h, dělení, skutečný přepis).
 
 ## Čeká na odpověď uživatele
 
