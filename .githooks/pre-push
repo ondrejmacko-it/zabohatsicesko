@@ -1,0 +1,16 @@
+#!/bin/sh
+# Lokální pojistka. Aktivaci popisuje 05_GIT_A_STRUKTURA.md.
+protected_branch="$(git config --get zbc.protectedBranch || true)"
+while read -r local_ref local_oid remote_ref remote_oid; do
+  case "$remote_ref" in
+    refs/heads/main|refs/heads/master)
+      printf '%s\n' "Přímý push na chráněnou větev je zakázaný. Použij PR." >&2
+      exit 1
+      ;;
+  esac
+  if [ -n "$protected_branch" ] && [ "$remote_ref" = "refs/heads/$protected_branch" ]; then
+    printf '%s\n' "Přímý push na výchozí větev je zakázaný. Použij PR." >&2
+    exit 1
+  fi
+done
+exit 0
