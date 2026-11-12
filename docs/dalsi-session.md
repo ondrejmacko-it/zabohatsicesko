@@ -24,10 +24,15 @@ Uživateli tykej, piš přátelsky. Větší změny nejdřív navrhni, nejasnost
   - **Přehlednost:** detail akce má nahoře výrazné Kdy · Vede · Pro koho, odkaz zpět vede tam, odkud
     uživatel přišel (`?odkud=zapisy|moje-cesta`), podrobnosti pozvánky jsou u synchronizované akce sbalené,
     na `/sprava` je štítek „Pozvaný“.
+- Větev `claude/blissful-mendel-quw7mn` navazuje na `claude/jolly-goodall-c5hp6c` (obsahuje její commity
+  B, C, D) a přidává **dokončení přehlednosti**: nástroje organizátora v Harmonogramu (Přidat akci, Doplnit
+  měsíc ze šablony, Šablona týdne) jsou v jedné nabídce „Nástroje organizátora“ vedle přepínače Měsíc/Seznam,
+  výsledek doplnění se vypíše v nabídce. Na Integracích drobné rozestupy a užší tlačítko obnovy dat.
 - Ověřeno lokálně 12. 11.: lint, typová kontrola, 90 z 90 testů, build, průchod v prohlížeči (PGlite) pro
-  `/sprava`, Moje cesta, Zápisy a detail akce. **Živě proti Googlu neověřeno nic z B a C.**
-- Nedoděláno z přání uživatele na přehlednost: sbalení nástrojů organizátora v Harmonogramu (Nová akce,
-  Doplnit měsíc, Šablona) do jedné nabídky, průchod stránek Témata a Integrace, mobilní kontrola detailu.
+  `/sprava`, Moje cesta, Zápisy, detail akce, Harmonogram s nabídkou, Témata a Integrace, vše i na šířce
+  390 px bez vodorovného posunu. Účastník nabídku organizátora nevidí. **Živě proti Googlu neověřeno nic
+  z B a C.**
+- `next dev` vytváří v kořeni soubor `AGENTS.md`. Do repa nepatří, před commitem ho smaž.
 
 ## Odsouhlaseno 12. 11. 2026
 
@@ -67,7 +72,7 @@ Uživateli tykej, piš přátelsky. Větší změny nejdřív navrhni, nejasnost
 1. Společná session s uživatelem: živý test (přihlášení Googlem, čekající žádost na `/sprava`, znovupřipojení
    Kalendáře), potom `CALENDAR_ATTENDEES=audience` na preview a ověření hostů a odkazu na zápis v pozvánce.
    Preview této větve potřebuje redirect URI v Googlu a branch-specific `APP_URL`.
-2. Dokončit přehlednost podle bodu „Nedoděláno“ výše a projít UI s uživatelem.
+2. Projít UI s uživatelem (přehlednost je hotová, čeká na jeho připomínky).
 3. Nahrávky pro provoz (soukromé úložiště, 2 až 2,5 h, dělení, skutečný přepis).
 
 ## Čeká na odpověď uživatele
@@ -75,6 +80,9 @@ Uživateli tykej, piš přátelsky. Větší změny nejdřív navrhni, nejasnost
 - Poskytovatel přepisu (zpracování v EU) a úložiště nahrávek (soukromý Vercel Blob, nebo firemní).
 - Skutečné pravidlo střídání typů ve slotu šablony a zda předvyplňovat téma i tréninkům.
 - Kam trvale uložit zadání (ZIP), aby ho nebylo nutné posílat. Do tohoto veřejného repa ne.
+
+- Kterou větev sloučit: draft PR z `claude/jolly-goodall-c5hp6c`, nebo jeden PR z
+  `claude/blissful-mendel-quw7mn`, který obsahuje totéž plus dokončení přehlednosti.
 
 ## Úklid, rozhoduje uživatel
 

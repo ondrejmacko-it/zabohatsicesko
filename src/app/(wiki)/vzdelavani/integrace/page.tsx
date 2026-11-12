@@ -161,7 +161,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
       <section className="section">
         <h2>Ukázka chyb</h2>
         <p className="small muted">Přepínače slouží k předvedení chybových stavů a opakování. V produkci neexistují.</p>
-        <div className="stack">
+        <div className="stack section-actions">
           {switchKeys.map((key) => (
             <div key={key} className="spread candidate">
               <span>
@@ -182,7 +182,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
       <section className="section">
         <h2>Ukázková data</h2>
         <p className="small muted">Obnoví všechna fiktivní data do výchozího stavu ze seedu. Akce se zapíše do auditu.</p>
-        <div className="section-actions">
+        <div className="section-actions row">
           <ActionForm
             action={resetDemoAction}
             label="Obnovit ukázková data"

@@ -900,17 +900,27 @@ a.item-card:hover {
   text-align: center;
 }
 
+/* Nabídka nástrojů organizátora: výsledek akce (např. doplnění měsíce) se vypíše přímo v ní. */
 .organizer-tools {
-  align-items: flex-start;
-  margin-bottom: 16px;
-  padding: 12px;
-  border-radius: 8px;
-  background: var(--beige);
+  width: 260px;
+  gap: 2px;
+}
+
+.organizer-tools .small,
+.organizer-tools .form-error {
+  margin: 0;
+  padding: 2px 12px 6px;
 }
 
 @media (max-width: 760px) {
   .view-toggle {
     display: none;
+  }
+
+  /* Na mobilu je nabídka pod názvem měsíce u levého okraje, proto se rozbalí doprava. */
+  .organizer-tools {
+    right: auto;
+    left: 0;
   }
 }
 
