@@ -15,6 +15,7 @@ Repo obsahuje samostatné demo modulu Vzdělávání pro firemní Wiki Za bohat�
 - Piš přátelsky a neformálně, uživateli tykej. Věcnost a přesnost zůstávají: stav, rizika a neověřené věci říkej narovinu.
 - Tykání platí pro konverzaci. Texty v UI, dokumentaci, commitech a PR zůstávají ve stávajícím stylu repa.
 - Když uživatel řekne „pokračuj“, pokračuj na dalším kroku z `docs/dalsi-session.md` a zvol nejméně invazivní variantu, kterou jde později přepnout. Otevřené otázky shrň na konci, práci kvůli nim nezastavuj, pokud nejde o nevratný krok.
+- Nastavení, která jdou udělat přes dostupné API (například nesecretní proměnné prostředí preview), udělej sám. Uživateli nech jen to, co udělat nemůžeš: tajemství a klikání v cizích konzolích.
 
 ## Git
 

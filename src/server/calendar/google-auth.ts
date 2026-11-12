@@ -45,7 +45,8 @@ export function beginAuthorization(cfg: GoogleCalendarConfig, userId: string, no
     scope: `openid email ${CALENDAR_SCOPE}`,
     // Offline přístup a výslovný souhlas, aby Google vrátil obnovovací token i při opakovaném připojení.
     access_type: "offline",
-    prompt: "consent",
+    // Výběr účtu vždy: prohlížeč s více přihlášenými účty by jinak mohl připojit jiný než testovací.
+    prompt: "consent select_account",
     include_granted_scopes: "false",
     state,
     code_challenge: createHash("sha256").update(verifier).digest("base64url"),

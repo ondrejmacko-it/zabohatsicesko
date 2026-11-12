@@ -60,6 +60,13 @@ Rozpracováno, čeká na ruční merge uživatelem v tomto pořadí (každá vě
   **Neověřeno proti Googlu ani na preview.** Popis a živý test: `docs/google-prihlaseni.md`.
   PR pro tuto větev ani pro Kalendář zatím není založený.
 
+Stav živého testu 12. 11. 2026: uživatel založil OAuth klienta, testovací kalendář a účty
+`zbc.test.spravce@gmail.com` (organizátor) a `zbc.test.uzivatel@gmail.com` (příjemce). Proměnné jsou na
+Vercelu pro Preview. `APP_URL`, `LOGIN_MODE`, `CALENDAR_MODE` a `GOOGLE_LOGIN_ACCOUNTS` nastavil Claude
+přes API jako čitelné, ostatní vyplnil uživatel jako sensitive. První pokus o připojení Kalendáře skončil
+`redirect_uri_mismatch`, živý test zatím neprošel. Uživatel chce, aby nesecretní proměnné příště
+zakládal Claude sám a on doplnil jen tajemství.
+
 Zadání: uživatel dodal ZIP, do repa nepatří (repo je veřejné). Pokud v relaci není, vyžádej si ho.
 Části: 01 produkt a UX, 02 Google Kalendář, 03 audio a bezpečnost, 04 ověření a předání, 05 Git,
 06 bezpečnost kódu.
