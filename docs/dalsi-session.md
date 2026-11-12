@@ -81,11 +81,11 @@ Uživateli tykej, piš přátelsky. Větší změny nejdřív navrhni, nejasnost
 
 ## Další kroky
 
-1. Přehled možností pro nahrávky a přepis jako podklad pro firmu (`docs/nahravky-moznosti.md`), bez zásahu
-   do kódu: úložiště (Google Disk uživatele, soukromý Vercel Blob, jiné) a dva až tři poskytovatelé přepisu
-   s kvalitou češtiny, zpracováním v EU a orientační cenou za hodinu záznamu. Údaje ověř z aktuálních zdrojů
-   a uveď datum ověření, nic neodhaduj. Přidej doporučení a co by znamenalo zapojení do stávajícího rozhraní
-   přepisu (dnes ukázkový režim, nahrávka soukromě v databázi). Návrh nejdřív projdi s uživatelem.
+1. Projít s uživatelem návrh `docs/nahravky-moznosti.md` (sepsán 12. 11., větev
+   `claude/optimistic-babbage-455rc9`, která obsahuje i commity PR #8). Údaje jsou z oficiálních stránek
+   přečtených přes vyhledávač, přímé otevření stránek síť prostředí nedovolila. Zbývá: potvrdit údaje na
+   živých stránkách (pro to dočasně povolit hosty poskytovatelů v síťových pravidlech), doplnit místa
+   „neověřeno“ a ověřit službu pro shrnutí do zápisu. Kód se nemění.
 2. Společná session s uživatelem: živý test (přihlášení Googlem, čekající žádost na `/sprava`, znovupřipojení
    Kalendáře), potom `CALENDAR_ATTENDEES=audience` na preview a ověření hostů a odkazu na zápis v pozvánce.
    Preview větve PR #8 potřebuje redirect URI v Googlu a branch-specific `APP_URL`.
@@ -94,7 +94,8 @@ Uživateli tykej, piš přátelsky. Větší změny nejdřív navrhni, nejasnost
 
 ## Čeká na odpověď uživatele
 
-- Výběr poskytovatele přepisu a úložiště: až po přehledu možností a schválení firmou.
+- Výběr poskytovatele přepisu a úložiště: přehled je v `docs/nahravky-moznosti.md`, rozhodne firma.
+- Zda doplnit commit s přehledem do PR #8 (push na `claude/blissful-mendel-quw7mn`), nebo otevřít nový draft PR.
 - Skutečné pravidlo střídání typů ve slotu šablony a zda předvyplňovat téma i tréninkům.
 - Kam trvale uložit zadání (ZIP), aby ho nebylo nutné posílat. Do tohoto veřejného repa ne.
 
