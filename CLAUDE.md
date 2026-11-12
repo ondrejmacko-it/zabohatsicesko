@@ -17,3 +17,9 @@ Repo obsahuje samostatné demo modulu Vzdělávání pro firemní Wiki Za bohat�
 - Veď jasnou hranici mezi UI, doménovými pravidly a integracemi. Validuj vstupy a ověřuj přístupy na serveru. U zápisu a opakování zkontroluj souběhy, oprávnění a konzistenci dat. Ošetři chyby a udrž provozní logy bez citlivého obsahu.
 - Přístupy produkce, záznamy klientů a firemní podklady nepatří do pracovního kódu, historie Gitu ani veřejného buildu. Pro práci stačí fiktivní seed. Při objevení možného tajemství hodnotu nezobrazuj, zapiš pouze cestu a typ problému a pokračuj bezpečně dostupnou prací. Změny oprávnění záměrně neoslabuj.
 - Před předáním spusť dostupný lint, typovou kontrolu, testy, build a scénáře v 04 a 06. Přidej cílené testy nových oprávnění a integrací tam, kde existující sada riziko nepokrývá. Výsledky a stav simulace oproti živému testu popiš v draftu PR.
+
+## Úspora tokenů
+
+- Cíl relace je do 200 tis. tokenů kontextu, tvrdý limit 250 tis. Hlídá ho hook `scripts/limit-kontextu.py` (nastavený v `.claude/settings.json`): od 200 tis. upozorňuje, od 250 tis. dovolí jen dokončení (git, zápis `docs/dalsi-session.md`, GitHub).
+- Na začátku relace čti `docs/dalsi-session.md`, `README.md` a jen soubory, které měníš. Nečti znovu celé zadání ani celý kód. Ověřuj cíleně (jednotlivé testy, konkrétní stránky).
+- Před koncem relace zapiš do `docs/dalsi-session.md` stručný navazující prompt: stav, další krok, otevřené otázky.
