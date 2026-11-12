@@ -32,9 +32,8 @@ Uživateli tykej, piš přátelsky. Větší změny nejdřív navrhni, nejasnost
   `/sprava`, Moje cesta, Zápisy, detail akce, Harmonogram s nabídkou, Témata a Integrace, vše i na šířce
   390 px bez vodorovného posunu. Účastník nabídku organizátora nevidí. **Živě proti Googlu neověřeno nic
   z B a C.**
-- Rozhodnuto 12. 11.: slučuje se jeden draft PR z `claude/blissful-mendel-quw7mn`, starší draft #7
-  z `claude/jolly-goodall-c5hp6c` uživatel zavře. Živý test proběhne, až bude hotové vše (včetně kroku 3),
-  potom testy a úpravy včetně UI. Zásada UI: co je v dané části důležité, musí být vidět hned a přehledně.
+- Draft PR #8 z `claude/blissful-mendel-quw7mn` nahrazuje starší draft #7 (`claude/jolly-goodall-c5hp6c`),
+  ten uživatel zavře. Na #8 pokračuj, dokud ho uživatel nesloučí.
 - `next dev` vytváří v kořeni soubor `AGENTS.md`. Do repa nepatří, před commitem ho smaž.
 
 ## Odsouhlaseno 12. 11. 2026
@@ -44,6 +43,16 @@ Uživateli tykej, piš přátelsky. Větší změny nejdřív navrhni, nejasnost
 - Zatím osobní Gmaily, jeden firemní kalendář vzdělávání, jeden OAuth klient.
 - E-maily: žádný vlastní poskytovatel. Pozvánky a změny rozesílá Google. Zveřejněný zápis doplní odkaz
   do pozvánky s rozesláním změny, ve Wiki je to v Moje cesta.
+
+## Rozhodnuto 12. 11. 2026 večer
+
+- Zásada UI: co je v dané části důležité, musí být vidět hned a přehledně. Proto je Přidat akci samostatné
+  tlačítko a v nabídce jsou jen méně časté nástroje.
+- Pořadí: nejdřív dodělat zbytek, potom živý test, potom testy, úpravy a změny včetně UI.
+- Nahrávky a přepis: zatím jen demo. Firma nemá žádné vlastní služby ani úložiště, uživatel může nabídnout
+  Google Disk. **Nic placeného se nezavádí, dokud to firma neschválí a nezaplatí.** Přepis teď není klíčový,
+  stačí znát možnosti. Požadavek na budoucí přepis: co nejkvalitnější čeština, ideálně bez chyb, zpracování
+  v EU. Delší záznamy (2 až 2,5 h) se v praxi otestují až na žádost firmy.
 
 ## Živý test (zatím neproběhl)
 
@@ -72,15 +81,20 @@ Uživateli tykej, piš přátelsky. Větší změny nejdřív navrhni, nejasnost
 
 ## Další kroky
 
-1. (Až po kroku 3.) Společná session s uživatelem: živý test (přihlášení Googlem, čekající žádost na `/sprava`, znovupřipojení
+1. Přehled možností pro nahrávky a přepis jako podklad pro firmu (`docs/nahravky-moznosti.md`), bez zásahu
+   do kódu: úložiště (Google Disk uživatele, soukromý Vercel Blob, jiné) a dva až tři poskytovatelé přepisu
+   s kvalitou češtiny, zpracováním v EU a orientační cenou za hodinu záznamu. Údaje ověř z aktuálních zdrojů
+   a uveď datum ověření, nic neodhaduj. Přidej doporučení a co by znamenalo zapojení do stávajícího rozhraní
+   přepisu (dnes ukázkový režim, nahrávka soukromě v databázi). Návrh nejdřív projdi s uživatelem.
+2. Společná session s uživatelem: živý test (přihlášení Googlem, čekající žádost na `/sprava`, znovupřipojení
    Kalendáře), potom `CALENDAR_ATTENDEES=audience` na preview a ověření hostů a odkazu na zápis v pozvánce.
-   Preview této větve potřebuje redirect URI v Googlu a branch-specific `APP_URL`.
-2. Projít UI s uživatelem (přehlednost je hotová, čeká na jeho připomínky).
-3. Nahrávky pro provoz (soukromé úložiště, 2 až 2,5 h, dělení, skutečný přepis).
+   Preview větve PR #8 potřebuje redirect URI v Googlu a branch-specific `APP_URL`.
+3. Po živém testu: připomínky uživatele, testy, úpravy a změny včetně UI.
+4. Až firma schválí a zaplatí: skutečné úložiště, dělení dlouhých záznamů a skutečný přepis.
 
 ## Čeká na odpověď uživatele
 
-- Poskytovatel přepisu (zpracování v EU) a úložiště nahrávek (soukromý Vercel Blob, nebo firemní).
+- Výběr poskytovatele přepisu a úložiště: až po přehledu možností a schválení firmou.
 - Skutečné pravidlo střídání typů ve slotu šablony a zda předvyplňovat téma i tréninkům.
 - Kam trvale uložit zadání (ZIP), aby ho nebylo nutné posílat. Do tohoto veřejného repa ne.
 
