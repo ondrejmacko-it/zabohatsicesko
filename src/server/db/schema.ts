@@ -149,6 +149,20 @@ export const integrationCredentials = pgTable(
   (t) => [primaryKey({ columns: [t.orgId, t.provider] })],
 );
 
+/** Účet u poskytovatele identity svázaný s uživatelem Wiki přes stabilní `sub`. E-mail je jen informativní. */
+export const userIdentities = pgTable(
+  "user_identities",
+  {
+    provider: text("provider").$type<"google">().notNull(),
+    subject: text("subject").notNull(),
+    userId: text("user_id").notNull(),
+    email: text("email").notNull(),
+    createdAt: ts("created_at").notNull().defaultNow(),
+    lastLoginAt: ts("last_login_at").notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.provider, t.subject] })],
+);
+
 export const simCalendarEvents = pgTable("sim_calendar_events", {
   id: text("id").primaryKey(),
   calendarId: text("calendar_id").notNull(),

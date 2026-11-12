@@ -11,6 +11,7 @@ import {
   templateSlots,
   topicInterests,
   topics,
+  userIdentities,
   users,
 } from "@/server/db/schema";
 import { calendarSummary, snapshotOf } from "@/server/domain/snapshot";
@@ -132,6 +133,11 @@ const TABLES = [
 
 /** Smaže všechna data dema a nahraje seed znovu. Jedna transakce, buď vše, nebo nic. */
 export async function resetDatabase(tx: Executor): Promise<void> {
+  // Vazby na účty Google nejsou ukázková data. Bez jejich zachování by obnova odhlásila i toho, kdo ji spustil.
+  const identities = await tx.select().from(userIdentities);
   await tx.execute(sql.raw(`TRUNCATE ${TABLES.join(", ")} RESTART IDENTITY CASCADE`));
   await seedDatabase(tx);
+  const seeded = new Set(seed.users.map((u) => u.id));
+  const kept = identities.filter((identity) => seeded.has(identity.userId));
+  if (kept.length) await tx.insert(userIdentities).values(kept);
 }

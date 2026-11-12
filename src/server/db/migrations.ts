@@ -219,4 +219,20 @@ CREATE TABLE integration_credentials (
 );
 `,
   },
+  {
+    id: "0003_user_identities",
+    sql: `
+-- Vazba účtu Wiki na stabilní identifikátor u poskytovatele identity (\`sub\`), ne na e-mail.
+CREATE TABLE user_identities (
+  provider text NOT NULL CHECK (provider IN ('google')),
+  subject text NOT NULL,
+  user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  email text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  last_login_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (provider, subject)
+);
+CREATE UNIQUE INDEX user_identities_user_uq ON user_identities (provider, user_id);
+`,
+  },
 ];

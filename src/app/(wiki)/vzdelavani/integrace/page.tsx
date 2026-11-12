@@ -4,7 +4,16 @@ import { ActionForm } from "@/components/ActionForm";
 import { disconnectCalendarAction, resetDemoAction, setSimulationAction } from "@/features/vzdelavani/actions";
 import { requireUser } from "@/server/auth/session";
 import { connectionStatus } from "@/server/calendar/google-auth";
-import { calendarMode, config, googleCalendarConfig, googleCalendarConfigProblems, integrationModes } from "@/server/config";
+import {
+  calendarMode,
+  config,
+  googleCalendarConfig,
+  googleCalendarConfigProblems,
+  googleLoginConfig,
+  googleLoginConfigProblems,
+  integrationModes,
+  loginMode,
+} from "@/server/config";
 import { formatDayMonth, toDateKey } from "@/lib/time";
 import { getDb } from "@/server/db/client";
 import { isOrganizer } from "@/server/policy";
@@ -57,6 +66,17 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                 {googleTest
                   ? "Adaptér Google Calendar API prošel testy proti napodobenému HTTP. Živý test se skutečným účtem zatím neproběhl."
                   : "Identita pozvánky, hosté a RSVP, oznámení, opakování bez duplicit, pořadí revizí a chyby. Ověřeno proti simulaci, ne proti skutečnému Google účtu."}
+              </td>
+            </tr>
+            <tr>
+              <td>Přihlášení</td>
+              <td>{loginMode() === "google-test" ? "Fiktivní role + účet Google · neověřeno proti Googlu" : "Fiktivní role"}</td>
+              <td>
+                {loginMode() !== "google-test"
+                  ? "Vstup přístupovým kódem a výběrem fiktivní role. Oprávnění ověřuje server podle role v databázi."
+                  : googleLoginConfig()
+                    ? "Ověření ID tokenu (podpis, vydavatel, příjemce, platnost, ověřený e-mail) a vazba na stabilní identifikátor prošly testy s napodobeným Googlem. Živé přihlášení zatím neproběhlo."
+                    : `Přihlášení účtem Google je vypnuté, konfigurace není úplná: ${googleLoginConfigProblems().join(", ")}.`}
               </td>
             </tr>
             <tr>

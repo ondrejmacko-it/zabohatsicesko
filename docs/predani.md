@@ -8,6 +8,7 @@ Stav k 12. 11. 2026. Spuštění, proměnné prostředí a architektura jsou v [
 |---|---|---|---|
 | Google Kalendář | **Simulace** se stejným rozhraním jako budoucí adaptér | Identita pozvánky, zachování hostů, RSVP a odkazu na schůzku, jedno oznámení na změnu, opakování bez duplicit, pořadí revizí, výpadek, odvolaný přístup, ruční změna mimo Wiki, zrušení jednoho termínu | Zápis do skutečného Google účtu. Simulovaný krok **nebyl** ověřen proti Google. |
 | Google Kalendář, testovací režim | **Připravený, vypnutý.** Adaptér Google Calendar API se zapíná `CALENDAR_MODE=google-test` | Proti napodobenému HTTP: vytvoření bez duplicit, úprava jen spravovaných polí, jeden výskyt série, odmítnutí zápisu do série a do cizí pozvánky, povolené kalendáře a příjemci, šifrování a obnova tokenu, odvolaný přístup, dělení chyb na přechodné a trvalé | **Neověřeno proti Googlu.** Živý test podle části 02 čeká na testovací účty, postup je v [google-kalendar.md](google-kalendar.md). |
+| Přihlášení Google identitou | **Připravené, vypnuté.** Druhý režim vedle fiktivních rolí, zapíná se `LOGIN_MODE=google-test` | Proti napodobenému Googlu: podpis, vydavatel, příjemce, platnost, nonce a ověřený e-mail v ID tokenu, vazba na stabilní `sub`, odmítnutí účtu mimo seznam a záměny účtu, okamžité ukončení session po odebrání, zákaz přepínání rolí | **Neověřeno proti Googlu.** Postup je v [google-prihlaseni.md](google-prihlaseni.md). Seznam účtů v proměnné prostředí je jen pro test. |
 | Přepis a zápis | **Ukázkový**: zná jen přiloženou syntetickou nahrávku (podle otisku SHA-256) | Celá cesta nahrání → zpracování → kontrola → oprava → zveřejnění, opakované doručení úlohy, nahrazení audia, výpadek a opakování | Skutečný přepis a shrnutí. Jiný soubor skončí čitelnou chybou „nepodporovaný soubor“. |
 | Úložiště nahrávek | Soukromé, v databázi, vydávání jen přes autorizovanou cestu | Přístup vedoucího, zamítnutí účastníka, organizátora bez role a kolegy mimo publikum, i přímým odkazem | Uchovávání a mazání podle pravidel firmy. |
 
@@ -49,8 +50,10 @@ Ručně v prohlížeči (Chromium, desktop 1440 px a iPhone 13) celý průchod p
 
 ## Před pilotem s lidmi (harmonogram)
 
-1. **Přístupy a hosting.** Napojit přihlášení Wiki (firemní Google identita) a role místo fiktivních
-   rolí. Oddělená testovací a produkční databáze. Zálohy a obnova.
+1. **Přístupy a hosting.** Přihlášení firemní Google identitou je připravené jako testovací režim
+   ([google-prihlaseni.md](google-prihlaseni.md)). Zbývá živý test, správa uživatelů ve Wiki místo
+   seznamu v prostředí a rozhodnutí o konci fiktivních rolí. Oddělená testovací a produkční databáze.
+   Zálohy a obnova.
 2. **Google Kalendář, živý test** podle části 02. Adaptér, připojení účtu a testovací režim jsou hotové,
    zbývá dodat testovací účty a OAuth klienta a projít kroky v [google-kalendar.md](google-kalendar.md).
    Produkce dostane vlastního OAuth klienta, vlastní klíč a vlastní seznam kalendářů.

@@ -39,16 +39,26 @@ Přístup k preview: Vercel Authentication. Pro automatické testy je potřeba s
 (Share, 23 h) a dočasně povolený host preview v síťových pravidlech prostředí. Bypass for Automation a
 deploy hooky blokuje bezpečnostní filtr relace.
 
-Rozpracováno, čeká na ruční merge uživatelem v tomto pořadí:
+Komunikace (je i v `CLAUDE.md`): uživateli tykej, piš přátelsky. Na „pokračuj“ ber další krok a
+nejméně invazivní variantu, otevřené otázky shrň na konci.
+
+Rozpracováno, čeká na ruční merge uživatelem v tomto pořadí (každá větev stojí na předchozí):
 
 - Draft PR #3 (větev `ccr-f94571c9-6bvs9j`): trvalá podmínka v `CLAUDE.md` a předvyplnění témat při
   generování měsíce (`suggestTopics`).
-- Větev `ccr-ed96f52d-3gp38c` (stojí na PR #3): testovací režim Google Kalendáře. Adaptér
+- Větev `ccr-ed96f52d-3gp38c`: testovací režim Google Kalendáře. Adaptér
   `src/server/calendar/google.ts`, OAuth a šifrované tokeny `google-auth.ts`, trasy
   `/api/google/kalendar/pripojit` a `/callback`, sekce připojení v Integracích, migrace
-  `0002_integration_credentials`. Lokálně: lint, typová kontrola, 49 z 49 testů, build, průchod stránkou
-  Integrace v prohlížeči s falešnou konfigurací. **Neověřeno proti Googlu ani na preview.**
+  `0002_integration_credentials`. **Neověřeno proti Googlu ani na preview.**
   Popis a postup živého testu: `docs/google-kalendar.md`.
+- Větev `ccr-2d4283fa-slno9d`: přihlášení Google identitou (OIDC) jako **druhý režim vedle fiktivních
+  rolí**, zapíná se `LOGIN_MODE=google-test`. Modul `src/server/auth/google-login.ts` (ověření ID
+  tokenu, vazba na `sub`), trasy `/api/google/prihlaseni` a `/callback`, tlačítko na `/vstup`, řádek
+  v Integracích, migrace `0003_user_identities`, pravidla komunikace v `CLAUDE.md`. Lokálně 12. 11.
+  2026: lint, typová kontrola, 72 z 72 testů, build, průchod `/vstup` v prohlížeči s falešnou
+  konfigurací (tlačítko, přesměrování na Google, neplatný stav, fiktivní role dál funguje).
+  **Neověřeno proti Googlu ani na preview.** Popis a živý test: `docs/google-prihlaseni.md`.
+  PR pro tuto větev ani pro Kalendář zatím není založený.
 
 Zadání: uživatel dodal ZIP, do repa nepatří (repo je veřejné). Pokud v relaci není, vyžádej si ho.
 Části: 01 produkt a UX, 02 Google Kalendář, 03 audio a bezpečnost, 04 ověření a předání, 05 Git,
@@ -56,20 +66,23 @@ Zadání: uživatel dodal ZIP, do repa nepatří (repo je veřejné). Pokud v re
 
 Další kroky, před každou částí nejdřív návrh uživateli:
 
-1. Přihlášení Google identitou (OIDC) jako režim vedle fiktivních rolí. Podle části 02 ověřit podpis,
-   issuer, audience, expiraci a ověřený e-mail, účet vázat na stabilní `sub`, role dál z databáze.
-   Uživatel zatím nepotvrdil, zda jde o druhý režim, nebo náhradu přístupového kódu.
+1. Po dodání Google účtů a OAuth klienta: nastavit proměnné na Preview (`CALENDAR_MODE`, `LOGIN_MODE`,
+   `GOOGLE_*`, `TOKEN_ENCRYPTION_KEY`, `APP_URL`), přidat obě přesměrovací adresy a projít živé testy
+   z `docs/google-kalendar.md` a `docs/google-prihlaseni.md`.
 2. Nahrávky pro reálný provoz: soukromé úložiště souborů místo databáze, nahrávání dlouhých souborů
    (tréninky mají 2 až 2,5 hodiny), dělení pro poskytovatele přepisu. Skutečný testovací režim přepisu,
    jakmile uživatel vybere poskytovatele.
-3. Po dodání Google účtů a OAuth klienta: nastavit proměnné na Preview a projít živý test Kalendáře.
+3. Správa uživatelů ve Wiki místo seznamu `GOOGLE_LOGIN_ACCOUNTS` (pozvání, vazba na `sub`, odebrání),
+   pokud má Google přihlášení fiktivní role nahradit.
 
 Čeká na odpověď uživatele (ptej se průběžně, nedomýšlej):
 
 - Testovací Google účty (organizátor a příjemce) a OAuth klient v Google Cloud: dodá později.
 - Poskytovatel přepisu pro testovací režim (zpracování v EU).
 - Úložiště nahrávek: soukromý Vercel Blob, nebo rovnou úložiště pod účtem firmy.
-- Google přihlášení: náhrada přístupového kódu, nebo druhý režim vedle fiktivních rolí.
+- Google přihlášení: uděláno jako druhý režim (nic se neruší). Potvrdit, nebo říct, že má přístupový
+  kód a fiktivní role nahradit.
+- Přihlášení sdílí OAuth klienta s Kalendářem. Potvrdit, nebo chtít oddělené klienty.
 - Skutečné pravidlo střídání typů ve slotu a zda předvyplňovat téma i tréninkům.
 - Kam trvale uložit zadání, aby ho nebylo nutné posílat (soukromé repo nebo Disk, ne tento repozitář).
 

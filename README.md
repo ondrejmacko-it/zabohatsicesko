@@ -11,6 +11,10 @@ Vedle simulace je připravený **testovací režim Google Kalendáře** (skuteč
 tokeny, povolené kalendáře a příjemci). Je ověřený jen proti napodobenému HTTP, **ne proti Googlu**.
 Nastavení a postup živého testu jsou v [docs/google-kalendar.md](docs/google-kalendar.md).
 
+Stejně je připravené **přihlášení Google identitou** jako druhý režim vedle fiktivních rolí (ověření ID
+tokenu, vazba účtu na stabilní `sub`, role dál z databáze). Také **neověřeno proti Googlu**, viz
+[docs/google-prihlaseni.md](docs/google-prihlaseni.md).
+
 | | |
 |---|---|
 | ![Harmonogram](docs/screenshots/harmonogram.png) | ![Detail akce a Kalendář](docs/screenshots/detail-kalendar.png) |
@@ -32,7 +36,7 @@ serveru) nebo tlačítkem *Vzdělávání → Integrace → Obnovit ukázková d
 | Příkaz | Co dělá |
 |---|---|
 | `npm run lint` · `npm run typecheck` | ESLint a TypeScript |
-| `npm test` | 34 testů: přístupy, plán a revize, Kalendář, témata, nahrávky, čas a session |
+| `npm test` | 72 testů: přístupy, plán a revize, Kalendář, přihlášení Google, témata, nahrávky, čas a session |
 | `npm run build` | Produkční build (vyžaduje `SESSION_SECRET` a `DEMO_ACCESS_CODE`) |
 | `npm run db:migrate` · `npm run db:reset` | Migrace a seed, nebo obnova ukázkových dat |
 
@@ -62,6 +66,8 @@ Vzor je v `.env.example`. Hodnoty tajemství patří do správce tajemství host
 | `SIM_LATENCY_MS` | ne | Zpoždění simulací v ms (výchozí 1200). |
 | `CALENDAR_MODE` | ne | `google-test` zapne testovací režim Google Kalendáře. Jinak simulace. |
 | `GOOGLE_*`, `TOKEN_ENCRYPTION_KEY` | v režimu `google-test` | Viz [docs/google-kalendar.md](docs/google-kalendar.md). |
+| `LOGIN_MODE` | ne | `google-test` přidá přihlášení účtem Google. Jinak jen fiktivní role. |
+| `GOOGLE_LOGIN_ACCOUNTS` | s `LOGIN_MODE=google-test` | Povolené účty, viz [docs/google-prihlaseni.md](docs/google-prihlaseni.md). |
 
 ## Architektura
 
@@ -117,6 +123,8 @@ Hlavní rozhodnutí:
 - Výstup přepisu a modelu je nedůvěryhodný: validuje se schématem a vykresluje se jako prostý text.
 - Session je podepsaná HttpOnly cookie, role se načítají z databáze při každém požadavku. Server actions
   mají kontrolu původu, vstupy se validují (Zod), dotazy jsou parametrizované.
+- Přihlášení účtem Google (volitelný testovací režim) ověřuje ID token na serveru a váže účet na stabilní
+  `sub`. Odebrání účtu ze seznamu ukončí i běžící session. Přihlášený účtem Google nepřepíná role.
 - Na hostingu je povinná přístupová brána s omezením počtu pokusů. Odpovědi mají CSP s nonce,
   `frame-ancestors 'none'`, `nosniff` a `noindex`.
 - Audit zaznamenává kdo, co a kdy bez obsahu dat. Provozní log obsahuje jen kódy chyb.

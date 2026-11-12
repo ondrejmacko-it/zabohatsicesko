@@ -117,6 +117,63 @@ export function googleCalendarConfig(): GoogleCalendarConfig | null {
   };
 }
 
+export type LoginMode = "demo" | "google-test";
+
+/**
+ * Přihlášení Google identitou je druhý režim vedle fiktivních rolí a zapíná se výslovně.
+ * Bez `LOGIN_MODE=google-test` se tlačítko Google nenabízí a trasy přihlášení vrací 404.
+ */
+export function loginMode(): LoginMode {
+  return process.env.LOGIN_MODE === "google-test" ? "google-test" : "demo";
+}
+
+export type GoogleLoginConfig = {
+  clientId: string;
+  clientSecret: string;
+  redirectUri: string;
+  /** Povolené testovací účty: ověřený e-mail malými písmeny → ID uživatele Wiki. Role se čte z databáze. */
+  accounts: ReadonlyMap<string, string>;
+};
+
+export const GOOGLE_LOGIN_ENV = ["GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_OAUTH_CLIENT_SECRET", "GOOGLE_LOGIN_ACCOUNTS", "APP_URL"] as const;
+
+const LOGIN_ACCOUNT = /^[^@\s=]+@[^@\s=]+=[a-z0-9-]+$/;
+
+/** Názvy proměnných, které přihlášení chybí nebo nedávají smysl. Hodnoty se nevypisují. */
+export function googleLoginConfigProblems(): string[] {
+  const env = process.env;
+  const problems: string[] = GOOGLE_LOGIN_ENV.filter((name) => !env[name]?.trim());
+  const entries = list(env.GOOGLE_LOGIN_ACCOUNTS);
+  if (entries.some((entry) => !LOGIN_ACCOUNT.test(entry))) {
+    problems.push("GOOGLE_LOGIN_ACCOUNTS má mít tvar adresa=id-uzivatele, oddělené čárkou");
+  } else {
+    const emails = entries.map((entry) => entry.split("=")[0]!.toLowerCase());
+    const userIds = entries.map((entry) => entry.split("=")[1]!);
+    // Jeden účet Google patří jednomu uživateli a naopak, jinak by vazba na `sub` nebyla jednoznačná.
+    if (new Set(emails).size !== emails.length || new Set(userIds).size !== userIds.length) {
+      problems.push("GOOGLE_LOGIN_ACCOUNTS smí každou adresu i každého uživatele uvést jen jednou");
+    }
+  }
+  return problems;
+}
+
+/** Úplná konfigurace přihlášení Google identitou, nebo null. Neúplná konfigurace přihlášení nezapne. */
+export function googleLoginConfig(): GoogleLoginConfig | null {
+  if (loginMode() !== "google-test" || googleLoginConfigProblems().length) return null;
+  const env = process.env;
+  return {
+    clientId: env.GOOGLE_OAUTH_CLIENT_ID!.trim(),
+    clientSecret: env.GOOGLE_OAUTH_CLIENT_SECRET!.trim(),
+    redirectUri: `${config.appUrl}/api/google/prihlaseni/callback`,
+    accounts: new Map(
+      list(env.GOOGLE_LOGIN_ACCOUNTS).map((entry) => {
+        const [email, userId] = entry.split("=");
+        return [email!.toLowerCase(), userId!] as const;
+      }),
+    ),
+  };
+}
+
 /** Klíč pro šifrování tokenů v databázi. Jen na serveru, nikdy v logu. */
 export function tokenEncryptionKey(): Buffer {
   const key = Buffer.from(process.env.TOKEN_ENCRYPTION_KEY ?? "", "base64");
