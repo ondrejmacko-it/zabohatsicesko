@@ -36,7 +36,7 @@ serveru) nebo tlačítkem *Vzdělávání → Integrace → Obnovit ukázková d
 | Příkaz | Co dělá |
 |---|---|
 | `npm run lint` · `npm run typecheck` | ESLint a TypeScript |
-| `npm test` | 72 testů: přístupy, plán a revize, Kalendář, přihlášení Google, témata, nahrávky, čas a session |
+| `npm test` | 84 testů: správa uživatelů, přístupy, plán a revize, Kalendář, přihlášení Google, témata, nahrávky, čas a session |
 | `npm run build` | Produkční build (vyžaduje `SESSION_SECRET` a `DEMO_ACCESS_CODE`) |
 | `npm run db:migrate` · `npm run db:reset` | Migrace a seed, nebo obnova ukázkových dat |
 
@@ -44,6 +44,7 @@ serveru) nebo tlačítkem *Vzdělávání → Integrace → Obnovit ukázková d
 
 | Role | Co ukazuje |
 |---|---|
+| Správce ZBC ukázky | Přiděluje role a skupiny, zve a schvaluje účty Google (Správa systému). Plánuje jako organizátor. |
 | Organizátor ukázky | Plánuje, zveřejňuje, spravuje vazbu na Kalendář. K audiu nemá automatický přístup. |
 | Vedoucí ukázky | Vede akce, nahrává záznam, kontroluje a zveřejňuje zápis. |
 | Účastník FP | Kolega ze skupiny finančních poradců. Čte plán a zveřejněné zápisy své skupiny. |
@@ -67,7 +68,7 @@ Vzor je v `.env.example`. Hodnoty tajemství patří do správce tajemství host
 | `CALENDAR_MODE` | ne | `google-test` zapne testovací režim Google Kalendáře. Jinak simulace. |
 | `GOOGLE_*`, `TOKEN_ENCRYPTION_KEY` | v režimu `google-test` | Viz [docs/google-kalendar.md](docs/google-kalendar.md). |
 | `LOGIN_MODE` | ne | `google-test` přidá přihlášení účtem Google. Jinak jen fiktivní role. |
-| `GOOGLE_LOGIN_ACCOUNTS` | s `LOGIN_MODE=google-test` | Povolené účty, viz [docs/google-prihlaseni.md](docs/google-prihlaseni.md). |
+| `GOOGLE_LOGIN_ACCOUNTS` | ne | Zaváděcí seznam účtů, ostatní zve a schvaluje Správa systému, viz [docs/google-prihlaseni.md](docs/google-prihlaseni.md). |
 
 ## Architektura
 

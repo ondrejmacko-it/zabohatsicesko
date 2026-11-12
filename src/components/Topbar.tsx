@@ -2,6 +2,7 @@ import Link from "next/link";
 import { signOut, switchPersona } from "@/app/vstup/actions";
 import type { Persona } from "@/server/auth/personas";
 import type { CurrentUser } from "@/server/auth/session";
+import { ROLE_LABELS } from "@/lib/labels";
 
 export function Topbar({ user, personas }: { user: CurrentUser; personas: Persona[] }) {
   return (
@@ -34,7 +35,7 @@ export function Topbar({ user, personas }: { user: CurrentUser; personas: Person
           </form>
         )}
         <span className="account-name">
-          {user.name} · {user.role === "organizer" ? "Organizátor" : "Kolega"}
+          {user.name} · {ROLE_LABELS[user.role]}
         </span>
         <form action={signOut}>
           <button className="btn btn-small" type="submit">

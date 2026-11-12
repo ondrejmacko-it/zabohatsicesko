@@ -129,7 +129,7 @@ describe("úprava zveřejněné akce a Kalendář", () => {
     const created = (await simEvents()).filter((e) => e.idempotencyKey?.endsWith(id));
     expect(created).toHaveLength(1);
     expect(created[0]!.attendees.map((a) => a.email).sort()).toEqual(
-      ["demo-organizator@example.invalid", "demo-ucastnik@example.invalid", "demo-vedouci@example.invalid"],
+      ["demo-organizator@example.invalid", "demo-spravce@example.invalid", "demo-ucastnik@example.invalid", "demo-vedouci@example.invalid"],
     );
   });
 

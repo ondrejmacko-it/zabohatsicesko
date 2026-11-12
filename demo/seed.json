@@ -5,6 +5,17 @@
   "referenceNow": "2026-11-12T09:00:00+01:00",
   "users": [
     {
+      "id": "demo-spravce",
+      "name": "Správce ZBC ukázky",
+      "role": "admin",
+      "groups": [
+        "vsichni",
+        "fp",
+        "rm",
+        "tym-a"
+      ]
+    },
+    {
       "id": "demo-organizator",
       "name": "Organizátor ukázky",
       "role": "organizer",

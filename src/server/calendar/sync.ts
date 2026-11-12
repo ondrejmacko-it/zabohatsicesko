@@ -60,13 +60,16 @@ const sameManaged = (a: ManagedFields, b: ManagedFields) =>
   a.summary === b.summary && a.startsAt === b.startsAt && a.endsAt === b.endsAt && a.cancelled === b.cancelled;
 
 /**
- * Komu půjde nová pozvánka. V simulaci publiku akce (fiktivní adresy). V testovacím režimu Googlu
- * jen povoleným testovacím příjemcům, skutečné publikum se neosloví.
+ * Komu půjde nová pozvánka. V simulaci aktivním fiktivním rolím z publika akce (skutečné účty
+ * z pozvánek simulace nikdy neosloví). V testovacím režimu Googlu jen povoleným testovacím příjemcům.
  */
 async function inviteAttendees(db: Db, audience: string): Promise<SimAttendee[]> {
   const cfg = googleCalendarConfig();
   if (cfg) return cfg.allowedAttendees.map((email) => ({ email, name: email, responseStatus: "needsAction" as const }));
-  const rows = await db.select().from(users).where(eq(users.orgId, config.orgId));
+  const rows = await db
+    .select()
+    .from(users)
+    .where(and(eq(users.orgId, config.orgId), eq(users.origin, "demo"), eq(users.status, "active")));
   const attendees = rows
     .filter((u) => u.groups.includes(audience))
     .map((u) => ({ email: u.email, name: u.name, responseStatus: "needsAction" as const }));

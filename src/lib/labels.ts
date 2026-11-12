@@ -1,4 +1,4 @@
-import type { EventType, Group, PlanStatus, RecordingState, SyncStatus } from "./types";
+import type { EventType, Group, PlanStatus, RecordingState, Role, SyncStatus, UserStatus } from "./types";
 
 export const TYPE_LABELS: Record<EventType, string> = {
   action: "Action time",
@@ -22,6 +22,18 @@ export const GROUP_LABELS: Record<Group, string> = {
   fp: "Finanční poradci",
   rm: "Relationship manažeři",
   "tym-a": "Tým A",
+};
+
+export const ROLE_LABELS: Record<Role, string> = {
+  admin: "Správce ZBC",
+  organizer: "Organizátor",
+  member: "Člen týmu",
+};
+
+export const USER_STATUS_LABELS: Record<UserStatus, string> = {
+  active: "Aktivní",
+  pending: "Čeká na schválení",
+  disabled: "Odebraný přístup",
 };
 
 export const PLAN_STATUS_LABELS: Record<PlanStatus, string> = {

@@ -1,5 +1,7 @@
 import { readFileSync } from "node:fs";
+import { ne } from "drizzle-orm";
 import { getDb } from "@/server/db/client";
+import { users } from "@/server/db/schema";
 import type { Viewer } from "@/server/policy";
 import { resetDatabase } from "@/server/seed";
 
@@ -8,9 +10,15 @@ export const lead: Viewer = { id: "demo-vedouci", role: "member", groups: ["vsic
 export const participant: Viewer = { id: "demo-ucastnik", role: "member", groups: ["vsichni", "fp"] };
 export const outsider: Viewer = { id: "demo-mimo-skupinu", role: "member", groups: ["vsichni", "rm"] };
 
+export const admin: Viewer = { id: "demo-spravce", role: "admin", groups: ["vsichni", "fp", "rm", "tym-a"] };
+
+/** Výchozí stav pro test. Skutečné účty obnova dat záměrně drží, test je proto maže zvlášť. */
 export async function resetDemo() {
   const db = await getDb();
-  await db.transaction((tx) => resetDatabase(tx));
+  await db.transaction(async (tx) => {
+    await tx.delete(users).where(ne(users.origin, "demo"));
+    await resetDatabase(tx);
+  });
   return db;
 }
 

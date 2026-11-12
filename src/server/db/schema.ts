@@ -9,7 +9,7 @@ import {
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
-import type { EventSnapshot, MinutesContent, SimAttendee } from "@/lib/types";
+import type { EventSnapshot, MinutesContent, Role, SimAttendee, UserOrigin, UserStatus } from "@/lib/types";
 
 // Typy tabulek odpovídají SQL v migrations.ts. Při změně uprav obojí.
 const ts = (name: string) => timestamp(name, { withTimezone: true, mode: "date" });
@@ -22,8 +22,11 @@ export const users = pgTable("users", {
   orgId: text("org_id").notNull(),
   name: text("name").notNull(),
   email: text("email").notNull(),
-  role: text("role").$type<"organizer" | "member">().notNull(),
+  role: text("role").$type<Role>().notNull(),
   groups: text("groups").array().notNull(),
+  status: text("status").$type<UserStatus>().notNull().default("active"),
+  origin: text("origin").$type<UserOrigin>().notNull().default("demo"),
+  createdAt: ts("created_at").notNull().defaultNow(),
 });
 
 export const templateSlots = pgTable(

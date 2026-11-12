@@ -1,12 +1,10 @@
 "use server";
 
-import { refresh } from "next/cache";
 import { after } from "next/server";
 import { z } from "zod";
 import { EVENT_TYPES, GROUPS } from "@/lib/types";
 import { isValidDateKey, isValidMonthKey, isValidTime } from "@/lib/time";
-import { audit, logError } from "@/server/audit";
-import { getCurrentUser, type CurrentUser } from "@/server/auth/session";
+import { audit } from "@/server/audit";
 import { disconnect as disconnectCalendar } from "@/server/calendar/google-auth";
 import { simulateManualEdit } from "@/server/calendar/simulated";
 import { pairWithExisting, requestNewInvite, requestRetry, syncEvent } from "@/server/calendar/sync";
@@ -14,7 +12,8 @@ import { calendarMode } from "@/server/config";
 import { getDb } from "@/server/db/client";
 import { isOrganizer } from "@/server/policy";
 import { resetDatabase } from "@/server/seed";
-import { DOMAIN_ERROR_MESSAGES, DomainError } from "@/server/services/errors";
+import { DomainError } from "@/server/services/errors";
+import { runAction, type ActionResult } from "@/features/shared/run-action";
 import {
   cancelEvent,
   createEvent,
@@ -38,22 +37,9 @@ import { SIMULATION_SWITCHES, writeSwitch } from "@/server/settings";
 // Každá akce znovu ověří session a oprávnění na serveru a validuje vstup.
 // Next.js u server actions navíc kontroluje Origin proti Host (ochrana proti CSRF).
 
-export type ActionResult = { ok: true; message?: string; id?: string } | { ok: false; error: string };
+export type { ActionResult } from "@/features/shared/run-action";
 
-async function run(task: (user: CurrentUser) => Promise<ActionResult>): Promise<ActionResult> {
-  const user = await getCurrentUser();
-  if (!user) return { ok: false, error: "Přihlášení vypršelo. Načtěte stránku a vstupte znovu." };
-  try {
-    const result = await task(user);
-    refresh();
-    return result;
-  } catch (error) {
-    if (error instanceof DomainError) return { ok: false, error: DOMAIN_ERROR_MESSAGES[error.code] };
-    if (error instanceof z.ZodError) return { ok: false, error: DOMAIN_ERROR_MESSAGES.invalid_input };
-    logError("action", "unexpected", error);
-    return { ok: false, error: "Akci se nepodařilo dokončit. Zkuste to prosím znovu." };
-  }
-}
+const run = runAction;
 
 const text = (max: number) =>
   z

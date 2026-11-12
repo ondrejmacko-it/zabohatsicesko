@@ -1,6 +1,11 @@
 // Sdílené typy mezi serverem a UI. Bez závislostí, bezpečné pro klientský bundle.
 
-export type Role = "organizer" | "member";
+export const ROLES = ["admin", "organizer", "member"] as const;
+export type Role = (typeof ROLES)[number];
+/** Stav účtu ve Wiki. Čekající žádost ani zablokovaný účet dovnitř nepustí. */
+export type UserStatus = "active" | "pending" | "disabled";
+/** Původ účtu: fiktivní role ukázky, pozvánka správce, nebo žádost po prvním přihlášení. */
+export type UserOrigin = "demo" | "invite" | "request";
 export type PlanStatus = "draft" | "published" | "cancelled";
 export type SyncStatus = "pending" | "synced" | "attention";
 

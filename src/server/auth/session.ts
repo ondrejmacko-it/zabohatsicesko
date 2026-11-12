@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { cache } from "react";
 import { googleSessionAllowed } from "@/server/auth/google-login";
 import { config } from "@/server/config";
-import { getDb } from "@/server/db/client";
+import { getDb, type Executor } from "@/server/db/client";
 import { users } from "@/server/db/schema";
 import type { Viewer } from "@/server/policy";
 
@@ -71,14 +71,23 @@ export type CurrentUser = Viewer & { name: string; email: string; signedInWith: 
 /** Přihlášený uživatel pro aktuální požadavek, nebo null. */
 export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   const session = readSession((await cookies()).get(SESSION_COOKIE)?.value);
-  if (!session) return null;
+  return session ? resolveSessionUser(await getDb(), session) : null;
+});
+
+/** Uživatel platné session podle aktuálního stavu v databázi. Role, skupiny i stav se čtou vždy znovu. */
+export async function resolveSessionUser(
+  db: Executor,
+  session: { userId: string; method: SignInMethod },
+): Promise<CurrentUser | null> {
   const { userId } = session;
-  const db = await getDb();
   if (session.method === "google" && !(await googleSessionAllowed(db, userId))) return null;
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-  if (!user || user.orgId !== config.orgId) return null;
+  // Čekající žádost ani odebraný přístup dovnitř nepustí, ani se starší platnou cookie.
+  if (!user || user.orgId !== config.orgId || user.status !== "active") return null;
+  // Session z výběru fiktivní role nikdy neotevře skutečný účet z pozvánky nebo žádosti.
+  if (session.method === "demo" && user.origin !== "demo") return null;
   return { id: user.id, name: user.name, email: user.email, role: user.role, groups: user.groups, signedInWith: session.method };
-});
+}
 
 /** Pro stránky: bez session přesměruje na vstup. */
 export async function requireUser(): Promise<CurrentUser> {

@@ -15,6 +15,7 @@ export type DomainErrorCode =
   | "invalid_state"
   | "cancelled"
   | "duplicate"
+  | "email_taken"
   | "rate_limited"
   | "file_too_large"
   | "file_type"
@@ -31,6 +32,7 @@ export const DOMAIN_ERROR_MESSAGES: Record<DomainErrorCode, string> = {
   invalid_state: "Tuto změnu nelze v aktuálním stavu provést.",
   cancelled: "Zrušenou akci už nelze upravit.",
   duplicate: "Takové téma už existuje.",
+  email_taken: "Uživatel s touto adresou už ve Wiki je.",
   rate_limited: "Příliš mnoho pokusů. Zkuste to prosím za chvíli.",
   file_too_large: "Soubor je příliš velký. Limit je 4 MB.",
   file_type: "Nepodporovaný formát. Nahrajte WAV, MP3 nebo M4A.",

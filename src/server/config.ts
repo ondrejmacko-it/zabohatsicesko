@@ -131,11 +131,14 @@ export type GoogleLoginConfig = {
   clientId: string;
   clientSecret: string;
   redirectUri: string;
-  /** Povolené testovací účty: ověřený e-mail malými písmeny → ID uživatele Wiki. Role se čte z databáze. */
+  /**
+   * Volitelný zaváděcí seznam: ověřený e-mail malými písmeny → ID uživatele Wiki. Slouží jen k prvnímu
+   * svázání účtu (například s fiktivní rolí). Další účty zve nebo schvaluje správce ve Wiki.
+   */
   accounts: ReadonlyMap<string, string>;
 };
 
-export const GOOGLE_LOGIN_ENV = ["GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_OAUTH_CLIENT_SECRET", "GOOGLE_LOGIN_ACCOUNTS", "APP_URL"] as const;
+export const GOOGLE_LOGIN_ENV = ["GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_OAUTH_CLIENT_SECRET", "APP_URL"] as const;
 
 const LOGIN_ACCOUNT = /^[^@\s=]+@[^@\s=]+=[a-z0-9-]+$/;
 

@@ -1,10 +1,11 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { config } from "@/server/config";
 import { getDb } from "@/server/db/client";
 import { users } from "@/server/db/schema";
 
 /** Popis fiktivních rolí pro výběr v ukázce. */
 const DESCRIPTIONS: Record<string, string> = {
+  "demo-spravce": "Přiděluje role a skupiny, schvaluje nové účty Google. Plánuje jako organizátor.",
   "demo-organizator": "Plánuje a zveřejňuje harmonogram, spravuje vazbu na Kalendář.",
   "demo-vedouci": "Vede akce, nahrává záznamy a kontroluje zápisy.",
   "demo-ucastnik": "Kolega ze skupiny finančních poradců.",
@@ -13,12 +14,13 @@ const DESCRIPTIONS: Record<string, string> = {
 
 export type Persona = { id: string; name: string; description: string };
 
+/** Jen fiktivní role ukázky. Skutečné účty z pozvánek a žádostí se za ně nikdy nedají vydávat. */
 export async function listPersonas(): Promise<Persona[]> {
   const db = await getDb();
   const rows = await db
     .select({ id: users.id, name: users.name })
     .from(users)
-    .where(eq(users.orgId, config.orgId))
+    .where(and(eq(users.orgId, config.orgId), eq(users.origin, "demo"), eq(users.status, "active")))
     .orderBy(asc(users.id));
   const order = Object.keys(DESCRIPTIONS);
   return rows

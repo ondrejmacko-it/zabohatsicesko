@@ -4,31 +4,38 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Icon, type IconName } from "./Icon";
 
-type Item = { label: string; icon: IconName; href?: string; match?: (path: string) => boolean };
+type Item = { label: string; icon: IconName; href?: string; match?: (path: string) => boolean; badgeKey?: "education" | "admin" };
 
 // Ostatní sekce Wiki jsou v ukázce jen kulisy shellu, bez interního obsahu.
 const ITEMS: Item[] = [
   { label: "Knihovna", icon: "library", href: "/", match: (p) => p === "/" },
   { label: "Moje role", icon: "user" },
   { label: "Jak pracujeme", icon: "workflow" },
-  { label: "Vzdělávání", icon: "education", href: "/vzdelavani", match: (p) => p.startsWith("/vzdelavani") },
-  { label: "Správa systému", icon: "settings" },
+  { label: "Vzdělávání", icon: "education", href: "/vzdelavani", match: (p) => p.startsWith("/vzdelavani"), badgeKey: "education" },
 ];
 
-export function Sidebar({ badge }: { badge: number }) {
+const ADMIN: Item = { label: "Správa systému", icon: "settings", href: "/sprava", match: (p) => p.startsWith("/sprava"), badgeKey: "admin" };
+
+type Props = { badge: number; canManageUsers: boolean; pendingRequests: number };
+
+export function Sidebar({ badge, canManageUsers, pendingRequests }: Props) {
   const pathname = usePathname();
+  // Správa je jen pro toho, kdo ji smí používat. Ostatním zůstává jako neaktivní položka shellu.
+  const items = [...ITEMS, canManageUsers ? ADMIN : { label: ADMIN.label, icon: ADMIN.icon }];
+  const counts = { education: badge, admin: pendingRequests };
   return (
     <aside className="sidebar" aria-label="Hlavní navigace">
       <nav>
         <ul className="nav">
-          {ITEMS.map((item) => {
+          {items.map((item) => {
+            const count = item.badgeKey ? counts[item.badgeKey] : 0;
             const content = (
               <>
                 <Icon name={item.icon} />
                 {item.label}
-                {item.label === "Vzdělávání" && badge > 0 && (
-                  <span className="nav-badge" aria-label={`${badge} čeká na vás`}>
-                    {badge}
+                {count > 0 && (
+                  <span className="nav-badge" aria-label={`${count} čeká na vás`}>
+                    {count}
                   </span>
                 )}
               </>
