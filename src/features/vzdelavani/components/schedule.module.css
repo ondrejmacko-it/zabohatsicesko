@@ -1,0 +1,304 @@
+/* Mřížka podle harmonogramu v Numbers z PDF: zelenošedá hlavička, týdny v řádcích, út–pá. */
+
+.gridWrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.grid {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 13px;
+}
+
+.grid thead th {
+  padding: 10px 12px;
+  background: var(--sage);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.slotTime {
+  display: block;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.weekCol {
+  width: 15%;
+}
+
+.weekCell {
+  padding: 12px;
+  border-top: 1px solid var(--line);
+  background: var(--beige);
+  font-weight: 500;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.weekCell > span {
+  display: block;
+}
+
+.offDay {
+  display: block;
+  margin-top: 8px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  background: var(--beige-strong);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+  text-decoration: none;
+}
+
+.cell {
+  padding: 8px;
+  border-top: 1px solid var(--line);
+  border-left: 1px solid var(--line);
+  vertical-align: top;
+}
+
+.outside {
+  background: repeating-linear-gradient(135deg, var(--beige) 0 6px, #fff 6px 12px);
+}
+
+.outside .date {
+  opacity: 0.5;
+}
+
+.date {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 4px 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.today {
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--ochre);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.event {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.event + .event {
+  margin-top: 6px;
+}
+
+.event:hover {
+  border-color: var(--line-strong);
+}
+
+.event :global(.badge) {
+  margin-top: 4px;
+}
+
+.title {
+  font-weight: 600;
+}
+
+.line {
+  color: var(--ink-soft);
+}
+
+.cancelled {
+  color: var(--ochre);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.regular {
+  background: #fff;
+}
+
+.extra {
+  background: var(--beige-strong);
+}
+
+.muted {
+  background: var(--beige);
+  color: var(--muted);
+}
+
+.muted .title {
+  font-weight: 500;
+}
+
+.draft {
+  border: 1px dashed var(--line-strong);
+  background: #fff;
+}
+
+.missing {
+  display: inline-block;
+  width: 64px;
+  height: 0.9em;
+  border-bottom: 2px dotted var(--ochre);
+  vertical-align: baseline;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin: 12px 0 0;
+  padding: 0;
+  color: var(--muted);
+  font-size: 12px;
+  list-style: none;
+}
+
+.legend li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.swatch {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+}
+
+.legend .missing {
+  width: 22px;
+}
+
+/* ——— Agenda ——— */
+
+.agenda {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.agendaWeek {
+  margin-bottom: 8px;
+  font-size: 17px;
+}
+
+.agendaDays,
+.agendaEvents {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.agendaDay {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px dashed var(--line);
+}
+
+.agendaDate {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  font-weight: 600;
+}
+
+.agendaEvents {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.agendaEvent {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  font-size: 15px;
+  text-decoration: none;
+}
+
+.agendaEvent:hover {
+  border-color: var(--line-strong);
+}
+
+.agendaTime {
+  color: var(--ink-soft);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.agendaMain {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.agendaMain .line {
+  font-size: 14px;
+}
+
+@media (max-width: 760px) {
+  .agendaDay {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+  }
+
+  .agendaDate {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .agendaEvent {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .agendaEvent :global(.badge) {
+    justify-self: start;
+  }
+}
+
+/* Na úzkém displeji se místo mřížky zobrazí agenda, bez nutnosti posouvat do strany. */
+.mobileOnly {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .desktopOnly {
+    display: none;
+  }
+
+  .mobileOnly {
+    display: block;
+  }
+}

@@ -1,0 +1,344 @@
+{
+  "organization": "zbc-demo",
+  "month": "2026-11",
+  "timeZone": "Europe/Prague",
+  "referenceNow": "2026-11-12T09:00:00+01:00",
+  "users": [
+    {
+      "id": "demo-organizator",
+      "name": "Organizátor ukázky",
+      "role": "organizer",
+      "groups": [
+        "vsichni",
+        "fp",
+        "rm",
+        "tym-a"
+      ]
+    },
+    {
+      "id": "demo-vedouci",
+      "name": "Vedoucí ukázky",
+      "role": "member",
+      "groups": [
+        "vsichni",
+        "fp",
+        "rm",
+        "tym-a"
+      ]
+    },
+    {
+      "id": "demo-ucastnik",
+      "name": "Účastník FP",
+      "role": "member",
+      "groups": [
+        "vsichni",
+        "fp"
+      ]
+    },
+    {
+      "id": "demo-mimo-skupinu",
+      "name": "Účastník RM",
+      "role": "member",
+      "groups": [
+        "vsichni",
+        "rm"
+      ]
+    }
+  ],
+  "weeklyTemplate": [
+    {
+      "isoWeekday": 2,
+      "start": "10:00",
+      "end": "12:00",
+      "types": [
+        "action"
+      ]
+    },
+    {
+      "isoWeekday": 3,
+      "start": "08:30",
+      "end": "11:00",
+      "types": [
+        "training-fp",
+        "portfolio"
+      ]
+    },
+    {
+      "isoWeekday": 4,
+      "start": "12:30",
+      "end": "15:00",
+      "types": [
+        "training-rm"
+      ]
+    },
+    {
+      "isoWeekday": 5,
+      "start": "08:30",
+      "end": "10:30",
+      "types": [
+        "education-fp",
+        "education-rm"
+      ]
+    }
+  ],
+  "events": [
+    {
+      "id": "ev-11-3",
+      "type": "action",
+      "label": "Action time",
+      "topic": null,
+      "startsAt": "2026-11-03T10:00:00+01:00",
+      "endsAt": "2026-11-03T12:00:00+01:00",
+      "audience": "tym-a",
+      "status": "published",
+      "leadId": "demo-vedouci",
+      "allDay": false
+    },
+    {
+      "id": "ev-11-4",
+      "type": "training-fp",
+      "label": "Trénink poradců",
+      "topic": null,
+      "startsAt": "2026-11-04T08:30:00+01:00",
+      "endsAt": "2026-11-04T11:00:00+01:00",
+      "audience": "fp",
+      "status": "cancelled",
+      "leadId": "demo-vedouci",
+      "allDay": false
+    },
+    {
+      "id": "ev-11-5",
+      "type": "team",
+      "label": "Setkání týmu",
+      "topic": "Týmové priority",
+      "startsAt": "2026-11-05T12:30:00+01:00",
+      "endsAt": "2026-11-05T15:00:00+01:00",
+      "audience": "vsichni",
+      "status": "published",
+      "leadId": "demo-vedouci",
+      "allDay": false
+    },
+    {
+      "id": "ev-11-6",
+      "type": "education-rm",
+      "label": "Firemní vzdělávání RM",
+      "topic": "První rozhovor",
+      "startsAt": "2026-11-06T08:30:00+01:00",
+      "endsAt": "2026-11-06T10:30:00+01:00",
+      "audience": "rm",
+      "status": "published",
+      "leadId": "demo-vedouci",
+      "allDay": false
+    },
+    {
+      "id": "ev-11-10",
+      "type": "action",
+      "label": "Action time",
+      "topic": null,
+      "startsAt": "2026-11-10T10:00:00+01:00",
+      "endsAt": "2026-11-10T12:00:00+01:00",
+      "audience": "tym-a",
+      "status": "published",
+      "leadId": "demo-vedouci",
+      "allDay": false
+    },
+    {
+      "id": "tr-fp-1111",
+      "type": "training-fp",
+      "label": "Trénink poradců",
+      "topic": "Příprava na úvodní schůzku",
+      "startsAt": "2026-11-11T08:30:00+01:00",
+      "endsAt": "2026-11-11T11:00:00+01:00",
+      "audience": "fp",
+      "status": "published",
+      "leadId": "demo-vedouci",
+      "allDay": false
+    },
+    {
+      "id": "tr-rm-1112",
+      "type": "training-rm",
+      "label": "Trénink RM",
+      "topic": "Rozbor úvodní konzultace",
+      "startsAt": "2026-11-12T12:30:00+01:00",
+      "endsAt": "2026-11-12T15:00:00+01:00",
+      "audience": "rm",
+      "status": "published",
+      "leadId": "demo-vedouci",
+      "allDay": false,
+      "calendarFixture": {
+        "id": "demo-existing-rm-1112",
+        "attendees": [
+          {
+            "userId": "demo-mimo-skupinu",
+            "response": "accepted"
+          }
+        ],
+        "meetingUrl": "https://example.invalid/meeting/demo"
+      }
+    },
+    {
+      "id": "ev-11-13",
+      "type": "education-fp",
+      "label": "Firemní vzdělávání FP",
+      "topic": null,
+      "startsAt": "2026-11-13T08:30:00+01:00",
+      "endsAt": "2026-11-13T10:30:00+01:00",
+      "audience": "fp",
+      "status": "draft",
+      "leadId": null,
+      "allDay": false
+    },
+    {
+      "id": "ev-11-17",
+      "type": "holiday",
+      "label": "Státní svátek",
+      "topic": null,
+      "startsAt": "2026-11-17T00:00:00+01:00",
+      "endsAt": "2026-11-18T00:00:00+01:00",
+      "audience": "vsichni",
+      "status": "published",
+      "leadId": null,
+      "allDay": true
+    },
+    {
+      "id": "ev-11-18",
+      "type": "portfolio",
+      "label": "Portfolio tým",
+      "topic": "Porovnání dvou postupů",
+      "startsAt": "2026-11-18T08:30:00+01:00",
+      "endsAt": "2026-11-18T11:00:00+01:00",
+      "audience": "fp",
+      "status": "published",
+      "leadId": "demo-vedouci",
+      "allDay": false
+    },
+    {
+      "id": "ev-11-19",
+      "type": "training-rm",
+      "label": "Trénink RM",
+      "topic": null,
+      "startsAt": "2026-11-19T12:30:00+01:00",
+      "endsAt": "2026-11-19T15:00:00+01:00",
+      "audience": "rm",
+      "status": "draft",
+      "leadId": null,
+      "allDay": false
+    },
+    {
+      "id": "ev-11-20",
+      "type": "two-day",
+      "label": "Dvoudenní školení",
+      "topic": "Praktický seminář",
+      "startsAt": "2026-11-20T09:00:00+01:00",
+      "endsAt": "2026-11-21T15:00:00+01:00",
+      "audience": "vsichni",
+      "status": "published",
+      "leadId": "demo-vedouci",
+      "allDay": false
+    },
+    {
+      "id": "ev-11-24",
+      "type": "action",
+      "label": "Action time",
+      "topic": null,
+      "startsAt": "2026-11-24T10:00:00+01:00",
+      "endsAt": "2026-11-24T12:00:00+01:00",
+      "audience": "tym-a",
+      "status": "published",
+      "leadId": "demo-vedouci",
+      "allDay": false
+    },
+    {
+      "id": "ev-11-25",
+      "type": "training-fp",
+      "label": "Trénink poradců",
+      "topic": null,
+      "startsAt": "2026-11-25T08:30:00+01:00",
+      "endsAt": "2026-11-25T11:00:00+01:00",
+      "audience": "fp",
+      "status": "draft",
+      "leadId": null,
+      "allDay": false
+    },
+    {
+      "id": "ev-11-26",
+      "type": "training-rm",
+      "label": "Trénink RM",
+      "topic": "Příprava na úvodní schůzku",
+      "startsAt": "2026-11-26T12:30:00+01:00",
+      "endsAt": "2026-11-26T15:00:00+01:00",
+      "audience": "rm",
+      "status": "published",
+      "leadId": "demo-vedouci",
+      "allDay": false
+    },
+    {
+      "id": "ev-11-27",
+      "type": "education-fp",
+      "label": "Firemní vzdělávání FP",
+      "topic": null,
+      "startsAt": "2026-11-27T08:30:00+01:00",
+      "endsAt": "2026-11-27T10:30:00+01:00",
+      "audience": "fp",
+      "status": "draft",
+      "leadId": null,
+      "allDay": false
+    },
+    {
+      "id": "ev-11-30",
+      "type": "workshop",
+      "label": "AI workshop",
+      "topic": "Příprava týmových materiálů",
+      "startsAt": "2026-11-30T09:00:00+01:00",
+      "endsAt": "2026-11-30T11:00:00+01:00",
+      "audience": "vsichni",
+      "status": "draft",
+      "leadId": null,
+      "allDay": false
+    }
+  ],
+  "topics": [
+    {
+      "id": "topic-questions",
+      "name": "Otevřené otázky na schůzce",
+      "audience": "fp",
+      "interestedUserIds": [
+        "demo-organizator",
+        "demo-ucastnik"
+      ],
+      "lastHeld": null
+    },
+    {
+      "id": "topic-preparation",
+      "name": "Příprava na úvodní schůzku",
+      "audience": "fp",
+      "interestedUserIds": [
+        "demo-ucastnik"
+      ],
+      "lastHeld": "2026-11-11"
+    },
+    {
+      "id": "topic-priority",
+      "name": "Týmové priority",
+      "audience": "vsichni",
+      "interestedUserIds": [
+        "demo-vedouci"
+      ],
+      "lastHeld": "2026-11-05"
+    },
+    {
+      "id": "topic-rm",
+      "name": "Návaznost po konzultaci",
+      "audience": "rm",
+      "interestedUserIds": [
+        "demo-mimo-skupinu"
+      ],
+      "lastHeld": null
+    }
+  ],
+  "recordingFixture": {
+    "eventId": "tr-fp-1111",
+    "file": "testovaci_skoleni_en.wav",
+    "expectedTranscript": "PREPIS_FIXTURE.md"
+  }
+}

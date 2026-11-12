@@ -1,0 +1,233 @@
+import Link from "next/link";
+import { TYPE_LABELS } from "@/lib/labels";
+import {
+  addDays,
+  formatDayMonth,
+  formatEventTime,
+  formatRange,
+  isoWeekday,
+  monthOf,
+  monthWeeks,
+  toDateKey,
+  weekdayShort,
+} from "@/lib/time";
+import type { EventCard } from "@/server/services/events";
+import { badgeClass, cardTone, primaryStatus } from "../status";
+import styles from "./schedule.module.css";
+
+const COLUMNS = [
+  { weekday: 2, label: "Úterý" },
+  { weekday: 3, label: "Středa" },
+  { weekday: 4, label: "Čtvrtek" },
+  { weekday: 5, label: "Pátek" },
+];
+
+export type SlotTimes = Record<number, string>;
+
+const href = (card: EventCard) => `/vzdelavani/akce/${encodeURIComponent(card.id)}`;
+const dayOf = (card: EventCard) => toDateKey(new Date(card.startsAt));
+
+function byDay(cards: EventCard[]): Map<string, EventCard[]> {
+  const map = new Map<string, EventCard[]>();
+  for (const card of cards) {
+    const day = dayOf(card);
+    map.set(day, [...(map.get(day) ?? []), card]);
+  }
+  return map;
+}
+
+/** Hodnota, která zatím není doplněná: tečkovaná linka jako v harmonogramu v Numbers. */
+function Missing() {
+  return (
+    <span className={styles.missing}>
+      <span className="visually-hidden">zatím nedoplněno</span>
+    </span>
+  );
+}
+
+function EventBlock({ card }: { card: EventCard }) {
+  const status = primaryStatus(card);
+  const tone = cardTone(card);
+  const isHoliday = card.type === "holiday";
+  return (
+    <Link href={href(card)} className={`${styles.event} ${styles[tone]}`}>
+      <span className={styles.title}>{card.label}</span>
+      {card.planStatus === "cancelled" && <span className={styles.cancelled}>Zrušeno</span>}
+      {!isHoliday && card.planStatus !== "cancelled" && (
+        <>
+          <span className={styles.line}>{formatEventTime(new Date(card.startsAt), new Date(card.endsAt), card.allDay)}</span>
+          <span className={styles.line}>Kdo: {card.leadName ?? <Missing />}</span>
+          <span className={styles.line}>Téma: {card.topicTitle ?? <Missing />}</span>
+        </>
+      )}
+      {status && status.label !== "Zrušeno" && status.label !== "Svátek" && (
+        <span className={badgeClass(status.tone)}>{status.label}</span>
+      )}
+    </Link>
+  );
+}
+
+export function ScheduleGrid({
+  monthKey,
+  cards,
+  todayKey,
+  slotTimes,
+}: {
+  monthKey: string;
+  cards: EventCard[];
+  todayKey: string;
+  slotTimes: SlotTimes;
+}) {
+  const days = byDay(cards);
+  const columnDays = new Set(COLUMNS.map((c) => c.weekday));
+  return (
+    <div className={styles.gridWrap}>
+      <table className={styles.grid}>
+        <caption className="visually-hidden">Harmonogram po týdnech, sloupce úterý až pátek</caption>
+        <thead>
+          <tr>
+            <th scope="col" className={styles.weekCol}>
+              Týden
+            </th>
+            {COLUMNS.map((col) => (
+              <th scope="col" key={col.weekday}>
+                {col.label}
+                {slotTimes[col.weekday] && <span className={styles.slotTime}>{slotTimes[col.weekday]}</span>}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {monthWeeks(monthKey).map((week) => {
+            const monday = week[0]!;
+            // Mimořádné termíny mimo sloupce zůstávají viditelné ve svém týdnu.
+            const offDays = week.filter((d) => !columnDays.has(isoWeekday(d)) && monthOf(d) === monthKey);
+            const offCards = offDays.flatMap((d) => days.get(d) ?? []);
+            if (!week.slice(0, 5).some((d) => monthOf(d) === monthKey) && !offCards.length) return null;
+            return (
+              <tr key={monday}>
+                <th scope="row" className={styles.weekCell}>
+                  <span>{formatRange(monday, addDays(monday, 4))}</span>
+                  {offCards.map((card) => (
+                    <Link key={card.id} href={href(card)} className={styles.offDay}>
+                      {weekdayShort(dayOf(card))} {formatDayMonth(dayOf(card))} · {card.label}
+                      {primaryStatus(card) && <span className="visually-hidden">, {primaryStatus(card)!.label}</span>}
+                    </Link>
+                  ))}
+                </th>
+                {COLUMNS.map((col) => {
+                  const day = week[col.weekday - 1]!;
+                  const inMonth = monthOf(day) === monthKey;
+                  const dayCards = inMonth ? (days.get(day) ?? []) : [];
+                  return (
+                    <td key={day} className={`${styles.cell} ${inMonth ? "" : styles.outside}`}>
+                      <span className={styles.date}>
+                        {formatDayMonth(day)}
+                        {day === todayKey && <span className={styles.today}>dnes</span>}
+                      </span>
+                      {dayCards.map((card) => (
+                        <EventBlock key={card.id} card={card} />
+                      ))}
+                    </td>
+                  );
+                })}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+export function Legend() {
+  return (
+    <ul className={styles.legend} aria-label="Legenda">
+      <li>
+        <span className={`${styles.swatch} ${styles.regular}`} /> běžná aktivita
+      </li>
+      <li>
+        <span className={`${styles.swatch} ${styles.extra}`} /> mimořádná akce místo pravidelné aktivity
+      </li>
+      <li>
+        <span className={`${styles.swatch} ${styles.muted}`} /> zrušeno nebo svátek
+      </li>
+      <li>
+        <span className={`${styles.swatch} ${styles.draft}`} /> návrh, zatím nezveřejněno
+      </li>
+      <li>
+        <span className={styles.missing} /> zatím nedoplněno
+      </li>
+    </ul>
+  );
+}
+
+/** Chronologický seznam po týdnech a dnech. Výchozí pohled na úzkém displeji. */
+export function Agenda({ monthKey, cards, todayKey }: { monthKey: string; cards: EventCard[]; todayKey: string }) {
+  const days = byDay(cards.filter((c) => monthOf(dayOf(c)) === monthKey));
+  const weeks = monthWeeks(monthKey)
+    .map((week) => ({ monday: week[0]!, days: week.filter((d) => days.has(d)) }))
+    .filter((w) => w.days.length);
+  if (!weeks.length) return <p className="muted">V tomto měsíci zatím nejsou žádné akce.</p>;
+  return (
+    <div className={styles.agenda}>
+      {weeks.map((week) => (
+        <section key={week.monday} aria-labelledby={`tyden-${week.monday}`}>
+          <h3 id={`tyden-${week.monday}`} className={styles.agendaWeek}>
+            Týden {formatRange(week.monday, addDays(week.monday, 6))}
+          </h3>
+          <ol className={styles.agendaDays}>
+            {week.days.map((day) => (
+              <li key={day} className={styles.agendaDay}>
+                <div className={styles.agendaDate}>
+                  {weekdayShort(day)} {formatDayMonth(day)}
+                  {day === todayKey && <span className={styles.today}>dnes</span>}
+                </div>
+                <ul className={styles.agendaEvents}>
+                  {(days.get(day) ?? []).map((card) => {
+                    const status = primaryStatus(card);
+                    return (
+                      <li key={card.id}>
+                        <Link href={href(card)} className={`${styles.agendaEvent} ${styles[cardTone(card)]}`}>
+                          <span className={styles.agendaTime}>
+                            {formatEventTime(new Date(card.startsAt), new Date(card.endsAt), card.allDay)}
+                          </span>
+                          <span className={styles.agendaMain}>
+                            <span className={styles.title}>{card.label}</span>
+                            {card.type !== "holiday" && (
+                              <span className={styles.line}>
+                                {card.topicTitle ?? "Téma zatím nedoplněno"} · {card.leadName ?? "vedoucí zatím nedoplněn"}
+                              </span>
+                            )}
+                          </span>
+                          {status && <span className={badgeClass(status.tone)}>{status.label}</span>}
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </li>
+            ))}
+          </ol>
+        </section>
+      ))}
+    </div>
+  );
+}
+
+export function NextEventCard({ card }: { card: EventCard | null }) {
+  if (!card) return <p className="muted">V nejbližších týdnech vás nečeká žádná zveřejněná akce.</p>;
+  const day = dayOf(card);
+  return (
+    <Link href={href(card)} className="item-card">
+      <p className="eyebrow">
+        {TYPE_LABELS[card.type]} · {weekdayShort(day)} {formatDayMonth(day)}
+      </p>
+      <p className="item-title">{card.topicTitle ? `${card.label}: ${card.topicTitle}` : card.label}</p>
+      <p className="item-meta">
+        {formatEventTime(new Date(card.startsAt), new Date(card.endsAt), card.allDay)}
+        {card.leadName ? ` · Vede: ${card.leadName}` : ""}
+      </p>
+    </Link>
+  );
+}

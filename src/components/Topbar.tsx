@@ -1,0 +1,41 @@
+import Link from "next/link";
+import { signOut, switchPersona } from "@/app/vstup/actions";
+import type { Persona } from "@/server/auth/personas";
+import type { CurrentUser } from "@/server/auth/session";
+
+export function Topbar({ user, personas }: { user: CurrentUser; personas: Persona[] }) {
+  return (
+    <header className="topbar">
+      <Link className="brand" href="/">
+        <span className="brand-name">Firemní Wiki</span>
+        <span className="brand-tagline">Za bohatší Česko – znalosti a procesy na jednom místě</span>
+      </Link>
+      <div className="account">
+        <span className="demo-badge" title="Fiktivní data a ukázkové režimy integrací">Ukázka · fiktivní data</span>
+        <form action={switchPersona} className="row">
+          <label className="visually-hidden" htmlFor="persona">
+            Přepnout ukázkovou roli
+          </label>
+          <select id="persona" name="persona" className="select persona-select" defaultValue={user.id}>
+            {personas.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+          <button className="btn btn-small" type="submit">
+            Přepnout roli
+          </button>
+        </form>
+        <span className="account-name">
+          {user.name} · {user.role === "organizer" ? "Organizátor" : "Kolega"}
+        </span>
+        <form action={signOut}>
+          <button className="btn btn-small" type="submit">
+            Odhlásit
+          </button>
+        </form>
+      </div>
+    </header>
+  );
+}
