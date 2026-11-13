@@ -32,6 +32,24 @@ Na `main` nepushuj, merge dělám já přes PR. Respektuj limit kontextu.
 
 ---
 
+## Stav 13. 11. 2026 pozdě večer (větev `claude/festive-shannon-s7wa4o`, vychází z větve PR #14)
+
+- PR #14 (`claude/focused-dirac-gphy4f`) je pořád draft a nesloučený. Tato větev na něj navazuje:
+  - `docs/google-kalendar.md` a `docs/google-prihlaseni.md` popisují automatické propojení Kalendáře.
+  - `docs/google-workspace-moznosti.md`: návrh variant A až E (In production bez ověření, ověření, Workspace
+    Internal, servisní účet s delegováním). Doporučení pro demo je B. Ověřeno jen z výsledků vyhledávání,
+    `developers.google.com` a `support.google.com` nejsou v povolené síti prostředí.
+  - Integrace: text o hostech pozvánek odpovídá `CALENDAR_ATTENDEES`, doplněna věta o automatickém propojení.
+    Ostatní „ukázkové“ texty (Ukázka chyb, Ukázková data, štítek „neověřeno proti Googlu“ u Přihlášení)
+    čekají na rozhodnutí uživatele a na výsledek živého testu.
+  - Zápisy po měsících: `groupByMonth` (`src/features/vzdelavani/minutes.ts`) řadí podle zveřejněného termínu,
+    test `tests/zapisy-mesice.test.ts` (více měsíců, přelom roku, pražský čas). V prohlížeči s více měsíci neviděno.
+- Ověřeno: lint, typy, 118 ze 118 testů, build.
+- **Živý test (kroky 1 a 2 promptu výše) neproběhl**, čeká na uživatele: potvrzení obou přesměrovacích adres
+  v Google konzoli a seznam účtů ve skupinách před `CALENDAR_ATTENDEES=audience`. Preview větve PR #14 je
+  nasazené (commit `eb85ab6`), `APP_URL` větve sedí. Tato větev vlastní `APP_URL` nemá, testuje se na PR #14.
+- Vercel přes konektor vrací 403 nebo 404, funguje `curl https://api.vercel.com/...?slug=maci`.
+
 ## Stav 13. 11. 2026 večer (větev `claude/focused-dirac-gphy4f`, zatím bez PR)
 
 - `main` obsahuje PR #1 až #13. Tato větev zapracovává připomínky uživatele ke stránce Plán:
