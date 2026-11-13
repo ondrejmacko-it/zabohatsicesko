@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { ActionMessage } from "@/components/ActionForm";
 import { Modal } from "@/components/Modal";
+import { submitKeepingValues } from "@/features/shared/keep-values";
 import { TYPE_LABELS } from "@/lib/labels";
 import type { EventType } from "@/lib/types";
 import { updateTemplateAction, type ActionResult } from "../actions";
@@ -32,7 +33,7 @@ export function TemplateDialog({ slots }: { slots: SlotValue[] }) {
           Časy a typy pro pravidelné dny. Když má den víc typů, střídají se po týdnech. Konkrétní akce pak můžete
           kdykoli upravit ručně.
         </p>
-        <form action={action} className="stack">
+        <form action={action} onSubmit={submitKeepingValues(action)} className="stack">
           {slots.map((slot) => (
             <fieldset key={slot.isoWeekday} className="slot">
               <legend className="field-label">{WEEKDAYS[slot.isoWeekday]}</legend>

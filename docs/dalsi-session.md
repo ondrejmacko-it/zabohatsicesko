@@ -36,6 +36,28 @@ Uživateli tykej, piš přátelsky. Větší změny nejdřív navrhni, nejasnost
   ten uživatel zavře. Na #8 pokračuj, dokud ho uživatel nesloučí.
 - `next dev` vytváří v kořeni soubor `AGENTS.md`. Do repa nepatří, před commitem ho smaž.
 
+## Hotovo 13. 11. 2026 (větev `ccr-abd7d882-k08f42`, PR do `main`)
+
+- `main` obsahuje PR #1 až #9. Tato větev z něj vychází.
+- **Oprava formulářů:** `src/features/shared/keep-values.ts` (`submitKeepingValues`). React po akci formulář
+  resetoval, proto se po neúspěšném zveřejnění přepnul Typ a Publikum a jinde mizel rozepsaný text. Použito
+  ve formuláři akce, zápisu, šablony týdne, zrušení akce, návrhu tématu a správy přístupů. Test
+  `tests/form-submit.test.ts`, v prohlížeči ověřeno, že se chyba bez opravy projeví a s opravou ne.
+- **Přehlednost:** týdny v Seznamu jsou bloky se střídavým pozadím, v Měsíci se střídají řádky, aktuální
+  týden má okrový pruh a štítek „tento týden“, dnešní den je podbarvený. Tabulky mají střídavé řádky.
+  Údaje o akci v detailu jsou jeden blok. Další termíny v Moje cesta jsou řádky místo podtržených odkazů.
+- **Apple zařízení:** pole mají na dotyku 16 px (iOS jinak po klepnutí přiblíží), tlačítka 44 px, select a
+  pole data a času mají vypnutý nativní vzhled Safari, odsazení pro výřez iPhonu (`viewport-fit=cover`,
+  `env(safe-area-inset-*)`), zamčený posun pod dialogem, vypnuté automatické odkazy z čísel a dat.
+  Mřížka měsíce se vejde na iPad na výšku. Na telefonu jsou v horním menu jen sekce, které někam vedou.
+- **Duplicity:** jméno role v horní liště se už neopakuje vedle přepínače.
+- Ověřeno lokálně v Chromiu na rozměrech iPhone SE, iPhone, iPad na výšku i na šířku, MacBook 13" a iMac:
+  žádný vodorovný posun stránky. **Ve skutečném Safari (WebKit) neověřeno**, v prostředí není k dispozici.
+  První věc ke kontrole na iPhonu a Macu: formulář Přidat akci (pole data a času) a nabídky.
+- Otevřené k rozhodnutí: „Nejbližší akce“ je v Moje cesta i v Harmonogramu, na Tématech jsou doporučená
+  témata nahoře a znovu ve výpisu všech. Obojí zatím ponecháno. Nabídky (Nástroje organizátora, Další
+  možnosti) se nezavírají klepnutím mimo.
+
 ## Odsouhlaseno 12. 11. 2026
 
 - Hotové demo „jak by to vypadalo v realitě“, fiktivní role a simulace zůstávají jako přepínače.
@@ -84,8 +106,7 @@ Uživateli tykej, piš přátelsky. Větší změny nejdřív navrhni, nejasnost
 1. Hotovo 12. 11.: přehled `docs/nahravky-moznosti.md` je v PR #8. Uživatel rozhodl dál ho teď neřešit
    (ověřování na živých stránkách, další kandidáti ani striktnost EU). Možná vznikne vlastní řešení nebo se
    použije firemní systém. Priorita je dodělat web.
-1b. **Chyba k opravě (nalezena 12. 11. při focení):** formulář akce (`ActionForm`) po neúspěšném zveřejnění
-   (chybí téma nebo vedoucí) přepne Typ na Action time a Publikum na Všichni. Opravit a přidat test.
+1b. Hotovo 13. 11.: chyba formuláře akce po neúspěšném zveřejnění je opravená (viz výše).
    Screenshoty všech obrazovek dostal uživatel jako ZIP (složka `screenshots/`, v repu není, čeká na
    rozhodnutí). Nezachycené stavy: přístupová brána, přihlášení Googlem, čekající žádost, „Vyžaduje
    pozornost“ se Zkusit synchronizaci znovu, výpadek přepisu.

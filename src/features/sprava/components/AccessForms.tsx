@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { ActionMessage } from "@/components/ActionForm";
+import { submitKeepingValues } from "@/features/shared/keep-values";
 import { GROUP_LABELS, ROLE_LABELS } from "@/lib/labels";
 import { GROUPS, type Group, type Role } from "@/lib/types";
 import { inviteUserAction, updateAccessAction } from "../actions";
@@ -48,7 +49,7 @@ type AccessProps = {
 export function AccessForm({ userId, roles, role, groups, mode }: AccessProps) {
   const [state, action, pending] = useActionState(updateAccessAction, null);
   return (
-    <form action={action} className="stack">
+    <form action={action} onSubmit={submitKeepingValues(action)} className="stack">
       <input type="hidden" name="userId" value={userId} />
       <AccessFields roles={roles} role={role} groups={mode === "approve" && groups.length === 0 ? ["vsichni"] : groups} />
       <div className="row">
@@ -69,7 +70,7 @@ export function AccessForm({ userId, roles, role, groups, mode }: AccessProps) {
 export function InviteForm({ roles, appUrl }: { roles: Role[]; appUrl: string }) {
   const [state, action, pending] = useActionState(inviteUserAction, null);
   return (
-    <form action={action} className="stack" key={state?.ok ? state.message : undefined}>
+    <form action={action} onSubmit={submitKeepingValues(action)} className="stack" key={state?.ok ? state.message : undefined}>
       <div className="form-grid">
         <label className="field">
           <span className="field-label">Jméno</span>

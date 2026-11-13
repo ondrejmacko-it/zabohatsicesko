@@ -8,7 +8,8 @@
 
 .grid {
   width: 100%;
-  min-width: 760px;
+  /* 640 px: mřížka se vejde i na iPad na výšku bez posunu do strany. */
+  min-width: 640px;
   border-collapse: collapse;
   table-layout: fixed;
   font-size: 13px;
@@ -47,6 +48,40 @@
 
 .weekCell > span {
   display: block;
+}
+
+/* Týdny se střídají v pozadí, aby šel řádek sledovat přes celou šířku. */
+.grid tbody tr:nth-child(even) .cell:not(.outside) {
+  background: var(--band);
+}
+
+.grid tbody tr:nth-child(even) .weekCell {
+  background: var(--beige-strong);
+}
+
+.currentWeek .weekCell {
+  box-shadow: inset 4px 0 0 var(--ochre);
+}
+
+.grid tbody tr .cell.todayCell:not(.outside) {
+  background: var(--ochre-soft);
+}
+
+.weekCell > .weekNow,
+.agendaWeek > .weekNow {
+  display: inline-block;
+}
+
+.weekNow {
+  margin-top: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--ochre-soft);
+  color: var(--ochre-dark);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0;
 }
 
 .offDay {
@@ -104,6 +139,7 @@
   border-radius: 6px;
   color: var(--ink);
   text-decoration: none;
+  overflow-wrap: anywhere;
 }
 
 .event + .event {
@@ -135,6 +171,7 @@
 }
 
 .regular {
+  border-color: var(--line);
   background: #fff;
 }
 
@@ -198,12 +235,41 @@
 .agenda {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 12px;
+}
+
+/* Každý týden je vlastní blok a bloky se střídají v pozadí. Aktuální týden má okrový pruh. */
+.agendaWeekBlock {
+  padding: 14px 16px 6px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--band);
+}
+
+.agendaWeekBlock:nth-child(even) {
+  background: var(--beige);
+}
+
+.agendaWeekBlock.currentWeek {
+  border-color: var(--line-strong);
+  box-shadow: inset 4px 0 0 var(--ochre);
 }
 
 .agendaWeek {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
   margin-bottom: 8px;
   font-size: 17px;
+}
+
+.agendaWeek > .weekNow {
+  margin-top: 0;
+}
+
+.agendaToday .agendaDate {
+  color: var(--ochre-dark);
 }
 
 .agendaDays,
@@ -246,6 +312,7 @@
   color: var(--ink);
   font-size: 15px;
   text-decoration: none;
+  overflow-wrap: anywhere;
 }
 
 .agendaEvent:hover {
@@ -286,6 +353,10 @@
   .agendaEvent :global(.badge) {
     justify-self: start;
   }
+
+  .agendaWeekBlock {
+    padding: 12px 12px 4px;
+  }
 }
 
 /* Na úzkém displeji se místo mřížky zobrazí agenda, bez nutnosti posouvat do strany. */
@@ -301,4 +372,8 @@
   .mobileOnly {
     display: block;
   }
+}
+
+.event.regular:hover {
+  border-color: var(--line-strong);
 }

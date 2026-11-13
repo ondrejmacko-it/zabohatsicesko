@@ -5,6 +5,7 @@ import { useActionState, useEffect, useState } from "react";
 import { ActionMessage } from "@/components/ActionForm";
 import { Icon } from "@/components/Icon";
 import { Modal } from "@/components/Modal";
+import { submitKeepingValues } from "@/features/shared/keep-values";
 import { GROUP_LABELS, TYPE_LABELS } from "@/lib/labels";
 import { EVENT_TYPES, GROUPS } from "@/lib/types";
 import { defaultAudience } from "@/server/domain/generation";
@@ -111,7 +112,7 @@ function EventForm({ mode, id, revision, initial, published, people, topics, inv
           </div>
         </div>
       ) : (
-        <form action={action} className="stack">
+        <form action={action} onSubmit={submitKeepingValues(action)} className="stack">
           {id && <input type="hidden" name="id" value={id} />}
           {revision !== undefined && <input type="hidden" name="revision" value={revision} />}
           <div className="form-grid">
