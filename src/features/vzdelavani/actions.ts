@@ -7,7 +7,7 @@ import { isValidDateKey, isValidMonthKey, isValidTime } from "@/lib/time";
 import { audit } from "@/server/audit";
 import { disconnect as disconnectCalendar } from "@/server/calendar/google-auth";
 import { simulateManualEdit } from "@/server/calendar/simulated";
-import { pairWithExisting, requestNewInvite, requestRetry, syncEvent } from "@/server/calendar/sync";
+import { pairWithExisting, requestNewInvite, requestRetry, syncEvent, syncPublished } from "@/server/calendar/sync";
 import { calendarMode } from "@/server/config";
 import { getDb } from "@/server/db/client";
 import { isOrganizer } from "@/server/policy";
@@ -20,6 +20,7 @@ import {
   deleteDraft,
   discardDraftChanges,
   generateMonth,
+  publishDrafts,
   updateEvent,
   updateTemplate,
   type EventInput,
@@ -144,7 +145,8 @@ export async function saveEventAction(_prev: ActionResult | null, formData: Form
       }
     }
     await updateEvent(user, id, revision, input, intent);
-    if (intent === "publish") after(() => syncEvent(id));
+    // Akce bez vazby (import, seed) ji dostane až tady, proto celá fronta a ne jen jedna akce.
+    if (intent === "publish") after(() => syncPublished());
     return { ok: true, id, message: intent === "publish" ? "Změna je zveřejněná." : "Návrh změny je uložený." };
   });
 }
@@ -191,6 +193,29 @@ export async function generateMonthAction(_prev: ActionResult | null, formData: 
       ? ` U ${withTopic} ${withTopic === 1 ? "termínu" : "termínů"} je předvyplněné doporučené téma podle zájmu, před zveřejněním ho můžete změnit.`
       : "";
     return { ok: true, message: `Doplněno ${places} ze šablony. Stávající akce zůstaly beze změny.${topicNote}` };
+  });
+}
+
+/** Zveřejní vybrané návrhy měsíce najednou. Pole formuláře: `pick` (ID), `rev-<id>`, `topic-<id>`, `lead-<id>`. */
+export async function publishMonthAction(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
+  return run(async (user) => {
+    const month = z.string().refine(isValidMonthKey).parse(formData.get("month"));
+    const ids = z.array(z.string().min(1).max(80)).min(1).max(100).safeParse(formData.getAll("pick"));
+    if (!ids.success) return { ok: false, error: "Vyberte aspoň jeden návrh." };
+    const items = ids.data.map((id) => ({
+      id,
+      revision: z.coerce.number().int().positive().parse(formData.get(`rev-${id}`)),
+      topicTitle: text(120).parse(formData.get(`topic-${id}`) ?? ""),
+      leadId: optionalId.parse(formData.get(`lead-${id}`) ?? ""),
+    }));
+    const { published, skipped } = await publishDrafts(user, month, items);
+    if (published.length) after(() => syncPublished());
+    const skippedNote = skipped
+      ? ` ${skipped} ${skipped === 1 ? "návrh mezitím někdo změnil a zůstal" : "návrhy mezitím někdo změnil a zůstaly"} beze změny, zkontrolujte je.`
+      : "";
+    if (!published.length) return { ok: false, error: `Nic se nezveřejnilo.${skippedNote}` };
+    const count = `${published.length} ${published.length === 1 ? "akce" : published.length < 5 ? "akce" : "akcí"}`;
+    return { ok: true, message: `Zveřejněno: ${count}. Pozvánky do Kalendáře se odesílají.${skippedNote}` };
   });
 }
 
@@ -396,6 +421,8 @@ export async function resetDemoAction(): Promise<ActionResult> {
       await resetDatabase(tx);
       await audit(tx, user.id, "demo.reset", "settings", "all");
     });
+    // Zveřejněné ukázkové akce dostanou pozvánky hned, ne až při další návštěvě Plánu.
+    after(() => syncPublished());
     return { ok: true, message: "Ukázková data jsou obnovená do výchozího stavu." };
   });
 }

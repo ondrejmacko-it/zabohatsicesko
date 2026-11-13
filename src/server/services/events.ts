@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, asc, eq, gt, gte, inArray, lt, ne, or, sql } from "drizzle-orm";
+import { and, asc, eq, gt, gte, inArray, isNull, lt, ne, or, sql } from "drizzle-orm";
 import { EXTRAORDINARY_TYPES } from "@/lib/labels";
 import { addDays, fromPragueLocal, isoWeekday, monthRange, toDateKey } from "@/lib/time";
 import type { EventType, Group, PlanStatus, SyncStatus } from "@/lib/types";
@@ -20,7 +20,7 @@ import { snapshotOf, type EventRow } from "@/server/domain/snapshot";
 import { suggestTopics } from "@/server/domain/topics";
 import { isOrganizer, visibleEvent, type Viewer } from "@/server/policy";
 import { DomainError } from "@/server/services/errors";
-import { listTopics } from "@/server/services/topics";
+import { listTopics, topicIdByName } from "@/server/services/topics";
 
 export type EventCard = {
   id: string;
@@ -217,8 +217,8 @@ export type SaveMode = "draft" | "publish";
 
 /**
  * Zveřejnění uloží snímek, revizi a požadavek na synchronizaci v jedné transakci.
- * Svátek se nesynchronizuje. Novou pozvánku vytvoří jen akce založená ve Wiki,
- * importovaná akce bez vazby čeká na spárování s existující pozvánkou.
+ * Svátek se nesynchronizuje. Vazbu tu dostane akce založená ve Wiki. Importované akci bez vazby
+ * ji dozaloží `linkPublishedWithoutInvite` (nejdřív ověří, že ve stejném čase neleží cizí pozvánka).
  */
 async function publishInTx(tx: Executor, row: EventRow, actorId: string, action: string) {
   const snapshot = snapshotOf(row);
@@ -431,6 +431,115 @@ export async function deleteDraft(viewer: Viewer, id: string, expectedRevision: 
         .onConflictDoNothing();
     }
     await audit(tx, viewer.id, "event.delete_draft", "event", id);
+  });
+}
+
+// ——— Hromadné zveřejnění návrhů měsíce ———
+
+export type MonthDraft = {
+  id: string;
+  revision: number;
+  type: EventType;
+  label: string;
+  startsAt: string;
+  endsAt: string;
+  audience: Group;
+  topicTitle: string | null;
+  leadId: string | null;
+  /** Návrh na místě z týdenní šablony (základ měsíce). Ostatní návrhy přidal někdo ručně navíc. */
+  fromTemplate: boolean;
+};
+
+/** Podmínka hromadného zveřejnění: budoucí, nikdy nezveřejněný návrh akce v daném měsíci. */
+function monthDraftFilter(monthKey: string) {
+  const { start, end } = monthRange(monthKey);
+  return and(
+    eq(events.orgId, config.orgId),
+    eq(events.status, "draft"),
+    isNull(events.publishedRevision),
+    ne(events.type, "holiday"),
+    gte(events.startsAt, start),
+    lt(events.startsAt, end),
+    gt(events.startsAt, now()),
+  );
+}
+
+/**
+ * Návrhy měsíce, které jdou zveřejnit najednou. Návrhy změn už zveřejněných akcí sem nepatří:
+ * mění platnou pozvánku, proto je správce zveřejňuje jednotlivě s přehledem dopadu. Vrací jen jejich počet.
+ */
+export async function listMonthDrafts(viewer: Viewer, monthKey: string): Promise<{ drafts: MonthDraft[]; changeDrafts: number }> {
+  requireOrganizer(viewer);
+  const db = await getDb();
+  const { start, end } = monthRange(monthKey);
+  const rows = await db.select().from(events).where(monthDraftFilter(monthKey)).orderBy(asc(events.startsAt), asc(events.id));
+  const [changes] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(events)
+    .where(
+      and(
+        eq(events.orgId, config.orgId),
+        ne(events.status, "cancelled"),
+        gte(events.startsAt, start),
+        lt(events.startsAt, end),
+        sql`${events.publishedRevision} IS NOT NULL AND ${events.revision} <> ${events.publishedRevision}`,
+      ),
+    );
+  return {
+    drafts: rows.map((row) => ({
+      id: row.id,
+      revision: row.revision,
+      type: row.type as EventType,
+      label: row.label,
+      startsAt: row.startsAt.toISOString(),
+      endsAt: row.endsAt.toISOString(),
+      audience: row.audience as Group,
+      topicTitle: row.topicTitle,
+      leadId: row.leadId,
+      fromTemplate: row.generationKey !== null,
+    })),
+    changeDrafts: changes?.count ?? 0,
+  };
+}
+
+export type DraftPublish = { id: string; revision: number; topicTitle: string | null; leadId: string | null };
+
+/**
+ * Zveřejní vybrané návrhy měsíce v jedné transakci, volitelně s doplněným tématem a vedoucím.
+ * Projde jen budoucí, nikdy nezveřejněný návrh z daného měsíce ve verzi, kterou správce viděl.
+ * Cokoli jiného (návrh změny, zrušená akce, mezitím upravený návrh) se přeskočí a nezmění.
+ */
+export async function publishDrafts(viewer: Viewer, monthKey: string, items: DraftPublish[]): Promise<{ published: string[]; skipped: number }> {
+  requireOrganizer(viewer);
+  const db = await getDb();
+  return db.transaction(async (tx) => {
+    await assertUsers(tx, items.map((item) => item.leadId));
+    const published: string[] = [];
+    for (const item of items) {
+      const [current] = await tx.select().from(events).where(and(monthDraftFilter(monthKey), eq(events.id, item.id))).limit(1);
+      if (!current || current.revision !== item.revision) continue;
+      const topicId = item.topicTitle === current.topicTitle ? current.topicId : await topicIdByName(tx, item.topicTitle);
+      const [row] = await tx
+        .update(events)
+        .set({
+          topicTitle: item.topicTitle,
+          topicId,
+          leadId: item.leadId,
+          status: "published",
+          revision: sql`${events.revision} + 1`,
+          updatedBy: viewer.id,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(events.id, item.id), eq(events.revision, item.revision)))
+        .returning();
+      if (!row) continue;
+      await tx.insert(eventRevisions).values({ eventId: row.id, revision: row.revision, action: "save", snapshot: snapshotOf(row), actorId: viewer.id });
+      await publishInTx(tx, row, viewer.id, "publish");
+      await audit(tx, viewer.id, "event.publish", "event", row.id);
+      published.push(row.id);
+    }
+    if (published.length) await audit(tx, viewer.id, "plan.publish_month", "month", monthKey);
+    return { published, skipped: items.length - published.length };
   });
 }
 

@@ -1,4 +1,4 @@
-import { and, eq, isNull, lt, or, sql } from "drizzle-orm";
+import { and, eq, gt, isNotNull, isNull, lt, ne, or, sql } from "drizzle-orm";
 import { addDays, fromPragueLocal, toDateKey } from "@/lib/time";
 import type { EventSnapshot } from "@/lib/types";
 import { audit, logError } from "@/server/audit";
@@ -11,7 +11,7 @@ import { DomainError } from "@/server/services/errors";
 import { isOrganizer, type Viewer } from "@/server/policy";
 import { audienceAttendees, planGuests, samePlan } from "./attendees";
 import { GoogleCalendar } from "./google";
-import { storedAccessToken } from "./google-auth";
+import { connectionStatus, storedAccessToken } from "./google-auth";
 import { CalendarError, type CalendarProvider, type ExternalEvent, type ManagedEventData } from "./provider";
 import { SimulatedCalendar } from "./simulated";
 import { targetCalendarId } from "./target";
@@ -246,6 +246,80 @@ export async function syncPending(): Promise<void> {
     .from(calendarLinks)
     .where(eq(calendarLinks.syncStatus, "pending"));
   for (const { eventId } of pending) await syncEvent(eventId);
+}
+
+/**
+ * Založí vazbu každé zveřejněné budoucí akci, která ji nemá (typicky akce ze seedu nebo importu).
+ * Pozvánku pak vytvoří běžná fronta. Výjimka: když ve stejném čase už v Kalendáři leží cizí
+ * nespárovaná pozvánka, akce počká na rozhodnutí správce (spárovat, nebo založit novou),
+ * aby pozvaným nepřišla dvojí pozvánka. Proběhlé a zrušené akce se nezakládají.
+ * @returns ID akcí, které dostaly vazbu
+ */
+export async function linkPublishedWithoutInvite(): Promise<string[]> {
+  const db = await getDb();
+  // Bez použitelného Kalendáře by vazby jen spadly do chyby. Počká se na propojení.
+  if (calendarMode() !== "simulation") {
+    const cfg = googleCalendarConfig();
+    if (!cfg || !(await connectionStatus(db))) return [];
+  }
+  const unlinked = await db
+    .select({ id: events.id, published: events.published })
+    .from(events)
+    .leftJoin(calendarLinks, eq(calendarLinks.eventId, events.id))
+    .where(
+      and(
+        eq(events.orgId, config.orgId),
+        isNotNull(events.published),
+        isNull(calendarLinks.eventId),
+        ne(events.type, "holiday"),
+        ne(events.status, "cancelled"),
+        gt(sql`(${events.published}->>'startsAt')::timestamptz`, sql`${now().toISOString()}::timestamptz`),
+      ),
+    );
+  if (!unlinked.length) return [];
+
+  const provider = calendarProvider(db);
+  const calendarId = targetCalendarId();
+  const taken = new Set((await db.select({ id: calendarLinks.externalEventId }).from(calendarLinks)).map((l) => l.id));
+  const linked: string[] = [];
+  for (const { id, published } of unlinked) {
+    const snapshot = published as EventSnapshot;
+    if (snapshot.status === "cancelled" || snapshot.type === "holiday") continue;
+    const startsAt = new Date(snapshot.startsAt);
+    const endsAt = new Date(snapshot.endsAt);
+    try {
+      // Pozvánka, kterou Wiki založila dřív (například před obnovou ukázkových dat), se pozná podle klíče
+      // a fronta ji převezme. Jiná pozvánka ve stejném čase je důvod počkat na člověka.
+      const own = await provider.findByKey(calendarId, `${config.orgId}:${id}`);
+      const sameSlot = (await provider.listBetween(calendarId, startsAt, endsAt)).filter(
+        (c) => c.id !== own?.id && !taken.has(c.id) && !c.cancelled && c.startsAt.getTime() === startsAt.getTime() && c.endsAt.getTime() === endsAt.getTime(),
+      );
+      if (sameSlot.length) continue;
+    } catch (error) {
+      if (!(error instanceof CalendarError)) throw error;
+      logError("calendar.auto_link", error.code);
+      return linked;
+    }
+    const inserted = await db.transaction(async (tx) => {
+      const [row] = await tx
+        .insert(calendarLinks)
+        .values({ eventId: id, calendarId, syncStatus: "pending", syncedRevision: 0, attempts: 0 })
+        .onConflictDoNothing()
+        .returning({ eventId: calendarLinks.eventId });
+      if (!row) return false;
+      await tx.update(events).set({ calendarIntent: "create" }).where(eq(events.id, id));
+      await audit(tx, null, "calendar.auto_link", "event", id);
+      return true;
+    });
+    if (inserted) linked.push(id);
+  }
+  return linked;
+}
+
+/** Všechno zveřejněné dostane pozvánku: dozaloží chybějící vazby a odešle frontu. Opakované volání je bezpečné. */
+export async function syncPublished(): Promise<void> {
+  await linkPublishedWithoutInvite();
+  await syncPending();
 }
 
 // ——— Akce organizátora nad vazbou ———

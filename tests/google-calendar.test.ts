@@ -14,7 +14,7 @@ import {
   type AccessTokenSource,
 } from "@/server/calendar/google-auth";
 import { CalendarError, type ManagedEventData } from "@/server/calendar/provider";
-import { pairWithExisting, pairingCandidates, requestNewInvite, resumeAfterReconnect, syncEvent, syncPending } from "@/server/calendar/sync";
+import { linkPublishedWithoutInvite, pairWithExisting, pairingCandidates, requestNewInvite, resumeAfterReconnect, syncEvent, syncPending, syncPublished } from "@/server/calendar/sync";
 import { googleCalendarConfig, googleCalendarConfigProblems } from "@/server/config";
 import { getDb } from "@/server/db/client";
 import { calendarLinks, integrationCredentials, users } from "@/server/db/schema";
@@ -446,6 +446,42 @@ describe("testovací režim Google Kalendáře ve Wiki (napodobené HTTP)", () =
     await connect();
     const db = await resetDemo();
     expect(await connectionStatus(db)).toMatchObject({ accountEmail: expect.any(String) });
+  });
+
+  test("zveřejněné budoucí akce ze seedu dostanou pozvánku samy, i po obnově ukázkových dat", async () => {
+    // Bez propojeného Kalendáře se nic nezakládá, vazby by jen spadly do chyby.
+    expect(await linkPublishedWithoutInvite()).toEqual([]);
+
+    await connect();
+    await syncPublished();
+    const db = await getDb();
+    const links = await db.select().from(calendarLinks);
+    expect(links.length).toBeGreaterThan(2);
+    expect(links.every((l) => l.syncStatus === "synced" && l.externalEventId)).toBe(true);
+    expect(links.map((l) => l.eventId)).toContain("ev-11-26");
+    // Proběhlé, zrušené akce ani návrhy pozvánku nedostanou.
+    for (const id of ["ev-11-3", "ev-11-4", "ev-11-19"]) expect(await link(id)).toBeUndefined();
+    const created = google.calls("POST").length;
+    expect(created).toBe(links.length);
+
+    // Obnova dat vazby smaže. Pozvánky v Googlu zůstaly, Wiki je pozná podle klíče a nezaloží je podruhé.
+    await resetDemo();
+    expect(await link("ev-11-26")).toBeUndefined();
+    await syncPublished();
+    await syncPublished();
+    expect((await db.select().from(calendarLinks)).length).toBe(links.length);
+    expect(google.calls("POST")).toHaveLength(created);
+    expect((await link("ev-11-26"))?.syncStatus).toBe("synced");
+  });
+
+  test("cizí pozvánka ve stejném čase: akce počká na rozhodnutí, dvojí pozvánka nevznikne", async () => {
+    await connect();
+    const row = (await loadEventRow(await getDb(), "ev-11-26"))!;
+    google.put({ id: "cizi1", summary: "Trénink RM", start: { dateTime: row.startsAt.toISOString() }, end: { dateTime: row.endsAt.toISOString() } });
+    await syncPublished();
+    expect(await link("ev-11-26")).toBeUndefined();
+    expect((await link("ev-11-24"))?.syncStatus).toBe("synced");
+    expect((await pairingCandidates(organizer, "ev-11-26")).map((c) => c.id)).toEqual(["cizi1"]);
   });
 
   test("spárování s výskytem série: změna tématu upraví jen tento termín, opakování nic nezdvojí", async () => {

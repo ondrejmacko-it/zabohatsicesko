@@ -2003,3 +2003,80 @@ p.cal-status {
     white-space: normal;
   }
 }
+
+/* Hromadné zveřejnění návrhů měsíce: řádek = výběr, téma, vedoucí. */
+.publish-group {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.publish-group-head .btn {
+  flex: none;
+  white-space: nowrap;
+}
+
+.publish-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 0;
+}
+
+.publish-list {
+  display: flex;
+  flex-direction: column;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--line);
+}
+
+.publish-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 0.8fr);
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.publish-row[data-picked="false"] .publish-main {
+  opacity: 0.6;
+}
+
+.publish-pick {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.publish-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.publish-impact {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--band);
+}
+
+@media (max-width: 640px) {
+  .publish-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .publish-pick {
+    grid-column: 1 / -1;
+  }
+}

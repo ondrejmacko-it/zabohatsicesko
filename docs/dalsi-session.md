@@ -9,42 +9,62 @@ Kontext máš v `docs/dalsi-session.md`, `README.md`, `docs/google-prihlaseni.md
 pravidla v `CLAUDE.md`. Tykej mi, piš přátelsky. Úpravy níže jsou odsouhlasené, rovnou je udělej. Ptej se jen
 na věci označené „zeptej se“.
 
-Stav: větev `claude/blissful-mendel-ejkw5s` má draft PR do `main` (obsahuje i `claude/amazing-edison-51eo2g`).
-Hotové je jádro části A a B z minulého promptu (viz „Stav 13. 11. noc“ níže). Pokud je PR sloučený, vyjdi z `main`.
+Stav: práce pokračuje na větvi `claude/tender-fermat-oepq6p` (vychází z `claude/blissful-mendel-ejkw5s`, draft PR #16
+do `main`). Zeptej se, jestli ji mám přidat do PR #16, nebo otevřít vlastní PR. Pokud je PR sloučený, vyjdi z `main`.
+Můj osobní účet je z Wiki smazaný, nezakládej ho znovu a nikam ho nezvi.
 
 Zásada pro celé UI: hlavní údaje a hlavní akce musí vyniknout, vedlejší texty jsou menší a tlumené, nic není
 ani o pixel mimo osu, vše je jasné na první pohled.
 
-1. Živý test se mnou krok za krokem na preview větve (adresa v poznámkách níže). Zeptej se, jestli jsem v Google
-   konzoli přidal obě přesměrovací adresy. Postup: přihlášení správce (při druhém přihlášení má přijít jedna
-   obrazovka Googlu s Kalendářem), nový účet a žádost, schválení ve Správě, řádek „Kalendář“ na Plánu,
-   zveřejnění akce, změna, zrušení, odkaz na zápis v pozvánce.
-2. Skutečné pozvánky jsou na preview této větve zapnuté (`CALENDAR_ATTENDEES=audience`, jen pro tuto větev).
-   Ověř se mnou, že zveřejněné budoucí akce mají v Kalendáři hosty podle skupin a že nový účet ve skupině
-   dostane pozvánky sám. Návrhy se do Kalendáře neposílají, dokud je nezveřejním: navrhni hromadné zveřejnění
-   měsíce (zeptej se, posílá e-maily). Po sloučení PR přenes proměnnou na všechny preview (zeptej se).
-   Pozor: ze 6 zveřejněných budoucích akcí mají vazbu na Kalendář jen 2. Zbylé 4 jsou ze seedu se záměrem
-   `pair` (čekají na spárování s existující pozvánkou) a do Kalendáře se samy nezaloží. Zjisti v `sync.ts`
-   a `events.ts` proč, a udělej to tak, aby každá zveřejněná akce bez vazby dostala pozvánku automaticky.
-3. Dialog akce: ukaž skutečné hosty podle vybrané skupiny (`loadCalendarStatus().recipients`) místo testovací
+1. Živý test se mnou krok za krokem. Skutečné pozvánky (`CALENDAR_ATTENDEES=audience`), vlastní `APP_URL`
+   a přesměrovací adresy v Google konzoli má jen preview větve `claude/blissful-mendel-ejkw5s`. Zeptej se, kde
+   testovat (nová větev potřebuje totéž). Postup: přihlášení správce (při druhém přihlášení jedna obrazovka
+   Googlu s Kalendářem), řádek „Kalendář“ na Plánu, všech 6 zveřejněných budoucích akcí má vazbu a hosty podle
+   skupin, nový účet a žádost, schválení ve Správě a pozvánky, které mu samy dojdou, změna, zrušení, odkaz na zápis.
+   Hromadné zveřejnění („Zveřejnit návrhy“ na Plánu) před prvním ostrým použitím na preview potvrď se mnou,
+   posílá e-maily. Po sloučení PR přenes proměnnou na všechny preview (zeptej se).
+2. Dialog akce: ukaž skutečné hosty podle vybrané skupiny (`loadCalendarStatus().recipients`) místo testovací
    adresy a nabídni doporučená témata s počtem zájemců.
-4. Dokonči sloučení rolí v textech: hledej „organizátor“ v `src/` (Integrace, `SyncPanelView`, `EventPeek`,
-   detail akce, `status.ts`, legenda, nápovědy) a nahraď „správce“. Persona „Organizátor ukázky“ na `/vstup`
-   a v seedu: přejmenuj nebo sluč s personou správce (zeptej se, seed mění data ukázky).
-5. Okno „Přidat zápis“ a detail akce za správce u cizí akce: ověř v prohlížeči, že má „Nahrát záznam“, úpravu,
-   zveřejnění i stažení zápisu (oprávnění na serveru už platí).
-6. Část C z minula: Správa v okně (`Modal`) a řádkové akce v menu (`Menu`), menu místo řady tlačítek v detailu
-   akce pro vedoucího, na Integraci a v `SyncPanelView`, doověření oken (zápis za čtenáře, nahrání záznamu,
-   „Přidat zápis“ na 1280 px, Plán za účastníka na 390 px, varování o hydrataci). Po každém bloku 1280 a 390 px.
-7. Dokumentace: `README.md`, `docs/predani.md`, `docs/google-prihlaseni.md`, `docs/google-kalendar.md` popiš
-   podle stavu (jedna role Správce, souhlas ke Kalendáři při přihlášení, `GOOGLE_OAUTH_PUBLISHED`, příjemci
-   pozvánek včetně testovacích účtů svázaných s fiktivní rolí, řádek stavu Kalendáře).
-8. Snímky každého okna a stavu za každou roli na 1280 a 390 px jako ZIP se seznamem. Do repa je nedávej.
+3. Dokonči sloučení rolí v textech: hledej „organizátor“ v `src/` (Integrace, `SyncPanelView`, `EventPeek`,
+   detail akce, `status.ts`, legenda, nápovědy, výběr „Zobrazit jako: Organizátor (vidím vše)“) a nahraď
+   „správce“. Persona „Organizátor ukázky“ na `/vstup` a v seedu: přejmenuj nebo sluč (zeptej se, mění seed).
+4. Okno „Přidat zápis“ a detail akce za správce u cizí akce: ověř v prohlížeči „Nahrát záznam“, úpravu,
+   zveřejnění i stažení zápisu.
+5. Správa: úpravy uživatele v okně (`Modal`), řádkové akce v menu (`Menu`). Menu místo řady tlačítek v detailu
+   akce pro vedoucího, na Integraci a v `SyncPanelView`. Doověř okna (zápis za čtenáře, nahrání záznamu
+   a `AutoRefresh`, „Přidat zápis“ na 1280 px, Plán za účastníka na 390 px). Varování o hydrataci na Plánu
+   trvá (viděno 13. 11., příčina nehledána). Po každém bloku 1280 a 390 px.
+6. Dokumentace: `README.md`, `docs/predani.md`, `docs/google-prihlaseni.md`, `docs/google-kalendar.md` podle
+   stavu (jedna role Správce, souhlas ke Kalendáři při přihlášení, `GOOGLE_OAUTH_PUBLISHED`, příjemci pozvánek,
+   řádek stavu Kalendáře, automatické vazby a fronta z Plánu, hromadné zveřejnění měsíce).
+7. Snímky každého okna a stavu za každou roli na 1280 a 390 px jako ZIP se seznamem. Do repa je nedávej.
 
 Production na Vercelu nemá proměnné prostředí a buildy z `main` se přeskakují, vše běží na preview.
 Na `main` nepushuj, merge dělám já. Respektuj limit kontextu.
 
 ---
+
+## Stav 13. 11. 2026 pozdě v noci (větev `claude/tender-fermat-oepq6p`)
+
+Ověřeno: lint, typy, 134 ze 134 testů, build. V Chromiu nad PGlite okno „Zveřejnit návrhy“ za správce na 1280
+a 390 px (bez vodorovného posunu). **Naživo proti Googlu neověřeno.**
+
+- **Proč 4 zveřejněné akce neměly pozvánku:** seed zakládá akce se záměrem `pair`, `publishInTx` vytvoří vazbu
+  jen pro `create` a fronta `syncPending` čte jen existující vazby. V režimu Googlu seed žádné vazby nezakládá.
+- **Automatické vazby** (`sync.ts`: `linkPublishedWithoutInvite`, `syncPublished`): každá zveřejněná budoucí
+  nezrušená akce bez vazby ji dostane a fronta založí pozvánku. Pozvánku, kterou Wiki založila dřív (před obnovou
+  dat), pozná podle klíče a nezdvojí. Výjimka: když ve stejném čase leží v Kalendáři cizí nespárovaná pozvánka,
+  akce zůstane „bez vazby“ a správce ji spáruje nebo založí novou. Bez propojeného Kalendáře se nezakládá nic.
+  Spouští se po otevření Plánu správcem, po zveřejnění, po hromadném zveřejnění a po obnově ukázkových dat.
+  Platí i v simulaci (ukázkové akce bez pozvánky ji dostanou po otevření Plánu).
+- **Hromadné zveřejnění** (`PublishMonthDialog`, `listMonthDrafts`, `publishDrafts`, `publishMonthAction`):
+  tlačítko „Zveřejnit návrhy (počet)“ vedle „Přidat akci“. Nahoře přehled dopadu (počet akcí, kolik lidí dostane
+  e-mail a z jakých skupin, podle režimu Kalendáře). Základ ze šablony je předvybraný, návrhy přidané navíc
+  ne. Téma a vedoucího jde doplnit přímo v řádku. Návrhy změn zveřejněných akcí v okně nejsou (jen počet),
+  server je odmítne stejně jako cizí měsíc, proběhlé termíny a zastaralou verzi návrhu.
+  Testy: `tests/hromadne-zverejneni.test.ts`, dva nové v `tests/google-calendar.test.ts`.
+- **Neuděláno z promptu:** živý test, hosté a témata v dialogu akce, texty „organizátor“, Správa v okně a menu,
+  doověření oken, dokumentace, snímky.
 
 ## Stav 13. 11. 2026 noc (větev `claude/blissful-mendel-ejkw5s`, draft PR do `main`)
 
