@@ -315,7 +315,7 @@ function EventForm({ mode, id, revision, initial, published, people, topics, onC
               {published ? "Uložit návrh změny" : "Uložit návrh"}
             </button>
             <button type="submit" name="intent" value="publish" className="btn btn-primary" disabled={pending || checking}>
-              {checking ? "Počítám dopad…" : confirmed ? "Potvrdit dopad a zveřejnit" : published ? "Zveřejnit změnu" : "Zveřejnit"}
+              {checking ? "Počítám dopad…" : pending ? "Ukládám…" : confirmed ? "Potvrdit dopad a zveřejnit" : published ? "Zveřejnit změnu" : "Zveřejnit"}
             </button>
             <button type="button" className="btn" onClick={requestClose}>
               Zrušit
