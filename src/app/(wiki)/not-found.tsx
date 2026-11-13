@@ -6,11 +6,8 @@ export default function NotFound() {
       <h1>Záznam není dostupný</h1>
       <p>Záznam neexistuje nebo k němu nemáte přístup.</p>
       <p className="row">
-        <Link className="btn btn-primary" href="/vzdelavani/prehled">
-          Přejít na Přehled
-        </Link>
-        <Link className="btn" href="/vzdelavani/harmonogram">
-          Otevřít harmonogram
+        <Link className="btn btn-primary" href="/vzdelavani/harmonogram">
+          Otevřít Plán vzdělávání
         </Link>
       </p>
     </section>

@@ -45,7 +45,7 @@ export function SyncPanelView({ eventId, sync }: { eventId: string; sync: SyncPa
           {sync.calendarErrorCode === "calendar_revoked" || sync.calendarErrorCode === "calendar_not_configured" ? (
             <>
               {sync.calendarErrorCode === "calendar_revoked" ? "Google Kalendář není připojený." : ERROR_LABELS.calendar_not_configured}{" "}
-              <a href="/vzdelavani/integrace">Otevřít Integrace</a>
+              <a href="/vzdelavani/integrace">Otevřít technické nastavení</a>
             </>
           ) : (
             "Kalendář teď neodpovídá. Údaje o pozvánce nejsou k dispozici."

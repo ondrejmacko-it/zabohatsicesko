@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ActionForm } from "@/components/ActionForm";
 import { AccessForm, InviteForm } from "@/features/sprava/components/AccessForms";
@@ -32,6 +33,24 @@ export default async function AdminPage() {
           </p>
         </div>
       </div>
+
+      <section className="section" aria-labelledby="jak-to-funguje">
+        <h2 id="jak-to-funguje">Jak to funguje</h2>
+        <ul className="prose-list">
+          <li>
+            <strong>Role</strong> říká, co člověk smí dělat. Člen týmu vidí plán a zápisy, organizátor plánuje a zveřejňuje akce a
+            spravuje uživatele, správce navíc přiděluje roli správce.
+          </li>
+          <li>
+            <strong>Skupiny</strong> říkají, co člověk uvidí: jen akce a zápisy určené jeho skupinám. Všichni = celá firma, FP = finanční
+            poradci, RM = relationship manažeři, Tým A = účastníci Action time.
+          </li>
+          <li>
+            <strong>Vedoucí akce</strong> není role. Organizátor ho vybere u konkrétní akce a vedoucí pak u ní nahrává záznam a
+            zveřejňuje zápis.
+          </li>
+        </ul>
+      </section>
 
       <section className="section stack" aria-labelledby="zadosti">
         <h2 id="zadosti">Čekající žádosti {pending.length > 0 && <span className="badge badge-ochre">{pending.length}</span>}</h2>
@@ -88,6 +107,10 @@ export default async function AdminPage() {
           </article>
         ))}
       </section>
+
+      <p className="small muted">
+        <Link href="/vzdelavani/integrace">Technické nastavení ukázky</Link> (stav propojení, ukázka chyb, obnova ukázkových dat)
+      </p>
     </>
   );
 }

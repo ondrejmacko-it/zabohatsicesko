@@ -6,6 +6,7 @@ import { ActionMessage } from "@/components/ActionForm";
 import { Icon } from "@/components/Icon";
 import { Modal } from "@/components/Modal";
 import { EXTRAORDINARY_TYPES, GROUP_HINTS, GROUP_LABELS, TYPE_LABELS } from "@/lib/labels";
+import { isoWeekday } from "@/lib/time";
 import { EVENT_TYPES, GROUPS } from "@/lib/types";
 import { defaultAudience } from "@/server/domain/generation";
 import { topicFitsAudience } from "@/server/domain/topics";
@@ -28,7 +29,11 @@ type Props = {
   inviteeCount: number;
   /** Nahrazení pravidelného termínu jinou akcí na stejném místě v rozpisu. */
   replace?: boolean;
+  /** Dny v týdnu (1 = pondělí), kdy se podle šablony běžně plánuje. Jiný den dialog výrazně ohlásí. */
+  planDays?: number[];
 };
+
+const WEEKDAY_NAMES = ["", "pondělí", "úterý", "středu", "čtvrtek", "pátek", "sobotu", "neděli"];
 
 /** Přidání a úprava akce v jednom plovoucím dialogu. */
 export function EventDialog(props: Props) {
@@ -62,7 +67,7 @@ function replacementOf(initial: EventFormValues): EventFormValues {
   return { ...initial, type: "workshop", label: TYPE_LABELS.workshop, topicTitle: "" };
 }
 
-function EventForm({ mode, id, revision, initial, published, people, topics, replace, onClose }: Props & { onClose: () => void }) {
+function EventForm({ mode, id, revision, initial, published, people, topics, replace, planDays, onClose }: Props & { onClose: () => void }) {
   const router = useRouter();
   const [values, setValues] = useState(() => (replace ? replacementOf(initial) : initial));
   const [multiDay, setMultiDay] = useState(initial.endDate !== null);
@@ -110,6 +115,8 @@ function EventForm({ mode, id, revision, initial, published, people, topics, rep
     }
     startTransition(() => action(formData));
   };
+  const weekday = /^\d{4}-\d{2}-\d{2}$/.test(values.date) ? isoWeekday(values.date) : null;
+  const unusualDay = !isHoliday && planDays !== undefined && planDays.length > 0 && weekday !== null && !planDays.includes(weekday);
   const suggestions = topics.filter((t) => topicFitsAudience(t.audience, values.audience)).slice(0, 3);
 
   useEffect(() => {
@@ -164,6 +171,8 @@ function EventForm({ mode, id, revision, initial, published, people, topics, rep
               {published ? " Protože je termín zveřejněný, změna se uloží jako návrh a zveřejníte ji po potvrzení dopadu." : ""}
             </p>
           )}
+          <fieldset className="form-main">
+            <legend>Základní údaje</legend>
           <div className="form-grid">
             <label className="field">
               <span className="field-label">Typ</span>
@@ -180,6 +189,12 @@ function EventForm({ mode, id, revision, initial, published, people, topics, rep
               <span className="field-label">Datum</span>
               <input className="input" type="date" name="date" value={values.date} onChange={(e) => set("date", e.target.value)} required />
             </label>
+            {unusualDay && (
+              <p className="notice notice-danger span-2" role="alert">
+                <strong>Pozor, vybrali jste {WEEKDAY_NAMES[weekday!]}.</strong> V tento den se vzdělávání běžně nekoná a měsíční tabulka
+                pro něj nemá sloupec. Akce se ukáže jen jako řádek u svého týdne a v Seznamu. Pokud je to záměr, pokračujte.
+              </p>
+            )}
             {!isHoliday && (
               <div className="form-grid">
                 <label className="field">
@@ -278,6 +293,8 @@ function EventForm({ mode, id, revision, initial, published, people, topics, rep
               <span className="field-hint">{GROUP_HINTS[values.audience]}</span>
             </label>
           </div>
+          {!isHoliday && <p className="field-hint">Návrh jde uložit i neúplný. Pro zveřejnění je potřeba téma a vedoucí.</p>}
+          </fieldset>
 
           {!isHoliday && (
             <details className="more-settings" open={moreOpen} onToggle={(e) => setMoreOpen(e.currentTarget.open)}>

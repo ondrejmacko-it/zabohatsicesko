@@ -16,7 +16,7 @@ import { formatDate, formatEventTime, monthOf, toDateKey } from "@/lib/time";
 import { requireUser } from "@/server/auth/session";
 import { isOrganizer } from "@/server/policy";
 import { getEventDetail } from "@/server/services/detail";
-import { listPeople } from "@/server/services/events";
+import { listPeople, loadTemplate } from "@/server/services/events";
 import { listTopics } from "@/server/services/topics";
 
 export const metadata: Metadata = { title: "Detail akce" };
@@ -24,7 +24,7 @@ export const metadata: Metadata = { title: "Detail akce" };
 /** Odkud uživatel přišel. Zpět ho vracíme tam, ne vždy na harmonogram. Jiná hodnota se ignoruje. */
 const ORIGINS: Record<string, { href: string; label: string }> = {
   zapisy: { href: "/vzdelavani/zapisy", label: "Zpět na zápisy" },
-  prehled: { href: "/vzdelavani/prehled", label: "Zpět na Přehled" },
+  prehled: { href: "/vzdelavani/harmonogram", label: "Zpět na Plán" },
 };
 
 type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ odkud?: string }> };
@@ -44,6 +44,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
   const title = card.topicTitle ? `${card.label}: ${card.topicTitle}` : card.label;
   const status = primaryStatus(card);
   const [people, topics] = organizer ? await Promise.all([listPeople(user), listTopics(user)]) : [[], []];
+  const planDays = organizer ? (await loadTemplate()).filter((slot) => slot.active).map((slot) => slot.isoWeekday) : [];
   const handler = detail.recording.access === "handler";
   const back = ORIGINS[(await searchParams).odkud ?? ""] ?? { href: `/vzdelavani/harmonogram?mesic=${monthOf(dayKey)}`, label: "Zpět na harmonogram" };
 
@@ -82,6 +83,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
               people={people}
               topics={topics}
               inviteeCount={detail.sync?.inviteeCount ?? 0}
+              planDays={planDays}
             />
           )}
           {organizer && detail.form && detail.fromTemplate && !EXTRAORDINARY_TYPES.has(card.type) && card.planStatus !== "cancelled" && !card.past && (
@@ -95,6 +97,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
               people={people}
               topics={topics}
               inviteeCount={detail.sync?.inviteeCount ?? 0}
+              planDays={planDays}
             />
           )}
           {handler && card.past && (
