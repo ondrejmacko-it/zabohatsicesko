@@ -64,7 +64,8 @@ export async function listPublishedMinutes(viewer: Viewer, filter: MinutesFilter
 const MAX_MINUTES_TASKS = 4;
 
 /** `external`: odkaz vede mimo stránky Wiki (přesměrování na Google), proto běžná navigace prohlížeče. */
-export type JourneyTask = { key: string; title: string; detail: string; href: string; action: string; external?: boolean };
+/** `eventType`: úkol patří ke konkrétní akci, filtr Typ akce na Plánu ho podle něj schová nebo nechá. */
+export type JourneyTask = { key: string; title: string; detail: string; href: string; action: string; external?: boolean; eventType?: EventType };
 
 /** Co na uživatele čeká: zápisy k dokončení u akcí, které vede nebo kontroluje, a úkoly organizátora. */
 export async function listTasks(viewer: Viewer): Promise<JourneyTask[]> {
@@ -93,13 +94,13 @@ export async function listTasks(viewer: Viewer): Promise<JourneyTask[]> {
       if (tasks.length >= MAX_MINUTES_TASKS) break;
       const today = toDateKey(new Date(snapshot.endsAt)) === toDateKey(reference);
       if (today && state !== "draft") {
-        tasks.push({ key: `nahravka-${row.id}`, title: "Nahrajte audio z dnešní akce", detail: `${title}. Zápis se z nahrávky připraví sám, vy ho jen zkontrolujete.`, href: `/vzdelavani/akce/${row.id}?odkud=prehled#nahravka`, action: "Nahrát audio" });
+        tasks.push({ key: `nahravka-${row.id}`, title: "Nahrajte audio z dnešní akce", detail: `${title}. Zápis se z nahrávky připraví sám, vy ho jen zkontrolujete.`, href: `/vzdelavani/akce/${row.id}?odkud=prehled#nahravka`, action: "Nahrát audio", eventType: snapshot.type });
         continue;
       }
       tasks.push(
         state === "draft"
-          ? { key: `zapis-${row.id}`, title, detail: "Návrh zápisu čeká na kontrolu a zveřejnění.", href: `/vzdelavani/akce/${row.id}?odkud=prehled#nahravka`, action: "Zkontrolovat zápis" }
-          : { key: `nahravka-${row.id}`, title, detail: "Proběhla a nemá zápis. Připraví se z nahrávky.", href: `/vzdelavani/akce/${row.id}?odkud=prehled#nahravka`, action: "Nahrát nahrávku" },
+          ? { key: `zapis-${row.id}`, title, detail: "Návrh zápisu čeká na kontrolu a zveřejnění.", href: `/vzdelavani/akce/${row.id}?odkud=prehled#nahravka`, action: "Zkontrolovat zápis", eventType: snapshot.type }
+          : { key: `nahravka-${row.id}`, title, detail: "Proběhla a nemá zápis. Připraví se z nahrávky.", href: `/vzdelavani/akce/${row.id}?odkud=prehled#nahravka`, action: "Nahrát nahrávku", eventType: snapshot.type },
       );
     }
   }
@@ -114,7 +115,7 @@ export async function listTasks(viewer: Viewer): Promise<JourneyTask[]> {
       .innerJoin(events, eq(events.id, calendarLinks.eventId))
       .where(and(eq(events.orgId, config.orgId), eq(calendarLinks.syncStatus, "attention")));
     for (const { event } of stuck) {
-      tasks.push({ key: `kalendar-${event.id}`, title: event.published?.label ?? "Akce", detail: "Pozvánka v Kalendáři neodpovídá Wiki a čeká na váš zásah.", href: `/vzdelavani/akce/${event.id}?odkud=prehled#kalendar`, action: "Vyřešit pozvánku" });
+      tasks.push({ key: `kalendar-${event.id}`, title: event.published?.label ?? "Akce", detail: "Pozvánka v Kalendáři neodpovídá Wiki a čeká na váš zásah.", href: `/vzdelavani/akce/${event.id}?odkud=prehled#kalendar`, action: "Vyřešit pozvánku", eventType: event.published?.type });
     }
   }
   if (canManageUsers(viewer)) {

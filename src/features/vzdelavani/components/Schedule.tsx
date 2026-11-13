@@ -290,8 +290,8 @@ export function NextEventCard({ card }: { card: EventCard | null }) {
 }
 
 /** Několik nejbližších akcí pod sebou: den vlevo, název a čas vpravo. První je nejblíž, proto je zvýrazněná. */
-export function NextEventsList({ cards, todayKey, hrefFor = pageHref }: { cards: EventCard[]; todayKey: string; hrefFor?: CardHref }) {
-  if (!cards.length) return <p className="muted">V nejbližších týdnech vás nečeká žádná zveřejněná akce.</p>;
+export function NextEventsList({ cards, todayKey, hrefFor = pageHref, emptyText }: { cards: EventCard[]; todayKey: string; hrefFor?: CardHref; emptyText?: string }) {
+  if (!cards.length) return <p className="muted">{emptyText ?? "V nejbližších týdnech vás nečeká žádná zveřejněná akce."}</p>;
   return (
     <ul className="brief-list">
       {cards.map((card, index) => {
@@ -304,7 +304,10 @@ export function NextEventsList({ cards, todayKey, hrefFor = pageHref }: { cards:
                 <span>{formatDayMonth(day)}</span>
               </span>
               <span className="brief-main">
-                <span className="item-title">{card.topicTitle ? `${card.label}: ${card.topicTitle}` : card.label}</span>
+                <span className="item-title">
+                  {card.topicTitle ? `${card.label}: ${card.topicTitle}` : card.label}
+                  {card.planStatus === "draft" && <span className="badge badge-draft">Návrh</span>}
+                </span>
                 <span className="item-meta">
                   {formatEventTime(new Date(card.startsAt), new Date(card.endsAt), card.allDay)}
                   {card.leadName ? ` · Vede: ${card.leadName}` : ""}

@@ -142,10 +142,16 @@ export async function listMonth(viewer: Viewer, monthKey: string): Promise<Event
 
 /** Nejbližší zveřejněná akce pro uživatele (bez svátků a zrušených). */
 /** Nejbližší zveřejněné akce, které uživatel uvidí, od nejbližší. */
-export async function nextEventsFor(viewer: Viewer, limit: number): Promise<EventCard[]> {
+/**
+ * Nejbližší akce uživatele. Běžně jen zveřejněné. Filtr Plánu (`match`) může výběr zúžit a organizátorovi
+ * při filtru podle stavu ukázat i návrhy (`includeDrafts`): viditelnost dál určuje `listEvents`.
+ */
+export async function nextEventsFor(viewer: Viewer, limit: number, match?: (card: EventCard) => boolean, includeDrafts = false): Promise<EventCard[]> {
   const from = now();
   const cards = await listEvents(viewer, from, new Date(from.getTime() + 120 * 86_400_000));
-  return cards.filter((c) => c.planStatus === "published" && c.type !== "holiday" && new Date(c.startsAt) >= from).slice(0, limit);
+  return cards
+    .filter((c) => (includeDrafts ? c.planStatus !== "cancelled" : c.planStatus === "published") && c.type !== "holiday" && new Date(c.startsAt) >= from && (!match || match(c)))
+    .slice(0, limit);
 }
 
 export async function nextEventFor(viewer: Viewer): Promise<EventCard | null> {

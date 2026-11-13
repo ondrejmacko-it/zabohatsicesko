@@ -1790,3 +1790,25 @@ a.brief-link:hover {
   margin: 0;
   line-height: 36px;
 }
+
+/* Filtry Plánu jsou nad celou stránkou: mění oba horní bloky i harmonogram. */
+.plan-filter-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.plan-filter-bar:empty {
+  display: none;
+}
+
+.plan-filter-bar .plan-filters,
+.plan-filter-bar .notice {
+  margin: 0;
+}
+
+.brief-main .item-title .badge {
+  margin-left: 8px;
+  vertical-align: 2px;
+}

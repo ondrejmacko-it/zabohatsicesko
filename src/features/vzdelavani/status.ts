@@ -112,6 +112,14 @@ export function filterCards(cards: EventCard[], monthKey: string, filter: PlanFi
   );
 }
 
+/** Stejný filtr pro jednu akci mimo mřížku měsíce (blok Nejbližší akce). */
+export function matchesPlanFilter(card: EventCard, filter: PlanFilter): boolean {
+  if (filter.type && card.type !== filter.type) return false;
+  if (filter.state === "navrhy") return awaitsPublishing(card);
+  if (filter.state === "doplnit") return card.planStatus !== "cancelled" && (!card.topicTitle || !card.leadName || card.syncStatus === "attention");
+  return true;
+}
+
 export type PlanGap = { card: EventCard; reasons: string[] };
 
 /**
