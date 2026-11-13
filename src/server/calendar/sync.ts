@@ -117,6 +117,28 @@ export async function syncEvent(eventId: string, options: { force?: boolean } = 
       if (current.syncedRevision >= revision && current.syncStatus === "synced") return;
 
       const desired = desiredData(eventId, snapshot, await hasPublishedMinutes(db, eventId));
+      // Akce zrušená dřív, než pozvánka vznikla: nic se nezakládá, pozvaným nepřijde pozvánka se stornem.
+      // Jen po nejasném výsledku dřívějšího pokusu se ověří, zda pozvánka přece jen nevznikla.
+      if (desired.cancelled && !current.externalEventId) {
+        let orphan: ExternalEvent | null = null;
+        try {
+          orphan = await provider.findByKey(current.calendarId, `${config.orgId}:${eventId}`);
+        } catch (error) {
+          if (!(error instanceof CalendarError)) throw error;
+          if (current.attempts > 0) {
+            await markAttention(db, eventId, error.code, attempts + 1);
+            return;
+          }
+        }
+        if (!orphan) {
+          await db
+            .update(calendarLinks)
+            .set({ syncedRevision: revision, syncStatus: "synced", errorCode: null, conflict: null, attempts: 0, updatedAt: new Date() })
+            .where(eq(calendarLinks.eventId, eventId));
+          await audit(db, null, "calendar.cancel_without_invite", "event", eventId);
+          return;
+        }
+      }
       let external: ExternalEvent;
       let managedAttendees: string[];
       try {
@@ -307,7 +329,7 @@ export async function pairingCandidates(viewer: Viewer, eventId: string): Promis
   const db = await getDb();
   const row = await loadEventRow(db, eventId);
   if (!row?.published) return [];
-  const day = toDateKey(row.startsAt);
+  const day = toDateKey(new Date(row.published.startsAt));
   const candidates = await calendarProvider(db).listBetween(
     targetCalendarId(),
     fromPragueLocal(day, "00:00"),

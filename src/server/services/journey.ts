@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull, lt } from "drizzle-orm";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { formatDayMonth, toDateKey } from "@/lib/time";
 import type { EventType, Group } from "@/lib/types";
 import { config, now } from "@/server/config";
@@ -72,7 +72,7 @@ export async function listTasks(viewer: Viewer): Promise<JourneyTask[]> {
   const past = await db
     .select()
     .from(events)
-    .where(and(eq(events.orgId, config.orgId), lt(events.endsAt, reference)))
+    .where(and(eq(events.orgId, config.orgId), sql`(${events.published}->>'endsAt')::timestamptz < ${reference.toISOString()}::timestamptz`))
     .orderBy(desc(events.startsAt));
   const handled = past.filter((row) => row.published?.status === "published" && row.published.type !== "holiday" && canHandleRecording(viewer, row));
   if (handled.length) {

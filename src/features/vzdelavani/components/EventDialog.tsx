@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useActionState, useEffect, useState } from "react";
+import { startTransition, useActionState, useEffect, useState } from "react";
 import { ActionMessage } from "@/components/ActionForm";
 import { Icon } from "@/components/Icon";
 import { Modal } from "@/components/Modal";
@@ -10,7 +10,8 @@ import { EVENT_TYPES, GROUPS } from "@/lib/types";
 import { defaultAudience } from "@/server/domain/generation";
 import { topicFitsAudience } from "@/server/domain/topics";
 import type { EventFormValues } from "@/server/services/detail";
-import { saveEventAction, type ActionResult } from "../actions";
+import type { ChangeImpact } from "@/server/services/impact";
+import { previewImpactAction, saveEventAction, type ActionResult } from "../actions";
 
 export type Person = { id: string; name: string };
 export type TopicOption = { name: string; audience: string; reason: string };
@@ -49,15 +50,17 @@ export function EventDialog(props: Props) {
   );
 }
 
-const MANAGED: Array<keyof EventFormValues> = ["type", "label", "topicTitle", "date", "endDate", "startTime", "endTime"];
-const TERM_FIELDS: Array<keyof EventFormValues> = ["date", "endDate", "startTime", "endTime"];
+/** Pole, jejichž změna zasáhne pozvané. Přesný dopad počítá a potvrzení ověřuje server. */
+const SIGNIFICANT: Array<keyof EventFormValues> = ["label", "topicTitle", "date", "endDate", "startTime", "endTime", "audience"];
 
-function EventForm({ mode, id, revision, initial, published, people, topics, inviteeCount, onClose }: Props & { onClose: () => void }) {
+function EventForm({ mode, id, revision, initial, published, people, topics, onClose }: Props & { onClose: () => void }) {
   const router = useRouter();
   const [values, setValues] = useState(initial);
   const [multiDay, setMultiDay] = useState(initial.endDate !== null);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
-  const [impactConfirmed, setImpactConfirmed] = useState(false);
+  const [impact, setImpact] = useState<{ key: string; data: ChangeImpact } | null>(null);
+  const [previewError, setPreviewError] = useState<ActionResult | null>(null);
+  const [checking, setChecking] = useState(false);
   const [state, action, pending] = useActionState(async (prev: ActionResult | null, formData: FormData) => {
     const result = await saveEventAction(prev, formData);
     if (result.ok) {
@@ -67,14 +70,35 @@ function EventForm({ mode, id, revision, initial, published, people, topics, inv
     return result;
   }, null);
 
-  const dirty = JSON.stringify({ ...values, endDate: multiDay ? values.endDate : null }) !== JSON.stringify(initial);
+  const valuesKey = JSON.stringify({ ...values, endDate: multiDay ? values.endDate : null });
+  const dirty = valuesKey !== JSON.stringify(initial);
+  // Potvrzení dopadu platí jen pro hodnoty, pro které vzniklo. Jakákoli další úprava formuláře ho zruší.
+  const confirmed = impact?.key === valuesKey ? impact.data : null;
   const isHoliday = values.type === "holiday";
   const incomplete = !isHoliday && (!values.topicTitle.trim() || !values.leadId);
   const changed = (key: keyof EventFormValues) =>
     published !== null && (key === "endDate" ? (multiDay ? values.endDate : null) : values[key]) !== published[key];
-  const calendarChange = MANAGED.some(changed);
-  // Google při změně termínu vynuluje odpovědi pozvaných a požádá je o novou (ověřeno živým testem).
-  const termChange = TERM_FIELDS.some(changed);
+  const significant = SIGNIFICANT.some(changed);
+
+  // Formulář se neodesílá přes <form action>: React by po akci vrátil výběry (typ, publikum) na první
+  // možnost. Ruční odeslání nechá po chybě všechna pole tak, jak je organizátor vyplnil.
+  const submit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget, (event.nativeEvent as SubmitEvent).submitter);
+    setPreviewError(null);
+    if (formData.get("intent") === "publish" && significant && !confirmed) {
+      setChecking(true);
+      void previewImpactAction(formData)
+        .then((result) => {
+          if (!result.ok) return setPreviewError(result);
+          if (result.impact) return setImpact({ key: valuesKey, data: result.impact });
+          startTransition(() => action(formData));
+        })
+        .finally(() => setChecking(false));
+      return;
+    }
+    startTransition(() => action(formData));
+  };
   const suggestions = topics.filter((t) => topicFitsAudience(t.audience, values.audience)).slice(0, 3);
 
   useEffect(() => {
@@ -111,7 +135,8 @@ function EventForm({ mode, id, revision, initial, published, people, topics, inv
           </div>
         </div>
       ) : (
-        <form action={action} className="stack">
+        <form onSubmit={submit} className="stack">
+          {confirmed && <input type="hidden" name="confirmToken" value={confirmed.token} />}
           {id && <input type="hidden" name="id" value={id} />}
           {revision !== undefined && <input type="hidden" name="revision" value={revision} />}
           <div className="form-grid">
@@ -251,45 +276,46 @@ function EventForm({ mode, id, revision, initial, published, people, topics, inv
             </label>
           )}
 
-          {published && (
-            <div className={calendarChange ? "notice" : "notice notice-ok"}>
-              {calendarChange ? (
-                <label className="check">
-                  <input
-                    type="checkbox"
-                    name="confirmImpact"
-                    checked={impactConfirmed}
-                    onChange={(e) => setImpactConfirmed(e.target.checked)}
-                  />
-                  <span>
-                    Změna zasáhne pozvané ({inviteeCount}). Po zveřejnění se upraví stávající pozvánka v Kalendáři a
-                    Google pošle oznámení. Hosté a odkaz na schůzku zůstanou.{" "}
-                    {termChange
-                      ? "Mění se termín, proto Google požádá pozvané o novou odpověď."
-                      : "Odpovědi pozvaných zůstanou."}
-                  </span>
-                </label>
-              ) : (
-                <>
-                  <input type="hidden" name="confirmImpact" value="on" />
-                  Změna se týká jen Wiki. Pozvánka v Kalendáři zůstane beze změny.
-                </>
-              )}
-              {values.audience !== published.audience && (
-                <p className="small">Změna publika neupraví seznam hostů v existující pozvánce.</p>
-              )}
+          {published && !significant && (
+            <p className="notice notice-ok">Tato úprava se pozvaných nedotkne. Pozvánka v Kalendáři i hosté zůstanou beze změny.</p>
+          )}
+          {published && significant && !confirmed && (
+            <p className="notice">
+              Změna zasáhne pozvané. Po kliknutí na Zveřejnit změnu nejdřív uvidíte, co přesně se změní a komu, a teprve
+              potom ji potvrdíte.
+            </p>
+          )}
+          {confirmed && (
+            <div className="notice" role="status" aria-live="polite">
+              <p>
+                <strong>Zkontrolujte dopad změny</strong>
+              </p>
+              <ul className="prose-list">
+                {confirmed.changes.map((c) => (
+                  <li key={c.field}>
+                    {c.field}: <s>{c.from}</s> → <strong>{c.to}</strong>
+                  </li>
+                ))}
+                {confirmed.guests.add.length > 0 && <li>Wiki do pozvánky přidá: {confirmed.guests.add.join(", ")}</li>}
+                {confirmed.guests.remove.length > 0 && <li>Wiki z pozvánky odebere: {confirmed.guests.remove.join(", ")}</li>}
+                {confirmed.guests.manual.length > 0 && <li>Ručně přidaní hosté zůstanou: {confirmed.guests.manual.join(", ")}</li>}
+                {confirmed.notes.map((note) => (
+                  <li key={note}>{note}</li>
+                ))}
+              </ul>
+              <p className="small">Když ve formuláři cokoli změníte, potvrzení se zruší a dopad se spočítá znovu.</p>
             </div>
           )}
 
-          <ActionMessage state={state} />
+          <ActionMessage state={previewError ?? state} />
 
           {/* Enter ve formuláři uloží jen návrh. Zveřejnění je vždy vědomá volba. */}
           <div className="dialog-actions">
-            <button type="submit" name="intent" value="draft" className="btn" disabled={pending}>
+            <button type="submit" name="intent" value="draft" className="btn" disabled={pending || checking}>
               {published ? "Uložit návrh změny" : "Uložit návrh"}
             </button>
-            <button type="submit" name="intent" value="publish" className="btn btn-primary" disabled={pending || (calendarChange && !impactConfirmed)}>
-              {published ? "Zveřejnit změnu" : "Zveřejnit"}
+            <button type="submit" name="intent" value="publish" className="btn btn-primary" disabled={pending || checking}>
+              {checking ? "Počítám dopad…" : confirmed ? "Potvrdit dopad a zveřejnit" : published ? "Zveřejnit změnu" : "Zveřejnit"}
             </button>
             <button type="button" className="btn" onClick={requestClose}>
               Zrušit

@@ -27,10 +27,10 @@ export async function listTopics(viewer: Viewer): Promise<RankedTopic[]> {
           (SELECT count(*)::int FROM topic_interests i WHERE i.topic_id = t.id) AS interest_count,
           EXISTS (SELECT 1 FROM topic_interests i WHERE i.topic_id = t.id AND i.user_id = ${viewer.id}) AS interested,
           (SELECT max((e.published->>'endsAt')::timestamptz) FROM events e
-             WHERE e.topic_id = t.id AND e.published->>'status' = 'published'
+             WHERE e.published->>'topicId' = t.id AND e.published->>'status' = 'published'
                AND (e.published->>'endsAt')::timestamptz <= ${reference}::timestamptz) AS last_held,
           (SELECT min((e.published->>'startsAt')::timestamptz) FROM events e
-             WHERE e.topic_id = t.id AND e.published->>'status' = 'published'
+             WHERE e.published->>'topicId' = t.id AND e.published->>'status' = 'published'
                AND (e.published->>'startsAt')::timestamptz > ${reference}::timestamptz) AS next_planned
         FROM topics t WHERE t.org_id = ${config.orgId}`,
   );

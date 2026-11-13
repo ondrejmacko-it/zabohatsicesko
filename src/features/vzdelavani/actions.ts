@@ -19,11 +19,11 @@ import {
   createEvent,
   deleteDraft,
   generateMonth,
-  loadEventRow,
   updateEvent,
   updateTemplate,
   type EventInput,
 } from "@/server/services/events";
+import { ImpactNotConfirmed, assertImpactConfirmed, changeImpact, type ChangeImpact } from "@/server/services/impact";
 import {
   processTranscriptionJob,
   publishMinutes,
@@ -67,7 +67,7 @@ const eventSchema = z
     reviewerId: optionalId,
     intent: z.enum(["draft", "publish"]),
     allowIncomplete: z.literal("on").optional(),
-    confirmImpact: z.literal("on").optional(),
+    confirmToken: z.string().max(64).optional(),
   })
   .refine((v) => !v.multiDay || (v.endDate !== undefined && isValidDateKey(v.endDate) && v.endDate >= v.date));
 
@@ -76,7 +76,9 @@ const formObject = (formData: FormData) => Object.fromEntries([...formData.entri
 async function parseEvent(formData: FormData) {
   const data = eventSchema.parse(formObject(formData));
   if (data.intent === "publish" && (!data.topicTitle || !data.leadId) && data.type !== "holiday" && !data.allowIncomplete) {
-    throw new IncompleteError();
+    throw new IncompleteError(
+      [!data.topicTitle && "téma", !data.leadId && "vedoucí"].filter(Boolean).join(" a "),
+    );
   }
   const input: EventInput = {
     type: data.type,
@@ -91,13 +93,28 @@ async function parseEvent(formData: FormData) {
     leadId: data.leadId,
     reviewerId: data.reviewerId,
   };
-  return { input, intent: data.intent, confirmImpact: data.confirmImpact === "on" };
+  return { input, intent: data.intent, confirmToken: data.confirmToken ?? null };
 }
 
 class IncompleteError extends Error {}
 
-const INCOMPLETE_MESSAGE =
-  "Téma nebo vedoucí chybí. Doplňte je, nebo potvrďte zveřejnění bez nich (pozvaní uvidí obecný název).";
+const incompleteMessage = (missing: string) =>
+  `Nezveřejněno, chybí ${missing}. Doplňte údaj, nebo dole zaškrtněte zveřejnění bez něj. Vyplněné hodnoty zůstaly beze změny.`;
+
+/** Dopad změny zveřejněné akce na pozvané. Dialog ho ukáže před potvrzením. */
+export async function previewImpactAction(formData: FormData): Promise<ActionResult & { impact?: ChangeImpact | null }> {
+  return run(async (user) => {
+    let parsed;
+    try {
+      parsed = await parseEvent(formData);
+    } catch (error) {
+      if (error instanceof IncompleteError) return { ok: false, error: incompleteMessage(error.message) };
+      throw error;
+    }
+    const id = z.string().max(80).parse(formData.get("id"));
+    return { ok: true, impact: await changeImpact(user, id, parsed.input) };
+  });
+}
 
 export async function saveEventAction(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
   return run(async (user) => {
@@ -105,10 +122,10 @@ export async function saveEventAction(_prev: ActionResult | null, formData: Form
     try {
       parsed = await parseEvent(formData);
     } catch (error) {
-      if (error instanceof IncompleteError) return { ok: false, error: INCOMPLETE_MESSAGE };
+      if (error instanceof IncompleteError) return { ok: false, error: incompleteMessage(error.message) };
       throw error;
     }
-    const { input, intent, confirmImpact } = parsed;
+    const { input, intent, confirmToken } = parsed;
     const id = z.string().max(80).optional().parse(formData.get("id") ?? undefined);
     if (!id) {
       const created = await createEvent(user, input, intent);
@@ -116,9 +133,13 @@ export async function saveEventAction(_prev: ActionResult | null, formData: Form
       return { ok: true, id: created, message: intent === "publish" ? "Akce je zveřejněná." : "Návrh je uložený." };
     }
     const revision = z.coerce.number().int().positive().parse(formData.get("revision"));
-    const row = await loadEventRow(await getDb(), id);
-    if (intent === "publish" && row?.published && !confirmImpact) {
-      return { ok: false, error: "Potvrďte, že změnu chcete poslat pozvaným." };
+    if (intent === "publish") {
+      try {
+        await assertImpactConfirmed(id, input, confirmToken);
+      } catch (error) {
+        if (!(error instanceof ImpactNotConfirmed)) throw error;
+        return { ok: false, error: "Změna zasáhne pozvané. Zkontrolujte a potvrďte její dopad, potom ji zveřejněte." };
+      }
     }
     await updateEvent(user, id, revision, input, intent);
     if (intent === "publish") after(() => syncEvent(id));

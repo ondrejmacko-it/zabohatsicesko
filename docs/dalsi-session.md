@@ -8,7 +8,40 @@ Pokračuj na demu modulu Vzdělávání. Nečti znovu celé zadání ani celý k
 `docs/predani.md`, `docs/google-kalendar.md` a `docs/google-prihlaseni.md`, pravidla v `CLAUDE.md`.
 Uživateli tykej, piš přátelsky. Větší změny nejdřív navrhni, nejasnosti se ptej.
 
-## Stav kódu
+## Stav 13. 11. 2026 (větev `oprava/bezpecne-zverejneni-akci`, draft PR)
+
+Relace narazila na limit kontextu, proto je hotová **jen část 1 zadání (zveřejňování)**. Části 2 až 4 čekají.
+
+Hotovo a pokryto testy (`tests/publishing.test.ts`, celkem 96 z 96, lint, typy, build):
+- Formulář akce po chybě drží všechny hodnoty (odesílá se ručně, ne přes `<form action>`), chyba říká, co chybí.
+- Zrušení vychází ze zveřejněné verze, návrh změny zahodí. Akce zrušená před vznikem pozvánky nic nezakládá.
+- Účastník vidí zveřejněný termín i při návrhu přesunu (`listEvents` filtruje a řadí podle viditelné verze),
+  úkoly vedoucího a historie témat vychází ze zveřejněné verze.
+- Dopad změny počítá server (`src/server/services/impact.ts`): rozdíl název, téma, termín, publikum, koho Wiki
+  přidá a odebere, ruční hosté, poznámky k režimu a neověřenému Kalendáři. Zveřejnění významné změny bez
+  potvrzení (token vázaný na změnu a zveřejněnou revizi) server odmítne, úprava formuláře potvrzení zruší.
+
+Ověřeno v prohlížeči (PGlite, 390 px): FP návrh po odmítnutém zveřejnění beze změny polí, dialog dopadu RM → FP,
+zrušení potvrzení po další úpravě. **Neověřeno:** poslední krok „Potvrdit dopad a zveřejnit“ v prohlížeči.
+Automat viděl tlačítko zablokované (nejspíš právě probíhající uložení, data se podle všeho uložila), je
+potřeba to projít ručně a případně opravit stav `pending` v `EventDialog`. Živě proti Googlu neověřeno nic.
+
+Další kroky v tomto pořadí:
+1. Ručně ověřit potvrzení dopadu v prohlížeči (viz výše). Organizátor v listopadu nevidí původní termín akce,
+   kterou má v návrhu přesunutou jinam: zvážit „stín“ původního termínu.
+2. Část 2 zadání: „K doplnění“ v harmonogramu, „Nahradit pravidelný termín“ (úprava typu už `generationKey`
+   drží, chybí jen viditelná akce a popis), správa témat (Upravit, Archivovat, nutná migrace `archived_at`).
+3. Část 3: navigace Přehled · Harmonogram · Zápisy · Témata (přejmenovat Moje cesta, starou adresu přesměrovat),
+   Přehled podle role, Domov s Otevřít akci, kratší záhlaví na mobilu, pořadí polí v dialogu, stavy
+   „Zveřejněno · máš návrh změny“ a „Kalendář čeká na opravu“, stav zápisu u minulé akce pro účastníka.
+   Výměna nahrávky dnes schová zveřejněný zápis (dotazy filtrují `superseded_at`): zachovat ho do schválení
+   náhrady nebo výslovného stažení (nové stavy zápisu vyžadují migraci CHECK u `minutes.status`).
+4. Část 4: průchod všemi rolemi na desktopu i mobilu, postup živého testu, aktualizace PR.
+
+K rozhodnutí pro Annu: má se střídání typů po svátku nebo zrušení posunout? Hromadné zveřejnění měsíce
+(až projde jeden běžný měsíc). Fiktivní nebo očištěný vzor zápisu pro školení, poradu a trénink.
+
+## Stav kódu (starší)
 
 - `main` obsahuje PR #1 až #6 (poslední je krok A, správa uživatelů a stránka `/sprava`).
 - Větev `claude/jolly-goodall-c5hp6c` (z `main`), draft PR: **kroky B, C a D cílového průchodu**.
