@@ -84,8 +84,13 @@ Uživateli tykej, piš přátelsky. Větší změny nejdřív navrhni, nejasnost
 1. Hotovo 12. 11.: přehled `docs/nahravky-moznosti.md` je v PR #8. Uživatel rozhodl dál ho teď neřešit
    (ověřování na živých stránkách, další kandidáti ani striktnost EU). Možná vznikne vlastní řešení nebo se
    použije firemní systém. Priorita je dodělat web.
-1b. **Chyba k opravě (nalezena 12. 11. při focení):** formulář akce (`ActionForm`) po neúspěšném zveřejnění
-   (chybí téma nebo vedoucí) přepne Typ na Action time a Publikum na Všichni. Opravit a přidat test.
+1b. Opraveno 13. 11. na větvi `ccr-3229c8ec-9u3ksw` (z `main` po PR #9, zatím bez PR): dialog akce
+   (`EventDialog`) po neúspěšném zveřejnění vracel Typ na Action time a Publikum na Všichni, následné
+   Uložit návrh pak uložilo špatný typ. Příčina: React po akci předané přes `<form action>` formulář
+   resetuje a řízené výběry spadnou na první možnost. Formulář teď odesílá přes `onSubmit`. Ověřeno
+   v prohlížeči (PGlite) před opravou i po ní, lint, typy, 90 z 90 testů, build. **Automatický test
+   chybí:** sada běží jen v Node bez DOM, test komponenty by potřeboval nové vývojové závislosti
+   (`jsdom`, `@testing-library/react`), čeká na souhlas uživatele.
    Screenshoty všech obrazovek dostal uživatel jako ZIP (složka `screenshots/`, v repu není, čeká na
    rozhodnutí). Nezachycené stavy: přístupová brána, přihlášení Googlem, čekající žádost, „Vyžaduje
    pozornost“ se Zkusit synchronizaci znovu, výpadek přepisu.
@@ -97,6 +102,7 @@ Uživateli tykej, piš přátelsky. Větší změny nejdřív navrhni, nejasnost
 
 ## Čeká na odpověď uživatele
 
+- Zda přidat `jsdom` a `@testing-library/react` kvůli testu dialogu akce (viz krok 1b).
 - Výběr poskytovatele přepisu a úložiště: přehled je v `docs/nahravky-moznosti.md`, odloženo, rozhodne firma.
 - Skutečné pravidlo střídání typů ve slotu šablony a zda předvyplňovat téma i tréninkům.
 - Kam trvale uložit zadání (ZIP), aby ho nebylo nutné posílat. Do tohoto veřejného repa ne.

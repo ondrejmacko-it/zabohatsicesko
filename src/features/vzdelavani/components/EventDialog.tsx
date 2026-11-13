@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useState, useTransition, type FormEvent } from "react";
 import { ActionMessage } from "@/components/ActionForm";
 import { Icon } from "@/components/Icon";
 import { Modal } from "@/components/Modal";
@@ -66,6 +66,16 @@ function EventForm({ mode, id, revision, initial, published, people, topics, inv
     }
     return result;
   }, null);
+  const [, startTransition] = useTransition();
+
+  // Po dokončení akce předané přes <form action> React formulář resetuje a řízené výběry (Typ, Publikum, Vede)
+  // spadnou na první možnost, i když stav zůstal. Odeslání přes onSubmit reset nespouští, rozepsané hodnoty
+  // tak po chybě zůstanou.
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget, (event.nativeEvent as SubmitEvent).submitter);
+    startTransition(() => action(formData));
+  };
 
   const dirty = JSON.stringify({ ...values, endDate: multiDay ? values.endDate : null }) !== JSON.stringify(initial);
   const isHoliday = values.type === "holiday";
@@ -111,7 +121,7 @@ function EventForm({ mode, id, revision, initial, published, people, topics, inv
           </div>
         </div>
       ) : (
-        <form action={action} className="stack">
+        <form onSubmit={submit} className="stack">
           {id && <input type="hidden" name="id" value={id} />}
           {revision !== undefined && <input type="hidden" name="revision" value={revision} />}
           <div className="form-grid">
