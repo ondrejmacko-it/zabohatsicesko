@@ -142,6 +142,8 @@ export type EventDetail = {
   cancelReason: string | null;
   canCancel: boolean;
   canDelete: boolean;
+  /** Akce drží místo v rozpisu ze šablony. Organizátor ji může nahradit jiným typem akce. */
+  fromTemplate: boolean;
   sync: SyncPanel | null;
   recording: RecordingPanel;
 };
@@ -166,6 +168,7 @@ export async function getEventDetail(viewer: Viewer, id: string): Promise<EventD
     cancelReason: view.cancelReason,
     canCancel: organizer && row.published !== null && row.status !== "cancelled",
     canDelete: organizer && row.publishedRevision === null,
+    fromTemplate: row.generationKey !== null && row.type !== "holiday",
     sync,
     recording,
   };

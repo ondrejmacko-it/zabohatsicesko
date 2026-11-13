@@ -31,7 +31,7 @@ import {
   updateMinutes,
   uploadRecording,
 } from "@/server/services/recordings";
-import { proposeTopic, setInterest, topicIdByName } from "@/server/services/topics";
+import { proposeTopic, setInterest, setTopicArchived, topicIdByName, updateTopic } from "@/server/services/topics";
 import { SIMULATION_SWITCHES, writeSwitch } from "@/server/settings";
 
 // Každá akce znovu ověří session a oprávnění na serveru a validuje vstup.
@@ -308,6 +308,24 @@ export async function proposeTopicAction(_prev: ActionResult | null, formData: F
       .parse(formObject(formData));
     await proposeTopic(user, data.name, data.audience);
     return { ok: true, message: "Téma je přidané a máte u něj označený zájem." };
+  });
+}
+
+export async function updateTopicAction(formData: FormData): Promise<ActionResult> {
+  return run(async (user) => {
+    const data = z
+      .object({ topicId: z.string().max(80), name: z.string().trim().min(3).max(120), audience: z.enum(GROUPS) })
+      .parse(formObject(formData));
+    await updateTopic(user, data.topicId, data.name, data.audience);
+    return { ok: true, message: "Téma je upravené." };
+  });
+}
+
+export async function archiveTopicAction(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
+  return run(async (user) => {
+    const data = z.object({ topicId: z.string().max(80), archived: z.enum(["true", "false"]) }).parse(formObject(formData));
+    await setTopicArchived(user, data.topicId, data.archived === "true");
+    return { ok: true };
   });
 }
 

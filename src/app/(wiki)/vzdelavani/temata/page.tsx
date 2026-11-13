@@ -1,20 +1,21 @@
 import type { Metadata } from "next";
-import { InterestButton, ProposeTopicDialog } from "@/features/vzdelavani/components/TopicActions";
+import { InterestButton, ProposeTopicDialog, RestoreTopicButton, TopicManage } from "@/features/vzdelavani/components/TopicActions";
 import { GROUP_LABELS } from "@/lib/labels";
 import { formatDayMonth } from "@/lib/time";
 import { GROUPS, type Group } from "@/lib/types";
 import { requireUser } from "@/server/auth/session";
 import { interestedLabel } from "@/server/domain/topics";
 import { isOrganizer } from "@/server/policy";
-import { listTopics } from "@/server/services/topics";
+import { listArchivedTopics, listTopics } from "@/server/services/topics";
 
 export const metadata: Metadata = { title: "Témata" };
 
 export default async function TopicsPage() {
   const user = await requireUser();
-  const topics = await listTopics(user);
+  const organizer = isOrganizer(user);
+  const [topics, archived] = await Promise.all([listTopics(user), listArchivedTopics(user)]);
   const recommended = topics.filter((t) => t.nextPlanned === null).slice(0, 3);
-  const groups = GROUPS.filter((g) => isOrganizer(user) || user.groups.includes(g)) as Group[];
+  const groups = GROUPS.filter((g) => organizer || user.groups.includes(g)) as Group[];
   const label = (g: string) => GROUP_LABELS[g as Group] ?? g;
 
   return (
@@ -68,13 +69,35 @@ export default async function TopicsPage() {
                 <td data-label="Zájemci">{interestedLabel(t.interestCount)}</td>
                 <td data-label="Naposledy">{t.lastHeld ? formatDayMonth(t.lastHeld) : "zatím neproběhlo"}</td>
                 <td>
-                  <InterestButton topicId={t.id} interested={t.interestedByViewer} topicName={t.name} />
+                  <div className="row topic-actions">
+                    <InterestButton topicId={t.id} interested={t.interestedByViewer} topicName={t.name} />
+                    {organizer && <TopicManage topic={t} groups={groups} />}
+                  </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </section>
+
+      {archived.length > 0 && (
+        <section className="section" aria-labelledby="archiv-temat">
+          <details>
+            <summary id="archiv-temat">Archivovaná témata ({archived.length})</summary>
+            <p className="small muted">Nenabízí se v doporučení ani v dialogu akce. Minulé akce na ně dál odkazují.</p>
+            <ul className="stack archived-topics">
+              {archived.map((t) => (
+                <li key={t.id} className="spread">
+                  <span>
+                    {t.name} <span className="small muted">· {label(t.audience)}</span>
+                  </span>
+                  <RestoreTopicButton topicId={t.id} />
+                </li>
+              ))}
+            </ul>
+          </details>
+        </section>
+      )}
     </>
   );
 }

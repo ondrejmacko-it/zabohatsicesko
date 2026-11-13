@@ -5,8 +5,9 @@ import { AutoRefresh } from "@/components/AutoRefresh";
 import { Icon } from "@/components/Icon";
 import { generateMonthAction } from "@/features/vzdelavani/actions";
 import { EventDialog } from "@/features/vzdelavani/components/EventDialog";
-import { Agenda, Legend, NextEventCard, ScheduleGrid } from "@/features/vzdelavani/components/Schedule";
+import { Agenda, Legend, NextEventCard, PlanGaps, ScheduleGrid } from "@/features/vzdelavani/components/Schedule";
 import { TemplateDialog } from "@/features/vzdelavani/components/TemplateDialog";
+import { planGaps } from "@/features/vzdelavani/status";
 import styles from "@/features/vzdelavani/components/schedule.module.css";
 import { formatMonth, isValidMonthKey, monthOf, shiftMonth, toDateKey } from "@/lib/time";
 import { requireUser } from "@/server/auth/session";
@@ -99,6 +100,8 @@ export default async function SchedulePage({ searchParams }: { searchParams: Sea
             )}
           </div>
         </div>
+
+        {organizer && <PlanGaps gaps={planGaps(cards, monthKey)} />}
 
         {listView ? (
           <Agenda monthKey={monthKey} cards={cards} todayKey={todayKey} />

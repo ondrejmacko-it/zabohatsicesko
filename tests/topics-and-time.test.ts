@@ -59,3 +59,50 @@ describe("čas a session", () => {
     expect(decodeSession(undefined)).toBeNull();
   });
 });
+
+describe("správa témat a mezery v plánu", () => {
+  beforeEach(resetDemo);
+
+  test("úprava a archivace: jen organizátor, bez duplicit, archiv mimo doporučení a vazba akcí zůstává", async () => {
+    const { listArchivedTopics, setTopicArchived, topicIdByName, updateTopic } = await import("@/server/services/topics");
+    await expect(updateTopic(participant, "topic-questions", "Jinak", "fp")).rejects.toMatchObject({ code: "forbidden" });
+    await expect(setTopicArchived(lead, "topic-questions", true)).rejects.toMatchObject({ code: "forbidden" });
+    await expect(updateTopic(organizer, "topic-questions", (await listTopics(organizer)).find((t) => t.id === "topic-priority")!.name, "fp")).rejects.toMatchObject({ code: "duplicate" });
+    await updateTopic(organizer, "topic-questions", "Otázky jinak", "fp");
+    expect((await listTopics(participant)).find((t) => t.id === "topic-questions")!.name).toBe("Otázky jinak");
+
+    const db = await resetDemo();
+    const { events } = await import("@/server/db/schema");
+    const { isNotNull } = await import("drizzle-orm");
+    const linkedBefore = await db.select({ id: events.id, topicId: events.topicId }).from(events).where(isNotNull(events.topicId));
+    const linked = linkedBefore[0]!;
+    const name = (await listTopics(organizer)).find((t) => t.id === linked.topicId)!.name;
+    await setTopicArchived(organizer, linked.topicId!, true);
+    expect((await listTopics(organizer)).some((t) => t.id === linked.topicId)).toBe(false);
+    expect(await topicIdByName(db, name)).toBeNull();
+    expect((await listArchivedTopics(organizer)).map((t) => t.id)).toEqual([linked.topicId]);
+    expect(await listArchivedTopics(participant)).toEqual([]);
+    await expect(setInterest(participant, linked.topicId!, true)).rejects.toMatchObject({ code: "not_found" });
+    const linkedAfter = await db.select({ id: events.id, topicId: events.topicId }).from(events).where(isNotNull(events.topicId));
+    expect(linkedAfter).toEqual(linkedBefore);
+    await setTopicArchived(organizer, linked.topicId!, false);
+    expect((await listTopics(organizer)).some((t) => t.id === linked.topicId)).toBe(true);
+  });
+
+  test("K doplnění: jen vybraný měsíc, bez svátků a zrušených", async () => {
+    const { planGaps } = await import("@/features/vzdelavani/status");
+    const { listMonth } = await import("@/server/services/events");
+    const cards = await listMonth(organizer, "2026-11");
+    const gaps = planGaps(cards, "2026-11");
+    expect(gaps.length).toBeGreaterThan(0);
+    for (const { card, reasons } of gaps) {
+      expect(card.type).not.toBe("holiday");
+      expect(card.planStatus).not.toBe("cancelled");
+      expect(card.startsAt.slice(0, 7)).toBe("2026-11");
+      expect(reasons.length).toBeGreaterThan(0);
+      expect(!card.topicTitle || !card.leadName || card.syncStatus === "attention").toBe(true);
+    }
+    const complete = cards.filter((c) => c.topicTitle && c.leadName && c.syncStatus !== "attention");
+    expect(gaps.some((g) => complete.includes(g.card))).toBe(false);
+  });
+});

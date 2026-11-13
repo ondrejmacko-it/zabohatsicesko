@@ -254,4 +254,11 @@ CREATE UNIQUE INDEX users_email_uq ON users (org_id, lower(email));
 ALTER TABLE calendar_links ADD COLUMN managed_attendees text[];
 `,
   },
+  {
+    id: "0006_topic_archive",
+    sql: `
+-- Archivované téma zmizí z nabídky a doporučení, vazba minulých akcí na něj zůstává.
+ALTER TABLE topics ADD COLUMN archived_at timestamptz;
+`,
+  },
 ];

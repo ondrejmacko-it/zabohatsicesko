@@ -225,6 +225,22 @@ describe("úprava zveřejněné akce a Kalendář", () => {
 });
 
 describe("generování ze šablony", () => {
+  test("nahrazení pravidelného termínu workshopem drží místo v rozpisu a zveřejněná verze platí do potvrzení", async () => {
+    const db = await getDb();
+    const [before] = await db.select().from(events).where(eq(events.id, PUBLISHED_RM));
+    expect(before!.generationKey).not.toBeNull();
+    const form = formValuesOf(snapshotOf(before!));
+    const input = { ...form, type: "workshop" as const, label: "AI workshop", topicId: null, leadId: form.leadId || null, reviewerId: form.reviewerId || null };
+    await updateEvent(organizer, PUBLISHED_RM, before!.revision, input, "draft");
+    const [after] = await db.select().from(events).where(eq(events.id, PUBLISHED_RM));
+    expect(after!.generationKey).toBe(before!.generationKey);
+    expect(after!.type).toBe("workshop");
+    // Účastníci dál vidí zveřejněný trénink, dokud organizátor návrh nepotvrdí.
+    expect(after!.published!.type).toBe("training-rm");
+    expect((await listMonth(outsider, "2026-11")).find((c) => c.id === PUBLISHED_RM)!.type).toBe("training-rm");
+    expect((await generateMonth(organizer, "2026-11")).created).toBe(0);
+  });
+
   test("doplní jen chybějící sloty, svátky a ruční úpravy zachová", async () => {
     expect((await generateMonth(organizer, "2026-11")).created).toBe(0);
 

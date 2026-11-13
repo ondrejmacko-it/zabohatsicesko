@@ -79,6 +79,19 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
               inviteeCount={detail.sync?.inviteeCount ?? 0}
             />
           )}
+          {organizer && detail.form && detail.fromTemplate && card.planStatus !== "cancelled" && !card.past && (
+            <EventDialog
+              mode="edit"
+              replace
+              id={card.id}
+              revision={detail.revision}
+              initial={detail.form}
+              published={detail.publishedForm}
+              people={people}
+              topics={topics}
+              inviteeCount={detail.sync?.inviteeCount ?? 0}
+            />
+          )}
           {handler && card.past && (
             <a className="btn btn-primary" href="#nahravka">
               Nahrávka a zápis

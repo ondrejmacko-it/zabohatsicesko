@@ -12,7 +12,7 @@ import {
   weekdayShort,
 } from "@/lib/time";
 import type { EventCard } from "@/server/services/events";
-import { badgeClass, cardTone, primaryStatus } from "../status";
+import { badgeClass, cardTone, primaryStatus, type PlanGap } from "../status";
 import styles from "./schedule.module.css";
 
 const COLUMNS = [
@@ -229,5 +229,28 @@ export function NextEventCard({ card }: { card: EventCard | null }) {
         {card.leadName ? ` · Vede: ${card.leadName}` : ""}
       </p>
     </Link>
+  );
+}
+
+/** Rozbalovací přehled termínů, které ve vybraném měsíci čekají na doplnění. Jen pro organizátora. */
+export function PlanGaps({ gaps }: { gaps: PlanGap[] }) {
+  if (!gaps.length) return <p className="small muted plan-gaps-empty">V tomto měsíci není co doplnit.</p>;
+  return (
+    <details className="plan-gaps">
+      <summary>
+        <span className="badge badge-ochre">K doplnění · {gaps.length}</span>
+        <span className="small muted">termíny bez tématu, bez vedoucího nebo s chybou Kalendáře</span>
+      </summary>
+      <ul className="plan-gaps-list">
+        {gaps.map(({ card, reasons }) => (
+          <li key={card.id}>
+            <Link href={href(card)}>
+              {weekdayShort(dayOf(card))} {formatDayMonth(dayOf(card))} · {card.label}
+            </Link>
+            <span className="small muted"> {reasons.join(", ")}</span>
+          </li>
+        ))}
+      </ul>
+    </details>
   );
 }

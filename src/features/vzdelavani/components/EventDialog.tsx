@@ -5,7 +5,7 @@ import { startTransition, useActionState, useEffect, useState } from "react";
 import { ActionMessage } from "@/components/ActionForm";
 import { Icon } from "@/components/Icon";
 import { Modal } from "@/components/Modal";
-import { GROUP_LABELS, TYPE_LABELS } from "@/lib/labels";
+import { EXTRAORDINARY_TYPES, GROUP_LABELS, TYPE_LABELS } from "@/lib/labels";
 import { EVENT_TYPES, GROUPS } from "@/lib/types";
 import { defaultAudience } from "@/server/domain/generation";
 import { topicFitsAudience } from "@/server/domain/topics";
@@ -26,6 +26,8 @@ type Props = {
   people: Person[];
   topics: TopicOption[];
   inviteeCount: number;
+  /** Nahrazení pravidelného termínu jinou akcí na stejném místě v rozpisu. */
+  replace?: boolean;
 };
 
 /** Přidání a úprava akce v jednom plovoucím dialogu. */
@@ -37,13 +39,14 @@ export function EventDialog(props: Props) {
       <button
         type="button"
         className={props.mode === "create" ? "btn btn-primary" : "btn"}
+        title={props.replace ? "Místo pravidelné aktivity naplánuje jinou akci, třeba workshop" : undefined}
         onClick={() => {
           setSession((s) => s + 1);
           setOpen(true);
         }}
       >
-        <Icon name={props.mode === "create" ? "plus" : "pencil"} />
-        {props.mode === "create" ? "Přidat akci" : "Upravit"}
+        {!props.replace && <Icon name={props.mode === "create" ? "plus" : "pencil"} />}
+        {props.replace ? "Nahradit pravidelný termín" : props.mode === "create" ? "Přidat akci" : "Upravit"}
       </button>
       {open && <EventForm key={session} {...props} onClose={() => setOpen(false)} />}
     </>
@@ -53,9 +56,15 @@ export function EventDialog(props: Props) {
 /** Pole, jejichž změna zasáhne pozvané. Přesný dopad počítá a potvrzení ověřuje server. */
 const SIGNIFICANT: Array<keyof EventFormValues> = ["label", "topicTitle", "date", "endDate", "startTime", "endTime", "audience"];
 
-function EventForm({ mode, id, revision, initial, published, people, topics, onClose }: Props & { onClose: () => void }) {
+/** Výchozí nabídka při nahrazení: mimořádný typ místo pravidelného, termín, publikum a vedoucí zůstávají. */
+function replacementOf(initial: EventFormValues): EventFormValues {
+  if (EXTRAORDINARY_TYPES.has(initial.type)) return initial;
+  return { ...initial, type: "workshop", label: TYPE_LABELS.workshop, topicTitle: "" };
+}
+
+function EventForm({ mode, id, revision, initial, published, people, topics, replace, onClose }: Props & { onClose: () => void }) {
   const router = useRouter();
-  const [values, setValues] = useState(initial);
+  const [values, setValues] = useState(() => (replace ? replacementOf(initial) : initial));
   const [multiDay, setMultiDay] = useState(initial.endDate !== null);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [impact, setImpact] = useState<{ key: string; data: ChangeImpact } | null>(null);
@@ -121,7 +130,7 @@ function EventForm({ mode, id, revision, initial, published, people, topics, onC
   const requestClose = () => (dirty && !pending ? setConfirmDiscard(true) : onClose());
 
   return (
-    <Modal open title={mode === "create" ? "Přidat akci" : "Upravit akci"} onRequestClose={requestClose} wide>
+    <Modal open title={replace ? "Nahradit pravidelný termín" : mode === "create" ? "Přidat akci" : "Upravit akci"} onRequestClose={requestClose} wide>
       {confirmDiscard ? (
         <div className="stack">
           <p>Máte neuložené změny. Opravdu chcete dialog zavřít a změny zahodit?</p>
@@ -139,6 +148,13 @@ function EventForm({ mode, id, revision, initial, published, people, topics, onC
           {confirmed && <input type="hidden" name="confirmToken" value={confirmed.token} />}
           {id && <input type="hidden" name="id" value={id} />}
           {revision !== undefined && <input type="hidden" name="revision" value={revision} />}
+          {replace && (
+            <p className="notice">
+              Vyberte, co se v tomto termínu bude konat místo pravidelné aktivity. Akce zůstane na stejném místě
+              v rozpisu, takže další doplnění měsíce ze šablony sem nic nepřidá.
+              {published ? " Protože je termín zveřejněný, změna se uloží jako návrh a zveřejníte ji po potvrzení dopadu." : ""}
+            </p>
+          )}
           <div className="form-grid">
             <label className="field">
               <span className="field-label">Typ</span>
