@@ -96,8 +96,8 @@ export async function listTasks(viewer: Viewer): Promise<JourneyTask[]> {
       }
       tasks.push(
         state === "draft"
-          ? { key: `zapis-${row.id}`, title, detail: "Návrh zápisu čeká na vaši kontrolu a zveřejnění.", href: `/vzdelavani/akce/${row.id}?odkud=prehled#nahravka`, action: "Zkontrolovat zápis" }
-          : { key: `nahravka-${row.id}`, title, detail: "Akce proběhla a zatím nemá zápis. Nahrajte nahrávku, zápis se z ní připraví.", href: `/vzdelavani/akce/${row.id}?odkud=prehled#nahravka`, action: "Nahrát nahrávku" },
+          ? { key: `zapis-${row.id}`, title, detail: "Návrh zápisu čeká na kontrolu a zveřejnění.", href: `/vzdelavani/akce/${row.id}?odkud=prehled#nahravka`, action: "Zkontrolovat zápis" }
+          : { key: `nahravka-${row.id}`, title, detail: "Proběhla a nemá zápis. Připraví se z nahrávky.", href: `/vzdelavani/akce/${row.id}?odkud=prehled#nahravka`, action: "Nahrát nahrávku" },
       );
     }
   }

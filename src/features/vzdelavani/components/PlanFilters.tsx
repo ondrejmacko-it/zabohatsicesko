@@ -3,21 +3,24 @@
 import Link from "next/link";
 import { TYPE_LABELS } from "@/lib/labels";
 import type { EventType } from "@/lib/types";
+import type { MonthSummary, PlanState } from "../status";
 
 type Option = { key: string; label: string };
 
 type Props = {
-  /** Parametry, které filtr nemění (měsíc, zobrazení, stav). Posílají se spolu s výběrem. */
+  /** Parametry, které filtr nemění (měsíc, zobrazení). Posílají se spolu s výběrem. */
   keep: Record<string, string>;
   types: EventType[];
   type: EventType | undefined;
   /** Nabídka „Zobrazit jako“. Jen pro organizátora, jinak null. */
   preview: { groups: Option[]; people: Option[]; value: string } | null;
+  /** Filtr podle stavu s počty za měsíc. Jen pro organizátora ve vlastním pohledu, jinak null. */
+  states: { summary: MonthSummary; value: PlanState | undefined } | null;
   resetHref: string | null;
 };
 
 /** Filtry harmonogramu. Výběr se odešle hned, tlačítko zůstává pro prohlížeč bez JavaScriptu. */
-export function PlanFilters({ keep, types, type, preview, resetHref }: Props) {
+export function PlanFilters({ keep, types, type, preview, states, resetHref }: Props) {
   const submit = (event: React.ChangeEvent<HTMLSelectElement>) => event.currentTarget.form?.requestSubmit();
   return (
     <form className="plan-filters" method="get" aria-label="Filtr harmonogramu">
@@ -56,6 +59,16 @@ export function PlanFilters({ keep, types, type, preview, resetHref }: Props) {
                 {TYPE_LABELS[t]}
               </option>
             ))}
+          </select>
+        </label>
+      )}
+      {states && (
+        <label className="field">
+          <span className="field-label">Stav</span>
+          <select className="select" name="stav" defaultValue={states.value ?? ""} onChange={submit}>
+            <option value="">Vše v plánu ({states.summary.planned})</option>
+            <option value="navrhy">Čeká na zveřejnění ({states.summary.toPublish})</option>
+            <option value="doplnit">K doplnění ({states.summary.toComplete})</option>
           </select>
         </label>
       )}

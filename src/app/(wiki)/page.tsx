@@ -15,12 +15,12 @@ export default async function HomePage() {
       </p>
       <input
         className="search-field"
-        placeholder="Co dnes potřebuješ vyřešit? Hledej napříč znalostmi i postupy…"
+        placeholder="Co dnes potřebujete vyřešit? Hledejte napříč znalostmi i postupy…"
         aria-label="Vyhledávání (v ukázce není k dispozici)"
         disabled
       />
       <section className="section">
-        <h2>Co tě čeká</h2>
+        <h2>Co vás čeká</h2>
         <div className="stack">
           <NextEventCard card={next} />
           <div>

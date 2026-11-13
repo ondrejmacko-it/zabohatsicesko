@@ -1271,26 +1271,6 @@ details > summary {
   margin-bottom: 12px;
 }
 
-/* Harmonogram organizátora: termíny k doplnění */
-.plan-gaps {
-  margin: 12px 0;
-}
-.plan-gaps > summary {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-}
-.plan-gaps-list {
-  margin: 8px 0 0;
-  padding-left: 20px;
-  display: grid;
-  gap: 4px;
-}
-.plan-gaps-empty {
-  margin: 8px 0;
-}
 .topic-actions {
   justify-content: flex-end;
   flex-wrap: wrap;
@@ -1459,12 +1439,12 @@ details > summary {
   }
 }
 
-/* Plán: úkoly a nejbližší akce vedle sebe, harmonogram pod nimi. */
+/* Plán: úkoly a nejbližší akce vedle sebe a stejně vysoké, harmonogram pod nimi. */
 .plan-top {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0 28px;
-  align-items: start;
+  gap: 0 20px;
+  align-items: stretch;
 }
 
 @media (max-width: 900px) {
@@ -1473,42 +1453,128 @@ details > summary {
   }
 }
 
-/* Stav měsíce v jednom řádku. Položky jsou zároveň filtr harmonogramu. */
-.month-summary {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 0 0 12px;
-  padding: 0;
-  list-style: none;
+.count-badge {
+  display: inline-block;
+  min-width: 24px;
+  margin-left: 8px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--ochre);
+  color: #fff;
+  font-family: var(--font-sans, inherit);
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 20px;
+  text-align: center;
+  vertical-align: 3px;
 }
 
-.month-summary-item {
-  display: inline-flex;
-  align-items: baseline;
+/* Odznak nesmí nadpis zvýšit, jinak by řádky ve dvou blocích vedle sebe nezačínaly stejně. */
+.plan-top .section > h2 {
+  line-height: 24px;
+}
+
+.count-badge {
+  margin-top: -2px;
+  margin-bottom: -2px;
+}
+
+.notice + .detail-head {
+  margin-top: 14px;
+}
+
+/* Řádky v horních blocích Plánu: úkoly i nejbližší akce mají stejnou výšku a stavbu. */
+.brief-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
   gap: 8px;
-  min-height: 44px;
-  padding: 8px 14px;
+}
+
+.brief-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 64px;
+  padding: 10px 14px;
   border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
+  border-radius: 8px;
+  background: var(--band);
   color: var(--ink);
   text-decoration: none;
 }
 
-.month-summary-item.attention {
-  border-color: var(--ochre);
-  background: var(--ochre-soft);
+.brief-row .btn {
+  flex: none;
 }
 
-.month-summary-item[aria-current="true"] {
-  border-color: var(--ink);
-  box-shadow: inset 0 0 0 1px var(--ink);
+a.brief-link:hover {
+  border-color: var(--line-strong);
 }
 
-.month-summary-count {
-  font-size: 18px;
-  font-weight: 650;
+.brief-first {
+  border-color: var(--beige-strong);
+  background: var(--item);
+}
+
+.brief-main {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+}
+
+.brief-main .item-title {
+  font-size: 15px;
+}
+
+.brief-main .item-meta {
+  margin-top: 0;
+  font-size: 13px;
+}
+
+.brief-date {
+  flex: none;
+  width: 52px;
+  display: grid;
+  justify-items: center;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.brief-weekday {
+  color: var(--ochre-dark);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.brief-more {
+  margin-top: 8px;
+}
+
+.brief-more > summary {
+  cursor: pointer;
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+
+.brief-more[open] > summary {
+  margin-bottom: 8px;
+}
+
+/* Na telefonu jde tlačítko úkolu pod text, jinak by text zbyl na úzký sloupec. */
+@media (max-width: 520px) {
+  li.brief-row {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  li.brief-row .brief-main {
+    flex-basis: 100%;
+  }
 }
 
 .month-summary-empty {

@@ -141,14 +141,15 @@ export async function listMonth(viewer: Viewer, monthKey: string): Promise<Event
 }
 
 /** Nejbližší zveřejněná akce pro uživatele (bez svátků a zrušených). */
-export async function nextEventFor(viewer: Viewer): Promise<EventCard | null> {
+/** Nejbližší zveřejněné akce, které uživatel uvidí, od nejbližší. */
+export async function nextEventsFor(viewer: Viewer, limit: number): Promise<EventCard[]> {
   const from = now();
   const cards = await listEvents(viewer, from, new Date(from.getTime() + 120 * 86_400_000));
-  return (
-    cards.find(
-      (c) => c.planStatus === "published" && c.type !== "holiday" && new Date(c.startsAt) >= from,
-    ) ?? null
-  );
+  return cards.filter((c) => c.planStatus === "published" && c.type !== "holiday" && new Date(c.startsAt) >= from).slice(0, limit);
+}
+
+export async function nextEventFor(viewer: Viewer): Promise<EventCard | null> {
+  return (await nextEventsFor(viewer, 1))[0] ?? null;
 }
 
 export async function loadEventRow(db: Executor, id: string): Promise<EventRow | null> {
