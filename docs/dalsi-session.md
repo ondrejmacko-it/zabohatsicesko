@@ -8,6 +8,33 @@ Pokračuj na demu modulu Vzdělávání. Nečti znovu celé zadání ani celý k
 `docs/predani.md`, `docs/google-kalendar.md` a `docs/google-prihlaseni.md`, pravidla v `CLAUDE.md`.
 Uživateli tykej, piš přátelsky. Větší změny nejdřív navrhni, nejasnosti se ptej.
 
+## Stav 13. 11. 2026 večer (větev `claude/focused-dirac-gphy4f`, zatím bez PR)
+
+- `main` obsahuje PR #1 až #13. Tato větev zapracovává připomínky uživatele ke stránce Plán:
+  - **Horní bloky:** „Čeká na vás“ a „Nejbližší akce“ jsou stejně vysoké, se stejnými řádky (`.brief-row`).
+    Úkoly nad tři se sbalí do „Další úkoly“, nejbližší akce jsou až tři (`nextEventsFor`, `NextEventsList`).
+  - **Stav měsíce je mezi úkoly organizátora** (`monthTasks` ve `status.ts`): „k doplnění“ a „čeká na zveřejnění“
+    s tlačítkem, které zúží harmonogram (`?stav=`). Řádek s čísly (`MonthSummaryBar`) a odrážkový seznam
+    (`PlanGaps`) jsou pryč, filtr **Stav** je třetí výběr vedle „Zobrazit jako“ a „Typ akce“.
+  - **Detail akce z náhledu „Zobrazit jako“** (`?jako=` na `/vzdelavani/akce/[id]`): počítá se pro vybranou
+    skupinu nebo kolegu, jen ke čtení, nástroje vedoucího se v náhledu nenabízejí.
+  - Domovská stránka vyká, vstupní stránka říká „Ukázka“ místo „Prototyp“.
+- Ověřeno: lint, typy, 114 ze 114 testů, build. Chromium nad PGlite: Plán za organizátora (1280 a 390 px),
+  vedoucího a účastníka, filtr K doplnění, náhled za FP a za vedoucího včetně detailu, Zápisy se dvěma
+  zveřejněnými zápisy (nadpis měsíce se ukazuje), bez vodorovného posunu. **Neověřeno:** Safari, živý Google.
+- **Živý test:** pro tuto větev je na Vercelu nastavená `APP_URL`
+  `https://zbc-vzdelavani-demo-git-claude-focused-dirac-gphy4f-maci.vercel.app`. Uživatel musí v Google konzoli
+  přidat `<APP_URL>/api/google/prihlaseni/callback` a `<APP_URL>/api/google/kalendar/callback`. Přihlašovat se
+  jen z této adresy větve, ne z adresy jednotlivého nasazení. `redirect_uri=` z chyby na staré větvi uživatel
+  zatím neposlal.
+- **Návrh automatického Kalendáře (čeká na souhlas, neprogramováno):** po přihlášení Googlem si Wiki
+  u organizátora, pokud Kalendář není propojený, sama řekne o oprávnění ke Kalendáři (druhé přesměrování,
+  jedna souhlasová obrazovka). Ostatní role žádné oprávnění navíc nedostanou. Rozpojený Kalendář se ukáže
+  jako úkol v „Čeká na vás“ s jedním tlačítkem. Stránka Integrace zůstane jen jako technická adresa pro
+  správce. Servisní účet bez Google Workspace nejspíš nejde (pozvánky hostům), ověřit před rozhodnutím.
+  Pozor: dokud je OAuth aplikace v režimu Testing, obnovovací token vyprší po 7 dnech.
+- Otevřené: „Ukázka“ a přepínač rolí zůstávají. Texty na technické stránce Integrace jsou pořád „ukázkové“.
+
 ## Stav 13. 11. 2026 pozdě odpoledne (větev `ccr-aad79b00-uhlkt9`, PR do `main`)
 
 - `main` obsahuje PR #1 až #12. Uživatel prošel web na preview a nadiktoval připomínky, tato větev je zapracovává:
