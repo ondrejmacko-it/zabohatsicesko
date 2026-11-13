@@ -1,15 +1,15 @@
 import { randomUUID } from "node:crypto";
-import { and, eq, sql } from "drizzle-orm";
+import { and, asc, eq, isNotNull, isNull, ne, sql } from "drizzle-orm";
 import { toDateKey } from "@/lib/time";
 import { audit } from "@/server/audit";
 import { config, now } from "@/server/config";
 import { getDb, queryRows, type Executor } from "@/server/db/client";
 import { topicInterests, topics } from "@/server/db/schema";
 import { rankTopics, type RankedTopic, type TopicStat } from "@/server/domain/topics";
-import { canSeeAudience, type Viewer } from "@/server/policy";
+import { canSeeAudience, isOrganizer, type Viewer } from "@/server/policy";
 import { DomainError } from "@/server/services/errors";
 
-/** Témata viditelná uživateli se zájmem a historií konání (jen zveřejněné, nezrušené akce). */
+/** Nearchivovaná témata viditelná uživateli se zájmem a historií konání (jen zveřejněné, nezrušené akce). */
 export async function listTopics(viewer: Viewer): Promise<RankedTopic[]> {
   const db = await getDb();
   const reference = now().toISOString();
@@ -27,12 +27,12 @@ export async function listTopics(viewer: Viewer): Promise<RankedTopic[]> {
           (SELECT count(*)::int FROM topic_interests i WHERE i.topic_id = t.id) AS interest_count,
           EXISTS (SELECT 1 FROM topic_interests i WHERE i.topic_id = t.id AND i.user_id = ${viewer.id}) AS interested,
           (SELECT max((e.published->>'endsAt')::timestamptz) FROM events e
-             WHERE e.topic_id = t.id AND e.published->>'status' = 'published'
+             WHERE e.published->>'topicId' = t.id AND e.published->>'status' = 'published'
                AND (e.published->>'endsAt')::timestamptz <= ${reference}::timestamptz) AS last_held,
           (SELECT min((e.published->>'startsAt')::timestamptz) FROM events e
-             WHERE e.topic_id = t.id AND e.published->>'status' = 'published'
+             WHERE e.published->>'topicId' = t.id AND e.published->>'status' = 'published'
                AND (e.published->>'startsAt')::timestamptz > ${reference}::timestamptz) AS next_planned
-        FROM topics t WHERE t.org_id = ${config.orgId}`,
+        FROM topics t WHERE t.org_id = ${config.orgId} AND t.archived_at IS NULL`,
   );
   const stats: TopicStat[] = rows
     .filter((r) => canSeeAudience(viewer, r.audience))
@@ -54,7 +54,7 @@ async function requireVisibleTopic(db: Executor, viewer: Viewer, topicId: string
     .from(topics)
     .where(and(eq(topics.id, topicId), eq(topics.orgId, config.orgId)))
     .limit(1);
-  if (!topic || !canSeeAudience(viewer, topic.audience)) throw new DomainError("not_found");
+  if (!topic || topic.archivedAt || !canSeeAudience(viewer, topic.audience)) throw new DomainError("not_found");
   return topic;
 }
 
@@ -92,7 +92,54 @@ export async function topicIdByName(db: Executor, name: string | null): Promise<
   const [topic] = await db
     .select({ id: topics.id })
     .from(topics)
-    .where(and(eq(topics.orgId, config.orgId), sql`lower(${topics.name}) = lower(${name})`))
+    .where(and(eq(topics.orgId, config.orgId), isNull(topics.archivedAt), sql`lower(${topics.name}) = lower(${name})`))
     .limit(1);
   return topic?.id ?? null;
+}
+
+/** Úprava názvu a skupiny tématu. Akce si vazbu drží přes ID, jejich už zveřejněný název se nemění. */
+export async function updateTopic(viewer: Viewer, topicId: string, name: string, audience: string): Promise<void> {
+  if (!isOrganizer(viewer)) throw new DomainError("forbidden");
+  const db = await getDb();
+  await db.transaction(async (tx) => {
+    const [clash] = await tx
+      .select({ id: topics.id })
+      .from(topics)
+      .where(and(eq(topics.orgId, config.orgId), ne(topics.id, topicId), sql`lower(${topics.name}) = lower(${name})`))
+      .limit(1);
+    if (clash) throw new DomainError("duplicate");
+    const [updated] = await tx
+      .update(topics)
+      .set({ name, audience })
+      .where(and(eq(topics.id, topicId), eq(topics.orgId, config.orgId)))
+      .returning({ id: topics.id });
+    if (!updated) throw new DomainError("not_found");
+    await audit(tx, viewer.id, "topic.update", "topic", topicId);
+  });
+}
+
+/**
+ * Archivace téma vyřadí z nabídky a doporučení. Řádek zůstává, takže minulé akce na téma dál odkazují
+ * a organizátor ho může vrátit.
+ */
+export async function setTopicArchived(viewer: Viewer, topicId: string, archived: boolean): Promise<void> {
+  if (!isOrganizer(viewer)) throw new DomainError("forbidden");
+  const db = await getDb();
+  const [updated] = await db
+    .update(topics)
+    .set({ archivedAt: archived ? now() : null })
+    .where(and(eq(topics.id, topicId), eq(topics.orgId, config.orgId)))
+    .returning({ id: topics.id });
+  if (!updated) throw new DomainError("not_found");
+  await audit(db, viewer.id, archived ? "topic.archive" : "topic.restore", "topic", topicId);
+}
+
+export async function listArchivedTopics(viewer: Viewer): Promise<Array<{ id: string; name: string; audience: string }>> {
+  if (!isOrganizer(viewer)) return [];
+  const db = await getDb();
+  return db
+    .select({ id: topics.id, name: topics.name, audience: topics.audience })
+    .from(topics)
+    .where(and(eq(topics.orgId, config.orgId), isNotNull(topics.archivedAt)))
+    .orderBy(asc(topics.name));
 }

@@ -49,6 +49,7 @@ export const topics = pgTable("topics", {
   audience: text("audience").notNull(),
   proposedBy: text("proposed_by"),
   createdAt: ts("created_at").notNull().defaultNow(),
+  archivedAt: ts("archived_at"),
 });
 
 export const topicInterests = pgTable(

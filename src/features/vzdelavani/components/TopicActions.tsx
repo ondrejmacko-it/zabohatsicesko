@@ -1,12 +1,12 @@
 "use client";
 
-import { useActionState, useState } from "react";
-import { ActionMessage } from "@/components/ActionForm";
+import { useActionState, useState, useTransition } from "react";
+import { ActionForm, ActionMessage } from "@/components/ActionForm";
 import { Modal } from "@/components/Modal";
 import { submitKeepingValues } from "@/features/shared/keep-values";
 import { GROUP_LABELS } from "@/lib/labels";
 import type { Group } from "@/lib/types";
-import { proposeTopicAction, toggleInterestAction, type ActionResult } from "../actions";
+import { archiveTopicAction, proposeTopicAction, toggleInterestAction, updateTopicAction, type ActionResult } from "../actions";
 
 /** Přepínač zájmu. Jeden uživatel = nejvýš jeden zájem o téma (hlídá server). */
 export function InterestButton({ topicId, interested, topicName }: { topicId: string; interested: boolean; topicName: string }) {
@@ -85,4 +85,80 @@ function ProposeForm({ groups, onClose }: { groups: Group[]; onClose: () => void
       </form>
     </Modal>
   );
+}
+
+/** Správa tématu pro organizátora: úprava názvu a skupiny, archivace. */
+export function TopicManage({ topic, groups }: { topic: { id: string; name: string; audience: string }; groups: Group[] }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="row topic-manage">
+      <button type="button" className="btn btn-small" onClick={() => setOpen(true)} aria-label={`Upravit téma ${topic.name}`}>
+        Upravit
+      </button>
+      <ActionForm
+        action={archiveTopicAction}
+        fields={{ topicId: topic.id, archived: "true" }}
+        label="Archivovat"
+        small
+        confirm={{
+          title: "Archivovat téma",
+          text: `Téma „${topic.name}“ zmizí z nabídky a z doporučení. Akce, které ho už měly, si vazbu nechají a téma můžete kdykoli obnovit.`,
+          confirmLabel: "Archivovat téma",
+        }}
+      />
+      {open && <EditTopicForm topic={topic} groups={groups} onClose={() => setOpen(false)} />}
+    </div>
+  );
+}
+
+function EditTopicForm({ topic, groups, onClose }: { topic: { id: string; name: string; audience: string }; groups: Group[]; onClose: () => void }) {
+  const [name, setName] = useState(topic.name);
+  const [audience, setAudience] = useState(topic.audience);
+  const [state, setState] = useState<ActionResult | null>(null);
+  const [pending, start] = useTransition();
+  // Ruční odeslání: po chybě (například duplicitní název) zůstanou hodnoty tak, jak je organizátor vyplnil.
+  const submit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    start(async () => {
+      const result = await updateTopicAction(formData);
+      if (result.ok) onClose();
+      else setState(result);
+    });
+  };
+  return (
+    <Modal open title="Upravit téma" onRequestClose={onClose}>
+      <form onSubmit={submit} className="stack">
+        <input type="hidden" name="topicId" value={topic.id} />
+        <label className="field">
+          <span className="field-label">Téma</span>
+          <input className="input" name="name" value={name} onChange={(e) => setName(e.target.value)} required minLength={3} maxLength={120} />
+        </label>
+        <label className="field">
+          <span className="field-label">Pro skupinu</span>
+          <select className="select" name="audience" value={audience} onChange={(e) => setAudience(e.target.value)}>
+            {groups.map((g) => (
+              <option key={g} value={g}>
+                {GROUP_LABELS[g]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <p className="small muted">Akce, které téma už mají v plánu nebo v zápisu, si nechají název, pod kterým byly zveřejněné.</p>
+        <ActionMessage state={state} />
+        <div className="row">
+          <button type="submit" className="btn btn-primary" disabled={pending}>
+            {pending ? "Ukládám…" : "Uložit"}
+          </button>
+          <button type="button" className="btn" onClick={onClose}>
+            Zrušit
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+export function RestoreTopicButton({ topicId }: { topicId: string }) {
+  return <ActionForm action={archiveTopicAction} fields={{ topicId, archived: "false" }} label="Obnovit" small />;
 }

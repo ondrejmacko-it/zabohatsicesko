@@ -218,6 +218,27 @@ export async function publishMinutes(viewer: Viewer, eventId: string, minutesId:
     .where(and(eq(calendarLinks.eventId, eventId), eq(calendarLinks.syncStatus, "synced")));
 }
 
+/**
+ * Stáhne zveřejněný zápis akce z očí publika. Vrátí se do návrhu u vedoucího, který ho může opravit
+ * a zveřejnit znovu. Týká se všech zveřejněných zápisů akce, i toho z dříve vyměněné nahrávky.
+ */
+export async function withdrawMinutes(viewer: Viewer, eventId: string): Promise<void> {
+  const db = await getDb();
+  await requireHandledEvent(db, viewer, eventId);
+  const rows = await db
+    .update(minutes)
+    .set({ status: "draft", publishedBy: null, publishedAt: null, version: sql`${minutes.version} + 1`, updatedBy: viewer.id })
+    .where(and(eq(minutes.eventId, eventId), eq(minutes.status, "published")))
+    .returning({ id: minutes.id });
+  if (!rows.length) throw new DomainError("invalid_state");
+  await audit(db, viewer.id, "minutes.withdraw", "event", eventId);
+  // Pozvánka přijde o odkaz na zápis. Odeslání spouští volající.
+  await db
+    .update(calendarLinks)
+    .set({ syncStatus: "pending", attempts: 0, errorCode: null, updatedAt: new Date() })
+    .where(and(eq(calendarLinks.eventId, eventId), eq(calendarLinks.syncStatus, "synced")));
+}
+
 export type RecordingPanel =
   | { access: "none" }
   | { access: "reader"; state: RecordingState; minutes: MinutesContent | null; publishedAt: string | null }
@@ -226,6 +247,8 @@ export type RecordingPanel =
       state: RecordingState;
       recording: { name: string; sizeBytes: number; durationSec: number; uploadedAt: string } | null;
       errorCode: string | null;
+      /** Publikum právě vidí nějaký zveřejněný zápis akce (i z dříve vyměněné nahrávky). */
+      publicMinutes: boolean;
       minutes: {
         id: string;
         version: number;
@@ -264,9 +287,15 @@ export async function recordingPanel(viewer: Viewer, row: EventRow): Promise<Rec
   else if (job) state = "processing";
 
   if (canHandleRecording(viewer, row)) {
+    const [visible] = await db
+      .select({ id: minutes.id })
+      .from(minutes)
+      .where(and(eq(minutes.eventId, row.id), eq(minutes.status, "published")))
+      .limit(1);
     return {
       access: "handler",
       state,
+      publicMinutes: visible !== undefined,
       recording: recording
         ? { name: recording.originalName, sizeBytes: recording.sizeBytes, durationSec: recording.durationSec, uploadedAt: recording.createdAt.toISOString() }
         : null,
@@ -286,10 +315,16 @@ export async function recordingPanel(viewer: Viewer, row: EventRow): Promise<Rec
     };
   }
   if (!canReadPublishedMinutes(viewer, row)) return { access: "none" };
-  const published = draft?.status === "published" ? draft : null;
+  // Výměna nahrávky zveřejněný zápis neschová: publikum ho čte dál, dokud vedoucí neschválí zápis z náhrady.
+  const [published] = await db
+    .select()
+    .from(minutes)
+    .where(and(eq(minutes.eventId, row.id), eq(minutes.status, "published")))
+    .orderBy(desc(minutes.publishedAt))
+    .limit(1);
   return {
     access: "reader",
-    state: published ? "available" : "awaiting",
+    state: published ? "available" : recording ? "processing" : "awaiting",
     minutes: published?.content ?? null,
     publishedAt: published?.publishedAt?.toISOString() ?? null,
   };

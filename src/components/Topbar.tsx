@@ -12,7 +12,9 @@ export function Topbar({ user, personas }: { user: CurrentUser; personas: Person
         <span className="brand-tagline">Za bohatší Česko – znalosti a procesy na jednom místě</span>
       </Link>
       <div className="account">
-        <span className="demo-badge" title="Fiktivní data a ukázkové režimy integrací">Ukázka · fiktivní data</span>
+        <span className="demo-badge" title="Fiktivní data a ukázkové režimy integrací">
+          Ukázka<span className="demo-badge-detail"> · fiktivní data</span>
+        </span>
         {user.signedInWith === "google" ? (
           <span className="small muted" title={user.email}>
             Přihlášení účtem Google

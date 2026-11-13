@@ -18,20 +18,22 @@ import {
   cancelEvent,
   createEvent,
   deleteDraft,
+  discardDraftChanges,
   generateMonth,
-  loadEventRow,
   updateEvent,
   updateTemplate,
   type EventInput,
 } from "@/server/services/events";
+import { ImpactNotConfirmed, assertImpactConfirmed, cancelImpact, changeImpact, type CancelImpact, type ChangeImpact } from "@/server/services/impact";
 import {
   processTranscriptionJob,
   publishMinutes,
   retryTranscription,
   updateMinutes,
   uploadRecording,
+  withdrawMinutes,
 } from "@/server/services/recordings";
-import { proposeTopic, setInterest, topicIdByName } from "@/server/services/topics";
+import { proposeTopic, setInterest, setTopicArchived, topicIdByName, updateTopic } from "@/server/services/topics";
 import { SIMULATION_SWITCHES, writeSwitch } from "@/server/settings";
 
 // Každá akce znovu ověří session a oprávnění na serveru a validuje vstup.
@@ -67,7 +69,7 @@ const eventSchema = z
     reviewerId: optionalId,
     intent: z.enum(["draft", "publish"]),
     allowIncomplete: z.literal("on").optional(),
-    confirmImpact: z.literal("on").optional(),
+    confirmToken: z.string().max(64).optional(),
   })
   .refine((v) => !v.multiDay || (v.endDate !== undefined && isValidDateKey(v.endDate) && v.endDate >= v.date));
 
@@ -76,7 +78,9 @@ const formObject = (formData: FormData) => Object.fromEntries([...formData.entri
 async function parseEvent(formData: FormData) {
   const data = eventSchema.parse(formObject(formData));
   if (data.intent === "publish" && (!data.topicTitle || !data.leadId) && data.type !== "holiday" && !data.allowIncomplete) {
-    throw new IncompleteError();
+    throw new IncompleteError(
+      [!data.topicTitle && "téma", !data.leadId && "vedoucí"].filter(Boolean).join(" a "),
+    );
   }
   const input: EventInput = {
     type: data.type,
@@ -91,13 +95,28 @@ async function parseEvent(formData: FormData) {
     leadId: data.leadId,
     reviewerId: data.reviewerId,
   };
-  return { input, intent: data.intent, confirmImpact: data.confirmImpact === "on" };
+  return { input, intent: data.intent, confirmToken: data.confirmToken ?? null };
 }
 
 class IncompleteError extends Error {}
 
-const INCOMPLETE_MESSAGE =
-  "Téma nebo vedoucí chybí. Doplňte je, nebo potvrďte zveřejnění bez nich (pozvaní uvidí obecný název).";
+const incompleteMessage = (missing: string) =>
+  `Nezveřejněno, chybí ${missing}. Doplňte údaj, nebo dole zaškrtněte zveřejnění bez něj. Vyplněné hodnoty zůstaly beze změny.`;
+
+/** Dopad změny zveřejněné akce na pozvané. Dialog ho ukáže před potvrzením. */
+export async function previewImpactAction(formData: FormData): Promise<ActionResult & { impact?: ChangeImpact | null }> {
+  return run(async (user) => {
+    let parsed;
+    try {
+      parsed = await parseEvent(formData);
+    } catch (error) {
+      if (error instanceof IncompleteError) return { ok: false, error: incompleteMessage(error.message) };
+      throw error;
+    }
+    const id = z.string().max(80).parse(formData.get("id"));
+    return { ok: true, impact: await changeImpact(user, id, parsed.input) };
+  });
+}
 
 export async function saveEventAction(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
   return run(async (user) => {
@@ -105,10 +124,10 @@ export async function saveEventAction(_prev: ActionResult | null, formData: Form
     try {
       parsed = await parseEvent(formData);
     } catch (error) {
-      if (error instanceof IncompleteError) return { ok: false, error: INCOMPLETE_MESSAGE };
+      if (error instanceof IncompleteError) return { ok: false, error: incompleteMessage(error.message) };
       throw error;
     }
-    const { input, intent, confirmImpact } = parsed;
+    const { input, intent, confirmToken } = parsed;
     const id = z.string().max(80).optional().parse(formData.get("id") ?? undefined);
     if (!id) {
       const created = await createEvent(user, input, intent);
@@ -116,9 +135,13 @@ export async function saveEventAction(_prev: ActionResult | null, formData: Form
       return { ok: true, id: created, message: intent === "publish" ? "Akce je zveřejněná." : "Návrh je uložený." };
     }
     const revision = z.coerce.number().int().positive().parse(formData.get("revision"));
-    const row = await loadEventRow(await getDb(), id);
-    if (intent === "publish" && row?.published && !confirmImpact) {
-      return { ok: false, error: "Potvrďte, že změnu chcete poslat pozvaným." };
+    if (intent === "publish") {
+      try {
+        await assertImpactConfirmed(id, input, confirmToken);
+      } catch (error) {
+        if (!(error instanceof ImpactNotConfirmed)) throw error;
+        return { ok: false, error: "Změna zasáhne pozvané. Zkontrolujte a potvrďte její dopad, potom ji zveřejněte." };
+      }
     }
     await updateEvent(user, id, revision, input, intent);
     if (intent === "publish") after(() => syncEvent(id));
@@ -137,11 +160,24 @@ export async function cancelEventAction(_prev: ActionResult | null, formData: Fo
   });
 }
 
+/** Koho se zrušení dotkne. Dialog zrušení to ukáže ještě před potvrzením. */
+export async function previewCancelAction(id: string): Promise<ActionResult & { impact?: CancelImpact }> {
+  return run(async (user) => ({ ok: true, impact: await cancelImpact(user, z.string().max(80).parse(id)) }));
+}
+
 export async function deleteDraftAction(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
   return run(async (user) => {
     const data = z.object({ id: z.string().max(80), revision: z.coerce.number().int().positive() }).parse(formObject(formData));
     await deleteDraft(user, data.id, data.revision);
     return { ok: true, message: "Návrh je smazaný." };
+  });
+}
+
+export async function discardChangesAction(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
+  return run(async (user) => {
+    const data = z.object({ id: z.string().max(80), revision: z.coerce.number().int().positive() }).parse(formObject(formData));
+    await discardDraftChanges(user, data.id, data.revision);
+    return { ok: true, message: "Návrh změny je zahozený, platí zveřejněná verze." };
   });
 }
 
@@ -270,6 +306,15 @@ export async function saveMinutesAction(_prev: ActionResult | null, formData: Fo
   });
 }
 
+export async function withdrawMinutesAction(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
+  return run(async (user) => {
+    const { id } = eventIdSchema.parse(formObject(formData));
+    await withdrawMinutes(user, id);
+    after(() => syncEvent(id));
+    return { ok: true, message: "Zápis je stažený. Kolegové ho nevidí, dokud ho znovu nezveřejníte." };
+  });
+}
+
 // ——— Témata ———
 
 export async function toggleInterestAction(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
@@ -287,6 +332,24 @@ export async function proposeTopicAction(_prev: ActionResult | null, formData: F
       .parse(formObject(formData));
     await proposeTopic(user, data.name, data.audience);
     return { ok: true, message: "Téma je přidané a máte u něj označený zájem." };
+  });
+}
+
+export async function updateTopicAction(formData: FormData): Promise<ActionResult> {
+  return run(async (user) => {
+    const data = z
+      .object({ topicId: z.string().max(80), name: z.string().trim().min(3).max(120), audience: z.enum(GROUPS) })
+      .parse(formObject(formData));
+    await updateTopic(user, data.topicId, data.name, data.audience);
+    return { ok: true, message: "Téma je upravené." };
+  });
+}
+
+export async function archiveTopicAction(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
+  return run(async (user) => {
+    const data = z.object({ topicId: z.string().max(80), archived: z.enum(["true", "false"]) }).parse(formObject(formData));
+    await setTopicArchived(user, data.topicId, data.archived === "true");
+    return { ok: true };
   });
 }
 

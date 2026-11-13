@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, asc, eq, gt, gte, inArray, lt, ne, sql } from "drizzle-orm";
+import { and, asc, eq, gt, gte, inArray, lt, ne, or, sql } from "drizzle-orm";
 import { EXTRAORDINARY_TYPES } from "@/lib/labels";
 import { addDays, fromPragueLocal, isoWeekday, monthRange, toDateKey } from "@/lib/time";
 import type { EventType, Group, PlanStatus, SyncStatus } from "@/lib/types";
@@ -38,6 +38,8 @@ export type EventCard = {
   past: boolean;
   /** Jen pro organizátora. „unlinked“ = zveřejněná akce zatím bez vazby na pozvánku. */
   syncStatus: SyncStatus | "unlinked" | null;
+  /** Jen pro organizátora: zveřejněný termín, pokud ho rozpracovaný návrh přesouvá jinam. */
+  movedFrom: { startsAt: string; endsAt: string; allDay: boolean } | null;
 };
 
 async function userNames(db: Executor): Promise<Map<string, string>> {
@@ -67,6 +69,8 @@ function toCard(
   const isPublic = row.published !== null;
   let syncStatus: EventCard["syncStatus"] = null;
   if (organizer && isPublic && view.type !== "holiday") syncStatus = link?.syncStatus ?? "unlinked";
+  const last = row.published;
+  const moved = organizer && last !== null && row.status !== "cancelled" && (last.startsAt !== view.startsAt || last.endsAt !== view.endsAt);
 
   return {
     id: row.id,
@@ -83,6 +87,7 @@ function toCard(
     extraordinary: view.type !== "holiday" && (EXTRAORDINARY_TYPES.has(view.type) || !slotDays.has(weekday)),
     past: new Date(view.endsAt) <= now(),
     syncStatus,
+    movedFrom: moved ? { startsAt: last.startsAt, endsAt: last.endsAt, allDay: last.allDay } : null,
   };
 }
 
@@ -92,16 +97,30 @@ export async function listEvents(viewer: Viewer, from: Date, to: Date): Promise<
   const rows = await db
     .select()
     .from(events)
-    .where(and(eq(events.orgId, config.orgId), lt(events.startsAt, to), gte(events.endsAt, from)))
+    .where(
+      and(
+        eq(events.orgId, config.orgId),
+        // Návrh přesunu nesmí účastníkům schovat původní termín: hledá se i podle zveřejněné verze.
+        or(
+          and(lt(events.startsAt, to), gte(events.endsAt, from)),
+          and(
+            sql`(${events.published}->>'startsAt')::timestamptz < ${to.toISOString()}::timestamptz`,
+            sql`(${events.published}->>'endsAt')::timestamptz >= ${from.toISOString()}::timestamptz`,
+          ),
+        ),
+      ),
+    )
     .orderBy(asc(events.startsAt), asc(events.id));
   const links = rows.length
     ? await db.select().from(calendarLinks).where(inArray(calendarLinks.eventId, rows.map((r) => r.id)))
     : [];
   const linkByEvent = new Map(links.map((l) => [l.eventId, l]));
   const [names, slotDays] = await Promise.all([userNames(db), templateWeekdays(db)]);
+  // Rozsah a pořadí se řídí verzí, kterou uživatel opravdu vidí (organizátor pracovní, ostatní zveřejněnou).
   return rows
     .map((row) => toCard(viewer, row, linkByEvent.get(row.id), names, slotDays))
-    .filter((card): card is EventCard => card !== null);
+    .filter((card): card is EventCard => card !== null && new Date(card.startsAt) < to && new Date(card.endsAt) >= from)
+    .sort((a, b) => a.startsAt.localeCompare(b.startsAt) || a.id.localeCompare(b.id));
 }
 
 /** Akce pro detail: řádek z databáze a karta podle oprávnění uživatele, nebo null. */
@@ -284,7 +303,7 @@ export async function updateEvent(
         type: input.type,
         label: input.label,
         topicTitle: input.topicTitle,
-        topicId: input.topicId,
+        topicId: input.topicId ?? (input.topicTitle === current.topicTitle ? current.topicId : null),
         startsAt,
         endsAt,
         allDay,
@@ -313,9 +332,22 @@ export async function cancelEvent(viewer: Viewer, id: string, expectedRevision: 
     const current = await loadEventRow(tx, id);
     if (!current) throw new DomainError("not_found");
     if (!current.published || current.status === "cancelled") throw new DomainError("invalid_state");
+    // Zrušení vychází z poslední zveřejněné verze. Rozpracovaný návrh změny se zahodí,
+    // aby se nezveřejněné téma, termín ani publikum nedostaly do Wiki a Kalendáře.
+    const last = current.published;
     const [row] = await tx
       .update(events)
       .set({
+        type: last.type,
+        label: last.label,
+        topicTitle: last.topicTitle,
+        topicId: last.topicId,
+        startsAt: new Date(last.startsAt),
+        endsAt: new Date(last.endsAt),
+        allDay: last.allDay,
+        audience: last.audience,
+        leadId: last.leadId,
+        reviewerId: last.reviewerId,
         status: "cancelled",
         cancelReason: reason,
         revision: sql`${events.revision} + 1`,
@@ -327,6 +359,44 @@ export async function cancelEvent(viewer: Viewer, id: string, expectedRevision: 
     if (!row) throw new DomainError("conflict");
     await publishInTx(tx, row, viewer.id, "cancel");
     await audit(tx, viewer.id, "event.cancel", "event", id);
+  });
+}
+
+/**
+ * Zahodí rozpracovaný návrh změny a vrátí pracovní verzi na poslední zveřejněnou. Zveřejněná verze
+ * se nemění, proto se Kalendář nesynchronizuje a pozvaní nic nedostanou.
+ */
+export async function discardDraftChanges(viewer: Viewer, id: string, expectedRevision: number): Promise<void> {
+  requireOrganizer(viewer);
+  const db = await getDb();
+  await db.transaction(async (tx) => {
+    const current = await loadEventRow(tx, id);
+    if (!current) throw new DomainError("not_found");
+    const last = current.published;
+    if (!last || current.status === "cancelled" || current.revision === current.publishedRevision) throw new DomainError("invalid_state");
+    const [row] = await tx
+      .update(events)
+      .set({
+        type: last.type,
+        label: last.label,
+        topicTitle: last.topicTitle,
+        topicId: last.topicId,
+        startsAt: new Date(last.startsAt),
+        endsAt: new Date(last.endsAt),
+        allDay: last.allDay,
+        audience: last.audience,
+        leadId: last.leadId,
+        reviewerId: last.reviewerId,
+        revision: sql`${events.revision} + 1`,
+        publishedRevision: sql`${events.revision} + 1`,
+        updatedBy: viewer.id,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(events.id, id), eq(events.revision, expectedRevision)))
+      .returning();
+    if (!row) throw new DomainError("conflict");
+    await tx.insert(eventRevisions).values({ eventId: id, revision: row.revision, action: "discard", snapshot: snapshotOf(row), actorId: viewer.id });
+    await audit(tx, viewer.id, "event.discard_changes", "event", id);
   });
 }
 

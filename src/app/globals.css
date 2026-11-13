@@ -1271,6 +1271,97 @@ details > summary {
   margin-bottom: 12px;
 }
 
+/* Harmonogram organizátora: termíny k doplnění */
+.plan-gaps {
+  margin: 12px 0;
+}
+.plan-gaps > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.plan-gaps-list {
+  margin: 8px 0 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 4px;
+}
+.plan-gaps-empty {
+  margin: 8px 0;
+}
+.topic-actions {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+.archived-topics {
+  list-style: none;
+  padding: 0;
+  margin-top: 8px;
+}
+
+/* Mobil: kratší záhlaví. Technické podrobnosti ukázky jsou na stránce Integrace. */
+@media (max-width: 720px) {
+  .brand-tagline,
+  .demo-badge-detail,
+  .status-strip:not(.mode-strip) {
+    display: none;
+  }
+}
+
+.mode-strip {
+  margin-bottom: 12px;
+}
+
+/* Průvodce měsícem pro organizátora: tři kroky vedle sebe, na telefonu pod sebou. */
+.month-guide {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: krok;
+}
+.month-guide > li {
+  counter-increment: krok;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-size: 13px;
+}
+.month-guide > li.todo {
+  border-color: var(--ochre);
+}
+.month-guide-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+.month-guide-title::before {
+  content: counter(krok) ".";
+}
+@media (max-width: 720px) {
+  .month-guide {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.status-advice {
+  margin: 8px 0 0;
+  max-width: 60ch;
+}
+.more-settings > summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.more-settings[open] > summary {
+  margin-bottom: 12px;
+}
+
 /* ——— Dotyková zařízení (iPhone, iPad) ———
    Pole s písmem pod 16 px Safari na iOS po klepnutí přiblíží a stránka zůstane zvětšená.
    Ovládací prvky mají výšku podle doporučení Applu pro dotyk (44 px). */

@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 export function SubNav({ showIntegrations }: { showIntegrations: boolean }) {
   const pathname = usePathname();
   const items = [
-    { href: "/vzdelavani/moje-cesta", label: "Moje cesta" },
+    { href: "/vzdelavani/prehled", label: "Přehled" },
     { href: "/vzdelavani/harmonogram", label: "Harmonogram", also: "/vzdelavani/akce" },
     { href: "/vzdelavani/zapisy", label: "Zápisy" },
     { href: "/vzdelavani/temata", label: "Témata" },

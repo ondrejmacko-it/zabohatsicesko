@@ -6,7 +6,8 @@ import { ActionMessage } from "@/components/ActionForm";
 import { Icon } from "@/components/Icon";
 import { Modal } from "@/components/Modal";
 import { submitKeepingValues } from "@/features/shared/keep-values";
-import { cancelEventAction, deleteDraftAction, type ActionResult } from "../actions";
+import type { CancelImpact } from "@/server/services/impact";
+import { cancelEventAction, deleteDraftAction, previewCancelAction, type ActionResult } from "../actions";
 
 /** Kontextové možnosti detailu akce: zrušení zveřejněné akce a smazání návrhu. */
 export function EventMenu({ id, revision, canCancel, canDelete }: { id: string; revision: number; canCancel: boolean; canDelete: boolean }) {
@@ -43,15 +44,43 @@ function CancelDialog({ id, revision, onClose }: { id: string; revision: number;
     if (result.ok) onClose();
     return result;
   }, null);
+  // Dopad se načte při otevření dialogu. Když se nepovede, zrušení jde provést i bez něj.
+  const [impact, setImpact] = useState<CancelImpact | "failed" | null>(null);
+  useEffect(() => {
+    let active = true;
+    previewCancelAction(id)
+      .then((result) => active && setImpact(result.ok && result.impact ? result.impact : "failed"))
+      .catch(() => active && setImpact("failed"));
+    return () => {
+      active = false;
+    };
+  }, [id]);
   return (
     <Modal open title="Zrušit akci" onRequestClose={onClose}>
       <form action={action} onSubmit={submitKeepingValues(action)} className="stack">
         <input type="hidden" name="id" value={id} />
         <input type="hidden" name="revision" value={revision} />
-        <p>
-          Akce zůstane v harmonogramu se stavem Zrušeno. Pozvaní dostanou z Kalendáře zprávu o zrušení. Ostatní
-          termíny se nemění.
-        </p>
+        <p>Akce zůstane v harmonogramu se stavem Zrušeno. Ostatní termíny se nemění.</p>
+        <div className="notice" role="status" aria-live="polite">
+          <p>
+            <strong>Koho se zrušení dotkne</strong>
+          </p>
+          {impact === null && <p className="small">Zjišťuji, kdo je v pozvánce…</p>}
+          {impact === "failed" && <p className="small">Dopad se nepodařilo načíst. Pozvaní dostanou z Kalendáře zprávu o zrušení.</p>}
+          {impact && impact !== "failed" && (
+            <ul className="prose-list">
+              <li>Ve Wiki uvidí stav Zrušeno a důvod skupina {impact.audience}.</li>
+              {impact.guests.length > 0 && (
+                <li>
+                  Zprávu o zrušení z Kalendáře dostane {impact.guests.length === 1 ? "1 host" : `hostů: ${impact.guests.length}`} ({impact.guests.join(", ")}).
+                </li>
+              )}
+              {impact.notes.map((note) => (
+                <li key={note}>{note}</li>
+              ))}
+            </ul>
+          )}
+        </div>
         <label className="field">
           <span className="field-label">Důvod zrušení (uvidí ho kolegové ve Wiki)</span>
           <textarea className="textarea" name="reason" required minLength={3} maxLength={300} />

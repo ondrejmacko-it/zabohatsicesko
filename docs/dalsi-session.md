@@ -8,35 +8,61 @@ Pokračuj na demu modulu Vzdělávání. Nečti znovu celé zadání ani celý k
 `docs/predani.md`, `docs/google-kalendar.md` a `docs/google-prihlaseni.md`, pravidla v `CLAUDE.md`.
 Uživateli tykej, piš přátelsky. Větší změny nejdřív navrhni, nejasnosti se ptej.
 
-## Stav kódu
+## Stav 13. 11. 2026 večer (větev `ccr-8554df8b-jabz1f`, PR #12 do `main`)
 
-- `main` obsahuje PR #1 až #6 (poslední je krok A, správa uživatelů a stránka `/sprava`).
-- Větev `claude/jolly-goodall-c5hp6c` (z `main`), draft PR: **kroky B, C a D cílového průchodu**.
-  - **B, hosté z publika:** `src/server/calendar/attendees.ts`. Wiki zve aktivní účty skupiny akce a spravuje
-    jen hosty, které sama přidala (`calendar_links.managed_attendees`, migrace `0005_managed_attendees`).
-    Pozvání, změna skupin a odebrání přístupu vrátí budoucí pozvánky do fronty (`syncPending`). V režimu
-    Googlu je výchozí pevný seznam `GOOGLE_ALLOWED_ATTENDEES`, publikum zapíná `CALENDAR_ATTENDEES=audience`
-    (na Vercelu zatím nenastaveno). Pozor: i spárovaná existující pozvánka teď dostane chybějící publikum.
-  - **C, Zápisy:** `/vzdelavani/zapisy` (jen zveřejněné a oprávněné, hledání bez diakritiky, filtr typu a
-    skupiny). Zveřejnění zápisu doplní odkaz do popisu pozvánky a Kalendář rozešle změnu.
-  - **D, Moje cesta:** výchozí stránka modulu (`/vzdelavani` na ni přesměruje): Čeká na vás, Nejbližší akce,
-    Poslední zápisy, prázdné stavy. Menu Moje cesta · Harmonogram · Zápisy · Témata (+ Integrace organizátorovi).
-  - **Přehlednost:** detail akce má nahoře výrazné Kdy · Vede · Pro koho, odkaz zpět vede tam, odkud
-    uživatel přišel (`?odkud=zapisy|moje-cesta`), podrobnosti pozvánky jsou u synchronizované akce sbalené,
-    na `/sprava` je štítek „Pozvaný“.
-- Větev `claude/blissful-mendel-quw7mn` navazuje na `claude/jolly-goodall-c5hp6c` (obsahuje její commity
-  B, C, D) a přidává **dokončení přehlednosti**: v Harmonogramu je vedle přepínače Měsíc/Seznam
-  viditelné hlavní tlačítko Přidat akci a nabídka „Nástroje organizátora“ (Doplnit měsíc ze šablony, Šablona
-  týdne), výsledek doplnění se vypíše v nabídce. Na Integracích drobné rozestupy a užší tlačítko obnovy dat.
-- Ověřeno lokálně 12. 11.: lint, typová kontrola, 90 z 90 testů, build, průchod v prohlížeči (PGlite) pro
-  `/sprava`, Moje cesta, Zápisy, detail akce, Harmonogram s nabídkou, Témata a Integrace, vše i na šířce
-  390 px bez vodorovného posunu. Účastník nabídku organizátora nevidí. **Živě proti Googlu neověřeno nic
-  z B a C.**
-- Draft PR #8 z `claude/blissful-mendel-quw7mn` nahrazuje starší draft #7 (`claude/jolly-goodall-c5hp6c`),
-  ten uživatel zavře. Na #8 pokračuj, dokud ho uživatel nesloučí.
+- PR #12 spojuje #10 a #11 (ty uživatel zavře) a **dokončuje zbylé body 3 a 4 šestibodového zadání**:
+  - pruh režimů ukázky je i na stránce Integrace (`ModeStrip`), na telefonu tam zůstává vidět,
+  - dialog akce: Typ, termín, Téma, Vede, Publikum nahoře, Název v plánu a Kontrolor zápisu ve sbaleném
+    „Další nastavení“ (otevře se samo, když jsou vyplněné jinak než výchozím způsobem nebo při neplatném poli),
+  - „Stáhnout zveřejněný zápis“ (`withdrawMinutes`): publikum zápis nevidí, vedoucí ho má zpět jako návrh,
+    z pozvánky zmizí odkaz,
+  - stín původního termínu v harmonogramu organizátora (`EventCard.movedFrom`),
+  - „Koho se zrušení dotkne“ v dialogu zrušení (`cancelImpact`): skupina ve Wiki a hosté pozvánky,
+  - věta „co udělat“ pod stavem v detailu akce (`statusAdvice`, jen organizátor),
+  - průvodce měsícem ve třech krocích nad harmonogramem (`monthSteps`: Termíny, Témata a vedoucí, Zveřejnění),
+  - texty z #10 sjednocené na vykání jako zbytek UI.
+- Konflikty #10 a #11: dialog akce má ruční odeslání z #10, ostatní formuláře `submitKeepingValues` z #11.
+- Ověřeno: lint, typy, 108 ze 108 testů (nový `tests/dokonceni.test.ts`), build. Prohlížeč (Chromium, PGlite):
+  všechny stránky za organizátora, vedoucího a účastníka na 1280, 820 a 390 px bez vodorovného posunu, nové
+  funkce proklikané (dialog, zrušení, stín, průvodce, zveřejnění a stažení zápisu, pohled účastníka).
+- **Neověřeno:** skutečné Safari, živý test proti Googlu (stažení zápisu a storno jen v simulaci), úkol
+  „Nahrajte audio z dnešní akce“ v prohlížeči.
+- Další krok po sloučení #12: živý test (bod 6 níže). Větev pro něj potřebuje `APP_URL` a redirect URI.
 - `next dev` vytváří v kořeni soubor `AGENTS.md`. Do repa nepatří, před commitem ho smaž.
 
-## Hotovo 13. 11. 2026 (větev `ccr-abd7d882-k08f42`, PR do `main`)
+## Stav 13. 11. 2026 odpoledne (původně draft PR #10)
+
+Relace znovu došla k limitu kontextu. Z šestibodového zadání je hotové toto (lint, typy, 101 z 101 testů, build,
+průchod v prohlížeči nad PGlite: organizátor a kolega mimo publikum na desktopu, vedoucí a účastník FP na 390 px):
+
+- **Bod 1:** „Potvrdit dopad a zveřejnit“ (RM → FP i zpět) funguje na desktopu i mobilu. Chyba se nepotvrdila,
+  tlačítko bylo zablokované jen po dobu ukládání. Teď během ukládání ukazuje „Ukládám…“.
+- **Bod 2 celý:** „K doplnění“ v harmonogramu (`planGaps` ve `status.ts`), „Nahradit pravidelný termín“ v detailu
+  budoucí akce ze šablony (`EventDialog` s `replace`), správa témat Upravit, Archivovat, Obnovit
+  (migrace `0006_topic_archive`, aditivní sloupec `topics.archived_at`).
+- **Bod 3 částečně:** navigace Přehled · Harmonogram · Zápisy · Témata, `/vzdelavani/moje-cesta` přesměruje na
+  `/vzdelavani/prehled`. Přehled podle role (organizátor má nahoře termíny k doplnění a návrhy ke zveřejnění,
+  kdo nemá úkol, vidí nejdřív nejbližší akci). Domov má „Otevřít akci“ nebo „Otevřít harmonogram“. Na mobilu
+  zkrácené záhlaví („Ukázka“, bez podtitulu a bez pruhu režimů). Stavy „Zveřejněno · máš návrh změny“,
+  „Kalendář čeká na opravu“, „Kalendář se synchronizuje“. Účastník u minulé akce vidí, jestli se zápis
+  připravuje. Výměna nahrávky nechá publiku poslední zveřejněný zápis, dokud vedoucí neschválí nový.
+- **Bod 4 částečně:** „Zahodit návrh změny“ jedním klikem (`discardDraftChanges`, Kalendář se nemění),
+  vysvětlení FP, RM a Tým A u publika (`GROUP_HINTS`), úkol vedoucího „Nahraj audio z dnešní akce“.
+
+**Zbývá:** body 3 a 4 jsou hotové (viz výše), zbývá živý test.
+
+4. Bod 6, živý test: nic z něj neproběhlo. Větev `oprava/bezpecne-zverejneni-akci` ani `ccr-8554df8b-jabz1f` nemá vlastní `APP_URL` ani
+   redirect URI v Googlu. Uživatel zvažuje test rovnou na Production (deploy a merge dělá sám). Připravit
+   přesný postup. Nahlášená chyba přihlášení druhým Google účtem a `/sprava` z 13. 11. pořád neověřena,
+   hypotézy: chybějící `APP_URL` a redirect URI větve, účet mimo `GOOGLE_LOGIN_ACCOUNTS`, `<form action>`
+   v `AccessForms.tsx`, stav účtu v Neonu (`users`, `user_identities`).
+
+Pozor: preview sdílí databázi Neon. Migrace 0006 je aditivní, starší kód s ní běží.
+
+K rozhodnutí pro Annu: posun střídání typů po svátku nebo zrušení, hromadné zveřejnění měsíce, fiktivní vzory
+zápisu pro školení, poradu a trénink. Nově: co přesně znamená skupina Tým A (text nápovědy u publika je odhad).
+
+## Hotovo 13. 11. 2026 (původně PR #11)
 
 - `main` obsahuje PR #1 až #9. Tato větev z něj vychází.
 - **Oprava formulářů:** `src/features/shared/keep-values.ts` (`submitKeepingValues`). React po akci formulář

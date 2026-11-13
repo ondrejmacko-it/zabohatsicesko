@@ -12,7 +12,7 @@ import {
   weekdayShort,
 } from "@/lib/time";
 import type { EventCard } from "@/server/services/events";
-import { badgeClass, cardTone, primaryStatus } from "../status";
+import { badgeClass, cardTone, primaryStatus, type MonthStep, type PlanGap } from "../status";
 import styles from "./schedule.module.css";
 
 const COLUMNS = [
@@ -34,6 +34,31 @@ function byDay(cards: EventCard[]): Map<string, EventCard[]> {
     map.set(day, [...(map.get(day) ?? []), card]);
   }
   return map;
+}
+
+/** Zveřejněné termíny, které rozpracovaný návrh přesouvá jinam. Vidí je jen organizátor. */
+function ghostsByDay(cards: EventCard[]): Map<string, EventCard[]> {
+  const map = new Map<string, EventCard[]>();
+  for (const card of cards) {
+    if (!card.movedFrom) continue;
+    const day = toDateKey(new Date(card.movedFrom.startsAt));
+    map.set(day, [...(map.get(day) ?? []), card]);
+  }
+  return map;
+}
+
+/** Stín původního termínu: kolegové a Kalendář ho vidí, dokud organizátor přesun nezveřejní. */
+function GhostBlock({ card }: { card: EventCard }) {
+  const from = card.movedFrom!;
+  return (
+    <Link href={href(card)} className={`${styles.event} ${styles.ghost}`}>
+      <span className={styles.title}>{card.label}</span>
+      <span className={styles.line}>{formatEventTime(new Date(from.startsAt), new Date(from.endsAt), from.allDay)}</span>
+      <span className={styles.line}>
+        Zveřejněný termín, návrh ho přesouvá na {weekdayShort(dayOf(card))} {formatDayMonth(dayOf(card))}
+      </span>
+    </Link>
+  );
 }
 
 /** Hodnota, která zatím není doplněná: tečkovaná linka jako v harmonogramu v Numbers. */
@@ -79,6 +104,7 @@ export function ScheduleGrid({
   slotTimes: SlotTimes;
 }) {
   const days = byDay(cards);
+  const ghosts = ghostsByDay(cards);
   const columnDays = new Set(COLUMNS.map((c) => c.weekday));
   return (
     <div className={styles.gridWrap}>
@@ -130,6 +156,7 @@ export function ScheduleGrid({
                       {dayCards.map((card) => (
                         <EventBlock key={card.id} card={card} />
                       ))}
+                      {inMonth && (ghosts.get(day) ?? []).map((card) => <GhostBlock key={`stin-${card.id}`} card={card} />)}
                     </td>
                   );
                 })}
@@ -167,8 +194,13 @@ export function Legend() {
 /** Chronologický seznam po týdnech a dnech. Výchozí pohled na úzkém displeji. */
 export function Agenda({ monthKey, cards, todayKey }: { monthKey: string; cards: EventCard[]; todayKey: string }) {
   const days = byDay(cards.filter((c) => monthOf(dayOf(c)) === monthKey));
+  const ghosts = ghostsByDay(cards);
   const weeks = monthWeeks(monthKey)
-    .map((week) => ({ monday: week[0]!, days: week.filter((d) => days.has(d)), current: week.includes(todayKey) }))
+    .map((week) => ({
+      monday: week[0]!,
+      days: week.filter((d) => days.has(d) || (ghosts.has(d) && monthOf(d) === monthKey)),
+      current: week.includes(todayKey),
+    }))
     .filter((w) => w.days.length);
   if (!weeks.length) return <p className="muted">V tomto měsíci zatím nejsou žádné akce.</p>;
   return (
@@ -212,6 +244,11 @@ export function Agenda({ monthKey, cards, todayKey }: { monthKey: string; cards:
                       </li>
                     );
                   })}
+                  {(ghosts.get(day) ?? []).map((card) => (
+                    <li key={`stin-${card.id}`}>
+                      <GhostBlock card={card} />
+                    </li>
+                  ))}
                 </ul>
               </li>
             ))}
@@ -236,5 +273,45 @@ export function NextEventCard({ card }: { card: EventCard | null }) {
         {card.leadName ? ` · Vede: ${card.leadName}` : ""}
       </p>
     </Link>
+  );
+}
+
+/** Rozbalovací přehled termínů, které ve vybraném měsíci čekají na doplnění. Jen pro organizátora. */
+export function PlanGaps({ gaps }: { gaps: PlanGap[] }) {
+  if (!gaps.length) return <p className="small muted plan-gaps-empty">V tomto měsíci není co doplnit.</p>;
+  return (
+    <details className="plan-gaps">
+      <summary>
+        <span className="badge badge-ochre">K doplnění · {gaps.length}</span>
+        <span className="small muted">termíny bez tématu, bez vedoucího nebo s chybou Kalendáře</span>
+      </summary>
+      <ul className="plan-gaps-list">
+        {gaps.map(({ card, reasons }) => (
+          <li key={card.id}>
+            <Link href={href(card)}>
+              {weekdayShort(dayOf(card))} {formatDayMonth(dayOf(card))} · {card.label}
+            </Link>
+            <span className="small muted"> {reasons.join(", ")}</span>
+          </li>
+        ))}
+      </ul>
+    </details>
+  );
+}
+
+/** Průvodce měsícem ve třech krocích. Jen pro organizátora a jen pro aktuální a budoucí měsíce. */
+export function MonthGuide({ steps }: { steps: MonthStep[] }) {
+  return (
+    <ol className="month-guide" aria-label="Postup přípravy měsíce">
+      {steps.map((step) => (
+        <li key={step.title} className={step.done ? undefined : "todo"}>
+          <span className="month-guide-title">
+            {step.title}
+            <span className={step.done ? "badge badge-ok" : "badge badge-ochre"}>{step.done ? "hotovo" : "zbývá"}</span>
+          </span>
+          <span className="small muted">{step.text}</span>
+        </li>
+      ))}
+    </ol>
   );
 }
