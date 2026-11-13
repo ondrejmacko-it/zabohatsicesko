@@ -97,7 +97,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
         <p className="notice">Máte uložené, ale nezveřejněné změny. Kolegové a Kalendář zatím vidí zveřejněnou verzi.</p>
       )}
 
-      <section className="section" aria-label="Údaje o akci">
+      <section className="section facts-section" aria-label="Údaje o akci">
         {/* Kdy a kdo: to hlavní, co kolega z akce potřebuje, je nahoře a výrazně. Typ a publikum nese nadpis. */}
         <dl className="key-facts">
           <div>

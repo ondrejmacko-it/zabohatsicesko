@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { ActionMessage } from "@/components/ActionForm";
 import { Modal } from "@/components/Modal";
+import { submitKeepingValues } from "@/features/shared/keep-values";
 import { GROUP_LABELS } from "@/lib/labels";
 import type { Group } from "@/lib/types";
 import { proposeTopicAction, toggleInterestAction, type ActionResult } from "../actions";
@@ -56,7 +57,7 @@ function ProposeForm({ groups, onClose }: { groups: Group[]; onClose: () => void
   }, null);
   return (
     <Modal open title="Navrhnout téma" onRequestClose={onClose}>
-      <form action={action} className="stack">
+      <form action={action} onSubmit={submitKeepingValues(action)} className="stack">
         <p className="small muted">Popište stručně, co byste chtěli na vzdělávání probrat. Zájem se vám označí automaticky.</p>
         <label className="field">
           <span className="field-label">Téma</span>

@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { ActionMessage } from "@/components/ActionForm";
+import { submitKeepingValues } from "@/features/shared/keep-values";
 import type { MinutesContent } from "@/lib/types";
 import { saveMinutesAction } from "../actions";
 
@@ -26,7 +27,7 @@ export function MinutesEditor({
     </label>
   );
   return (
-    <form action={action} className="stack">
+    <form action={action} onSubmit={submitKeepingValues(action)} className="stack">
       <input type="hidden" name="id" value={eventId} />
       <input type="hidden" name="minutesId" value={minutesId} />
       <input type="hidden" name="version" value={version} />
