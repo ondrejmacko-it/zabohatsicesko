@@ -5,45 +5,71 @@ Zkopíruj text níže jako první zprávu nové relace Claude Code (repo `ondrej
 ---
 
 Pokračuj na demu modulu Vzdělávání (repo `ondrejmacko-it/zabohatsicesko`). Nečti znovu celé zadání ani celý kód.
-Kontext máš v `docs/dalsi-session.md`, `README.md` a `docs/google-prihlaseni.md`, pravidla v `CLAUDE.md`.
-Tykej mi, piš přátelsky. Na nejasnosti se ptej, ale úpravy níže jsou odsouhlasené, rovnou je udělej.
+Kontext máš v `docs/dalsi-session.md`, `README.md`, `docs/google-prihlaseni.md` a `docs/google-kalendar.md`,
+pravidla v `CLAUDE.md`. Tykej mi, piš přátelsky. Úpravy níže jsou odsouhlasené, rovnou je udělej. Ptej se jen
+na věci označené „zeptej se“.
 
-Stav 13. 11. 2026: `main` obsahuje PR #1 až #15. Větev `claude/amazing-edison-51eo2g` (bez PR) vychází z
-`claude/festive-shannon-s7wa4o` a má hotové body 1, 2, 4 a 5 z části A (viz „Stav“ níže). Pokud není sloučená,
-vyjdi z ní, jinak z `main`.
+Stav: `main` obsahuje PR #1 až #15. Větev `claude/amazing-edison-51eo2g` (bez PR) má nová okna, menu, filtry
+nahoře, témata jako karty a zápisy v okně (viz „Stav“ v `docs/dalsi-session.md`). Pokud není sloučená, vyjdi
+z ní, jinak z `main`.
 
 Zásada pro celé UI: hlavní údaje a hlavní akce musí vyniknout, vedlejší texty jsou menší a tlumené, nic není
 ani o pixel mimo osu, vše je jasné na první pohled.
 
-ČÁST A · zbývá (po každém bloku ověř v prohlížeči na 1280 a 390 px):
+ČÁST A · Kalendář musí konečně fungovat (nejvyšší priorita)
 
-1. Správa: úpravy uživatele v okně (`Modal`) místo formulářů v řádku, řádkové akce v rozbalovacím menu
-   (`src/components/Menu.tsx`), ať je na první pohled vidět, který účet je ve které skupině a roli.
-2. Projdi zbylá místa s řadou tlačítek (detail akce pro vedoucího, Integrace, `SyncPanelView`) a kde to dává
-   smysl, použij `Menu`. Projdi všechna okna: klik mimo zavírá, rozepsaný formulář se ptá.
-3. Doověř z minulé relace: okno zápisu na stránce Zápisy za čtenáře se zveřejněným zápisem, nahrání záznamu
-   v okně (průběh zpracování a `AutoRefresh`), „Přidat zápis“ na 1280 px za vedoucího, Plán za účastníka na 390 px,
-   varování o hydrataci v konzoli na Plánu (objevilo se ve vývojovém režimu, v druhém běhu ne).
-4. Cokoli dalšího, co zlepší přehlednost podle zásady výše, udělej a vypiš mi to.
+Co dnes nefunguje a proč (ověřeno v kódu 13. 11.): přihlášení žádá jen `openid email profile`, souhlas ke
+Kalendáři je druhý krok jen pro organizátora a správce a jen když Wiki žádné propojení nemá
+(`needsCalendarConnection`). Propojení je jedno pro celou Wiki a zapisuje do jednoho kalendáře
+(`GOOGLE_CALENDAR_ID`). Hosté pozvánek jsou bez `CALENDAR_ATTENDEES=audience` jen adresy z
+`GOOGLE_ALLOWED_ATTENDEES`, proto se nový účet v pozvaných neobjeví a nic se mu nepropíše.
 
-ČÁST B · až bude A hotová a ověřená:
+1. Souhlas ke Kalendáři rovnou při přihlášení: kdo plánuje (správce), dostane jednu obrazovku Googlu
+   s přihlášením i oprávněním `calendar.events` a Wiki si propojení uloží sama, bez dalšího kroku. Účet, který
+   už ve Wiki je a plánuje, pozná server podle e-mailu před přesměrováním (nebo požádej o oprávnění až druhým
+   automatickým přesměrováním, pokud to jinak nejde). Účastník oprávnění ke Kalendáři nedává, pozvánky
+   dostává jako host.
+2. Účastníci se do pozvánek dostanou sami: skuteční hosté jsou aktivní účty skupiny akce. Navrhni a udělej
+   bezpečné zapnutí (`CALENDAR_ATTENDEES=audience`): ve Správě jasně ukaž, komu Wiki pozvánky pošle, a přepínač
+   zapni na preview až po mém potvrzení účtů (zeptej se, posílá skutečné e-maily).
+3. Stav Kalendáře musí být vidět: na Plánu a ve Správě řádek „Kalendář: propojeno účtem X, kalendář Y,
+   pozvánky dostává: …“ nebo výrazná výzva „Propojit“. V dialogu akce ukaž skutečné hosty podle skupiny, ne jen
+   testovací adresu. Když propojení chybí nebo vypršelo (režim Testing, 7 dní), řekni to hned a nabídni opravu.
+4. Zjisti na preview, proč se mi teď nic nepropisuje: stav `integration_credentials` a `calendar_links`
+   v Neonu (projekt `neon-zbz-vzdelavani-demo`), proměnné na Vercelu, role mého účtu. Výsledek mi napiš.
+5. Projdi se mnou živý test krok za krokem (přihlášení, žádost, schválení, propojení, pozvánka, změna, zrušení,
+   odkaz na zápis) a napiš přesný postup včetně toho, kde ve Správě vidím, který účet je ve které skupině.
 
-5. Napiš mi přesný postup, jak ověřit živě: přihlášení Googlem, žádost na `/sprava`, schválení, propojení Kalendáře
-   a `CALENDAR_ATTENDEES=audience`. Zahrň, kde ve Správě zjistím, který účet je ve které skupině (zatím to nevím).
-   `audience` nezapínej, dokud ti účty nepotvrdím, posílá skutečné pozvánky.
-6. Kompletní dokumentace: `README.md`, `docs/predani.md`, `docs/google-*.md` a `docs/dalsi-session.md` musí
-   odpovídat skutečnému stavu.
-7. Srovnej kód: větev postav na nejnovějším `main`, vše zprovozni (lint, typy, testy, build, preview; větev
-   potřebuje vlastní `APP_URL` na Vercelu a já přidám přesměrovací adresy v Googlu) a připrav draft PR do `main`.
-   Merge dělám já.
-8. Nascreenshotuj každé jediné okno a stav, na který se dá ve Wiki dostat, za každou roli, na 1280 a 390 px:
-   všechny stránky, otevřená okna (Přidat akci, Upravit, Zrušit, náhled akce, zápis, Přidat zápis, šablona týdne,
-   potvrzení), rozbalená menu i výběry ve formulářích, prázdné a chybové stavy, vstupní bránu, čekající žádost.
-   Pošli mi je jako ZIP se seznamem, co je na kterém snímku. Do repa je nedávej.
+ČÁST B · role a oprávnění
+
+6. Sluč role organizátor a správce do jedné: v UI jedna role „Správce“ (plánuje, zveřejňuje, spravuje účty,
+   vidí vše). V databázi nech obě hodnoty a v `policy.ts` je ber stejně, ať není potřeba destruktivní migrace.
+   Uprav texty, Správu, ukázkové role na `/vstup` a testy.
+7. Správce smí u každé akce nahrát záznam, upravit a zveřejnit i stáhnout zápis (dnes jen vedoucí a kontrolor).
+   V okně „Přidat zápis“ pak má u všech akcí „Nahrát záznam“. Přidej testy oprávnění.
+8. Jména zájemců o téma vidí každý, kdo smí plánovat (správce). Tak to už je, jen ověř po sloučení rolí.
+   V dialogu akce nabídni doporučená témata s počtem zájemců.
+
+ČÁST C · dodělat z minula (po každém bloku ověř na 1280 a 390 px)
+
+9. Správa: úpravy uživatele v okně (`Modal`), řádkové akce v menu (`src/components/Menu.tsx`), na první pohled
+   vidět účet, roli a skupiny.
+10. Menu místo řady tlačítek: detail akce pro vedoucího, Integrace, `SyncPanelView`.
+11. Doověř: okno zveřejněného zápisu za čtenáře, nahrání záznamu v okně (průběh a `AutoRefresh`), „Přidat zápis“
+    na 1280 px, Plán za účastníka na 390 px, varování o hydrataci na Plánu ve vývojovém režimu.
+12. Cokoli dalšího, co zlepší přehlednost podle zásady výše, udělej a vypiš mi to.
+
+ČÁST D · předání
+
+13. Dokumentace: `README.md`, `docs/predani.md`, `docs/google-*.md` a `docs/dalsi-session.md` odpovídají stavu.
+14. Větev postav na nejnovějším `main`, zprovozni lint, typy, testy, build a preview (vlastní `APP_URL` větve
+    nastav sám, přesměrovací adresy v Googlu přidám já, napiš mi je) a připrav draft PR do `main`. Merge dělám já.
+15. Snímky každého okna a stavu za každou roli na 1280 a 390 px (stránky, okna, menu, výběry, prázdné a chybové
+    stavy, vstupní brána, čekající žádost) jako ZIP se seznamem. Do repa je nedávej.
 
 Production na Vercelu nemá proměnné prostředí a buildy z `main` se přeskakují, vše běží na preview.
-Na `main` nepushuj. Respektuj limit kontextu: když se blíží, ulož stav do `docs/dalsi-session.md` a pošli mi
-navazující prompt.
+Na `main` nepushuj. Respektuj limit kontextu: začni částí A, a když se limit blíží, ulož stav do
+`docs/dalsi-session.md` a pošli mi navazující prompt.
 
 ---
 
@@ -76,10 +102,9 @@ Hotovo a ověřeno (lint, typy, 121 ze 121 testů, build; Chromium nad PGlite):
 
 Neověřeno: body v části A.3 promptu, Safari, živý Google. Správa (bod A.1) se nezačala.
 
-Otevřené otázky pro uživatele:
-
-- Smí jména zájemců o téma vidět i vedoucí akcí nebo všichni ze skupiny tématu? Teď jen organizátor a správce.
-- Má organizátor smět nahrát záznam a zveřejnit zápis i u akce, kterou nevede? Teď ne.
+Rozhodnuto uživatelem 13. 11. večer: jména zájemců vidí ti, kdo plánují (tak to je). Správce a organizátor
+mají umět vše včetně zápisů u cizích akcí a role se mají sloučit do jedné. Kalendář má fungovat automaticky
+už od přihlášení (části A a B promptu).
 
 Poznámky k prostředí: lokální běh `npx next dev -p 3100` nad PGlite, na `/vstup` kliknout na `label.persona`
 a odeslat. Po větší změně serverových modulů vývojový server restartuj (držel starou verzi modulu).
