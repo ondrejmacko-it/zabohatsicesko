@@ -6,31 +6,67 @@ Zkopíruj text níže jako první zprávu nové relace Claude Code (repo `ondrej
 
 Pokračuj na demu modulu Vzdělávání (repo `ondrejmacko-it/zabohatsicesko`). Nečti znovu celé zadání ani celý kód.
 Kontext máš v `docs/dalsi-session.md`, `README.md` a `docs/google-prihlaseni.md`, pravidla v `CLAUDE.md`.
-Tykej mi, piš přátelsky. Větší změny nejdřív navrhni, na nejasnosti se ptej.
+Tykej mi, piš přátelsky. Na nejasnosti se ptej, ale úpravy níže jsou odsouhlasené, rovnou je udělej.
 
-Stav 13. 11. 2026 večer: `main` obsahuje PR #1 až #13. Větev `claude/focused-dirac-gphy4f` má draft PR do `main`
-(přestavěný Plán, detail akce v náhledu „Zobrazit jako“, automatické propojení Kalendáře při přihlášení
-organizátora Googlem). Pokud už je sloučený, vyjdi z `main`.
+Stav 13. 11. 2026 v noci: `main` obsahuje PR #1 až #15. Větev `claude/festive-shannon-s7wa4o` má navíc náhled akce
+v okně nad Plánem, okrové návrhy a jednotný styl chybějících údajů (bez PR). Pokud není sloučená, vyjdi z ní,
+jinak z `main`. Její preview má vlastní `APP_URL` a přihlášení Googlem na ní funguje (ověřil jsem 13. 11.).
 
-Co udělat, v tomto pořadí:
+Zásada pro celé UI: hlavní údaje a hlavní akce musí vyniknout, vedlejší texty jsou menší a tlumené, nic není
+ani o pixel mimo osu, vše je jasné na první pohled.
 
-1. Živý test na preview větve `claude/focused-dirac-gphy4f` (adresa a `APP_URL` jsou v poznámkách níže). Zeptej se,
-   jestli jsem v Google konzoli přidal obě přesměrovací adresy. Projdi se mnou: přihlášení organizátora Googlem
-   (má ho samo poslat na souhlas ke Kalendáři a vrátit na Plán), účet ze seznamu, neznámý účet a čekající žádost
-   na `/sprava`, schválení, úkol „Propojit Kalendář“ po zrušení přístupu v Google účtu.
-2. Po úspěšném testu nastav na preview `CALENDAR_ATTENDEES=audience` a ověř se mnou, že se akce po zveřejnění
-   sama objeví v kalendáři lidí ze skupiny a že se změna a zrušení propíšou. Pozor: posílá skutečné pozvánky,
-   nejdřív si se mnou potvrď, které účty jsou ve skupinách.
-3. Doplň `docs/google-kalendar.md` a `docs/google-prihlaseni.md` o automatické propojení Kalendáře.
-4. Zjisti a navrhni (neprogramuj): co by znamenal Google Workspace a servisní účet, aby odpadl i jednorázový
-   souhlas organizátora a sedmidenní platnost v režimu Testing. Ověř v dokumentaci Googlu, nespoléhej na paměť.
-5. Projdi zbylé „ukázkové“ texty na technické stránce Integrace a rozdělení Zápisů do více měsíců (naživo
-   viděn jen jeden měsíc). Štítek „Ukázka“ a přepínač rolí zůstávají.
+ČÁST A · opravy a novinky (v tomto pořadí, po každém bloku ověř v prohlížeči na 1280 a 390 px):
 
-Production na Vercelu nemá proměnné prostředí a buildy z `main` se přeskakují, živý test běží na preview.
-Na `main` nepushuj, merge dělám já přes PR. Respektuj limit kontextu.
+1. Okno akce (`EventPeek`):
+   - Vejde se bez posuvníku. Nabídka „Další možnosti“ se dnes ořízne o okraj okna a přidá posuvník: udělej z ní
+     skutečné rozbalovací menu, které se vykreslí nad oknem (ne uvnitř rolované části).
+   - „Zrušit akci“ a „Upravit“ se dnes otevřou jako okno v okně a původní okno pod nimi ujede a prosvítá.
+     Druhé okno má to první nahradit (nebo se vykreslit mimo něj), nikdy dvě rozbitá okna na sobě.
+   - Do „Další možnosti“ dej vše pohromadě: Zobrazit zápis, Otevřít celý detail, Nahradit pravidelný termín,
+     Zrušit akci, Smazat. Tlačítko „Upravit“ zůstává hlavní vpravo. Pokud vymyslíš přehlednější rozložení, použij ho.
+2. Klik mimo zavírá: každé menu (`details.menu`), každé okno (`Modal`) i náhled akce. Rozepsaný formulář se
+   přitom nesmí ztratit bez potvrzení (dialog akce už potvrzení má). Esc funguje dál.
+3. Rozbalovací menu místo řady tlačítek všude, kde to dává smysl (detail akce, řádky ve Správě, témata).
+4. Filtry „Zobrazit jako“, „Typ akce“ a „Stav“ přesuň na Plánu úplně nahoru, nad „Čeká na vás“ a „Nejbližší akce“.
+   Musí měnit obsah celé stránky, tedy i oba horní bloky, ne jen harmonogram. V náhledu „Zobrazit jako“ ukazují
+   horní bloky to, co vidí vybraná skupina nebo kolega (stejná pravidla `policy.ts`, jen ke čtení).
+5. Zápisy a témata:
+   - Témata odliš pozadím jako karty, ať je vidět, že jde o obsah, ne o další text.
+   - U tématu jde zobrazit zájemce (kdo, ne jen počet). Ověř na serveru, kdo jména smí vidět, a zeptej se mě,
+     pokud to z pravidel není jasné.
+   - Na stránce Zápisy tlačítko „Přidat zápis“ (pro vedoucího a organizátora): okno jako „Přidat akci“ se seznamem
+     jen těch proběhlých akcí, kde zápis chybí. Existující zápisy se zobrazují rovnou jako dnes.
+6. Odložené z minula: stejné okno jako u akce použij u zápisu ze stránky Zápisy a u úprav uživatele ve Správě.
+7. Cokoli dalšího, co zlepší přehlednost podle zásady výše, udělej a vypiš mi to.
+
+ČÁST B · až bude A hotová a ověřená:
+
+8. Napiš mi přesný postup, jak ověřit živě: přihlášení Googlem, žádost na `/sprava`, schválení, propojení Kalendáře
+   a `CALENDAR_ATTENDEES=audience`. Zahrň, kde ve Správě zjistím, který účet je ve které skupině (zatím to nevím).
+   `audience` nezapínej, dokud ti účty nepotvrdím, posílá skutečné pozvánky.
+9. Kompletní dokumentace: `README.md`, `docs/predani.md`, `docs/google-*.md` a `docs/dalsi-session.md` musí
+   odpovídat skutečnému stavu. Staré bloky v `docs/dalsi-session.md` zkrať.
+10. Srovnej kód: větev postav na nejnovějším `main`, vše zprovozni (lint, typy, testy, build, preview) a připrav
+    draft PR do `main`. Merge dělám já.
+11. Nascreenshotuj každé jediné okno a stav, na který se dá ve Wiki dostat, za každou roli, na 1280 a 390 px:
+    všechny stránky, otevřená okna (Přidat akci, Upravit, Zrušit, náhled akce, šablona týdne, potvrzení),
+    rozbalená menu i výběry ve formulářích, prázdné a chybové stavy, vstupní bránu, čekající žádost.
+    Pošli mi je jako ZIP se seznamem, co je na kterém snímku. Do repa je nedávej.
+
+Production na Vercelu nemá proměnné prostředí a buildy z `main` se přeskakují, vše běží na preview.
+Na `main` nepushuj. Respektuj limit kontextu: když se blíží, ulož stav do `docs/dalsi-session.md` a pošli mi
+navazující prompt.
 
 ---
+
+## Nahlášeno uživatelem 13. 11. 2026 v noci (ze snímků preview, neopraveno)
+
+- Okno akce: nabídka „Další možnosti“ je oříznutá a přidává posuvník, „Zrušit akci“ se otevře uvnitř okna a to
+  pod ním ujede. Příčina k ověření: `<dialog>` vnořený v `.dialog-body` s `overflow-y: auto` a `.menu-list`
+  s `position: absolute`.
+- Přihlášení Googlem na preview této větve funguje (lišta ukazuje „Přihlášení účtem Google“). Automatický
+  souhlas ke Kalendáři a ostatní kroky živého testu uživatel zatím nepotvrdil.
+- Uživatel neví, který účet je ve které skupině, ověří to až podle postupu z bodu 8 promptu.
 
 ## Stav 13. 11. 2026 v noci (větev `claude/festive-shannon-s7wa4o`, vychází z `main` po PR #15)
 
