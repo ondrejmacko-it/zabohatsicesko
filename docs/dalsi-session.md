@@ -8,6 +8,34 @@ Pokračuj na demu modulu Vzdělávání. Nečti znovu celé zadání ani celý k
 `docs/predani.md`, `docs/google-kalendar.md` a `docs/google-prihlaseni.md`, pravidla v `CLAUDE.md`.
 Uživateli tykej, piš přátelsky. Větší změny nejdřív navrhni, nejasnosti se ptej.
 
+## Stav 13. 11. 2026 pozdě odpoledne (větev `ccr-aad79b00-uhlkt9`, PR do `main`)
+
+- `main` obsahuje PR #1 až #12. Uživatel prošel web na preview a nadiktoval připomínky, tato větev je zapracovává:
+  - **Navigace ze čtyř záložek na dvě:** „Plán“ (`/vzdelavani/harmonogram`: Čeká na vás a Nejbližší akce vedle sebe,
+    pod nimi harmonogram) a „Zápisy a témata“ (`/vzdelavani/zapisy`). `/vzdelavani/prehled`, `/moje-cesta` a `/temata`
+    přesměrují. Integrace zmizela z navigace, stránka `/vzdelavani/integrace` zůstává jako technické nastavení
+    s odkazem ze Správy. Pruh režimů ukázky je už jen tam.
+  - **Harmonogram:** vlevo měsíc a přepínač Měsíc / Seznam, vpravo Nástroje organizátora a úplně na kraji Přidat akci.
+    Průvodce měsícem nahradil řádek s čísly (`monthSummary`, `MonthSummaryBar`), která jsou zároveň filtr (`?stav=navrhy`,
+    `?stav=doplnit`). Filtr typu akce (`?typ=`) a „Zobrazit jako“ (`?jako=skupina-fp` nebo `kolega-<id>`,
+    `src/server/services/preview.ts`): jen organizátor, jen ke čtení, počítá se stejnými pravidly `policy.ts`.
+  - **Dialog akce:** zvýrazněný blok Základní údaje, výrazné upozornění na den mimo šablonu týdne (pondělí), akci jde uložit.
+  - **Témata:** jeden seznam, doporučená mají štítek, Upravit a Archivovat u každého řádku (`TopicsSection`).
+  - **Zápisy:** po měsících, s vysvětlením, že zápis je i u akce v Plánu.
+  - **Správa:** vysvětlení rolí a skupin, tlačítka rychlého nastavení (Účastník FP, RM, Tým A, Organizátor).
+- Ověřeno: lint, typy, 111 ze 111 testů (nový `tests/nahled.test.ts`), build. Chromium nad PGlite za organizátora na
+  1280 a 390 px: Plán, filtry, náhled za FP, upozornění na pondělí, rychlé nastavení ve Správě, Zápisy a témata,
+  přesměrování, bez vodorovného posunu. **Neověřeno:** ostatní role v prohlížeči, Safari, živý Google.
+- **Přihlášení Googlem na preview `ccr-8554df8b-jabz1f` hlásí `redirect_uri_mismatch`.** Nasazení je v pořádku
+  (`APP_URL` větve nastavená, build po ní), chyba je v Google konzoli (překlep v adrese, nebo se změna ještě
+  nepropsala). Čeká se na řádek `redirect_uri=` z chybové stránky Googlu od uživatele.
+- Production na Vercelu nemá žádné proměnné prostředí a buildy z `main` se přeskakují. Živý test proto na preview.
+- Rozhodnutí uživatele 13. 11.: připojování Kalendáře nemá být samostatný krok pro uživatele, do budoucna má
+  přihlášení Googlem dát oprávnění automaticky. **Zatím neřešeno**, připojení Kalendáře zůstává na technické stránce.
+  Štítek „Ukázka“ a přepínač rolí prozatím zůstávají.
+- Otevřené: karta akce z náhledu „Zobrazit jako“ vede na detail v pohledu organizátora. Domovská stránka Knihovna
+  má texty tykáním („Co tě čeká“), zbytek UI vyká.
+
 ## Stav 13. 11. 2026 večer (větev `ccr-8554df8b-jabz1f`, PR #12 do `main`)
 
 - PR #12 spojuje #10 a #11 (ty uživatel zavře) a **dokončuje zbylé body 3 a 4 šestibodového zadání**:

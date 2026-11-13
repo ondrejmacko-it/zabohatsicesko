@@ -7,7 +7,7 @@ import { calendarLinks, events, minutes, recordings } from "@/server/db/schema";
 import { canHandleRecording, canManageUsers, canReadPublishedMinutes, isOrganizer, type Viewer } from "@/server/policy";
 import { pendingRequestCount } from "@/server/services/users";
 
-// Čtecí pohledy pro stránky Přehled a Zápisy. Přístup rozhoduje policy.ts u každého řádku.
+// Čtecí pohledy pro stránky Plán a Zápisy. Přístup rozhoduje policy.ts u každého řádku.
 
 export type MinutesItem = {
   eventId: string;
@@ -91,7 +91,7 @@ export async function listTasks(viewer: Viewer): Promise<JourneyTask[]> {
       if (tasks.length >= MAX_MINUTES_TASKS) break;
       const today = toDateKey(new Date(snapshot.endsAt)) === toDateKey(reference);
       if (today && state !== "draft") {
-        tasks.push({ key: `nahravka-${row.id}`, title: "Nahrajte audio z dnešní akce", detail: `${title}. Zápis se z nahrávky připraví sám, ty ho jen zkontroluješ.`, href: `/vzdelavani/akce/${row.id}?odkud=prehled#nahravka`, action: "Nahrát audio" });
+        tasks.push({ key: `nahravka-${row.id}`, title: "Nahrajte audio z dnešní akce", detail: `${title}. Zápis se z nahrávky připraví sám, vy ho jen zkontrolujete.`, href: `/vzdelavani/akce/${row.id}?odkud=prehled#nahravka`, action: "Nahrát audio" });
         continue;
       }
       tasks.push(

@@ -5,23 +5,27 @@ import { AutoRefresh } from "@/components/AutoRefresh";
 import { Icon } from "@/components/Icon";
 import { generateMonthAction } from "@/features/vzdelavani/actions";
 import { EventDialog } from "@/features/vzdelavani/components/EventDialog";
-import { Agenda, Legend, MonthGuide, NextEventCard, PlanGaps, ScheduleGrid } from "@/features/vzdelavani/components/Schedule";
+import { PlanFilters } from "@/features/vzdelavani/components/PlanFilters";
+import { Agenda, Legend, MonthSummaryBar, NextEventCard, PlanGaps, ScheduleGrid } from "@/features/vzdelavani/components/Schedule";
 import { TemplateDialog } from "@/features/vzdelavani/components/TemplateDialog";
-import { monthSteps, planGaps } from "@/features/vzdelavani/status";
+import { PLAN_STATES, filterCards, monthSummary, planGaps } from "@/features/vzdelavani/status";
 import styles from "@/features/vzdelavani/components/schedule.module.css";
 import { formatMonth, isValidMonthKey, monthOf, shiftMonth, toDateKey } from "@/lib/time";
+import { EVENT_TYPES } from "@/lib/types";
 import { requireUser } from "@/server/auth/session";
 import { now } from "@/server/config";
 import { defaultAudience } from "@/server/domain/generation";
 import { isOrganizer } from "@/server/policy";
 import { listMonth, listPeople, loadTemplate, nextEventFor } from "@/server/services/events";
+import { listTasks } from "@/server/services/journey";
+import { listPreviewOptions, resolvePreview } from "@/server/services/preview";
 import { listTopics } from "@/server/services/topics";
 
-export const metadata: Metadata = { title: "Harmonogram" };
+export const metadata: Metadata = { title: "Plán vzdělávání" };
 
-type SearchParams = Promise<{ mesic?: string; pohled?: string }>;
+type SearchParams = Promise<{ mesic?: string; pohled?: string; jako?: string; typ?: string; stav?: string }>;
 
-export default async function SchedulePage({ searchParams }: { searchParams: SearchParams }) {
+export default async function PlanPage({ searchParams }: { searchParams: SearchParams }) {
   const user = await requireUser();
   const params = await searchParams;
   const todayKey = toDateKey(now());
@@ -29,91 +33,159 @@ export default async function SchedulePage({ searchParams }: { searchParams: Sea
   const listView = params.pohled === "seznam";
   const organizer = isOrganizer(user);
 
-  const [cards, next, template] = await Promise.all([listMonth(user, monthKey), nextEventFor(user), loadTemplate()]);
-  const slotTimes = Object.fromEntries(template.filter((s) => s.active).map((s) => [s.isoWeekday, `${s.startTime}–${s.endTime}`]));
-  const [people, topics] = organizer ? await Promise.all([listPeople(user), listTopics(user)]) : [[], []];
-  const syncing = cards.some((c) => c.syncStatus === "pending");
-  const link = (month: string, list = listView) => `/vzdelavani/harmonogram?mesic=${month}${list ? "&pohled=seznam" : ""}`;
+  // Náhled očima skupiny nebo kolegy počítá server stejnými pravidly jako pro skutečného uživatele.
+  const preview = await resolvePreview(user, params.jako);
+  const managing = organizer && !preview;
+  const [monthCards, next, template, tasks] = await Promise.all([
+    listMonth(preview?.viewer ?? user, monthKey),
+    nextEventFor(user),
+    loadTemplate(),
+    listTasks(user),
+  ]);
+  const activeSlots = template.filter((s) => s.active);
+  const slotTimes = Object.fromEntries(activeSlots.map((s) => [s.isoWeekday, `${s.startTime}–${s.endTime}`]));
+  const [people, topics, previewOptions] = organizer
+    ? await Promise.all([listPeople(user), listTopics(user), listPreviewOptions(user)])
+    : [[], [], null];
+
+  const types = EVENT_TYPES.filter((t) => monthCards.some((c) => c.type === t && monthOf(toDateKey(new Date(c.startsAt))) === monthKey));
+  const type = types.find((t) => t === params.typ);
+  const state = managing ? PLAN_STATES.find((s) => s === params.stav) : undefined;
+  const cards = filterCards(monthCards, monthKey, { type, state });
+  const filtering = Boolean(type || state);
+  const syncing = monthCards.some((c) => c.syncStatus === "pending");
+
+  const current = { mesic: monthKey, pohled: listView ? "seznam" : undefined, jako: preview ? params.jako : undefined, typ: type, stav: state };
+  const link = (change: Partial<typeof current>) => {
+    const query = new URLSearchParams();
+    for (const [key, value] of Object.entries({ ...current, ...change })) if (value) query.set(key, value);
+    return `/vzdelavani/harmonogram?${query}`;
+  };
   const newDate = monthOf(todayKey) === monthKey ? todayKey : `${monthKey}-01`;
+  const emptyText = filtering ? "Filtru v tomto měsíci neodpovídá žádná akce." : undefined;
 
   return (
     <>
       <AutoRefresh active={syncing} />
-      <section className="section">
-        <h2>Nejbližší akce</h2>
-        <NextEventCard card={next} />
-      </section>
+      <div className="plan-top">
+        <section className="section" aria-labelledby="ceka">
+          <h2 id="ceka">Čeká na vás</h2>
+          {tasks.length === 0 ? (
+            <p className="muted">Teď po vás nic nechceme. Úkoly se tu objeví, když povedete akci nebo budete kontrolovat zápis.</p>
+          ) : (
+            <ul className="card-list">
+              {tasks.map((task) => (
+                <li key={task.key} className="task-card">
+                  <div>
+                    <p className="item-title">{task.title}</p>
+                    <p className="item-meta">{task.detail}</p>
+                  </div>
+                  <Link className="btn btn-primary" href={task.href}>
+                    {task.action}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+        <section className="section" aria-labelledby="nejblizsi">
+          <h2 id="nejblizsi">Nejbližší akce</h2>
+          <NextEventCard card={next} />
+        </section>
+      </div>
 
       <section className="section" aria-labelledby="mesic">
         <div className="spread schedule-toolbar">
           <div className="row">
-            <Link className="btn btn-small" href={link(shiftMonth(monthKey, -1))} aria-label="Předchozí měsíc">
+            <Link className="btn btn-small" href={link({ mesic: shiftMonth(monthKey, -1) })} aria-label="Předchozí měsíc">
               <Icon name="chevronLeft" />
             </Link>
             <h2 id="mesic" className="month-title">
               {formatMonth(monthKey)}
             </h2>
-            <Link className="btn btn-small" href={link(shiftMonth(monthKey, 1))} aria-label="Další měsíc">
+            <Link className="btn btn-small" href={link({ mesic: shiftMonth(monthKey, 1) })} aria-label="Další měsíc">
               <Icon name="chevronRight" />
             </Link>
-          </div>
-          <div className="row">
             <div className="row view-toggle" role="group" aria-label="Zobrazení">
-              <Link className="pill" href={link(monthKey, false)} aria-current={!listView ? "page" : undefined}>
+              <Link className="pill" href={link({ pohled: undefined })} aria-current={!listView ? "page" : undefined}>
                 Měsíc
               </Link>
-              <Link className="pill" href={link(monthKey, true)} aria-current={listView ? "page" : undefined}>
+              <Link className="pill" href={link({ pohled: "seznam" })} aria-current={listView ? "page" : undefined}>
                 Seznam
               </Link>
             </div>
-            {organizer && (
-              <>
-                <EventDialog
-                  mode="create"
-                  initial={{
-                    type: "other",
-                    label: "Jiná akce",
-                    date: newDate,
-                    endDate: null,
-                    startTime: "09:00",
-                    endTime: "11:00",
-                    topicTitle: "",
-                    audience: defaultAudience("other"),
-                    leadId: "",
-                    reviewerId: "",
-                  }}
-                  published={null}
-                  people={people}
-                  topics={topics}
-                  inviteeCount={0}
-                />
-                <details className="menu">
-                  <summary className="btn">
-                    <Icon name="more" /> Nástroje organizátora
-                  </summary>
-                  <div className="menu-list organizer-tools">
-                    <ActionForm action={generateMonthAction} fields={{ month: monthKey }} label="Doplnit měsíc ze šablony" pendingLabel="Doplňuji…" />
-                    <TemplateDialog slots={template} />
-                  </div>
-                </details>
-              </>
-            )}
           </div>
+          {managing && (
+            <div className="row">
+              <details className="menu">
+                <summary className="btn">
+                  <Icon name="more" /> Nástroje organizátora
+                </summary>
+                <div className="menu-list organizer-tools">
+                  <ActionForm action={generateMonthAction} fields={{ month: monthKey }} label="Doplnit měsíc ze šablony" pendingLabel="Doplňuji…" />
+                  <TemplateDialog slots={template} />
+                </div>
+              </details>
+              <EventDialog
+                mode="create"
+                initial={{
+                  type: "other",
+                  label: "Jiná akce",
+                  date: newDate,
+                  endDate: null,
+                  startTime: "09:00",
+                  endTime: "11:00",
+                  topicTitle: "",
+                  audience: defaultAudience("other"),
+                  leadId: "",
+                  reviewerId: "",
+                }}
+                published={null}
+                people={people}
+                topics={topics}
+                inviteeCount={0}
+                planDays={activeSlots.map((s) => s.isoWeekday)}
+              />
+            </div>
+          )}
         </div>
 
-        {organizer && monthKey >= monthOf(todayKey) && <MonthGuide steps={monthSteps(cards, monthKey)} />}
-        {organizer && <PlanGaps gaps={planGaps(cards, monthKey)} />}
+        {managing && monthKey >= monthOf(todayKey) && (
+          <MonthSummaryBar
+            summary={monthSummary(monthCards, monthKey)}
+            active={state}
+            links={{ all: link({ stav: undefined }), toPublish: link({ stav: "navrhy" }), toComplete: link({ stav: "doplnit" }) }}
+          />
+        )}
+        {state === "doplnit" && <PlanGaps gaps={planGaps(monthCards, monthKey)} />}
+
+        {(previewOptions || types.length > 1) && (
+          <PlanFilters
+            key={`${params.jako ?? ""}|${type ?? ""}`}
+            keep={Object.fromEntries(Object.entries({ mesic: monthKey, pohled: current.pohled, stav: state }).filter((e): e is [string, string] => Boolean(e[1])))}
+            types={types}
+            type={type}
+            preview={previewOptions && { ...previewOptions, value: preview ? (params.jako ?? "") : "" }}
+            resetHref={filtering || preview ? link({ jako: undefined, typ: undefined, stav: undefined }) : null}
+          />
+        )}
+        {preview && (
+          <p className="notice" role="status">
+            Díváte se jako <strong>{preview.label}</strong>. Vidíte jen zveřejněné akce, které tento pohled opravdu vidí. Návrhy a úpravy
+            jsou schované. <Link href={link({ jako: undefined })}>Zpět na pohled organizátora</Link>
+          </p>
+        )}
 
         {listView ? (
-          <Agenda monthKey={monthKey} cards={cards} todayKey={todayKey} />
+          <Agenda monthKey={monthKey} cards={cards} todayKey={todayKey} emptyText={emptyText} />
         ) : (
           <>
             <div className={styles.desktopOnly}>
               <ScheduleGrid monthKey={monthKey} cards={cards} todayKey={todayKey} slotTimes={slotTimes} />
-              <Legend />
+              <Legend organizer={managing} />
             </div>
             <div className={styles.mobileOnly}>
-              <Agenda monthKey={monthKey} cards={cards} todayKey={todayKey} />
+              <Agenda monthKey={monthKey} cards={cards} todayKey={todayKey} emptyText={emptyText} />
             </div>
           </>
         )}

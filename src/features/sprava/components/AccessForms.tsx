@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { ActionMessage } from "@/components/ActionForm";
 import { submitKeepingValues } from "@/features/shared/keep-values";
 import { GROUP_LABELS, ROLE_LABELS } from "@/lib/labels";
@@ -8,12 +8,41 @@ import { GROUPS, type Group, type Role } from "@/lib/types";
 import { inviteUserAction, updateAccessAction } from "../actions";
 
 /** Výběr role a skupin. Nabízí jen role, které smí přihlášený uživatel přidělit (hlídá i server). */
-function AccessFields({ roles, role, groups }: { roles: Role[]; role: Role; groups: Group[] }) {
+const PRESETS: Array<{ label: string; role: Role; groups: Group[] }> = [
+  { label: "Účastník FP", role: "member", groups: ["vsichni", "fp"] },
+  { label: "Účastník RM", role: "member", groups: ["vsichni", "rm"] },
+  { label: "Člen Týmu A", role: "member", groups: ["vsichni", "tym-a"] },
+  { label: "Organizátor", role: "organizer", groups: [...GROUPS] },
+];
+
+function AccessFields({ roles, role: initialRole, groups: initialGroups }: { roles: Role[]; role: Role; groups: Group[] }) {
+  const [role, setRole] = useState(initialRole);
+  const [groups, setGroups] = useState(initialGroups);
+  const toggle = (group: Group, on: boolean) => setGroups((current) => (on ? [...current, group] : current.filter((g) => g !== group)));
   return (
     <>
+      <div className="field">
+        <span className="field-label">Rychlé nastavení</span>
+        <div className="row">
+          {PRESETS.filter((preset) => roles.includes(preset.role)).map((preset) => (
+            <button
+              key={preset.label}
+              type="button"
+              className="btn btn-small"
+              onClick={() => {
+                setRole(preset.role);
+                setGroups(preset.groups);
+              }}
+            >
+              {preset.label}
+            </button>
+          ))}
+        </div>
+        <span className="field-hint">Vyplní roli a skupiny níže. Potom je můžete ručně upravit.</span>
+      </div>
       <label className="field">
-        <span className="field-label">Role</span>
-        <select className="select" name="role" defaultValue={role}>
+        <span className="field-label">Role (co smí dělat)</span>
+        <select className="select" name="role" value={role} onChange={(e) => setRole(e.target.value as Role)}>
           {roles.map((r) => (
             <option key={r} value={r}>
               {ROLE_LABELS[r]}
@@ -22,11 +51,11 @@ function AccessFields({ roles, role, groups }: { roles: Role[]; role: Role; grou
         </select>
       </label>
       <fieldset className="field">
-        <legend className="field-label">Skupiny (určují, které akce a zápisy uvidí)</legend>
+        <legend className="field-label">Skupiny (které akce a zápisy uvidí)</legend>
         <div className="row">
           {GROUPS.map((g) => (
             <label key={g} className="check">
-              <input type="checkbox" name="groups" value={g} defaultChecked={groups.includes(g)} />
+              <input type="checkbox" name="groups" value={g} checked={groups.includes(g)} onChange={(e) => toggle(g, e.target.checked)} />
               {GROUP_LABELS[g]}
             </label>
           ))}

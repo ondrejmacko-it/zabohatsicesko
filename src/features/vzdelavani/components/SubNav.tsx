@@ -3,20 +3,18 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-export function SubNav({ showIntegrations }: { showIntegrations: boolean }) {
+const ITEMS = [
+  { href: "/vzdelavani/harmonogram", label: "Plán", also: ["/vzdelavani/akce"] },
+  { href: "/vzdelavani/zapisy", label: "Zápisy a témata", also: ["/vzdelavani/temata"] },
+];
+
+export function SubNav() {
   const pathname = usePathname();
-  const items = [
-    { href: "/vzdelavani/prehled", label: "Přehled" },
-    { href: "/vzdelavani/harmonogram", label: "Harmonogram", also: "/vzdelavani/akce" },
-    { href: "/vzdelavani/zapisy", label: "Zápisy" },
-    { href: "/vzdelavani/temata", label: "Témata" },
-    ...(showIntegrations ? [{ href: "/vzdelavani/integrace", label: "Integrace" }] : []),
-  ];
   return (
     <nav aria-label="Vzdělávání">
       <ul className="pill-nav">
-        {items.map((item) => {
-          const active = pathname.startsWith(item.href) || ("also" in item && item.also && pathname.startsWith(item.also));
+        {ITEMS.map((item) => {
+          const active = [item.href, ...item.also].some((prefix) => pathname.startsWith(prefix));
           return (
             <li key={item.href}>
               <Link className="pill" href={item.href} aria-current={active ? "page" : undefined}>

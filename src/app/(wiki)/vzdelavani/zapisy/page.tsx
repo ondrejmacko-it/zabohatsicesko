@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { GROUP_LABELS, TYPE_LABELS } from "@/lib/labels";
-import { formatDate, toDateKey } from "@/lib/time";
+import { TopicsSection } from "@/features/vzdelavani/components/TopicsSection";
+import { formatDate, formatMonth, monthOf, toDateKey } from "@/lib/time";
 import { GROUPS, type Group } from "@/lib/types";
 import { requireUser } from "@/server/auth/session";
 import { listPublishedMinutes } from "@/server/services/journey";
 
-export const metadata: Metadata = { title: "Zápisy" };
+export const metadata: Metadata = { title: "Zápisy a témata" };
 
 type SearchParams = Promise<{ q?: string; typ?: string; skupina?: string }>;
 
@@ -22,11 +23,21 @@ export default async function MinutesPage({ searchParams }: { searchParams: Sear
   const audience = groups.find((g: Group) => g === params.skupina);
   const filtered = query || type || audience ? await listPublishedMinutes(user, { query, type, audience }) : all;
   const filtering = Boolean(query || type || audience);
+  // Zápisy jsou seřazené od nejnovější akce, stačí je rozdělit po měsících.
+  const months = new Map<string, typeof filtered>();
+  for (const item of filtered) {
+    const month = monthOf(toDateKey(new Date(item.startsAt)));
+    months.set(month, [...(months.get(month) ?? []), item]);
+  }
 
   return (
+    <>
     <section className="section" aria-labelledby="zapisy">
       <h2 id="zapisy">Zápisy</h2>
-      <p className="lead-text">Zveřejněné zápisy z akcí, které jsou určené vám. Návrhy a nahrávky tu nejsou.</p>
+      <p className="lead-text">
+        Shrnutí proběhlých akcí, které jsou určené vám: o čem to bylo, co se rozhodlo a co dál. Stejný zápis najdete i přímo u akce
+        v Plánu.
+      </p>
 
       {all.length > 0 && (
         <form className="filter-bar" method="get" role="search">
@@ -85,24 +96,31 @@ export default async function MinutesPage({ searchParams }: { searchParams: Sear
           <p className="item-meta">
             {filtering
               ? "Zkuste jiné slovo nebo zrušte filtr."
-              : "Zápis se objeví, jakmile ho vedoucí akce po skončení zkontroluje a zveřejní. Uvidíte jen zápisy z akcí pro své skupiny."}
+              : "Zápis se objeví, jakmile ho vedoucí po skončení akce zkontroluje a zveřejní. Uvidíte jen zápisy z akcí pro své skupiny."}
           </p>
         </div>
       ) : (
-        <ul className="card-list">
-          {filtered.map((m) => (
-            <li key={m.eventId}>
-              <Link className="item-card" href={`/vzdelavani/akce/${m.eventId}?odkud=zapisy#zapis`}>
-                <p className="eyebrow">
-                  {formatDate(toDateKey(new Date(m.startsAt)))} · {TYPE_LABELS[m.type]} · {GROUP_LABELS[m.audience]}
-                </p>
-                <p className="item-title">{m.title}</p>
-                <p className="item-meta clamp">{m.summary}</p>
-              </Link>
-            </li>
-          ))}
-        </ul>
+        [...months].map(([month, items]) => (
+          <div key={month} className="minutes-month">
+            <h3 className="minutes-month-title">{formatMonth(month)}</h3>
+            <ul className="card-list">
+              {items.map((m) => (
+                <li key={m.eventId}>
+                  <Link className="item-card" href={`/vzdelavani/akce/${m.eventId}?odkud=zapisy#zapis`}>
+                    <p className="eyebrow">
+                      {formatDate(toDateKey(new Date(m.startsAt)))} · {TYPE_LABELS[m.type]} · {GROUP_LABELS[m.audience]}
+                    </p>
+                    <p className="item-title">{m.title}</p>
+                    <p className="item-meta clamp">{m.summary}</p>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))
       )}
     </section>
+    <TopicsSection user={user} />
+    </>
   );
 }

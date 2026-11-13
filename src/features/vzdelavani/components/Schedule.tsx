@@ -12,7 +12,7 @@ import {
   weekdayShort,
 } from "@/lib/time";
 import type { EventCard } from "@/server/services/events";
-import { badgeClass, cardTone, primaryStatus, type MonthStep, type PlanGap } from "../status";
+import { badgeClass, cardTone, primaryStatus, type MonthSummary, type PlanGap, type PlanState } from "../status";
 import styles from "./schedule.module.css";
 
 const COLUMNS = [
@@ -169,7 +169,7 @@ export function ScheduleGrid({
   );
 }
 
-export function Legend() {
+export function Legend({ organizer }: { organizer: boolean }) {
   return (
     <ul className={styles.legend} aria-label="Legenda">
       <li>
@@ -181,9 +181,11 @@ export function Legend() {
       <li>
         <span className={`${styles.swatch} ${styles.muted}`} /> zrušeno nebo svátek
       </li>
-      <li>
-        <span className={`${styles.swatch} ${styles.draft}`} /> návrh, zatím nezveřejněno
-      </li>
+      {organizer && (
+        <li>
+          <span className={`${styles.swatch} ${styles.draft}`} /> návrh, vidí ho jen organizátor
+        </li>
+      )}
       <li>
         <span className={styles.missing} /> zatím nedoplněno
       </li>
@@ -192,7 +194,7 @@ export function Legend() {
 }
 
 /** Chronologický seznam po týdnech a dnech. Výchozí pohled na úzkém displeji. */
-export function Agenda({ monthKey, cards, todayKey }: { monthKey: string; cards: EventCard[]; todayKey: string }) {
+export function Agenda({ monthKey, cards, todayKey, emptyText }: { monthKey: string; cards: EventCard[]; todayKey: string; emptyText?: string }) {
   const days = byDay(cards.filter((c) => monthOf(dayOf(c)) === monthKey));
   const ghosts = ghostsByDay(cards);
   const weeks = monthWeeks(monthKey)
@@ -202,7 +204,7 @@ export function Agenda({ monthKey, cards, todayKey }: { monthKey: string; cards:
       current: week.includes(todayKey),
     }))
     .filter((w) => w.days.length);
-  if (!weeks.length) return <p className="muted">V tomto měsíci zatím nejsou žádné akce.</p>;
+  if (!weeks.length) return <p className="muted">{emptyText ?? "V tomto měsíci zatím nejsou žádné akce."}</p>;
   return (
     <div className={styles.agenda}>
       {weeks.map((week) => (
@@ -276,42 +278,50 @@ export function NextEventCard({ card }: { card: EventCard | null }) {
   );
 }
 
-/** Rozbalovací přehled termínů, které ve vybraném měsíci čekají na doplnění. Jen pro organizátora. */
+/** Termíny, které ve vybraném měsíci čekají na doplnění. Ukáže se po kliknutí na „K doplnění“. */
 export function PlanGaps({ gaps }: { gaps: PlanGap[] }) {
-  if (!gaps.length) return <p className="small muted plan-gaps-empty">V tomto měsíci není co doplnit.</p>;
+  if (!gaps.length) return null;
   return (
-    <details className="plan-gaps">
-      <summary>
-        <span className="badge badge-ochre">K doplnění · {gaps.length}</span>
-        <span className="small muted">termíny bez tématu, bez vedoucího nebo s chybou Kalendáře</span>
-      </summary>
-      <ul className="plan-gaps-list">
-        {gaps.map(({ card, reasons }) => (
-          <li key={card.id}>
-            <Link href={href(card)}>
-              {weekdayShort(dayOf(card))} {formatDayMonth(dayOf(card))} · {card.label}
-            </Link>
-            <span className="small muted"> {reasons.join(", ")}</span>
-          </li>
-        ))}
-      </ul>
-    </details>
+    <ul className="plan-gaps-list" aria-label="Termíny k doplnění">
+      {gaps.map(({ card, reasons }) => (
+        <li key={card.id}>
+          <Link href={href(card)}>
+            {weekdayShort(dayOf(card))} {formatDayMonth(dayOf(card))} · {card.label}
+          </Link>
+          <span className="small muted"> {reasons.join(", ")}</span>
+        </li>
+      ))}
+    </ul>
   );
 }
 
-/** Průvodce měsícem ve třech krocích. Jen pro organizátora a jen pro aktuální a budoucí měsíce. */
-export function MonthGuide({ steps }: { steps: MonthStep[] }) {
+type SummaryLinks = { all: string; toPublish: string; toComplete: string };
+
+/**
+ * Stav měsíce pro organizátora v jednom řádku. Čísla jsou zároveň filtr harmonogramu:
+ * kliknutím zůstanou v tabulce jen návrhy ke zveřejnění, nebo jen termíny k doplnění.
+ */
+export function MonthSummaryBar({ summary, active, links }: { summary: MonthSummary; active: PlanState | undefined; links: SummaryLinks }) {
+  if (!summary.planned) {
+    return <p className="notice month-summary-empty">Měsíc je zatím prázdný. Doplňte ho ze šablony v Nástrojích organizátora, nebo přidejte akci.</p>;
+  }
+  const items: Array<{ key: PlanState | undefined; href: string; label: string; count: number; attention: boolean }> = [
+    { key: undefined, href: links.all, label: "V plánu", count: summary.planned, attention: false },
+    { key: "navrhy", href: links.toPublish, label: "Čeká na zveřejnění", count: summary.toPublish, attention: summary.toPublish > 0 },
+    { key: "doplnit", href: links.toComplete, label: "K doplnění", count: summary.toComplete, attention: summary.toComplete > 0 },
+  ];
   return (
-    <ol className="month-guide" aria-label="Postup přípravy měsíce">
-      {steps.map((step) => (
-        <li key={step.title} className={step.done ? undefined : "todo"}>
-          <span className="month-guide-title">
-            {step.title}
-            <span className={step.done ? "badge badge-ok" : "badge badge-ochre"}>{step.done ? "hotovo" : "zbývá"}</span>
-          </span>
-          <span className="small muted">{step.text}</span>
-        </li>
-      ))}
-    </ol>
+    <nav aria-label="Stav měsíce">
+      <ul className="month-summary">
+        {items.map((item) => (
+          <li key={item.label}>
+            <Link href={item.href} className={`month-summary-item${item.attention ? " attention" : ""}`} aria-current={active === item.key ? "true" : undefined}>
+              <span className="month-summary-count">{item.count}</span>
+              <span>{item.label}</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </nav>
   );
 }

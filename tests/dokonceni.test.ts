@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from "vitest";
-import { monthSteps, statusAdvice } from "@/features/vzdelavani/status";
+import { filterCards, monthSummary, statusAdvice } from "@/features/vzdelavani/status";
 import { getDb } from "@/server/db/client";
 import { snapshotOf } from "@/server/domain/snapshot";
 import { formValuesOf } from "@/server/services/detail";
@@ -93,13 +93,20 @@ describe("stín původního termínu a průvodce měsícem", () => {
     expect(theirs.movedFrom).toBeNull();
   });
 
-  test("kroky měsíce a rada ke stavu odpovídají plánu", async () => {
+  test("souhrn měsíce, filtry a rada ke stavu odpovídají plánu", async () => {
     const cards = await listMonth(organizer, "2026-11");
-    const [terms, details, publishing] = monthSteps(cards, "2026-11");
-    expect(terms!.done).toBe(true);
-    expect(details!.done).toBe(false);
-    expect(publishing!.done).toBe(false);
-    expect(monthSteps([], "2027-03").map((s) => s.done)).toEqual([false, false, false]);
+    const summary = monthSummary(cards, "2026-11");
+    expect(summary.planned).toBeGreaterThan(0);
+    expect(summary.toPublish).toBeGreaterThan(0);
+    expect(summary.toComplete).toBeGreaterThan(0);
+    expect(monthSummary([], "2027-03")).toEqual({ planned: 0, toPublish: 0, toComplete: 0 });
+
+    const drafts = filterCards(cards, "2026-11", { state: "navrhy" });
+    expect(drafts.filter((c) => c.startsAt.startsWith("2026-11"))).toHaveLength(summary.toPublish);
+    expect(drafts.every((c) => c.planStatus === "draft" || c.unpublishedChanges)).toBe(true);
+    expect(filterCards(cards, "2026-11", { state: "doplnit" })).toHaveLength(summary.toComplete);
+    expect(filterCards(cards, "2026-11", { type: "action" }).every((c) => c.type === "action")).toBe(true);
+    expect(filterCards(cards, "2026-11", {})).toBe(cards);
 
     const draft = cards.find((c) => c.planStatus === "draft")!;
     expect(statusAdvice(draft)).toContain("Návrh vidíte jen vy");
