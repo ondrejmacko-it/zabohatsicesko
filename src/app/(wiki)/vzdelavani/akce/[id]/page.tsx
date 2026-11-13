@@ -117,7 +117,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
         </div>
       )}
 
-      <section className="section" aria-label="Údaje o akci">
+      <section className="section facts-section" aria-label="Údaje o akci">
         {/* Kdy a kdo: to hlavní, co kolega z akce potřebuje, je nahoře a výrazně. Typ a publikum nese nadpis. */}
         <dl className="key-facts">
           <div>

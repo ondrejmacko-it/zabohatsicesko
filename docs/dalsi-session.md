@@ -8,7 +8,20 @@ Pokračuj na demu modulu Vzdělávání. Nečti znovu celé zadání ani celý k
 `docs/predani.md`, `docs/google-kalendar.md` a `docs/google-prihlaseni.md`, pravidla v `CLAUDE.md`.
 Uživateli tykej, piš přátelsky. Větší změny nejdřív navrhni, nejasnosti se ptej.
 
-## Stav 13. 11. 2026 odpoledne (větev `oprava/bezpecne-zverejneni-akci`, draft PR #10)
+## Stav 13. 11. 2026 večer (větev `ccr-8554df8b-jabz1f`, jeden PR do `main`)
+
+- Větev spojuje draft #10 (`oprava/bezpecne-zverejneni-akci`) a #11 (`ccr-abd7d882-k08f42`). Oba vznikly
+  souběžně z `main` a kolidovaly v `globals.css` a `EventDialog.tsx`. **Pokračuj jen na této větvi**, #10 a #11
+  uživatel zavře.
+- Řešení konfliktů: dialog akce si nechává vlastní ruční odeslání z #10 (drží hodnoty a navíc ověřuje dopad
+  změny), `submitKeepingValues` z #11 používají ostatní formuláře včetně `/sprava`. V CSS platí obě sady pravidel.
+- Ověřeno po spojení: lint, typy, 102 ze 102 testů, build. Prohlížeč (Chromium, PGlite): organizátor, vedoucí a
+  účastník na 1280, 820 a 390 px, všechny stránky modulu, `/sprava` a detail akce bez vodorovného posunu.
+  Přidat akci na 390 px: neúspěšné zveřejnění nechá Typ i Publikum, pole mají 16 px.
+- **Neověřeno:** skutečné Safari, živý test proti Googlu, úkol „Nahraj audio z dnešní akce“ v prohlížeči.
+- `next dev` vytváří v kořeni soubor `AGENTS.md`. Do repa nepatří, před commitem ho smaž.
+
+## Stav 13. 11. 2026 odpoledne (původně draft PR #10)
 
 Relace znovu došla k limitu kontextu. Z šestibodového zadání je hotové toto (lint, typy, 101 z 101 testů, build,
 průchod v prohlížeči nad PGlite: organizátor a kolega mimo publikum na desktopu, vedoucí a účastník FP na 390 px):
@@ -34,11 +47,11 @@ průchod v prohlížeči nad PGlite: organizátor a kolega mimo publikum na desk
    „Další nastavení“; pozor na `required` pole ve sbaleném `<details>`). Výslovné stažení zveřejněného zápisu
    neexistuje, zatím platí jen „do schválení náhrady“.
 2. Bod 4: stín původního termínu pro organizátora, přehled dopadu (kdo dostane storno) v dialogu zrušení,
-   věta „co má člověk udělat“ u stavů, průvodce měsícem ve třech krocích, ruční odesílání formulářů na
-   `/sprava` (`AccessForms.tsx`).
+   věta „co má člověk udělat“ u stavů, průvodce měsícem ve třech krocích. Formuláře na `/sprava` už hodnoty
+   drží (`submitKeepingValues`).
 3. Bod 5: úplný průchod rolemi po dodělání bodů výše. Úkol „Nahraj audio z dnešní akce“ nejde v ukázkovém čase
    (12. 11. 9:00) vidět, dnešní akce ještě neskončila. Ověřen jen typy a kódem, ne v prohlížeči.
-4. Bod 6, živý test: nic z něj neproběhlo. Větev `oprava/bezpecne-zverejneni-akci` nemá vlastní `APP_URL` ani
+4. Bod 6, živý test: nic z něj neproběhlo. Větev `oprava/bezpecne-zverejneni-akci` ani `ccr-8554df8b-jabz1f` nemá vlastní `APP_URL` ani
    redirect URI v Googlu. Uživatel zvažuje test rovnou na Production (deploy a merge dělá sám). Připravit
    přesný postup. Nahlášená chyba přihlášení druhým Google účtem a `/sprava` z 13. 11. pořád neověřena,
    hypotézy: chybějící `APP_URL` a redirect URI větve, účet mimo `GOOGLE_LOGIN_ACCOUNTS`, `<form action>`
@@ -49,33 +62,27 @@ Pozor: preview sdílí databázi Neon. Migrace 0006 je aditivní, starší kód 
 K rozhodnutí pro Annu: posun střídání typů po svátku nebo zrušení, hromadné zveřejnění měsíce, fiktivní vzory
 zápisu pro školení, poradu a trénink. Nově: co přesně znamená skupina Tým A (text nápovědy u publika je odhad).
 
-## Stav kódu (starší)
+## Hotovo 13. 11. 2026 (původně PR #11)
 
-- `main` obsahuje PR #1 až #6 (poslední je krok A, správa uživatelů a stránka `/sprava`).
-- Větev `claude/jolly-goodall-c5hp6c` (z `main`), draft PR: **kroky B, C a D cílového průchodu**.
-  - **B, hosté z publika:** `src/server/calendar/attendees.ts`. Wiki zve aktivní účty skupiny akce a spravuje
-    jen hosty, které sama přidala (`calendar_links.managed_attendees`, migrace `0005_managed_attendees`).
-    Pozvání, změna skupin a odebrání přístupu vrátí budoucí pozvánky do fronty (`syncPending`). V režimu
-    Googlu je výchozí pevný seznam `GOOGLE_ALLOWED_ATTENDEES`, publikum zapíná `CALENDAR_ATTENDEES=audience`
-    (na Vercelu zatím nenastaveno). Pozor: i spárovaná existující pozvánka teď dostane chybějící publikum.
-  - **C, Zápisy:** `/vzdelavani/zapisy` (jen zveřejněné a oprávněné, hledání bez diakritiky, filtr typu a
-    skupiny). Zveřejnění zápisu doplní odkaz do popisu pozvánky a Kalendář rozešle změnu.
-  - **D, Moje cesta:** výchozí stránka modulu (`/vzdelavani` na ni přesměruje): Čeká na vás, Nejbližší akce,
-    Poslední zápisy, prázdné stavy. Menu Moje cesta · Harmonogram · Zápisy · Témata (+ Integrace organizátorovi).
-  - **Přehlednost:** detail akce má nahoře výrazné Kdy · Vede · Pro koho, odkaz zpět vede tam, odkud
-    uživatel přišel (`?odkud=zapisy|moje-cesta`), podrobnosti pozvánky jsou u synchronizované akce sbalené,
-    na `/sprava` je štítek „Pozvaný“.
-- Větev `claude/blissful-mendel-quw7mn` navazuje na `claude/jolly-goodall-c5hp6c` (obsahuje její commity
-  B, C, D) a přidává **dokončení přehlednosti**: v Harmonogramu je vedle přepínače Měsíc/Seznam
-  viditelné hlavní tlačítko Přidat akci a nabídka „Nástroje organizátora“ (Doplnit měsíc ze šablony, Šablona
-  týdne), výsledek doplnění se vypíše v nabídce. Na Integracích drobné rozestupy a užší tlačítko obnovy dat.
-- Ověřeno lokálně 12. 11.: lint, typová kontrola, 90 z 90 testů, build, průchod v prohlížeči (PGlite) pro
-  `/sprava`, Moje cesta, Zápisy, detail akce, Harmonogram s nabídkou, Témata a Integrace, vše i na šířce
-  390 px bez vodorovného posunu. Účastník nabídku organizátora nevidí. **Živě proti Googlu neověřeno nic
-  z B a C.**
-- Draft PR #8 z `claude/blissful-mendel-quw7mn` nahrazuje starší draft #7 (`claude/jolly-goodall-c5hp6c`),
-  ten uživatel zavře. Na #8 pokračuj, dokud ho uživatel nesloučí.
-- `next dev` vytváří v kořeni soubor `AGENTS.md`. Do repa nepatří, před commitem ho smaž.
+- `main` obsahuje PR #1 až #9. Tato větev z něj vychází.
+- **Oprava formulářů:** `src/features/shared/keep-values.ts` (`submitKeepingValues`). React po akci formulář
+  resetoval, proto se po neúspěšném zveřejnění přepnul Typ a Publikum a jinde mizel rozepsaný text. Použito
+  ve formuláři akce, zápisu, šablony týdne, zrušení akce, návrhu tématu a správy přístupů. Test
+  `tests/form-submit.test.ts`, v prohlížeči ověřeno, že se chyba bez opravy projeví a s opravou ne.
+- **Přehlednost:** týdny v Seznamu jsou bloky se střídavým pozadím, v Měsíci se střídají řádky, aktuální
+  týden má okrový pruh a štítek „tento týden“, dnešní den je podbarvený. Tabulky mají střídavé řádky.
+  Údaje o akci v detailu jsou jeden blok. Další termíny v Moje cesta jsou řádky místo podtržených odkazů.
+- **Apple zařízení:** pole mají na dotyku 16 px (iOS jinak po klepnutí přiblíží), tlačítka 44 px, select a
+  pole data a času mají vypnutý nativní vzhled Safari, odsazení pro výřez iPhonu (`viewport-fit=cover`,
+  `env(safe-area-inset-*)`), zamčený posun pod dialogem, vypnuté automatické odkazy z čísel a dat.
+  Mřížka měsíce se vejde na iPad na výšku. Na telefonu jsou v horním menu jen sekce, které někam vedou.
+- **Duplicity:** jméno role v horní liště se už neopakuje vedle přepínače.
+- Ověřeno lokálně v Chromiu na rozměrech iPhone SE, iPhone, iPad na výšku i na šířku, MacBook 13" a iMac:
+  žádný vodorovný posun stránky. **Ve skutečném Safari (WebKit) neověřeno**, v prostředí není k dispozici.
+  První věc ke kontrole na iPhonu a Macu: formulář Přidat akci (pole data a času) a nabídky.
+- Otevřené k rozhodnutí: „Nejbližší akce“ je v Moje cesta i v Harmonogramu, na Tématech jsou doporučená
+  témata nahoře a znovu ve výpisu všech. Obojí zatím ponecháno. Nabídky (Nástroje organizátora, Další
+  možnosti) se nezavírají klepnutím mimo.
 
 ## Odsouhlaseno 12. 11. 2026
 
@@ -125,8 +132,7 @@ zápisu pro školení, poradu a trénink. Nově: co přesně znamená skupina T�
 1. Hotovo 12. 11.: přehled `docs/nahravky-moznosti.md` je v PR #8. Uživatel rozhodl dál ho teď neřešit
    (ověřování na živých stránkách, další kandidáti ani striktnost EU). Možná vznikne vlastní řešení nebo se
    použije firemní systém. Priorita je dodělat web.
-1b. **Chyba k opravě (nalezena 12. 11. při focení):** formulář akce (`ActionForm`) po neúspěšném zveřejnění
-   (chybí téma nebo vedoucí) přepne Typ na Action time a Publikum na Všichni. Opravit a přidat test.
+1b. Hotovo 13. 11.: chyba formuláře akce po neúspěšném zveřejnění je opravená (viz výše).
    Screenshoty všech obrazovek dostal uživatel jako ZIP (složka `screenshots/`, v repu není, čeká na
    rozhodnutí). Nezachycené stavy: přístupová brána, přihlášení Googlem, čekající žádost, „Vyžaduje
    pozornost“ se Zkusit synchronizaci znovu, výpadek přepisu.

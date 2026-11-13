@@ -36,8 +36,9 @@ export function Topbar({ user, personas }: { user: CurrentUser; personas: Person
             </button>
           </form>
         )}
+        {/* U ukázkové role už jméno ukazuje přepínač, proto se neopakuje. */}
         <span className="account-name">
-          {user.name} · {ROLE_LABELS[user.role]}
+          {user.signedInWith === "google" ? `${user.name} · ${ROLE_LABELS[user.role]}` : ROLE_LABELS[user.role]}
         </span>
         <form action={signOut}>
           <button className="btn btn-small" type="submit">

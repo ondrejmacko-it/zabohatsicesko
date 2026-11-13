@@ -5,6 +5,7 @@ import { useActionState, useEffect, useState } from "react";
 import { ActionMessage } from "@/components/ActionForm";
 import { Icon } from "@/components/Icon";
 import { Modal } from "@/components/Modal";
+import { submitKeepingValues } from "@/features/shared/keep-values";
 import { cancelEventAction, deleteDraftAction, type ActionResult } from "../actions";
 
 /** Kontextové možnosti detailu akce: zrušení zveřejněné akce a smazání návrhu. */
@@ -44,7 +45,7 @@ function CancelDialog({ id, revision, onClose }: { id: string; revision: number;
   }, null);
   return (
     <Modal open title="Zrušit akci" onRequestClose={onClose}>
-      <form action={action} className="stack">
+      <form action={action} onSubmit={submitKeepingValues(action)} className="stack">
         <input type="hidden" name="id" value={id} />
         <input type="hidden" name="revision" value={revision} />
         <p>

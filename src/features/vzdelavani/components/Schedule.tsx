@@ -104,10 +104,12 @@ export function ScheduleGrid({
             const offDays = week.filter((d) => !columnDays.has(isoWeekday(d)) && monthOf(d) === monthKey);
             const offCards = offDays.flatMap((d) => days.get(d) ?? []);
             if (!week.slice(0, 5).some((d) => monthOf(d) === monthKey) && !offCards.length) return null;
+            const current = week.includes(todayKey);
             return (
-              <tr key={monday}>
+              <tr key={monday} className={current ? styles.currentWeek : undefined}>
                 <th scope="row" className={styles.weekCell}>
                   <span>{formatRange(monday, addDays(monday, 4))}</span>
+                  {current && <span className={styles.weekNow}>tento týden</span>}
                   {offCards.map((card) => (
                     <Link key={card.id} href={href(card)} className={styles.offDay}>
                       {weekdayShort(dayOf(card))} {formatDayMonth(dayOf(card))} · {card.label}
@@ -120,7 +122,7 @@ export function ScheduleGrid({
                   const inMonth = monthOf(day) === monthKey;
                   const dayCards = inMonth ? (days.get(day) ?? []) : [];
                   return (
-                    <td key={day} className={`${styles.cell} ${inMonth ? "" : styles.outside}`}>
+                    <td key={day} className={`${styles.cell} ${inMonth ? "" : styles.outside} ${day === todayKey ? styles.todayCell : ""}`}>
                       <span className={styles.date}>
                         {formatDayMonth(day)}
                         {day === todayKey && <span className={styles.today}>dnes</span>}
@@ -166,19 +168,24 @@ export function Legend() {
 export function Agenda({ monthKey, cards, todayKey }: { monthKey: string; cards: EventCard[]; todayKey: string }) {
   const days = byDay(cards.filter((c) => monthOf(dayOf(c)) === monthKey));
   const weeks = monthWeeks(monthKey)
-    .map((week) => ({ monday: week[0]!, days: week.filter((d) => days.has(d)) }))
+    .map((week) => ({ monday: week[0]!, days: week.filter((d) => days.has(d)), current: week.includes(todayKey) }))
     .filter((w) => w.days.length);
   if (!weeks.length) return <p className="muted">V tomto měsíci zatím nejsou žádné akce.</p>;
   return (
     <div className={styles.agenda}>
       {weeks.map((week) => (
-        <section key={week.monday} aria-labelledby={`tyden-${week.monday}`}>
+        <section
+          key={week.monday}
+          aria-labelledby={`tyden-${week.monday}`}
+          className={`${styles.agendaWeekBlock} ${week.current ? styles.currentWeek : ""}`}
+        >
           <h3 id={`tyden-${week.monday}`} className={styles.agendaWeek}>
             Týden {formatRange(week.monday, addDays(week.monday, 6))}
+            {week.current && <span className={styles.weekNow}>tento týden</span>}
           </h3>
           <ol className={styles.agendaDays}>
             {week.days.map((day) => (
-              <li key={day} className={styles.agendaDay}>
+              <li key={day} className={`${styles.agendaDay} ${day === todayKey ? styles.agendaToday : ""}`}>
                 <div className={styles.agendaDate}>
                   {weekdayShort(day)} {formatDayMonth(day)}
                   {day === todayKey && <span className={styles.today}>dnes</span>}
