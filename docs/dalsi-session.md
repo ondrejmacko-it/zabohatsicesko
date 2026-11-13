@@ -9,69 +9,72 @@ Kontext máš v `docs/dalsi-session.md`, `README.md`, `docs/google-prihlaseni.md
 pravidla v `CLAUDE.md`. Tykej mi, piš přátelsky. Úpravy níže jsou odsouhlasené, rovnou je udělej. Ptej se jen
 na věci označené „zeptej se“.
 
-Stav: `main` obsahuje PR #1 až #15. Větev `claude/amazing-edison-51eo2g` (bez PR) má nová okna, menu, filtry
-nahoře, témata jako karty a zápisy v okně (viz „Stav“ v `docs/dalsi-session.md`). Pokud není sloučená, vyjdi
-z ní, jinak z `main`.
+Stav: větev `claude/blissful-mendel-ejkw5s` má draft PR do `main` (obsahuje i `claude/amazing-edison-51eo2g`).
+Hotové je jádro části A a B z minulého promptu (viz „Stav 13. 11. noc“ níže). Pokud je PR sloučený, vyjdi z `main`.
 
 Zásada pro celé UI: hlavní údaje a hlavní akce musí vyniknout, vedlejší texty jsou menší a tlumené, nic není
 ani o pixel mimo osu, vše je jasné na první pohled.
 
-ČÁST A · Kalendář musí konečně fungovat (nejvyšší priorita)
-
-Co dnes nefunguje a proč (ověřeno v kódu 13. 11.): přihlášení žádá jen `openid email profile`, souhlas ke
-Kalendáři je druhý krok jen pro organizátora a správce a jen když Wiki žádné propojení nemá
-(`needsCalendarConnection`). Propojení je jedno pro celou Wiki a zapisuje do jednoho kalendáře
-(`GOOGLE_CALENDAR_ID`). Hosté pozvánek jsou bez `CALENDAR_ATTENDEES=audience` jen adresy z
-`GOOGLE_ALLOWED_ATTENDEES`, proto se nový účet v pozvaných neobjeví a nic se mu nepropíše.
-
-1. Souhlas ke Kalendáři rovnou při přihlášení: kdo plánuje (správce), dostane jednu obrazovku Googlu
-   s přihlášením i oprávněním `calendar.events` a Wiki si propojení uloží sama, bez dalšího kroku. Účet, který
-   už ve Wiki je a plánuje, pozná server podle e-mailu před přesměrováním (nebo požádej o oprávnění až druhým
-   automatickým přesměrováním, pokud to jinak nejde). Účastník oprávnění ke Kalendáři nedává, pozvánky
-   dostává jako host.
-2. Účastníci se do pozvánek dostanou sami: skuteční hosté jsou aktivní účty skupiny akce. Navrhni a udělej
-   bezpečné zapnutí (`CALENDAR_ATTENDEES=audience`): ve Správě jasně ukaž, komu Wiki pozvánky pošle, a přepínač
-   zapni na preview až po mém potvrzení účtů (zeptej se, posílá skutečné e-maily).
-3. Stav Kalendáře musí být vidět: na Plánu a ve Správě řádek „Kalendář: propojeno účtem X, kalendář Y,
-   pozvánky dostává: …“ nebo výrazná výzva „Propojit“. V dialogu akce ukaž skutečné hosty podle skupiny, ne jen
-   testovací adresu. Když propojení chybí nebo vypršelo (režim Testing, 7 dní), řekni to hned a nabídni opravu.
-4. Zjisti na preview, proč se mi teď nic nepropisuje: stav `integration_credentials` a `calendar_links`
-   v Neonu (projekt `neon-zbz-vzdelavani-demo`), proměnné na Vercelu, role mého účtu. Výsledek mi napiš.
-5. Projdi se mnou živý test krok za krokem (přihlášení, žádost, schválení, propojení, pozvánka, změna, zrušení,
-   odkaz na zápis) a napiš přesný postup včetně toho, kde ve Správě vidím, který účet je ve které skupině.
-
-ČÁST B · role a oprávnění
-
-6. Sluč role organizátor a správce do jedné: v UI jedna role „Správce“ (plánuje, zveřejňuje, spravuje účty,
-   vidí vše). V databázi nech obě hodnoty a v `policy.ts` je ber stejně, ať není potřeba destruktivní migrace.
-   Uprav texty, Správu, ukázkové role na `/vstup` a testy.
-7. Správce smí u každé akce nahrát záznam, upravit a zveřejnit i stáhnout zápis (dnes jen vedoucí a kontrolor).
-   V okně „Přidat zápis“ pak má u všech akcí „Nahrát záznam“. Přidej testy oprávnění.
-8. Jména zájemců o téma vidí každý, kdo smí plánovat (správce). Tak to už je, jen ověř po sloučení rolí.
-   V dialogu akce nabídni doporučená témata s počtem zájemců.
-
-ČÁST C · dodělat z minula (po každém bloku ověř na 1280 a 390 px)
-
-9. Správa: úpravy uživatele v okně (`Modal`), řádkové akce v menu (`src/components/Menu.tsx`), na první pohled
-   vidět účet, roli a skupiny.
-10. Menu místo řady tlačítek: detail akce pro vedoucího, Integrace, `SyncPanelView`.
-11. Doověř: okno zveřejněného zápisu za čtenáře, nahrání záznamu v okně (průběh a `AutoRefresh`), „Přidat zápis“
-    na 1280 px, Plán za účastníka na 390 px, varování o hydrataci na Plánu ve vývojovém režimu.
-12. Cokoli dalšího, co zlepší přehlednost podle zásady výše, udělej a vypiš mi to.
-
-ČÁST D · předání
-
-13. Dokumentace: `README.md`, `docs/predani.md`, `docs/google-*.md` a `docs/dalsi-session.md` odpovídají stavu.
-14. Větev postav na nejnovějším `main`, zprovozni lint, typy, testy, build a preview (vlastní `APP_URL` větve
-    nastav sám, přesměrovací adresy v Googlu přidám já, napiš mi je) a připrav draft PR do `main`. Merge dělám já.
-15. Snímky každého okna a stavu za každou roli na 1280 a 390 px (stránky, okna, menu, výběry, prázdné a chybové
-    stavy, vstupní brána, čekající žádost) jako ZIP se seznamem. Do repa je nedávej.
+1. Živý test se mnou krok za krokem na preview větve (adresa v poznámkách níže). Zeptej se, jestli jsem v Google
+   konzoli přidal obě přesměrovací adresy. Postup: přihlášení správce (při druhém přihlášení má přijít jedna
+   obrazovka Googlu s Kalendářem), nový účet a žádost, schválení ve Správě, řádek „Kalendář“ na Plánu,
+   zveřejnění akce, změna, zrušení, odkaz na zápis v pozvánce.
+2. Zeptej se a po mém potvrzení účtů z tabulky „Kalendář a pozvánky“ ve Správě nastav na preview
+   `CALENDAR_ATTENDEES=audience` (posílá skutečné e-maily) a ověř se mnou, že pozvánky chodí skupině akce.
+3. Dialog akce: ukaž skutečné hosty podle vybrané skupiny (`loadCalendarStatus().recipients`) místo testovací
+   adresy a nabídni doporučená témata s počtem zájemců.
+4. Dokonči sloučení rolí v textech: hledej „organizátor“ v `src/` (Integrace, `SyncPanelView`, `EventPeek`,
+   detail akce, `status.ts`, legenda, nápovědy) a nahraď „správce“. Persona „Organizátor ukázky“ na `/vstup`
+   a v seedu: přejmenuj nebo sluč s personou správce (zeptej se, seed mění data ukázky).
+5. Okno „Přidat zápis“ a detail akce za správce u cizí akce: ověř v prohlížeči, že má „Nahrát záznam“, úpravu,
+   zveřejnění i stažení zápisu (oprávnění na serveru už platí).
+6. Část C z minula: Správa v okně (`Modal`) a řádkové akce v menu (`Menu`), menu místo řady tlačítek v detailu
+   akce pro vedoucího, na Integraci a v `SyncPanelView`, doověření oken (zápis za čtenáře, nahrání záznamu,
+   „Přidat zápis“ na 1280 px, Plán za účastníka na 390 px, varování o hydrataci). Po každém bloku 1280 a 390 px.
+7. Dokumentace: `README.md`, `docs/predani.md`, `docs/google-prihlaseni.md`, `docs/google-kalendar.md` popiš
+   podle stavu (jedna role Správce, souhlas ke Kalendáři při přihlášení, `GOOGLE_OAUTH_PUBLISHED`, příjemci
+   pozvánek včetně testovacích účtů svázaných s fiktivní rolí, řádek stavu Kalendáře).
+8. Snímky každého okna a stavu za každou roli na 1280 a 390 px jako ZIP se seznamem. Do repa je nedávej.
 
 Production na Vercelu nemá proměnné prostředí a buildy z `main` se přeskakují, vše běží na preview.
-Na `main` nepushuj. Respektuj limit kontextu: začni částí A, a když se limit blíží, ulož stav do
-`docs/dalsi-session.md` a pošli mi navazující prompt.
+Na `main` nepushuj, merge dělám já. Respektuj limit kontextu.
 
 ---
+
+## Stav 13. 11. 2026 noc (větev `claude/blissful-mendel-ejkw5s`, draft PR do `main`)
+
+Vychází z `claude/amazing-edison-51eo2g`. Ověřeno: lint, typy, 128 ze 128 testů, build. V Chromiu nad PGlite jen
+Plán a Správa za správce na 1280 a 390 px (řádek Kalendáře, tabulka příjemců, výběr role, bez vodorovného
+posunu). **Naživo proti Googlu neověřeno nic z níže uvedeného.**
+
+- **Souhlas ke Kalendáři při přihlášení** (`google-login.ts`, `api/google/prihlaseni/*`): po každém přihlášení
+  Googlem si prohlížeč uloží podepsanou cookie `zbc_google_hint` s ID uživatele. Při dalším přihlášení server
+  podle ní pozná aktivního správce, a pokud Wiki nemá propojení, požádá Google na jedné obrazovce o identitu
+  i `calendar.events` (`prompt=consent`, `access_type=offline`, `login_hint`). Callback propojení uloží
+  (`saveGrant`), jinak token hned zneplatní (`revokeToken`). První přihlášení z nového prohlížeče jde starou
+  cestou: druhé automatické přesměrování na `/api/google/kalendar/pripojit?auto=1`. Odmítnutý souhlas:
+  brána nabídne „Přihlásit se bez Kalendáře“ (`?kalendar=ne`), `?jiny=1` vynutí výběr účtu.
+- **Příjemci pozvánek** (`attendees.ts`, `listRecipients`): v režimu Googlu aktivní účty skupiny akce. Nově
+  i fiktivní role svázaná s účtem Google ze seznamu `GOOGLE_LOGIN_ACCOUNTS` (dostane pozvánku na adresu Google).
+  Přepínač zůstává `CALENDAR_ATTENDEES=audience`, **na preview není zapnutý**, čeká na potvrzení účtů.
+- **Stav Kalendáře** (`services/calendar-status.ts`, `CalendarStatusLine.tsx`): řádek na Plánu (jen správce mimo
+  náhled) a ve Správě v sekci „Kalendář a pozvánky“ s tabulkou, kdo dostane pozvánku podle skupiny. Propojení
+  se při načtení ověří u Googlu (vypršelý souhlas se pozná hned). V režimu Testing ukazuje datum vypršení
+  (7 dní od souhlasu), dva dny předem nabídne „Obnovit propojení“. `GOOGLE_OAUTH_PUBLISHED=1` upozornění vypne.
+- **Jedna role Správce** (`policy.ts`: `canPlan`, `isOrganizer` a `isAdmin` jsou totéž): v databázi zůstávají
+  `admin` i `organizer`, Správa nabízí jen Správce a Člena týmu. Správce smí u každé akce nahrát záznam,
+  číst pracovní zápis, zveřejnit ho i stáhnout (`canHandleRecording`, `canReadPublishedMinutes`). Mezi úkoly
+  „Čeká na vás“ má dál jen akce, které sám vede nebo kontroluje. Testy: `tests/kalendar-prihlaseni.test.ts`,
+  upravené `access`, `users`, `zapisy-temata`.
+- **Nedoděláno z promptu:** hosté a doporučená témata v dialogu akce, zbylé texty „organizátor“ v UI, celá
+  část C, dokumentace `README.md`, `docs/predani.md`, `docs/google-*.md`, snímky. Živý test neproběhl.
+
+**Diagnostika preview 13. 11. (proč se nic nepropisovalo):** Kalendář propojený je (12. 11. 17:48 testovacím
+účtem svázaným s `demo-organizator`), synchronizace běží (5 vazeb `synced`, poslední 13. 11. 19:41). Pozvánky
+ale šly jen na jednu adresu z `GOOGLE_ALLOWED_ATTENDEES`, protože `CALENDAR_ATTENDEES` na Vercelu není
+nastavené. Osobní účet uživatele je ve Wiki Člen týmu ve skupinách Všichni a FP (pozvaný), neplánuje a mezi
+hosty nebyl. Propojení v režimu Testing vyprší kolem 19. 11. Výchozí `APP_URL` preview míří na starou větev
+`ccr-2d4283fa-slno9d`, každá testovaná větev proto potřebuje vlastní.
 
 ## Stav 13. 11. 2026 (větev `claude/amazing-edison-51eo2g`, bez PR)
 

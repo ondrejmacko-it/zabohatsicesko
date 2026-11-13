@@ -33,8 +33,9 @@ export const GROUP_HINTS: Record<Group, string> = {
 };
 
 export const ROLE_LABELS: Record<Role, string> = {
-  admin: "Správce ZBC",
-  organizer: "Organizátor",
+  admin: "Správce",
+  // Starší hodnota v databázi, práva i název jsou stejné jako u správce.
+  organizer: "Správce",
   member: "Člen týmu",
 };
 

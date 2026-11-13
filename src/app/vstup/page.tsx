@@ -7,11 +7,12 @@ import { GateForm } from "./GateForm";
 export const metadata: Metadata = { title: "Vstup do ukázky" };
 
 const GOOGLE_RESULTS: Record<string, string> = {
-  "ucet-neni-povoleny": "Tento účet Google nemá do Wiki přístup. Zkuste jiný účet, nebo se obraťte na správce ZBC.",
+  "ucet-neni-povoleny": "Tento účet Google nemá do Wiki přístup. Zkuste jiný účet, nebo se obraťte na správce.",
   "ceka-na-schvaleni":
-    "Žádost o přístup je odeslaná. Jakmile vám správce ZBC přidělí roli a skupiny, přihlaste se znovu stejným účtem.",
+    "Žádost o přístup je odeslaná. Jakmile vám správce přidělí roli a skupiny, přihlaste se znovu stejným účtem.",
   "neplatny-stav": "Přihlášení vypršelo nebo začalo v jiném okně. Zkuste to prosím znovu.",
   zruseno: "Přihlášení účtem Google bylo zrušeno.",
+  "zruseno-kalendar": "Přihlášení se souhlasem ke Kalendáři bylo zrušeno. Můžete to zkusit znovu, nebo se přihlásit bez Kalendáře a propojit ho později z Plánu.",
   "nepodarilo-se": "Přihlášení účtem Google se nepodařilo dokončit. Zkuste to prosím znovu.",
 };
 
@@ -42,19 +43,28 @@ export default async function GatePage({ searchParams }: { searchParams: Promise
             <section className="stack gate-google" aria-labelledby="google-prihlaseni">
               <h2 id="google-prihlaseni">Přihlášení účtem Google</h2>
               <p className="small muted">
-                Google jen ověří, kdo jste. Roli a skupiny přiděluje správce ZBC ve Wiki. Nový účet nejdřív
-                počká na schválení.
+                Google jen ověří, kdo jste. Roli a skupiny přiděluje správce ve Wiki, nový účet nejdřív počká na
+                schválení. Správce Google požádá i o zápis do Kalendáře, účastníci pozvánky jen dostávají.
               </p>
               {googleError && (
                 <p className={isPending ? "notice" : "form-error"} role={isPending ? "status" : "alert"}>
                   {googleError}
                 </p>
               )}
-              <div>
+              <div className="row">
                 {/* Odkaz, ne formulář: navigaci na Google nesmí blokovat CSP form-action. */}
                 <a className="btn btn-primary" href="/api/google/prihlaseni">
                   Přihlásit se účtem Google
                 </a>
+                {googleResult === "zruseno-kalendar" ? (
+                  <a className="btn" href="/api/google/prihlaseni?kalendar=ne">
+                    Přihlásit se bez Kalendáře
+                  </a>
+                ) : (
+                  <a className="small" href="/api/google/prihlaseni?jiny=1">
+                    Použít jiný účet
+                  </a>
+                )}
               </div>
               <h2>Nebo projít ukázku s fiktivní rolí</h2>
             </section>

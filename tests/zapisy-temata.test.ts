@@ -17,7 +17,7 @@ describe("zájemci o téma", () => {
 });
 
 describe("akce bez zápisu pro okno Přidat zápis", () => {
-  it("vedoucí vidí své akce a smí je řešit, organizátor vidí přehled bez práva nahrát", async () => {
+  it("vedoucí vidí své akce a smí je řešit, správce vidí všechny a smí nahrát u každé", async () => {
     const mine = await listMissingMinutes(lead);
     expect(mine.handlesAny).toBe(true);
     expect(mine.items.length).toBeGreaterThan(0);
@@ -25,7 +25,8 @@ describe("akce bez zápisu pro okno Přidat zápis", () => {
 
     const overview = await listMissingMinutes(organizer);
     expect(overview.items.length).toBeGreaterThanOrEqual(mine.items.length);
-    expect(overview.items.some((item) => item.canHandle)).toBe(false);
+    expect(overview.items.every((item) => item.canHandle)).toBe(true);
+    expect(overview.handlesAny).toBe(true);
   });
 
   it("účastník bez vedené akce nevidí nic", async () => {

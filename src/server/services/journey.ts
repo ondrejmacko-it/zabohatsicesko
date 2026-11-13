@@ -5,7 +5,7 @@ import { needsCalendarConnection } from "@/server/calendar/google-auth";
 import { config, now } from "@/server/config";
 import { getDb } from "@/server/db/client";
 import { calendarLinks, events, minutes, recordings, users } from "@/server/db/schema";
-import { canHandleRecording, canManageUsers, canReadPublishedMinutes, isOrganizer, type Viewer } from "@/server/policy";
+import { canHandleRecording, canManageUsers, canReadPublishedMinutes, isEventHandler, isOrganizer, type Viewer } from "@/server/policy";
 import { pendingRequestCount } from "@/server/services/users";
 
 // Čtecí pohledy pro stránky Plán a Zápisy. Přístup rozhoduje policy.ts u každého řádku.
@@ -68,13 +68,13 @@ export type MissingMinutesItem = {
   leadName: string | null;
   /** Rozpracovaný stav: návrh zápisu čeká na kontrolu, nebo se nahrávka teprve zpracovává. */
   state: "none" | "draft" | "processing";
-  /** Uživatel je vedoucí nebo kontrolor, smí tedy nahrát záznam a zápis zveřejnit. */
+  /** Uživatel smí nahrát záznam a zápis zveřejnit (vedoucí, kontrolor, správce). */
   canHandle: boolean;
 };
 
 /**
  * Proběhlé zveřejněné akce bez zveřejněného zápisu, nejnovější první. Vedoucí a kontrolor vidí ty své,
- * organizátor všechny (kvůli přehledu). Nahrát a zveřejnit smí dál jen vedoucí a kontrolor akce.
+ * správce všechny a u všech smí nahrát záznam i zápis zveřejnit.
  * `handlesAny`: uživatel u nějaké proběhlé akce zápis řeší, i kdyby už měl vše hotovo.
  */
 export async function listMissingMinutes(viewer: Viewer): Promise<{ items: MissingMinutesItem[]; handlesAny: boolean }> {
@@ -125,7 +125,10 @@ const MAX_MINUTES_TASKS = 4;
 /** `eventType`: úkol patří ke konkrétní akci, filtr Typ akce na Plánu ho podle něj schová nebo nechá. */
 export type JourneyTask = { key: string; title: string; detail: string; href: string; action: string; external?: boolean; eventType?: EventType };
 
-/** Co na uživatele čeká: zápisy k dokončení u akcí, které vede nebo kontroluje, a úkoly organizátora. */
+/**
+ * Co na uživatele čeká: zápisy k dokončení u akcí, které vede nebo kontroluje, a úkoly správce.
+ * Správce smí zápis řešit u každé akce, mezi úkoly ale dostává jen ty své. Ostatní má v „Přidat zápis“.
+ */
 export async function listTasks(viewer: Viewer): Promise<JourneyTask[]> {
   const db = await getDb();
   const tasks: JourneyTask[] = [];
@@ -136,7 +139,7 @@ export async function listTasks(viewer: Viewer): Promise<JourneyTask[]> {
     .from(events)
     .where(and(eq(events.orgId, config.orgId), sql`(${events.published}->>'endsAt')::timestamptz < ${reference.toISOString()}::timestamptz`))
     .orderBy(desc(events.startsAt));
-  const handled = past.filter((row) => row.published?.status === "published" && row.published.type !== "holiday" && canHandleRecording(viewer, row));
+  const handled = past.filter((row) => row.published?.status === "published" && row.published.type !== "holiday" && isEventHandler(viewer, row.published));
   if (handled.length) {
     const states = await db
       .select({ eventId: minutes.eventId, status: minutes.status })

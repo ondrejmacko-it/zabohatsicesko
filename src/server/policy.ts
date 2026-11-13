@@ -7,21 +7,22 @@ import { snapshotOf } from "@/server/domain/snapshot";
 
 export type Viewer = { id: string; role: Role; groups: string[] };
 
-/** Plánuje a zveřejňuje. Správce ZBC má stejná práva jako organizátor a navíc spravuje uživatele. */
-export const isOrganizer = (viewer: Viewer) => viewer.role === "organizer" || viewer.role === "admin";
-
-export const isAdmin = (viewer: Viewer) => viewer.role === "admin";
-
 /**
- * Správu uživatelů (pozvání, schválení, role, skupiny, odebrání) má správce i organizátor.
- * Roli správce ale smí přidělit, odebrat nebo správci měnit účet jen jiný správce.
+ * Správce: plánuje, zveřejňuje, spravuje účty a vidí vše. V databázi zůstávají dvě hodnoty role
+ * (`admin` a starší `organizer`), pravidla je berou stejně. Nové účty dostávají `admin`.
  */
-export const canManageUsers = (viewer: Viewer) => isOrganizer(viewer);
+export const canPlan = (viewer: Pick<Viewer, "role">) => viewer.role === "organizer" || viewer.role === "admin";
 
+/** Starší název téhož pravidla, ponechaný pro stávající volání. */
+export const isOrganizer = canPlan;
+export const isAdmin = canPlan;
+
+export const canManageUsers = (viewer: Viewer) => canPlan(viewer);
+
+/** Správce smí měnit každý účet kromě vlastního, aby si omylem neodebral přístup. */
 export function canManageAccount(viewer: Viewer, target: { id: string; role: Role }, nextRole?: Role): boolean {
-  if (!canManageUsers(viewer) || target.id === viewer.id) return false;
-  if (isAdmin(viewer)) return true;
-  return target.role !== "admin" && nextRole !== "admin";
+  void nextRole;
+  return canManageUsers(viewer) && target.id !== viewer.id;
 }
 
 /**
@@ -37,20 +38,20 @@ export function visibleEvent(viewer: Viewer, row: EventRow): EventSnapshot | nul
   return null;
 }
 
-/** Vedoucí nebo pověřený kontrolor zveřejněné akce. Organizátor tuto roli automaticky nemá. */
+/** Vedoucí nebo pověřený kontrolor zveřejněné akce. */
 export function isEventHandler(viewer: Viewer, snapshot: EventSnapshot): boolean {
   return snapshot.leadId === viewer.id || snapshot.reviewerId === viewer.id;
 }
 
-/** Nahrávka, pracovní přepis a návrh zápisu: jen vedoucí a pověřený kontrolor. */
+/** Nahrávka, pracovní přepis, návrh zápisu a jeho zveřejnění či stažení: vedoucí, kontrolor a správce. */
 export function canHandleRecording(viewer: Viewer, row: EventRow): boolean {
-  return row.published !== null && isEventHandler(viewer, row.published);
+  return row.published !== null && (canPlan(viewer) || isEventHandler(viewer, row.published));
 }
 
-/** Zveřejněný zápis: publikum akce a její vedoucí či kontrolor. Platí i pro organizátora. */
+/** Zveřejněný zápis: publikum akce, její vedoucí či kontrolor a správce. */
 export function canReadPublishedMinutes(viewer: Viewer, row: EventRow): boolean {
   const snapshot = row.published;
-  return snapshot !== null && (viewer.groups.includes(snapshot.audience) || isEventHandler(viewer, snapshot));
+  return snapshot !== null && (canPlan(viewer) || viewer.groups.includes(snapshot.audience) || isEventHandler(viewer, snapshot));
 }
 
 export function canSeeAudience(viewer: Viewer, audience: string): boolean {

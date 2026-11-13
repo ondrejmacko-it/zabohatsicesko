@@ -5,8 +5,8 @@ import { users } from "@/server/db/schema";
 
 /** Popis fiktivních rolí pro výběr v ukázce. */
 const DESCRIPTIONS: Record<string, string> = {
-  "demo-spravce": "Přiděluje role a skupiny, schvaluje nové účty Google. Plánuje jako organizátor.",
-  "demo-organizator": "Plánuje a zveřejňuje harmonogram, spravuje vazbu na Kalendář.",
+  "demo-spravce": "Plánuje a zveřejňuje akce, spravuje účty a skupiny, vidí vše.",
+  "demo-organizator": "Správce: plánuje a zveřejňuje harmonogram, spravuje účty a Kalendář.",
   "demo-vedouci": "Vede akce, nahrává záznamy a kontroluje zápisy.",
   "demo-ucastnik": "Kolega ze skupiny finančních poradců.",
   "demo-mimo-skupinu": "Kolega ze skupiny RM, mimo publikum tréninku poradců.",

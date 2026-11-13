@@ -6,6 +6,7 @@ import { AutoRefresh } from "@/components/AutoRefresh";
 import { Icon } from "@/components/Icon";
 import { Menu } from "@/components/Menu";
 import { generateMonthAction } from "@/features/vzdelavani/actions";
+import { CalendarStatusLine } from "@/features/vzdelavani/components/CalendarStatusLine";
 import { EventDialog } from "@/features/vzdelavani/components/EventDialog";
 import { EventPeek } from "@/features/vzdelavani/components/EventPeek";
 import { PlanFilters } from "@/features/vzdelavani/components/PlanFilters";
@@ -20,6 +21,7 @@ import { now } from "@/server/config";
 import { defaultAudience } from "@/server/domain/generation";
 import { isOrganizer } from "@/server/policy";
 import { listMonth, listPeople, loadTemplate, nextEventsFor } from "@/server/services/events";
+import { loadCalendarStatus } from "@/server/services/calendar-status";
 import { listTasks } from "@/server/services/journey";
 import { listPreviewOptions, resolvePreview } from "@/server/services/preview";
 import { listTopics } from "@/server/services/topics";
@@ -50,6 +52,8 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   const [people, topics, previewOptions] = organizer
     ? await Promise.all([listPeople(user), listTopics(user), listPreviewOptions(user)])
     : [[], [], null];
+
+  const calendar = managing ? await loadCalendarStatus(user) : null;
 
   const types = EVENT_TYPES.filter((t) => monthCards.some((c) => c.type === t && monthOf(toDateKey(new Date(c.startsAt))) === monthKey));
   const type = types.find((t) => t === params.typ);
@@ -124,10 +128,11 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
     {preview && (
       <p className="notice" role="status">
         Díváte se jako <strong>{preview.label}</strong>. Celá stránka ukazuje jen to, co tento pohled opravdu vidí. Návrhy a úpravy
-        jsou schované, úkoly jsou jen ke čtení. <Link href={link({ jako: undefined })}>Zpět na pohled organizátora</Link>
+        jsou schované, úkoly jsou jen ke čtení. <Link href={link({ jako: undefined })}>Zpět na pohled správce</Link>
       </p>
     )}
       </div>
+      {calendar && <CalendarStatusLine status={calendar} now={now()} />}
       <div className="plan-top">
         <section className="section" aria-labelledby="ceka">
           <h2 id="ceka">
@@ -188,7 +193,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
           </div>
           {managing && (
             <div className="row">
-              <Menu label="Nástroje organizátora" className="organizer-tools">
+              <Menu label="Nástroje správce" className="organizer-tools">
                 <ActionForm action={generateMonthAction} fields={{ month: monthKey }} label="Doplnit měsíc ze šablony" pendingLabel="Doplňuji…" />
                 <TemplateDialog slots={template} />
               </Menu>
@@ -217,7 +222,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
         </div>
 
         {summary && !summary.planned && (
-          <p className="notice month-summary-empty">Měsíc je zatím prázdný. Doplňte ho ze šablony v Nástrojích organizátora, nebo přidejte akci.</p>
+          <p className="notice month-summary-empty">Měsíc je zatím prázdný. Doplňte ho ze šablony v Nástrojích správce, nebo přidejte akci.</p>
         )}
 
         {listView ? (

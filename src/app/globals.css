@@ -1938,3 +1938,68 @@ a.brief-link:hover {
 .topic-main .item-title .topic-badge {
   margin-left: 0;
 }
+
+/* ——— Stav Kalendáře (Plán a Správa) ——— */
+
+.cal-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 14px;
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  font-size: 14px;
+}
+
+p.cal-status {
+  justify-content: flex-start;
+}
+
+.cal-status-main {
+  display: flex;
+  flex: 1 1 320px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  min-width: 0;
+}
+
+.cal-status-rest {
+  color: var(--muted);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.cal-status-warn {
+  border-color: var(--draft-line);
+  background: var(--draft);
+}
+
+.cal-status-alert {
+  border-color: var(--danger);
+  border-left-width: 4px;
+  background: var(--danger-soft);
+  font-size: 15px;
+}
+
+.plan-filter-bar + .cal-status,
+.cal-status + .plan-top {
+  margin-top: 14px;
+}
+
+.recipients-table th[scope="row"] {
+  width: 30%;
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .recipients-table th[scope="row"] {
+    white-space: normal;
+  }
+}

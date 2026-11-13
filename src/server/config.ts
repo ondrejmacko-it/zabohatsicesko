@@ -75,6 +75,13 @@ export function attendeeSource(): AttendeeSource {
   return process.env.CALENDAR_ATTENDEES?.trim() === "audience" ? "audience" : "allowlist";
 }
 
+/**
+ * OAuth aplikace v Google konzoli je ve stavu Testing, dokud ji správce nepřepne do produkce. V tomto
+ * stavu platí souhlas ke Kalendáři 7 dní. Po přepnutí se nastaví `GOOGLE_OAUTH_PUBLISHED=1` a Wiki
+ * přestane na vypršení upozorňovat.
+ */
+export const oauthConsentExpiryDays = (): number | null => (process.env.GOOGLE_OAUTH_PUBLISHED?.trim() === "1" ? null : 7);
+
 export type GoogleCalendarConfig = {
   clientId: string;
   clientSecret: string;

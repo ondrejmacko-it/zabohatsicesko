@@ -6,13 +6,16 @@ import type { Executor } from "@/server/db/client";
 import { userIdentities, users } from "@/server/db/schema";
 
 // Přihlášení uživatele Google identitou (OpenID Connect, tok s autorizačním kódem a PKCE).
-// Oddělené od OAuth pro Kalendář: žádá jen `openid email profile`, žádný token se neukládá.
-// Google tu říká jen KDO se přihlásil. Role a skupiny zůstávají v databázi Wiki.
+// Běžně žádá jen `openid email profile` a žádný token neukládá. Google tu říká jen KDO se přihlásil,
+// role a skupiny zůstávají v databázi Wiki.
+// Správce, kterého Wiki z tohoto prohlížeče zná a kterému chybí propojení Kalendáře, dostane na téže
+// obrazovce Googlu i žádost o zápis událostí. Obnovovací token pak callback předá modulu Kalendáře.
 
 const AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const JWKS_URL = "https://www.googleapis.com/oauth2/v3/certs";
 const ISSUERS = ["https://accounts.google.com", "accounts.google.com"];
+const CALENDAR_SCOPE = "https://www.googleapis.com/auth/calendar.events";
 const PROVIDER = "google" as const;
 const TIMEOUT_MS = 10_000;
 const STATE_TTL_SEC = 10 * 60;
@@ -34,22 +37,36 @@ const safeEqual = (a: string, b: string) => {
 export type LoginStart = { url: string; cookieValue: string };
 
 /**
+ * Co má přihlášení udělat s Kalendářem:
+ * – `ask`: požádat o oprávnění ke Kalendáři na stejné obrazovce (známý správce bez propojení),
+ * – `later`: přihlásit a případné propojení nabídnout druhým automatickým přesměrováním,
+ * – `skip`: jen přihlásit (uživatel souhlas ke Kalendáři odmítl a chce dovnitř bez něj).
+ */
+export type CalendarIntent = "ask" | "later" | "skip";
+export type LoginOptions = { calendar?: CalendarIntent; loginHint?: string };
+
+/**
  * Připraví přesměrování na Google. Stav, nonce a PKCE ověřovač zůstávají v podepsané HttpOnly cookie
  * téhož prohlížeče, takže cizí odpověď od Googlu nejde podstrčit (login CSRF) ani přehrát.
  */
-export function beginLogin(cfg: GoogleLoginConfig, nowSec = Math.floor(Date.now() / 1000)): LoginStart {
+export function beginLogin(cfg: GoogleLoginConfig, nowSec = Math.floor(Date.now() / 1000), options: LoginOptions = {}): LoginStart {
+  const calendar: CalendarIntent = options.calendar ?? "later";
   const state = randomBytes(24).toString("base64url");
   const nonce = randomBytes(24).toString("base64url");
   const verifier = randomBytes(48).toString("base64url");
-  const data = Buffer.from(JSON.stringify({ state, nonce, verifier, exp: nowSec + STATE_TTL_SEC })).toString("base64url");
+  const data = Buffer.from(JSON.stringify({ state, nonce, verifier, calendar, exp: nowSec + STATE_TTL_SEC })).toString("base64url");
+  const withCalendar = calendar === "ask";
   const url = new URL(AUTH_URL);
   url.search = new URLSearchParams({
     client_id: cfg.clientId,
     redirect_uri: cfg.redirectUri,
     response_type: "code",
-    scope: "openid email profile",
-    // Vždy nabídnout výběr účtu, aby se tester nepřihlásil omylem jiným účtem z prohlížeče.
-    prompt: "select_account",
+    scope: withCalendar ? `openid email profile ${CALENDAR_SCOPE}` : "openid email profile",
+    // Běžně vždy nabídnout výběr účtu, aby se tester nepřihlásil omylem jiným účtem z prohlížeče.
+    // Se žádostí o Kalendář je účet známý: stačí souhlas, který je nutný pro obnovovací token.
+    prompt: withCalendar ? "consent" : "select_account",
+    ...(withCalendar ? { access_type: "offline", include_granted_scopes: "false" } : {}),
+    ...(withCalendar && options.loginHint ? { login_hint: options.loginHint } : {}),
     state,
     nonce,
     code_challenge: createHash("sha256").update(verifier).digest("base64url"),
@@ -63,7 +80,7 @@ export function verifyLoginState(
   cookieValue: string | undefined,
   state: string | null,
   nowSec = Math.floor(Date.now() / 1000),
-): { nonce: string; verifier: string } | null {
+): { nonce: string; verifier: string; calendar: CalendarIntent } | null {
   if (!cookieValue || !state) return null;
   const [data, signature] = cookieValue.split(".");
   if (!data || !signature || !safeEqual(signState(data), signature)) return null;
@@ -71,7 +88,8 @@ export function verifyLoginState(
     const payload = JSON.parse(Buffer.from(data, "base64url").toString("utf8")) as Record<string, unknown>;
     if (typeof payload.state !== "string" || typeof payload.nonce !== "string" || typeof payload.verifier !== "string") return null;
     if (typeof payload.exp !== "number" || payload.exp <= nowSec) return null;
-    return safeEqual(payload.state, state) ? { nonce: payload.nonce, verifier: payload.verifier } : null;
+    const calendar: CalendarIntent = payload.calendar === "ask" || payload.calendar === "skip" ? payload.calendar : "later";
+    return safeEqual(payload.state, state) ? { nonce: payload.nonce, verifier: payload.verifier, calendar } : null;
   } catch {
     return null;
   }
@@ -174,11 +192,17 @@ export async function verifyIdToken(
 // ——— Dokončení přihlášení ———
 
 export type LoginFailure = "exchange_failed" | "invalid_token" | "not_allowed" | "account_conflict" | "requests_full";
-export type LoginResult =
+/**
+ * Oprávnění ke Kalendáři, které Google vrátil spolu s přihlášením. Callback ho buď uloží (přihlásil se
+ * správce), nebo hned zneplatní. `refreshToken` nikdy neopouští server a nezapisuje se do logu.
+ */
+export type CalendarGrant = { refreshToken: string; scopes: string; accountEmail: string };
+export type LoginResult = (
   | { ok: true; userId: string }
   | { ok: false; reason: LoginFailure }
   /** Účet čeká, až mu správce přidělí roli. Session nevznikne. */
-  | { ok: false; reason: "pending"; userId: string; created: boolean };
+  | { ok: false; reason: "pending"; userId: string; created: boolean }
+) & { grant?: CalendarGrant };
 
 /** Kolik nevyřízených žádostí smí čekat najednou. Brání zaplnění databáze libovolnými účty Google. */
 export const MAX_PENDING_REQUESTS = 20;
@@ -198,13 +222,16 @@ export async function completeLogin(
   fetchImpl: FetchLike = fetch,
   nowSec = Math.floor(Date.now() / 1000),
 ): Promise<LoginResult> {
+  let grant: CalendarGrant | undefined;
   const fail = (reason: LoginFailure, code: string = reason): LoginResult => {
     // Do logu jde jen kód důvodu. Adresa ani `sub` neúspěšného pokusu se nezapisují.
     logError("google.login", code);
-    return { ok: false, reason };
+    return { ok: false, reason, grant };
   };
 
   let idToken: string | undefined;
+  let refreshToken: string | undefined;
+  let scopes = "";
   try {
     const response = await fetchImpl(TOKEN_URL, {
       method: "POST",
@@ -219,9 +246,11 @@ export async function completeLogin(
       }).toString(),
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
-    const body = (await response.json().catch(() => ({}))) as { id_token?: unknown };
+    const body = (await response.json().catch(() => ({}))) as { id_token?: unknown; refresh_token?: unknown; scope?: unknown };
     if (response.status !== 200 || typeof body.id_token !== "string") return fail("exchange_failed", `http_${response.status}`);
     idToken = body.id_token;
+    if (typeof body.refresh_token === "string") refreshToken = body.refresh_token;
+    if (typeof body.scope === "string") scopes = body.scope;
   } catch {
     return fail("exchange_failed", "unavailable");
   }
@@ -234,6 +263,8 @@ export async function completeLogin(
   }
   if (!verified.ok) return fail("invalid_token", verified.problem);
   const { sub, email, name } = verified.identity;
+  // Token patří ověřenému účtu. Od této chvíle ho callback musí uložit, nebo zneplatnit.
+  if (refreshToken) grant = { refreshToken, scopes, accountEmail: email };
 
   const identityWhere = and(eq(userIdentities.provider, PROVIDER), eq(userIdentities.subject, sub));
   const [existing] = await db.select({ userId: userIdentities.userId }).from(userIdentities).where(identityWhere).limit(1);
@@ -262,8 +293,8 @@ export async function completeLogin(
     .limit(1);
   if (!user || user.orgId !== config.orgId || user.status === "disabled") return fail("not_allowed");
   await db.update(userIdentities).set({ email, lastLoginAt: new Date() }).where(identityWhere);
-  if (user.status === "pending") return { ok: false, reason: "pending", userId, created: !existing };
-  return { ok: true, userId };
+  if (user.status === "pending") return { ok: false, reason: "pending", userId, created: !existing, grant };
+  return { ok: true, userId, grant };
 }
 
 /**
