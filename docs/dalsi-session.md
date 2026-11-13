@@ -8,17 +8,26 @@ Pokračuj na demu modulu Vzdělávání. Nečti znovu celé zadání ani celý k
 `docs/predani.md`, `docs/google-kalendar.md` a `docs/google-prihlaseni.md`, pravidla v `CLAUDE.md`.
 Uživateli tykej, piš přátelsky. Větší změny nejdřív navrhni, nejasnosti se ptej.
 
-## Stav 13. 11. 2026 večer (větev `ccr-8554df8b-jabz1f`, jeden PR do `main`)
+## Stav 13. 11. 2026 večer (větev `ccr-8554df8b-jabz1f`, PR #12 do `main`)
 
-- Větev spojuje draft #10 (`oprava/bezpecne-zverejneni-akci`) a #11 (`ccr-abd7d882-k08f42`). Oba vznikly
-  souběžně z `main` a kolidovaly v `globals.css` a `EventDialog.tsx`. **Pokračuj jen na této větvi**, #10 a #11
-  uživatel zavře.
-- Řešení konfliktů: dialog akce si nechává vlastní ruční odeslání z #10 (drží hodnoty a navíc ověřuje dopad
-  změny), `submitKeepingValues` z #11 používají ostatní formuláře včetně `/sprava`. V CSS platí obě sady pravidel.
-- Ověřeno po spojení: lint, typy, 102 ze 102 testů, build. Prohlížeč (Chromium, PGlite): organizátor, vedoucí a
-  účastník na 1280, 820 a 390 px, všechny stránky modulu, `/sprava` a detail akce bez vodorovného posunu.
-  Přidat akci na 390 px: neúspěšné zveřejnění nechá Typ i Publikum, pole mají 16 px.
-- **Neověřeno:** skutečné Safari, živý test proti Googlu, úkol „Nahraj audio z dnešní akce“ v prohlížeči.
+- PR #12 spojuje #10 a #11 (ty uživatel zavře) a **dokončuje zbylé body 3 a 4 šestibodového zadání**:
+  - pruh režimů ukázky je i na stránce Integrace (`ModeStrip`), na telefonu tam zůstává vidět,
+  - dialog akce: Typ, termín, Téma, Vede, Publikum nahoře, Název v plánu a Kontrolor zápisu ve sbaleném
+    „Další nastavení“ (otevře se samo, když jsou vyplněné jinak než výchozím způsobem nebo při neplatném poli),
+  - „Stáhnout zveřejněný zápis“ (`withdrawMinutes`): publikum zápis nevidí, vedoucí ho má zpět jako návrh,
+    z pozvánky zmizí odkaz,
+  - stín původního termínu v harmonogramu organizátora (`EventCard.movedFrom`),
+  - „Koho se zrušení dotkne“ v dialogu zrušení (`cancelImpact`): skupina ve Wiki a hosté pozvánky,
+  - věta „co udělat“ pod stavem v detailu akce (`statusAdvice`, jen organizátor),
+  - průvodce měsícem ve třech krocích nad harmonogramem (`monthSteps`: Termíny, Témata a vedoucí, Zveřejnění),
+  - texty z #10 sjednocené na vykání jako zbytek UI.
+- Konflikty #10 a #11: dialog akce má ruční odeslání z #10, ostatní formuláře `submitKeepingValues` z #11.
+- Ověřeno: lint, typy, 108 ze 108 testů (nový `tests/dokonceni.test.ts`), build. Prohlížeč (Chromium, PGlite):
+  všechny stránky za organizátora, vedoucího a účastníka na 1280, 820 a 390 px bez vodorovného posunu, nové
+  funkce proklikané (dialog, zrušení, stín, průvodce, zveřejnění a stažení zápisu, pohled účastníka).
+- **Neověřeno:** skutečné Safari, živý test proti Googlu (stažení zápisu a storno jen v simulaci), úkol
+  „Nahrajte audio z dnešní akce“ v prohlížeči.
+- Další krok po sloučení #12: živý test (bod 6 níže). Větev pro něj potřebuje `APP_URL` a redirect URI.
 - `next dev` vytváří v kořeni soubor `AGENTS.md`. Do repa nepatří, před commitem ho smaž.
 
 ## Stav 13. 11. 2026 odpoledne (původně draft PR #10)
@@ -40,17 +49,8 @@ průchod v prohlížeči nad PGlite: organizátor a kolega mimo publikum na desk
 - **Bod 4 částečně:** „Zahodit návrh změny“ jedním klikem (`discardDraftChanges`, Kalendář se nemění),
   vysvětlení FP, RM a Tým A u publika (`GROUP_HINTS`), úkol vedoucího „Nahraj audio z dnešní akce“.
 
-**Zbývá (v tomto pořadí):**
+**Zbývá:** body 3 a 4 jsou hotové (viz výše), zbývá živý test.
 
-1. Bod 3: pruh režimů (ukázkový čas, Kalendář, přepis) je na mobilu jen schovaný, **na stránku Integrace se
-   ještě nepřidal**. Pořadí polí v dialogu akce (dopředu typ, termín, téma, vedoucí, publikum, ostatní do
-   „Další nastavení“; pozor na `required` pole ve sbaleném `<details>`). Výslovné stažení zveřejněného zápisu
-   neexistuje, zatím platí jen „do schválení náhrady“.
-2. Bod 4: stín původního termínu pro organizátora, přehled dopadu (kdo dostane storno) v dialogu zrušení,
-   věta „co má člověk udělat“ u stavů, průvodce měsícem ve třech krocích. Formuláře na `/sprava` už hodnoty
-   drží (`submitKeepingValues`).
-3. Bod 5: úplný průchod rolemi po dodělání bodů výše. Úkol „Nahraj audio z dnešní akce“ nejde v ukázkovém čase
-   (12. 11. 9:00) vidět, dnešní akce ještě neskončila. Ověřen jen typy a kódem, ne v prohlížeči.
 4. Bod 6, živý test: nic z něj neproběhlo. Větev `oprava/bezpecne-zverejneni-akci` ani `ccr-8554df8b-jabz1f` nemá vlastní `APP_URL` ani
    redirect URI v Googlu. Uživatel zvažuje test rovnou na Production (deploy a merge dělá sám). Připravit
    přesný postup. Nahlášená chyba přihlášení druhým Google účtem a `/sprava` z 13. 11. pořád neověřena,

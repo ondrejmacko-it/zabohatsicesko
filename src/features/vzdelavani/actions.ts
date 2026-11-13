@@ -24,13 +24,14 @@ import {
   updateTemplate,
   type EventInput,
 } from "@/server/services/events";
-import { ImpactNotConfirmed, assertImpactConfirmed, changeImpact, type ChangeImpact } from "@/server/services/impact";
+import { ImpactNotConfirmed, assertImpactConfirmed, cancelImpact, changeImpact, type CancelImpact, type ChangeImpact } from "@/server/services/impact";
 import {
   processTranscriptionJob,
   publishMinutes,
   retryTranscription,
   updateMinutes,
   uploadRecording,
+  withdrawMinutes,
 } from "@/server/services/recordings";
 import { proposeTopic, setInterest, setTopicArchived, topicIdByName, updateTopic } from "@/server/services/topics";
 import { SIMULATION_SWITCHES, writeSwitch } from "@/server/settings";
@@ -157,6 +158,11 @@ export async function cancelEventAction(_prev: ActionResult | null, formData: Fo
     after(() => syncEvent(data.id));
     return { ok: true, message: "Akce je zrušená." };
   });
+}
+
+/** Koho se zrušení dotkne. Dialog zrušení to ukáže ještě před potvrzením. */
+export async function previewCancelAction(id: string): Promise<ActionResult & { impact?: CancelImpact }> {
+  return run(async (user) => ({ ok: true, impact: await cancelImpact(user, z.string().max(80).parse(id)) }));
 }
 
 export async function deleteDraftAction(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
@@ -297,6 +303,15 @@ export async function saveMinutesAction(_prev: ActionResult | null, formData: Fo
       after(() => syncEvent(data.id));
     }
     return { ok: true, message: data.intent === "publish" ? "Zápis je zveřejněný pro publikum akce." : "Úpravy zápisu jsou uložené." };
+  });
+}
+
+export async function withdrawMinutesAction(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
+  return run(async (user) => {
+    const { id } = eventIdSchema.parse(formObject(formData));
+    await withdrawMinutes(user, id);
+    after(() => syncEvent(id));
+    return { ok: true, message: "Zápis je stažený. Kolegové ho nevidí, dokud ho znovu nezveřejníte." };
   });
 }
 

@@ -9,7 +9,7 @@ import { EventDialog } from "@/features/vzdelavani/components/EventDialog";
 import { EventMenu } from "@/features/vzdelavani/components/EventMenu";
 import { RecordingSection } from "@/features/vzdelavani/components/RecordingSection";
 import { SyncPanelView } from "@/features/vzdelavani/components/SyncPanelView";
-import { badgeClass, primaryStatus } from "@/features/vzdelavani/status";
+import { badgeClass, primaryStatus, statusAdvice } from "@/features/vzdelavani/status";
 import { EXTRAORDINARY_TYPES, GROUP_LABELS, PLAN_STATUS_LABELS, TYPE_LABELS } from "@/lib/labels";
 import { safeDecode } from "@/lib/params";
 import { formatDate, formatEventTime, monthOf, toDateKey } from "@/lib/time";
@@ -69,6 +69,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
             {status && status.label !== PLAN_STATUS_LABELS[card.planStatus] && <span className={badgeClass(status.tone)}>{status.label}</span>}
             {card.past && card.planStatus === "published" && <span className="badge">Proběhlo</span>}
           </div>
+          {organizer && statusAdvice(card) && <p className="small muted status-advice">{statusAdvice(card)}</p>}
         </div>
         <div className="row">
           {organizer && detail.form && card.planStatus !== "cancelled" && (
@@ -112,7 +113,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
 
       {card.unpublishedChanges && (
         <div className="notice spread">
-          <p>Máš uložený návrh změny. Kolegové a Kalendář zatím vidí zveřejněnou verzi. Návrh zveřejni přes Upravit, nebo ho zahoď.</p>
+          <p>Máte uložený návrh změny. Kolegové a Kalendář zatím vidí zveřejněnou verzi. Návrh zveřejněte přes Upravit, nebo ho zahoďte.</p>
           <ActionForm action={discardChangesAction} fields={{ id: card.id, revision: String(detail.revision) }} label="Zahodit návrh změny" pendingLabel="Zahazuji…" small />
         </div>
       )}

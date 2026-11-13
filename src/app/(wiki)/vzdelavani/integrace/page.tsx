@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ActionForm } from "@/components/ActionForm";
 import { disconnectCalendarAction, resetDemoAction, setSimulationAction } from "@/features/vzdelavani/actions";
+import { ModeStrip } from "@/features/vzdelavani/components/ModeStrip";
 import { requireUser } from "@/server/auth/session";
 import { connectionStatus } from "@/server/calendar/google-auth";
 import {
@@ -51,6 +52,8 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
     <>
       <section className="section">
         <h2>Režimy integrací</h2>
+        {/* Na telefonu se pruh režimů v záhlaví modulu skrývá, tady je vidět vždy. */}
+        <ModeStrip className="status-strip mode-strip" />
         <table className="table">
           <thead>
             <tr>

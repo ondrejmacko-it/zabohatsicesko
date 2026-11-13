@@ -3,7 +3,7 @@ import { AutoRefresh } from "@/components/AutoRefresh";
 import { ERROR_LABELS, RECORDING_STATE_LABELS, TEMPLATE_LABELS } from "@/lib/labels";
 import type { MinutesContent, RecordingState } from "@/lib/types";
 import type { RecordingPanel } from "@/server/services/recordings";
-import { retryTranscriptionAction } from "../actions";
+import { retryTranscriptionAction, withdrawMinutesAction } from "../actions";
 import { MinutesEditor } from "./MinutesEditor";
 import { UploadForm } from "./UploadForm";
 
@@ -61,6 +61,20 @@ export function RecordingSection({ eventId, eventLabel, panel }: { eventId: stri
   }
 
   const { state, recording, minutes, errorCode } = panel;
+  const withdraw = (
+    <ActionForm
+      action={withdrawMinutesAction}
+      fields={{ id: eventId }}
+      label="Stáhnout zveřejněný zápis"
+      pendingLabel="Stahuji…"
+      confirm={{
+        title: "Stáhnout zveřejněný zápis",
+        text: "Kolegové zápis přestanou vidět a z pozvánky v Kalendáři zmizí odkaz na něj. Zápis zůstane u vás jako návrh, který můžete opravit a zveřejnit znovu.",
+        confirmLabel: "Stáhnout zápis",
+      }}
+      small
+    />
+  );
   return (
     <section className="section" id="nahravka" aria-labelledby="nahravka-title">
       <AutoRefresh active={state === "processing"} />
@@ -102,6 +116,12 @@ export function RecordingSection({ eventId, eventLabel, panel }: { eventId: stri
           )}
           {minutes.status === "draft" ? (
             <>
+              {panel.publicMinutes && (
+                <div className="notice spread">
+                  <p>Kolegové zatím vidí zápis z původní nahrávky, dokud nezveřejníte tento.</p>
+                  {withdraw}
+                </div>
+              )}
               <p className="notice">
                 Návrh zápisu vytvořený z přepisu. Doporučená šablona: {TEMPLATE_LABELS[minutes.detectedTemplate]}.
                 Zkontrolujte jej, opravte a zveřejněte.
@@ -110,7 +130,10 @@ export function RecordingSection({ eventId, eventLabel, panel }: { eventId: stri
             </>
           ) : (
             <>
-              <p className="notice notice-ok">Zápis je zveřejněný pro publikum akce.</p>
+              <div className="notice notice-ok spread">
+                <p>Zápis je zveřejněný pro publikum akce.</p>
+                {withdraw}
+              </div>
               <MinutesView content={minutes.content} />
             </>
           )}

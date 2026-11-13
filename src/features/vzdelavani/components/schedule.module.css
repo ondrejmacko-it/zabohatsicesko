@@ -377,3 +377,15 @@
 .event.regular:hover {
   border-color: var(--line-strong);
 }
+
+/* Stín zveřejněného termínu, který rozpracovaný návrh přesouvá jinam. */
+.ghost {
+  border: 1px dotted var(--line-strong);
+  background: transparent;
+  color: var(--muted);
+}
+
+.ghost .title {
+  font-weight: 500;
+  text-decoration: line-through;
+}

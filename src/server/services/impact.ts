@@ -146,3 +146,37 @@ export async function assertImpactConfirmed(eventId: string, input: EventInput, 
 }
 
 export class ImpactNotConfirmed extends Error {}
+
+export type CancelImpact = { audience: string; guests: string[]; notes: string[] };
+
+/** Koho se zrušení dotkne: skupina, která akci vidí ve Wiki, a hosté pozvánky, kterým Kalendář pošle storno. */
+export async function cancelImpact(viewer: Viewer, eventId: string): Promise<CancelImpact> {
+  if (!isOrganizer(viewer)) throw new DomainError("forbidden");
+  const db = await getDb();
+  const row = await loadEventRow(db, eventId);
+  if (!row) throw new DomainError("not_found");
+  const published = row.published;
+  if (!published || published.status === "cancelled") throw new DomainError("invalid_state");
+
+  const impact: CancelImpact = { audience: GROUP_LABELS[published.audience], guests: [], notes: [] };
+  if (row.revision !== row.publishedRevision) {
+    impact.notes.push("Rozpracovaný návrh změny se zahodí. Zruší se zveřejněná verze akce.");
+  }
+  const [link] = await db.select().from(calendarLinks).where(eq(calendarLinks.eventId, eventId)).limit(1);
+  if (!link?.externalEventId) {
+    impact.notes.push("Akce nemá pozvánku v Kalendáři, nikomu proto nepřijde zpráva. Zrušení se projeví jen ve Wiki.");
+    return impact;
+  }
+  if (new Date(published.endsAt) <= now()) impact.notes.push("Akce už proběhla. Zrušení se přesto zapíše do Wiki i do Kalendáře.");
+  if (calendarMode() === "simulation") impact.notes.push("Kalendář běží v simulaci: hosté jsou fiktivní role a žádná skutečná zpráva neodejde.");
+  try {
+    const external = await calendarProvider(db).get(link.calendarId, link.externalEventId);
+    if (!external) throw new CalendarError("calendar_missing", false);
+    impact.guests = external.attendees.map((a) => a.name || a.email);
+    if (!impact.guests.length) impact.notes.push("Pozvánka nemá žádné hosty, zpráva o zrušení nikomu nepřijde.");
+  } catch (error) {
+    if (!(error instanceof CalendarError)) throw error;
+    impact.notes.push("Hosty se z Kalendáře nepodařilo načíst. Zprávu o zrušení dostanou všichni, kdo jsou v pozvánce.");
+  }
+  return impact;
+}

@@ -38,6 +38,8 @@ export type EventCard = {
   past: boolean;
   /** Jen pro organizátora. „unlinked“ = zveřejněná akce zatím bez vazby na pozvánku. */
   syncStatus: SyncStatus | "unlinked" | null;
+  /** Jen pro organizátora: zveřejněný termín, pokud ho rozpracovaný návrh přesouvá jinam. */
+  movedFrom: { startsAt: string; endsAt: string; allDay: boolean } | null;
 };
 
 async function userNames(db: Executor): Promise<Map<string, string>> {
@@ -67,6 +69,8 @@ function toCard(
   const isPublic = row.published !== null;
   let syncStatus: EventCard["syncStatus"] = null;
   if (organizer && isPublic && view.type !== "holiday") syncStatus = link?.syncStatus ?? "unlinked";
+  const last = row.published;
+  const moved = organizer && last !== null && row.status !== "cancelled" && (last.startsAt !== view.startsAt || last.endsAt !== view.endsAt);
 
   return {
     id: row.id,
@@ -83,6 +87,7 @@ function toCard(
     extraordinary: view.type !== "holiday" && (EXTRAORDINARY_TYPES.has(view.type) || !slotDays.has(weekday)),
     past: new Date(view.endsAt) <= now(),
     syncStatus,
+    movedFrom: moved ? { startsAt: last.startsAt, endsAt: last.endsAt, allDay: last.allDay } : null,
   };
 }
 

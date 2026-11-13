@@ -67,6 +67,8 @@ function EventForm({ mode, id, revision, initial, published, people, topics, rep
   const [values, setValues] = useState(() => (replace ? replacementOf(initial) : initial));
   const [multiDay, setMultiDay] = useState(initial.endDate !== null);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
+  // Méně časté údaje jsou sbalené. Otevřené jsou, když je organizátor už vyplnil jinak než výchozím způsobem.
+  const [moreOpen, setMoreOpen] = useState(initial.reviewerId !== "" || initial.label !== TYPE_LABELS[initial.type]);
   const [impact, setImpact] = useState<{ key: string; data: ChangeImpact } | null>(null);
   const [previewError, setPreviewError] = useState<ActionResult | null>(null);
   const [checking, setChecking] = useState(false);
@@ -127,6 +129,13 @@ function EventForm({ mode, id, revision, initial, published, people, topics, rep
       audience: mode === "create" ? defaultAudience(type) : v.audience,
     }));
 
+  const labelField = (
+    <label className="field">
+      <span className="field-label">Název v plánu</span>
+      <input className="input" name="label" value={values.label} onChange={(e) => set("label", e.target.value)} required minLength={2} maxLength={80} />
+    </label>
+  );
+
   const requestClose = () => (dirty && !pending ? setConfirmDiscard(true) : onClose());
 
   return (
@@ -144,7 +153,7 @@ function EventForm({ mode, id, revision, initial, published, people, topics, rep
           </div>
         </div>
       ) : (
-        <form onSubmit={submit} className="stack">
+        <form onSubmit={submit} onInvalidCapture={() => setMoreOpen(true)} className="stack">
           {confirmed && <input type="hidden" name="confirmToken" value={confirmed.token} />}
           {id && <input type="hidden" name="id" value={id} />}
           {revision !== undefined && <input type="hidden" name="revision" value={revision} />}
@@ -166,10 +175,7 @@ function EventForm({ mode, id, revision, initial, published, people, topics, rep
                 ))}
               </select>
             </label>
-            <label className="field">
-              <span className="field-label">Název v plánu</span>
-              <input className="input" name="label" value={values.label} onChange={(e) => set("label", e.target.value)} required minLength={2} maxLength={80} />
-            </label>
+            {isHoliday && labelField}
             <label className="field">
               <span className="field-label">Datum</span>
               <input className="input" type="date" name="date" value={values.date} onChange={(e) => set("date", e.target.value)} required />
@@ -251,17 +257,6 @@ function EventForm({ mode, id, revision, initial, published, people, topics, rep
                     ))}
                   </select>
                 </label>
-                <label className="field">
-                  <span className="field-label">Kontrolor zápisu</span>
-                  <select className="select" name="reviewerId" value={values.reviewerId} onChange={(e) => set("reviewerId", e.target.value)}>
-                    <option value="">Jen vedoucí</option>
-                    {people.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
               </>
             )}
             {isHoliday && (
@@ -283,6 +278,26 @@ function EventForm({ mode, id, revision, initial, published, people, topics, rep
               <span className="field-hint">{GROUP_HINTS[values.audience]}</span>
             </label>
           </div>
+
+          {!isHoliday && (
+            <details className="more-settings" open={moreOpen} onToggle={(e) => setMoreOpen(e.currentTarget.open)}>
+              <summary>Další nastavení: název v plánu a kontrolor zápisu</summary>
+              <div className="form-grid">
+                {labelField}
+                <label className="field">
+              <span className="field-label">Kontrolor zápisu</span>
+              <select className="select" name="reviewerId" value={values.reviewerId} onChange={(e) => set("reviewerId", e.target.value)}>
+                <option value="">Jen vedoucí</option>
+                {people.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+              </div>
+            </details>
+          )}
 
           {incomplete && (
             <label className="check">
