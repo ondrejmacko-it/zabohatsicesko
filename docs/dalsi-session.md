@@ -26,6 +26,14 @@ zrušení potvrzení po další úpravě. **Neověřeno:** poslední krok „Pot
 Automat viděl tlačítko zablokované (nejspíš právě probíhající uložení, data se podle všeho uložila), je
 potřeba to projít ručně a případně opravit stav `pending` v `EventDialog`. Živě proti Googlu neověřeno nic.
 
+**Nahlášená chyba 13. 11. (neověřeno, první úkol příští relace):** přidání dalšího Google účtu nefunguje a
+po pokusu „nefunguje správa“ na `/sprava`. Změny této větve se přihlášení ani správy nedotkly. Hypotézy k ověření
+v tomto pořadí: (1) preview větve `oprava/bezpecne-zverejneni-akci` nemá vlastní `APP_URL` ani redirect URI
+v Googlu, přihlášení proto končí na jiném preview se starším kódem nad stejnou databází; (2) nový účet není
+v `GOOGLE_LOGIN_ACCOUNTS`; (3) formuláře na `/sprava` (`AccessForms.tsx`) používají `<form action>` a po chybě
+se jim vrací výběry stejně jako dřív dialogu akce; (4) stav nového účtu v Neonu (`users`, `user_identities`).
+Od uživatele zjistit: adresu, na které to zkoušel, přesný text chyby a co přesně na `/sprava` nešlo.
+
 Další kroky v tomto pořadí:
 1. Ručně ověřit potvrzení dopadu v prohlížeči (viz výše). Organizátor v listopadu nevidí původní termín akce,
    kterou má v návrhu přesunutou jinam: zvážit „stín“ původního termínu.
