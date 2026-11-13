@@ -23,6 +23,9 @@ ani o pixel mimo osu, vše je jasné na první pohled.
    Ověř se mnou, že zveřejněné budoucí akce mají v Kalendáři hosty podle skupin a že nový účet ve skupině
    dostane pozvánky sám. Návrhy se do Kalendáře neposílají, dokud je nezveřejním: navrhni hromadné zveřejnění
    měsíce (zeptej se, posílá e-maily). Po sloučení PR přenes proměnnou na všechny preview (zeptej se).
+   Pozor: ze 6 zveřejněných budoucích akcí mají vazbu na Kalendář jen 2. Zbylé 4 jsou ze seedu se záměrem
+   `pair` (čekají na spárování s existující pozvánkou) a do Kalendáře se samy nezaloží. Zjisti v `sync.ts`
+   a `events.ts` proč, a udělej to tak, aby každá zveřejněná akce bez vazby dostala pozvánku automaticky.
 3. Dialog akce: ukaž skutečné hosty podle vybrané skupiny (`loadCalendarStatus().recipients`) místo testovací
    adresy a nabídni doporučená témata s počtem zájemců.
 4. Dokonči sloučení rolí v textech: hledej „organizátor“ v `src/` (Integrace, `SyncPanelView`, `EventPeek`,
