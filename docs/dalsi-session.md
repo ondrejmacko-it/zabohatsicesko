@@ -8,6 +8,25 @@ Pokračuj na demu modulu Vzdělávání. Nečti znovu celé zadání ani celý k
 `docs/predani.md`, `docs/google-kalendar.md` a `docs/google-prihlaseni.md`, pravidla v `CLAUDE.md`.
 Uživateli tykej, piš přátelsky. Větší změny nejdřív navrhni, nejasnosti se ptej.
 
+## Zadání příští relace (odsouhlaseno 13. 11.)
+
+Pokračuj na větvi `oprava/bezpecne-zverejneni-akci` (draft PR #10). Přihlášení Googlem a `/sprava` teď neřeš,
+přijdou až na konec při živém testu. Pořadí:
+
+1. Ručně ověř v prohlížeči „Potvrdit dopad a zveřejnit“ (RM → FP) a případně oprav stav `pending` v `EventDialog`.
+2. Část 2: „K doplnění“ v harmonogramu, „Nahradit pravidelný termín“, správa témat (Upravit, Archivovat).
+3. Část 3: navigace Přehled · Harmonogram · Zápisy · Témata, Přehled podle role, Domov s Otevřít akci, kratší
+   mobilní záhlaví, pořadí polí v dialogu, stavy termínů, stav zápisu u minulé akce, zachování zveřejněného
+   zápisu při výměně nahrávky.
+4. Odsouhlasené nápady: stín původního termínu pro organizátora, dopad i v dialogu zrušení, „Zahodit návrh
+   změny“, lidské názvy stavů s větou co udělat, průvodce měsícem ve třech krocích, slovníček FP/RM/Tým A
+   u publika, úkol vedoucího „Nahraj audio z dnešní akce“. Formuláře na `/sprava` odeslat ručně jako dialog akce.
+5. Část 4: lint, typy, testy, build, průchod rolemi na desktopu i mobilu, aktualizace PR #10.
+6. Nakonec živý test: `APP_URL` a redirect URI pro aktuální větev, druhý Google účet, `/sprava`. Uživatel
+   zvažuje test rovnou na Production. Produkční deploy a merge dělá uživatel, Claude jen připraví postup.
+
+Šetři kontext: nečti celé soubory, které neměníš, a commituj po každém bodu.
+
 ## Stav 13. 11. 2026 (větev `oprava/bezpecne-zverejneni-akci`, draft PR)
 
 Relace narazila na limit kontextu, proto je hotová **jen část 1 zadání (zveřejňování)**. Části 2 až 4 čekají.
