@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Todo, missingText } from "@/components/Todo";
 import { TYPE_LABELS } from "@/lib/labels";
 import {
   addDays,
@@ -24,8 +25,10 @@ const COLUMNS = [
 
 export type SlotTimes = Record<number, string>;
 
-/** `as` je klíč náhledu „Zobrazit jako“: detail akce se pak otevře ve stejném pohledu jako harmonogram. */
-const href = (card: EventCard, as?: string) => `/vzdelavani/akce/${encodeURIComponent(card.id)}${as ? `?jako=${encodeURIComponent(as)}` : ""}`;
+/** Kam vede klik na akci. Plán posílá odkaz, který otevře náhled v okně a zachová měsíc i filtry. */
+export type CardHref = (card: EventCard) => string;
+const pageHref: CardHref = (card) => `/vzdelavani/akce/${encodeURIComponent(card.id)}`;
+type Linking = { hrefFor?: CardHref; managing?: boolean };
 const dayOf = (card: EventCard) => toDateKey(new Date(card.startsAt));
 
 function byDay(cards: EventCard[]): Map<string, EventCard[]> {
@@ -49,10 +52,10 @@ function ghostsByDay(cards: EventCard[]): Map<string, EventCard[]> {
 }
 
 /** Stín původního termínu: kolegové a Kalendář ho vidí, dokud organizátor přesun nezveřejní. */
-function GhostBlock({ card }: { card: EventCard }) {
+function GhostBlock({ card, hrefFor = pageHref }: { card: EventCard; hrefFor?: CardHref }) {
   const from = card.movedFrom!;
   return (
-    <Link href={href(card)} className={`${styles.event} ${styles.ghost}`}>
+    <Link href={hrefFor(card)} scroll={false} className={`${styles.event} ${styles.ghost}`}>
       <span className={styles.title}>{card.label}</span>
       <span className={styles.line}>{formatEventTime(new Date(from.startsAt), new Date(from.endsAt), from.allDay)}</span>
       <span className={styles.line}>
@@ -62,28 +65,23 @@ function GhostBlock({ card }: { card: EventCard }) {
   );
 }
 
-/** Hodnota, která zatím není doplněná: tečkovaná linka jako v harmonogramu v Numbers. */
-function Missing() {
-  return (
-    <span className={styles.missing}>
-      <span className="visually-hidden">zatím nedoplněno</span>
-    </span>
-  );
-}
-
-function EventBlock({ card, as }: { card: EventCard; as?: string }) {
+function EventBlock({ card, hrefFor = pageHref, managing = false }: { card: EventCard } & Linking) {
   const status = primaryStatus(card);
   const tone = cardTone(card);
   const isHoliday = card.type === "holiday";
   return (
-    <Link href={href(card, as)} className={`${styles.event} ${styles[tone]}`}>
+    <Link href={hrefFor(card)} scroll={false} className={`${styles.event} ${styles[tone]}`}>
       <span className={styles.title}>{card.label}</span>
       {card.planStatus === "cancelled" && <span className={styles.cancelled}>Zrušeno</span>}
       {!isHoliday && card.planStatus !== "cancelled" && (
         <>
           <span className={styles.line}>{formatEventTime(new Date(card.startsAt), new Date(card.endsAt), card.allDay)}</span>
-          <span className={styles.line}>Kdo: {card.leadName ?? <Missing />}</span>
-          <span className={styles.line}>Téma: {card.topicTitle ?? <Missing />}</span>
+          <span className={styles.line}>
+            <span className={styles.key}>Téma</span> {card.topicTitle ?? <Todo>{missingText(managing, "téma")}</Todo>}
+          </span>
+          <span className={styles.line}>
+            <span className={styles.key}>Vede</span> {card.leadName ?? <Todo>{missingText(managing, "vedoucího")}</Todo>}
+          </span>
         </>
       )}
       {status && status.label !== "Zrušeno" && status.label !== "Svátek" && (
@@ -98,14 +96,14 @@ export function ScheduleGrid({
   cards,
   todayKey,
   slotTimes,
-  as,
+  hrefFor = pageHref,
+  managing = false,
 }: {
   monthKey: string;
   cards: EventCard[];
   todayKey: string;
   slotTimes: SlotTimes;
-  as?: string;
-}) {
+} & Linking) {
   const days = byDay(cards);
   const ghosts = ghostsByDay(cards);
   const columnDays = new Set(COLUMNS.map((c) => c.weekday));
@@ -140,7 +138,7 @@ export function ScheduleGrid({
                   <span>{formatRange(monday, addDays(monday, 4))}</span>
                   {current && <span className={styles.weekNow}>tento týden</span>}
                   {offCards.map((card) => (
-                    <Link key={card.id} href={href(card, as)} className={styles.offDay}>
+                    <Link key={card.id} href={hrefFor(card)} scroll={false} className={styles.offDay}>
                       {weekdayShort(dayOf(card))} {formatDayMonth(dayOf(card))} · {card.label}
                       {primaryStatus(card) && <span className="visually-hidden">, {primaryStatus(card)!.label}</span>}
                     </Link>
@@ -157,9 +155,9 @@ export function ScheduleGrid({
                         {day === todayKey && <span className={styles.today}>dnes</span>}
                       </span>
                       {dayCards.map((card) => (
-                        <EventBlock key={card.id} card={card} as={as} />
+                        <EventBlock key={card.id} card={card} hrefFor={hrefFor} managing={managing} />
                       ))}
-                      {inMonth && (ghosts.get(day) ?? []).map((card) => <GhostBlock key={`stin-${card.id}`} card={card} />)}
+                      {inMonth && (ghosts.get(day) ?? []).map((card) => <GhostBlock key={`stin-${card.id}`} card={card} hrefFor={hrefFor} />)}
                     </td>
                   );
                 })}
@@ -186,18 +184,27 @@ export function Legend({ organizer }: { organizer: boolean }) {
       </li>
       {organizer && (
         <li>
-          <span className={`${styles.swatch} ${styles.draft}`} /> návrh, vidí ho jen organizátor
+          <span className={`${styles.swatch} ${styles.draft}`} /> návrh, kolegové ho zatím nevidí
         </li>
       )}
-      <li>
-        <span className={styles.missing} /> zatím nedoplněno
-      </li>
+      {organizer && (
+        <li>
+          <Todo>doplnit…</Todo> údaj, který chybí
+        </li>
+      )}
     </ul>
   );
 }
 
 /** Chronologický seznam po týdnech a dnech. Výchozí pohled na úzkém displeji. */
-export function Agenda({ monthKey, cards, todayKey, emptyText, as }: { monthKey: string; cards: EventCard[]; todayKey: string; emptyText?: string; as?: string }) {
+export function Agenda({
+  monthKey,
+  cards,
+  todayKey,
+  emptyText,
+  hrefFor = pageHref,
+  managing = false,
+}: { monthKey: string; cards: EventCard[]; todayKey: string; emptyText?: string } & Linking) {
   const days = byDay(cards.filter((c) => monthOf(dayOf(c)) === monthKey));
   const ghosts = ghostsByDay(cards);
   const weeks = monthWeeks(monthKey)
@@ -232,7 +239,7 @@ export function Agenda({ monthKey, cards, todayKey, emptyText, as }: { monthKey:
                     const status = primaryStatus(card);
                     return (
                       <li key={card.id}>
-                        <Link href={href(card, as)} className={`${styles.agendaEvent} ${styles[cardTone(card)]}`}>
+                        <Link href={hrefFor(card)} scroll={false} className={`${styles.agendaEvent} ${styles[cardTone(card)]}`}>
                           <span className={styles.agendaTime}>
                             {formatEventTime(new Date(card.startsAt), new Date(card.endsAt), card.allDay)}
                           </span>
@@ -240,7 +247,8 @@ export function Agenda({ monthKey, cards, todayKey, emptyText, as }: { monthKey:
                             <span className={styles.title}>{card.label}</span>
                             {card.type !== "holiday" && (
                               <span className={styles.line}>
-                                {card.topicTitle ?? "Téma zatím nedoplněno"} · {card.leadName ?? "vedoucí zatím nedoplněn"}
+                                {card.topicTitle ?? <Todo>{missingText(managing, "téma")}</Todo>} ·{" "}
+                                {card.leadName ?? <Todo>{missingText(managing, "vedoucího")}</Todo>}
                               </span>
                             )}
                           </span>
@@ -251,7 +259,7 @@ export function Agenda({ monthKey, cards, todayKey, emptyText, as }: { monthKey:
                   })}
                   {(ghosts.get(day) ?? []).map((card) => (
                     <li key={`stin-${card.id}`}>
-                      <GhostBlock card={card} />
+                      <GhostBlock card={card} hrefFor={hrefFor} />
                     </li>
                   ))}
                 </ul>
@@ -268,7 +276,7 @@ export function NextEventCard({ card }: { card: EventCard | null }) {
   if (!card) return <p className="muted">V nejbližších týdnech vás nečeká žádná zveřejněná akce.</p>;
   const day = dayOf(card);
   return (
-    <Link href={href(card)} className="item-card">
+    <Link href={pageHref(card)} className="item-card">
       <p className="eyebrow">
         {TYPE_LABELS[card.type]} · {weekdayShort(day)} {formatDayMonth(day)}
       </p>
@@ -282,7 +290,7 @@ export function NextEventCard({ card }: { card: EventCard | null }) {
 }
 
 /** Několik nejbližších akcí pod sebou: den vlevo, název a čas vpravo. První je nejblíž, proto je zvýrazněná. */
-export function NextEventsList({ cards, todayKey }: { cards: EventCard[]; todayKey: string }) {
+export function NextEventsList({ cards, todayKey, hrefFor = pageHref }: { cards: EventCard[]; todayKey: string; hrefFor?: CardHref }) {
   if (!cards.length) return <p className="muted">V nejbližších týdnech vás nečeká žádná zveřejněná akce.</p>;
   return (
     <ul className="brief-list">
@@ -290,7 +298,7 @@ export function NextEventsList({ cards, todayKey }: { cards: EventCard[]; todayK
         const day = dayOf(card);
         return (
           <li key={card.id}>
-            <Link href={href(card)} className={`brief-row brief-link${index === 0 ? " brief-first" : ""}`}>
+            <Link href={hrefFor(card)} scroll={false} className={`brief-row brief-link${index === 0 ? " brief-first" : ""}`}>
               <span className="brief-date">
                 <span className="brief-weekday">{day === todayKey ? "dnes" : weekdayShort(day)}</span>
                 <span>{formatDayMonth(day)}</span>

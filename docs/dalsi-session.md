@@ -32,6 +32,27 @@ Na `main` nepushuj, merge dělám já přes PR. Respektuj limit kontextu.
 
 ---
 
+## Stav 13. 11. 2026 v noci (větev `claude/festive-shannon-s7wa4o`, vychází z `main` po PR #15)
+
+- `main` obsahuje PR #1 až #15 (včetně obsahu PR #14). Tato větev přidává připomínky uživatele k přehlednosti:
+  - **Náhled akce v okně nad Plánem** (`EventPeek`, `RouteModal`, parametr `?akce=<id>`): stav v barevném pruhu,
+    Kdy, Téma, Vede, Pro koho, dole „Otevřít celý detail“, Další možnosti a Upravit. Měsíc, filtry i posun stránky
+    zůstávají. Celá stránka `/vzdelavani/akce/<id>` funguje dál (odkazy z pozvánek a Zápisů).
+  - **Chybějící údaj má v celé Wiki jeden styl** (`Todo`, třída `.todo`: menší, kurzívou, okrově). Organizátor čte
+    „doplnit téma“, ostatní „zatím neurčeno“. Tečkovaná linka zmizela. Zásada uživatele: hlavní údaje a akce mají
+    vynikat, vedlejší texty být menší a tlumené (`.hint`). Držet ji i u dalších úprav.
+  - **Návrhy okrově** s pruhem vlevo (`--draft`), štítek „Návrh“. Popisky „Téma“ a „Vede“ v kartách malé a tlumené.
+  - **Zarovnání:** šipky měsíce, přepínač Měsíc a Seznam a „Zrušit filtry“ mají stejnou výšku jako sousední prvky.
+- Ověřeno: lint, typy, testy, build. Chromium nad PGlite za organizátora na 1280 px: otevření okna, Upravit nad
+  oknem, zavření bez posunu stránky. **Neověřeno:** 390 px, ostatní role, náhled „Zobrazit jako“ v okně, Safari.
+- **Další krok (odsouhlaseno):** stejné okno u zápisu ze stránky Zápisy a u úprav uživatele ve Správě. Potom
+  projít zbylé stránky podle zásady výše (detail akce, Správa, Integrace).
+- **Živý test pořád neproběhl.** Větev má na Vercelu vlastní `APP_URL`
+  (`https://zbc-vzdelavani-demo-git-claude-festive-shannon-s7wa4o-maci.vercel.app`), uživatel má v Google konzoli
+  přidat její dvě přesměrovací adresy. Přihlášení z preview bez vlastní `APP_URL` vrací na starou větev
+  `ccr-2d4283fa-slno9d` (společná `APP_URL`). Před `CALENDAR_ATTENDEES=audience` potvrdit účty ve skupinách.
+- Lokální průchod: na `/vstup` vybrat `label.persona` a odeslat, po přihlášení čekat na změnu adresy.
+
 ## Stav 13. 11. 2026 pozdě večer (větev `claude/festive-shannon-s7wa4o`, vychází z větve PR #14)
 
 - PR #14 (`claude/focused-dirac-gphy4f`) je pořád draft a nesloučený. Tato větev na něj navazuje:

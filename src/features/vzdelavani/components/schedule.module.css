@@ -159,7 +159,7 @@
 }
 
 .line {
-  color: var(--ink-soft);
+  color: var(--ink);
 }
 
 .cancelled {
@@ -188,17 +188,29 @@
   font-weight: 500;
 }
 
+/* Návrh: okrové podbarvení a pruh vlevo. Zveřejněná akce je bílá, rozdíl je vidět na první pohled. */
 .draft {
-  border: 1px dashed var(--line-strong);
-  background: #fff;
+  border: 1px solid var(--draft-line);
+  border-left: 4px solid var(--ochre);
+  background: var(--draft);
 }
 
-.missing {
-  display: inline-block;
-  width: 64px;
-  height: 0.9em;
-  border-bottom: 2px dotted var(--ochre);
-  vertical-align: baseline;
+.event.draft:hover,
+.agendaEvent.draft:hover {
+  border-color: var(--ochre);
+}
+
+.swatch.draft {
+  border-left-width: 4px;
+}
+
+/* Popisek údaje je vedlejší, hodnota hlavní. */
+.key {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .legend {
@@ -224,10 +236,6 @@
   height: 14px;
   border: 1px solid var(--line-strong);
   border-radius: 3px;
-}
-
-.legend .missing {
-  width: 22px;
 }
 
 /* ——— Agenda ——— */

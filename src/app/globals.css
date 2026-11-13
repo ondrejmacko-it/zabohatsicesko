@@ -14,6 +14,9 @@
   --ochre: #9d6219;
   --ochre-dark: #7a4a12;
   --ochre-soft: #f6eee3;
+  --draft: #fcf3df;
+  --draft-strong: #f1dcb4;
+  --draft-line: #e0c188;
   --beige: #f4f1ee;
   --band: #faf8f5;
   --beige-strong: #e2dbd5;
@@ -1625,4 +1628,123 @@ a.brief-link:hover {
 .form-main > legend {
   padding: 0 6px;
   font-weight: 650;
+}
+
+/* ——— Chybějící údaj: v celé Wiki stejně, menší, kurzívou a okrově, aby se nepletl se skutečnou hodnotou ——— */
+.todo {
+  color: var(--ochre);
+  font-size: 0.9em;
+  font-style: italic;
+  font-weight: 500;
+}
+
+/* Vedlejší vysvětlující text pod hlavním obsahem. */
+.hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.badge-draft {
+  background: var(--draft-strong);
+  color: var(--ochre-dark);
+}
+
+/* ——— Náhled akce v okně ——— */
+.status-band {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 14px;
+  border-left: 4px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--beige);
+  font-size: 14px;
+}
+
+.status-band span {
+  color: var(--ink-soft);
+}
+
+.status-draft {
+  border-left-color: var(--ochre);
+  background: var(--draft);
+}
+
+.status-regular {
+  border-left-color: var(--ok);
+  background: var(--ok-soft);
+}
+
+.status-extra {
+  border-left-color: var(--ink-soft);
+  background: var(--beige-strong);
+}
+
+.fact-list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.fact-list > div {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 12px;
+  padding: 10px 14px;
+}
+
+.fact-list > div + div {
+  border-top: 1px solid var(--line);
+}
+
+.fact-list dt {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.fact-list dd {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.fact-list dd svg {
+  vertical-align: -2px;
+}
+
+.peek-actions {
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.peek-actions > :first-child {
+  margin-right: auto;
+}
+
+/* ——— Zarovnání: prvky v jednom řádku mají stejnou výšku ——— */
+.plan-filters .btn {
+  min-height: 40px;
+}
+
+.schedule-toolbar,
+.schedule-toolbar > .row {
+  align-items: center;
+}
+
+.schedule-toolbar .pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+}
+
+.schedule-toolbar .month-title {
+  margin: 0;
+  line-height: 36px;
 }

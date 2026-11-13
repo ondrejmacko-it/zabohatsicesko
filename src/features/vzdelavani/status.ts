@@ -2,14 +2,14 @@ import { monthOf, toDateKey } from "@/lib/time";
 import type { EventType } from "@/lib/types";
 import type { EventCard } from "@/server/services/events";
 
-export type Tone = "neutral" | "ochre" | "ok" | "danger" | "outline";
+export type Tone = "neutral" | "ochre" | "ok" | "danger" | "outline" | "draft";
 export type CardTone = "regular" | "extra" | "muted" | "draft";
 
 /** Jeden nejdůležitější stav akce pro mřížku a seznam. Text vždy doplňuje barvu. */
 export function primaryStatus(card: EventCard): { label: string; tone: Tone } | null {
   if (card.planStatus === "cancelled") return { label: "Zrušeno", tone: "danger" };
   if (card.type === "holiday") return { label: "Svátek", tone: "neutral" };
-  if (card.planStatus === "draft") return { label: "Návrh · vidíte jen vy", tone: "outline" };
+  if (card.planStatus === "draft") return { label: "Návrh", tone: "draft" };
   if (card.syncStatus === "attention") return { label: "Kalendář čeká na opravu", tone: "danger" };
   if (card.unpublishedChanges) return { label: "Zveřejněno · máte návrh změny", tone: "ochre" };
   if (card.syncStatus === "pending") return { label: "Kalendář se synchronizuje", tone: "ochre" };
@@ -45,7 +45,7 @@ export function cardTone(card: EventCard): CardTone {
 }
 
 export const badgeClass = (tone: Tone) =>
-  ({ neutral: "badge", ochre: "badge badge-ochre", ok: "badge badge-ok", danger: "badge badge-danger", outline: "badge badge-outline" })[tone];
+  ({ neutral: "badge", ochre: "badge badge-ochre", ok: "badge badge-ok", danger: "badge badge-danger", outline: "badge badge-outline", draft: "badge badge-draft" })[tone];
 
 const inPlan = (card: EventCard, monthKey: string) =>
   card.type !== "holiday" && card.planStatus !== "cancelled" && monthOf(toDateKey(new Date(card.startsAt))) === monthKey;

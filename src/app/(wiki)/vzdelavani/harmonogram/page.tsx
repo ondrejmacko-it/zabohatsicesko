@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
+import type { EventCard } from "@/server/services/events";
 import Link from "next/link";
 import { ActionForm } from "@/components/ActionForm";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { Icon } from "@/components/Icon";
 import { generateMonthAction } from "@/features/vzdelavani/actions";
 import { EventDialog } from "@/features/vzdelavani/components/EventDialog";
+import { EventPeek } from "@/features/vzdelavani/components/EventPeek";
 import { PlanFilters } from "@/features/vzdelavani/components/PlanFilters";
 import { Agenda, Legend, NextEventsList, ScheduleGrid } from "@/features/vzdelavani/components/Schedule";
 import { TemplateDialog } from "@/features/vzdelavani/components/TemplateDialog";
@@ -23,7 +25,7 @@ import { listTopics } from "@/server/services/topics";
 
 export const metadata: Metadata = { title: "Plán vzdělávání" };
 
-type SearchParams = Promise<{ mesic?: string; pohled?: string; jako?: string; typ?: string; stav?: string }>;
+type SearchParams = Promise<{ mesic?: string; pohled?: string; jako?: string; typ?: string; stav?: string; akce?: string }>;
 
 /** Kolik řádků se v horních blocích vejde bez rozbalení. Oba bloky tak zůstávají podobně vysoké. */
 const TOP_ROWS = 3;
@@ -59,11 +61,14 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   const syncing = monthCards.some((c) => c.syncStatus === "pending");
 
   const current = { mesic: monthKey, pohled: listView ? "seznam" : undefined, jako: preview ? params.jako : undefined, typ: type, stav: state };
-  const link = (change: Partial<typeof current>) => {
+  const link = (change: Partial<typeof current> & { akce?: string }) => {
     const query = new URLSearchParams();
     for (const [key, value] of Object.entries({ ...current, ...change })) if (value) query.set(key, value);
     return `/vzdelavani/harmonogram?${query}`;
   };
+  // Klik na akci otevře náhled v okně nad Plánem. Měsíc, pohled i filtry zůstávají v adrese.
+  const peekHref = (card: EventCard) => link({ akce: card.id });
+  const peekId = (params.akce ?? "").slice(0, 120);
   const newDate = monthOf(todayKey) === monthKey ? todayKey : `${monthKey}-01`;
   const emptyText = filtering ? "Filtru v tomto měsíci neodpovídá žádná akce." : undefined;
 
@@ -100,6 +105,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   return (
     <>
       <AutoRefresh active={syncing} />
+      {peekId && <EventPeek key={peekId} user={user} eventId={peekId} preview={preview} previewKey={current.jako} closeHref={link({})} />}
       <div className="plan-top">
         <section className="section" aria-labelledby="ceka">
           <h2 id="ceka">
@@ -121,20 +127,20 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
         </section>
         <section className="section" aria-labelledby="nejblizsi">
           <h2 id="nejblizsi">Nejbližší akce</h2>
-          <NextEventsList cards={upcoming} todayKey={todayKey} />
+          <NextEventsList cards={upcoming} todayKey={todayKey} hrefFor={peekHref} />
         </section>
       </div>
 
       <section className="section" aria-labelledby="mesic">
         <div className="spread schedule-toolbar">
           <div className="row">
-            <Link className="btn btn-small" href={link({ mesic: shiftMonth(monthKey, -1) })} aria-label="Předchozí měsíc">
+            <Link className="btn" href={link({ mesic: shiftMonth(monthKey, -1) })} aria-label="Předchozí měsíc">
               <Icon name="chevronLeft" />
             </Link>
             <h2 id="mesic" className="month-title">
               {formatMonth(monthKey)}
             </h2>
-            <Link className="btn btn-small" href={link({ mesic: shiftMonth(monthKey, 1) })} aria-label="Další měsíc">
+            <Link className="btn" href={link({ mesic: shiftMonth(monthKey, 1) })} aria-label="Další měsíc">
               <Icon name="chevronRight" />
             </Link>
             <div className="row view-toggle" role="group" aria-label="Zobrazení">
@@ -204,15 +210,15 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
         )}
 
         {listView ? (
-          <Agenda monthKey={monthKey} cards={cards} todayKey={todayKey} emptyText={emptyText} as={current.jako} />
+          <Agenda monthKey={monthKey} cards={cards} todayKey={todayKey} emptyText={emptyText} hrefFor={peekHref} managing={managing} />
         ) : (
           <>
             <div className={styles.desktopOnly}>
-              <ScheduleGrid monthKey={monthKey} cards={cards} todayKey={todayKey} slotTimes={slotTimes} as={current.jako} />
+              <ScheduleGrid monthKey={monthKey} cards={cards} todayKey={todayKey} slotTimes={slotTimes} hrefFor={peekHref} managing={managing} />
               <Legend organizer={managing} />
             </div>
             <div className={styles.mobileOnly}>
-              <Agenda monthKey={monthKey} cards={cards} todayKey={todayKey} emptyText={emptyText} as={current.jako} />
+              <Agenda monthKey={monthKey} cards={cards} todayKey={todayKey} emptyText={emptyText} hrefFor={peekHref} managing={managing} />
             </div>
           </>
         )}

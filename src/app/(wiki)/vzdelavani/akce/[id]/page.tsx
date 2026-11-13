@@ -5,6 +5,7 @@ import { ActionForm } from "@/components/ActionForm";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { discardChangesAction } from "@/features/vzdelavani/actions";
 import { Icon } from "@/components/Icon";
+import { Todo, missingText } from "@/components/Todo";
 import { EventDialog } from "@/features/vzdelavani/components/EventDialog";
 import { EventMenu } from "@/features/vzdelavani/components/EventMenu";
 import { RecordingSection } from "@/features/vzdelavani/components/RecordingSection";
@@ -149,7 +150,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
           {card.type !== "holiday" && (
             <div>
               <dt>Vede</dt>
-              <dd>{detail.leadName ?? <span className="muted">zatím nedoplněno</span>}</dd>
+              <dd>{detail.leadName ?? <Todo>{missingText(organizer, "vedoucího")}</Todo>}</dd>
             </div>
           )}
           <div>
@@ -161,7 +162,9 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
           {card.type !== "holiday" && !card.topicTitle && (
             <>
               <dt>Téma</dt>
-              <dd className="muted">zatím nedoplněno</dd>
+              <dd>
+                <Todo>{missingText(organizer, "téma")}</Todo>
+              </dd>
             </>
           )}
           {detail.reviewerName && (

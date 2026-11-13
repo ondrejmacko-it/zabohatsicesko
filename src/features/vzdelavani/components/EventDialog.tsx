@@ -31,6 +31,8 @@ type Props = {
   replace?: boolean;
   /** Dny v týdnu (1 = pondělí), kdy se podle šablony běžně plánuje. Jiný den dialog výrazně ohlásí. */
   planDays?: number[];
+  /** Tlačítko Upravit jako hlavní krok (v náhledu akce). */
+  primary?: boolean;
 };
 
 const WEEKDAY_NAMES = ["", "pondělí", "úterý", "středu", "čtvrtek", "pátek", "sobotu", "neděli"];
@@ -43,7 +45,7 @@ export function EventDialog(props: Props) {
     <>
       <button
         type="button"
-        className={props.mode === "create" ? "btn btn-primary" : "btn"}
+        className={props.mode === "create" || props.primary ? "btn btn-primary" : "btn"}
         title={props.replace ? "Místo pravidelné aktivity naplánuje jinou akci, třeba workshop" : undefined}
         onClick={() => {
           setSession((s) => s + 1);
