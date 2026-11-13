@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { GROUP_LABELS, TYPE_LABELS } from "@/lib/labels";
 import { TopicsSection } from "@/features/vzdelavani/components/TopicsSection";
-import { formatDate, formatMonth, monthOf, toDateKey } from "@/lib/time";
+import { groupByMonth } from "@/features/vzdelavani/minutes";
+import { formatDate, formatMonth, toDateKey } from "@/lib/time";
 import { GROUPS, type Group } from "@/lib/types";
 import { requireUser } from "@/server/auth/session";
 import { listPublishedMinutes } from "@/server/services/journey";
@@ -23,12 +24,7 @@ export default async function MinutesPage({ searchParams }: { searchParams: Sear
   const audience = groups.find((g: Group) => g === params.skupina);
   const filtered = query || type || audience ? await listPublishedMinutes(user, { query, type, audience }) : all;
   const filtering = Boolean(query || type || audience);
-  // Zápisy jsou seřazené od nejnovější akce, stačí je rozdělit po měsících.
-  const months = new Map<string, typeof filtered>();
-  for (const item of filtered) {
-    const month = monthOf(toDateKey(new Date(item.startsAt)));
-    months.set(month, [...(months.get(month) ?? []), item]);
-  }
+  const months = groupByMonth(filtered);
 
   return (
     <>
@@ -100,7 +96,7 @@ export default async function MinutesPage({ searchParams }: { searchParams: Sear
           </p>
         </div>
       ) : (
-        [...months].map(([month, items]) => (
+        months.map(([month, items]) => (
           <div key={month} className="minutes-month">
             <h3 className="minutes-month-title">{formatMonth(month)}</h3>
             <ul className="card-list">

@@ -13,3 +13,11 @@ export const oauthCookieOptions = {
 };
 
 export const integrationsUrl = (result: string) => `${config.appUrl}/vzdelavani/integrace?google=${result}`;
+
+/**
+ * Propojení spuštěné Wiki samo (po přihlášení nebo z úkolu v Plánu). Návrat pak vede na Plán, ne na
+ * technickou stránku. Cookie nenese žádné oprávnění, jen cíl návratu.
+ */
+export const AUTO_COOKIE = "zbc_google_auto";
+export const CONNECT_PATH = "/api/google/kalendar/pripojit?auto=1";
+export const planUrl = () => `${config.appUrl}/vzdelavani/harmonogram`;

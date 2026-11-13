@@ -7,7 +7,7 @@ import { resumeAfterReconnect, syncEvent } from "@/server/calendar/sync";
 import { googleCalendarConfig } from "@/server/config";
 import { getDb } from "@/server/db/client";
 import { isOrganizer } from "@/server/policy";
-import { OAUTH_COOKIE, integrationsUrl, oauthCookieOptions } from "../cookie";
+import { AUTO_COOKIE, OAUTH_COOKIE, integrationsUrl, oauthCookieOptions, planUrl } from "../cookie";
 
 // Návrat z Googlu. Kód se smění jen tehdy, když stav odpovídá podepsané cookie téhož organizátora.
 export async function GET(request: NextRequest) {
@@ -15,9 +15,12 @@ export async function GET(request: NextRequest) {
   const cfg = googleCalendarConfig();
   if (!user || !isOrganizer(user) || !cfg) return new Response(null, { status: 404 });
 
+  // Automatické propojení se vrací na Plán. Když se nepovede, zůstane tam úkol „Propojit Kalendář“.
+  const auto = request.cookies.get(AUTO_COOKIE)?.value === "1";
   const finish = (result: string) => {
-    const response = NextResponse.redirect(integrationsUrl(result));
+    const response = NextResponse.redirect(auto ? planUrl() : integrationsUrl(result));
     response.cookies.set(OAUTH_COOKIE, "", { ...oauthCookieOptions, maxAge: 0 });
+    response.cookies.set(AUTO_COOKIE, "", { ...oauthCookieOptions, maxAge: 0 });
     response.headers.set("Cache-Control", "no-store");
     return response;
   };

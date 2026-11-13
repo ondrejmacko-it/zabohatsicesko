@@ -17,6 +17,7 @@ import { requireUser } from "@/server/auth/session";
 import { isOrganizer } from "@/server/policy";
 import { getEventDetail } from "@/server/services/detail";
 import { listPeople, loadTemplate } from "@/server/services/events";
+import { resolvePreview } from "@/server/services/preview";
 import { listTopics } from "@/server/services/topics";
 
 export const metadata: Metadata = { title: "Detail akce" };
@@ -27,26 +28,34 @@ const ORIGINS: Record<string, { href: string; label: string }> = {
   prehled: { href: "/vzdelavani/harmonogram", label: "Zpět na Plán" },
 };
 
-type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ odkud?: string }> };
+type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ odkud?: string; jako?: string }> };
 
 export default async function EventDetailPage({ params, searchParams }: Props) {
   const user = await requireUser();
   const { id } = await params;
+  const query = await searchParams;
+  // Náhled „Zobrazit jako“ z harmonogramu: detail se počítá pro vybranou skupinu nebo kolegu a je jen ke čtení.
+  const preview = await resolvePreview(user, query.jako);
   // Neviditelná i neexistující akce vrací stejnou odpověď, aby ID neprozradilo, že akce existuje.
   const eventId = safeDecode(id);
-  const detail = eventId ? await getEventDetail(user, eventId) : null;
+  const detail = eventId ? await getEventDetail(preview?.viewer ?? user, eventId) : null;
   if (!detail) notFound();
 
   const { card } = detail;
-  const organizer = isOrganizer(user);
+  const organizer = isOrganizer(user) && !preview;
   const start = new Date(card.startsAt);
   const dayKey = toDateKey(start);
   const title = card.topicTitle ? `${card.label}: ${card.topicTitle}` : card.label;
   const status = primaryStatus(card);
   const [people, topics] = organizer ? await Promise.all([listPeople(user), listTopics(user)]) : [[], []];
   const planDays = organizer ? (await loadTemplate()).filter((slot) => slot.active).map((slot) => slot.isoWeekday) : [];
-  const handler = detail.recording.access === "handler";
-  const back = ORIGINS[(await searchParams).odkud ?? ""] ?? { href: `/vzdelavani/harmonogram?mesic=${monthOf(dayKey)}`, label: "Zpět na harmonogram" };
+  // Nástroje vedoucího (nahrání, úprava zápisu) by v náhledu běžely pod organizátorem, proto se nenabízejí.
+  const handlerPreview = Boolean(preview) && detail.recording.access === "handler";
+  const handler = detail.recording.access === "handler" && !preview;
+  const planHref = `/vzdelavani/harmonogram?mesic=${monthOf(dayKey)}`;
+  const back = preview
+    ? { href: `${planHref}&jako=${encodeURIComponent(query.jako!)}`, label: "Zpět na harmonogram v náhledu" }
+    : (ORIGINS[query.odkud ?? ""] ?? { href: planHref, label: "Zpět na harmonogram" });
 
   return (
     <>
@@ -54,6 +63,13 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
       <p className="small back-link">
         <Link href={back.href}>← {back.label}</Link>
       </p>
+
+      {preview && (
+        <p className="notice" role="status">
+          Díváte se jako <strong>{preview.label}</strong>. Akci vidíte tak, jak ji vidí tento pohled, bez nástrojů organizátora.{" "}
+          <Link href={`/vzdelavani/akce/${encodeURIComponent(card.id)}`}>Otevřít v pohledu organizátora</Link>
+        </p>
+      )}
 
       <div className="page-head detail-head">
         <div>
@@ -105,7 +121,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
               Nahrávka a zápis
             </a>
           )}
-          {!organizer && !handler && detail.recording.access === "reader" && detail.recording.minutes && (
+          {!organizer && detail.recording.access === "reader" && detail.recording.minutes && (
             <a className="btn btn-primary" href="#zapis">
               Zobrazit zápis
             </a>
@@ -114,7 +130,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
         </div>
       </div>
 
-      {card.unpublishedChanges && (
+      {organizer && card.unpublishedChanges && (
         <div className="notice spread">
           <p>Máte uložený návrh změny. Kolegové a Kalendář zatím vidí zveřejněnou verzi. Návrh zveřejněte přes Upravit, nebo ho zahoďte.</p>
           <ActionForm action={discardChangesAction} fields={{ id: card.id, revision: String(detail.revision) }} label="Zahodit návrh změny" pendingLabel="Zahazuji…" small />
@@ -165,7 +181,16 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
       </section>
 
       {detail.sync && <SyncPanelView eventId={card.id} sync={detail.sync} />}
-      <RecordingSection eventId={card.id} eventLabel={`${title} · ${formatDate(dayKey)}`} panel={detail.recording} />
+      {handlerPreview ? (
+        <section className="section" aria-labelledby="nahravka-nahled">
+          <h2 id="nahravka-nahled">Nahrávka a zápis</h2>
+          <p className="muted">
+            {preview!.label} u této akce nahrává záznam a kontroluje zápis. Nahrávka a pracovní přepis se v náhledu nezobrazují.
+          </p>
+        </section>
+      ) : (
+        <RecordingSection eventId={card.id} eventLabel={`${title} · ${formatDate(dayKey)}`} panel={detail.recording} />
+      )}
     </>
   );
 }

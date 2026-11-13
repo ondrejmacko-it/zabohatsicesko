@@ -4,9 +4,80 @@ Zkopíruj text níže jako první zprávu nové relace Claude Code (repo `ondrej
 
 ---
 
-Pokračuj na demu modulu Vzdělávání. Nečti znovu celé zadání ani celý kód. Kontext máš v `README.md`,
-`docs/predani.md`, `docs/google-kalendar.md` a `docs/google-prihlaseni.md`, pravidla v `CLAUDE.md`.
-Uživateli tykej, piš přátelsky. Větší změny nejdřív navrhni, nejasnosti se ptej.
+Pokračuj na demu modulu Vzdělávání (repo `ondrejmacko-it/zabohatsicesko`). Nečti znovu celé zadání ani celý kód.
+Kontext máš v `docs/dalsi-session.md`, `README.md` a `docs/google-prihlaseni.md`, pravidla v `CLAUDE.md`.
+Tykej mi, piš přátelsky. Větší změny nejdřív navrhni, na nejasnosti se ptej.
+
+Stav 13. 11. 2026 večer: `main` obsahuje PR #1 až #13. Větev `claude/focused-dirac-gphy4f` má draft PR do `main`
+(přestavěný Plán, detail akce v náhledu „Zobrazit jako“, automatické propojení Kalendáře při přihlášení
+organizátora Googlem). Pokud už je sloučený, vyjdi z `main`.
+
+Co udělat, v tomto pořadí:
+
+1. Živý test na preview větve `claude/focused-dirac-gphy4f` (adresa a `APP_URL` jsou v poznámkách níže). Zeptej se,
+   jestli jsem v Google konzoli přidal obě přesměrovací adresy. Projdi se mnou: přihlášení organizátora Googlem
+   (má ho samo poslat na souhlas ke Kalendáři a vrátit na Plán), účet ze seznamu, neznámý účet a čekající žádost
+   na `/sprava`, schválení, úkol „Propojit Kalendář“ po zrušení přístupu v Google účtu.
+2. Po úspěšném testu nastav na preview `CALENDAR_ATTENDEES=audience` a ověř se mnou, že se akce po zveřejnění
+   sama objeví v kalendáři lidí ze skupiny a že se změna a zrušení propíšou. Pozor: posílá skutečné pozvánky,
+   nejdřív si se mnou potvrď, které účty jsou ve skupinách.
+3. Doplň `docs/google-kalendar.md` a `docs/google-prihlaseni.md` o automatické propojení Kalendáře.
+4. Zjisti a navrhni (neprogramuj): co by znamenal Google Workspace a servisní účet, aby odpadl i jednorázový
+   souhlas organizátora a sedmidenní platnost v režimu Testing. Ověř v dokumentaci Googlu, nespoléhej na paměť.
+5. Projdi zbylé „ukázkové“ texty na technické stránce Integrace a rozdělení Zápisů do více měsíců (naživo
+   viděn jen jeden měsíc). Štítek „Ukázka“ a přepínač rolí zůstávají.
+
+Production na Vercelu nemá proměnné prostředí a buildy z `main` se přeskakují, živý test běží na preview.
+Na `main` nepushuj, merge dělám já přes PR. Respektuj limit kontextu.
+
+---
+
+## Stav 13. 11. 2026 pozdě večer (větev `claude/festive-shannon-s7wa4o`, vychází z větve PR #14)
+
+- PR #14 (`claude/focused-dirac-gphy4f`) je pořád draft a nesloučený. Tato větev na něj navazuje:
+  - `docs/google-kalendar.md` a `docs/google-prihlaseni.md` popisují automatické propojení Kalendáře.
+  - `docs/google-workspace-moznosti.md`: návrh variant A až E (In production bez ověření, ověření, Workspace
+    Internal, servisní účet s delegováním). Doporučení pro demo je B. Ověřeno jen z výsledků vyhledávání,
+    `developers.google.com` a `support.google.com` nejsou v povolené síti prostředí.
+  - Integrace: text o hostech pozvánek odpovídá `CALENDAR_ATTENDEES`, doplněna věta o automatickém propojení.
+    Ostatní „ukázkové“ texty (Ukázka chyb, Ukázková data, štítek „neověřeno proti Googlu“ u Přihlášení)
+    čekají na rozhodnutí uživatele a na výsledek živého testu.
+  - Zápisy po měsících: `groupByMonth` (`src/features/vzdelavani/minutes.ts`) řadí podle zveřejněného termínu,
+    test `tests/zapisy-mesice.test.ts` (více měsíců, přelom roku, pražský čas). V prohlížeči s více měsíci neviděno.
+- Ověřeno: lint, typy, 118 ze 118 testů, build.
+- **Živý test (kroky 1 a 2 promptu výše) neproběhl**, čeká na uživatele: potvrzení obou přesměrovacích adres
+  v Google konzoli a seznam účtů ve skupinách před `CALENDAR_ATTENDEES=audience`. Preview větve PR #14 je
+  nasazené (commit `eb85ab6`), `APP_URL` větve sedí. Tato větev vlastní `APP_URL` nemá, testuje se na PR #14.
+- Vercel přes konektor vrací 403 nebo 404, funguje `curl https://api.vercel.com/...?slug=maci`.
+
+## Stav 13. 11. 2026 večer (větev `claude/focused-dirac-gphy4f`, zatím bez PR)
+
+- `main` obsahuje PR #1 až #13. Tato větev zapracovává připomínky uživatele ke stránce Plán:
+  - **Horní bloky:** „Čeká na vás“ a „Nejbližší akce“ jsou stejně vysoké, se stejnými řádky (`.brief-row`).
+    Úkoly nad tři se sbalí do „Další úkoly“, nejbližší akce jsou až tři (`nextEventsFor`, `NextEventsList`).
+  - **Stav měsíce je mezi úkoly organizátora** (`monthTasks` ve `status.ts`): „k doplnění“ a „čeká na zveřejnění“
+    s tlačítkem, které zúží harmonogram (`?stav=`). Řádek s čísly (`MonthSummaryBar`) a odrážkový seznam
+    (`PlanGaps`) jsou pryč, filtr **Stav** je třetí výběr vedle „Zobrazit jako“ a „Typ akce“.
+  - **Detail akce z náhledu „Zobrazit jako“** (`?jako=` na `/vzdelavani/akce/[id]`): počítá se pro vybranou
+    skupinu nebo kolegu, jen ke čtení, nástroje vedoucího se v náhledu nenabízejí.
+  - Domovská stránka vyká, vstupní stránka říká „Ukázka“ místo „Prototyp“.
+- Ověřeno: lint, typy, 115 ze 115 testů, build. Chromium nad PGlite: Plán za organizátora (1280 a 390 px),
+  vedoucího a účastníka, filtr K doplnění, náhled za FP a za vedoucího včetně detailu, Zápisy se dvěma
+  zveřejněnými zápisy (nadpis měsíce se ukazuje), bez vodorovného posunu. **Neověřeno:** Safari, živý Google.
+- **Živý test:** pro tuto větev je na Vercelu nastavená `APP_URL`
+  `https://zbc-vzdelavani-demo-git-claude-focused-dirac-gphy4f-maci.vercel.app`. Uživatel musí v Google konzoli
+  přidat `<APP_URL>/api/google/prihlaseni/callback` a `<APP_URL>/api/google/kalendar/callback`. Přihlašovat se
+  jen z této adresy větve, ne z adresy jednotlivého nasazení. `redirect_uri=` z chyby na staré větvi uživatel
+  zatím neposlal.
+- **Automatické propojení Kalendáře (odsouhlaseno a naprogramováno 13. 11., naživo neověřeno):** po přihlášení
+  Googlem pošle Wiki organizátora nebo správce, pokud propojení chybí, rovnou na souhlas ke Kalendáři
+  (`needsCalendarConnection`, `/api/google/kalendar/pripojit?auto=1`, účet jde jako `login_hint`) a vrátí ho na
+  Plán. Ostatní role nic navíc nedostanou. Chybějící propojení je první úkol v „Čeká na vás“. Jedno propojení
+  platí pro celou Wiki, zápisy vedoucího (odkaz na zápis v pozvánce) jdou přes něj. Stránka Integrace zůstává
+  jako technická adresa. Uživatel neví, kdo ve firmě vlastní kalendář: účet organizátora do něj musí smět
+  zapisovat. Dokud je OAuth aplikace v režimu Testing, propojení vyprší po 7 dnech. Dokumentace v
+  `docs/google-kalendar.md` a `docs/google-prihlaseni.md` tento tok zatím nepopisuje.
+- Otevřené: „Ukázka“ a přepínač rolí zůstávají. Texty na technické stránce Integrace jsou pořád „ukázkové“.
 
 ## Stav 13. 11. 2026 pozdě odpoledne (větev `ccr-aad79b00-uhlkt9`, PR do `main`)
 

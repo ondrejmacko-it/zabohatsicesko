@@ -68,7 +68,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
               <td>{integrationModes.calendar === "simulation" ? "Simulace" : "Testovací režim Google · živý test 12. 11. 2026"}</td>
               <td>
                 {googleTest
-                  ? "Živý test se skutečným účtem prošel 12. 11. 2026: spárování, změna tématu a času, výskyt série, nová pozvánka, ruční změna v Kalendáři i odvolání přístupu. Pozvánky jdou jen testovacím příjemcům."
+                  ? `Živý test se skutečným účtem prošel 12. 11. 2026: spárování, změna tématu a času, výskyt série, nová pozvánka, ruční změna v Kalendáři i odvolání přístupu. ${attendeeSource() === "audience" ? "Pozvánky jdou skupině, pro kterou je akce určená." : "Pozvánky jdou jen testovacím příjemcům."}`
                   : "Identita pozvánky, hosté a RSVP, oznámení, opakování bez duplicit, pořadí revizí a chyby. Ověřeno proti simulaci, ne proti skutečnému Google účtu."}
               </td>
             </tr>
@@ -135,6 +135,10 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                     : `jen testovací příjemci: ${googleConfig.allowedAttendees.length ? googleConfig.allowedAttendees.join(", ") : "žádní, pozvánky vzniknou bez hostů"}`}
                 </dd>
               </dl>
+              <p className="small muted">
+                Organizátora nebo správce, který se přihlásí účtem Google, pošle Wiki na souhlas sama a vrátí ho na Plán. Tato
+                stránka slouží ke kontrole, ručnímu připojení jiným účtem a odpojení. Jedno připojení platí pro celou Wiki.
+              </p>
               <p className="small muted">
                 Wiki žádá jen o oprávnění k událostem. Obnovovací token je uložený šifrovaně na serveru, v aplikaci ani v logu
                 se nezobrazuje. Komu pozvánky jdou, určuje nastavení serveru a ověřuje se před každým zápisem. Wiki přidává a odebírá jen své hosty.

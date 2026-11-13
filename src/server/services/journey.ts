@@ -1,6 +1,7 @@
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { formatDayMonth, toDateKey } from "@/lib/time";
 import type { EventType, Group } from "@/lib/types";
+import { needsCalendarConnection } from "@/server/calendar/google-auth";
 import { config, now } from "@/server/config";
 import { getDb } from "@/server/db/client";
 import { calendarLinks, events, minutes, recordings } from "@/server/db/schema";
@@ -62,7 +63,8 @@ export async function listPublishedMinutes(viewer: Viewer, filter: MinutesFilter
 /** Nejnovější proběhlé akce bez zápisu. Starší dluhy by přehled zahltily, jsou dohledatelné v harmonogramu. */
 const MAX_MINUTES_TASKS = 4;
 
-export type JourneyTask = { key: string; title: string; detail: string; href: string; action: string };
+/** `external`: odkaz vede mimo stránky Wiki (přesměrování na Google), proto běžná navigace prohlížeče. */
+export type JourneyTask = { key: string; title: string; detail: string; href: string; action: string; external?: boolean };
 
 /** Co na uživatele čeká: zápisy k dokončení u akcí, které vede nebo kontroluje, a úkoly organizátora. */
 export async function listTasks(viewer: Viewer): Promise<JourneyTask[]> {
@@ -96,12 +98,15 @@ export async function listTasks(viewer: Viewer): Promise<JourneyTask[]> {
       }
       tasks.push(
         state === "draft"
-          ? { key: `zapis-${row.id}`, title, detail: "Návrh zápisu čeká na vaši kontrolu a zveřejnění.", href: `/vzdelavani/akce/${row.id}?odkud=prehled#nahravka`, action: "Zkontrolovat zápis" }
-          : { key: `nahravka-${row.id}`, title, detail: "Akce proběhla a zatím nemá zápis. Nahrajte nahrávku, zápis se z ní připraví.", href: `/vzdelavani/akce/${row.id}?odkud=prehled#nahravka`, action: "Nahrát nahrávku" },
+          ? { key: `zapis-${row.id}`, title, detail: "Návrh zápisu čeká na kontrolu a zveřejnění.", href: `/vzdelavani/akce/${row.id}?odkud=prehled#nahravka`, action: "Zkontrolovat zápis" }
+          : { key: `nahravka-${row.id}`, title, detail: "Proběhla a nemá zápis. Připraví se z nahrávky.", href: `/vzdelavani/akce/${row.id}?odkud=prehled#nahravka`, action: "Nahrát nahrávku" },
       );
     }
   }
 
+  if (await needsCalendarConnection(db, isOrganizer(viewer))) {
+    tasks.unshift({ key: "kalendar-propojeni", title: "Propojte Kalendář Google", detail: "Bez propojení se pozvánky neposílají. Stačí jednou potvrdit souhlas u Googlu.", href: "/api/google/kalendar/pripojit?auto=1", action: "Propojit Kalendář", external: true });
+  }
   if (isOrganizer(viewer)) {
     const stuck = await db
       .select({ event: events })

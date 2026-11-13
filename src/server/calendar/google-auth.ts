@@ -33,7 +33,13 @@ export type OAuthStart = { url: string; cookieValue: string };
  * Připraví přesměrování na souhlas. Stav a PKCE ověřovač zůstávají v podepsané HttpOnly cookie
  * vázané na prohlížeč organizátora, takže callback nejde podvrhnout z cizí relace.
  */
-export function beginAuthorization(cfg: GoogleCalendarConfig, userId: string, nowSec = Math.floor(Date.now() / 1000)): OAuthStart {
+export function beginAuthorization(
+  cfg: GoogleCalendarConfig,
+  userId: string,
+  nowSec = Math.floor(Date.now() / 1000),
+  /** Adresa účtu, kterým se organizátor právě přihlásil. Google pak nenabízí výběr účtu. */
+  loginHint?: string,
+): OAuthStart {
   const state = randomBytes(24).toString("base64url");
   const verifier = randomBytes(48).toString("base64url");
   const data = Buffer.from(JSON.stringify({ state, verifier, uid: userId, exp: nowSec + STATE_TTL_SEC })).toString("base64url");
@@ -46,7 +52,9 @@ export function beginAuthorization(cfg: GoogleCalendarConfig, userId: string, no
     // Offline přístup a výslovný souhlas, aby Google vrátil obnovovací token i při opakovaném připojení.
     access_type: "offline",
     // Výběr účtu vždy: prohlížeč s více přihlášenými účty by jinak mohl připojit jiný než testovací.
-    prompt: "consent select_account",
+    // Po přihlášení Googlem účet známe a posíláme ho jako nápovědu, stačí tedy jen souhlas.
+    prompt: loginHint ? "consent" : "consent select_account",
+    ...(loginHint ? { login_hint: loginHint } : {}),
     include_granted_scopes: "false",
     state,
     code_challenge: createHash("sha256").update(verifier).digest("base64url"),
@@ -205,6 +213,14 @@ export type ConnectionStatus = { accountEmail: string; connectedAt: Date } | nul
 export async function connectionStatus(db: Executor): Promise<ConnectionStatus> {
   const [row] = await db.select().from(integrationCredentials).where(whereCredential()).limit(1);
   return row ? { accountEmail: row.accountEmail, connectedAt: row.connectedAt } : null;
+}
+
+/**
+ * Má Wiki po přihlášení sama požádat o propojení Kalendáře? Jen v režimu Googlu, jen u toho, kdo plán
+ * spravuje, a jen když propojení chybí. Ostatní role žádné oprávnění navíc nedostávají.
+ */
+export async function needsCalendarConnection(db: Executor, managesPlan: boolean): Promise<boolean> {
+  return managesPlan && googleCalendarConfig() !== null && (await connectionStatus(db)) === null;
 }
 
 /** Odpojí integraci: zneplatní token u Googlu (pokud to jde) a vždy smaže uložený záznam. */

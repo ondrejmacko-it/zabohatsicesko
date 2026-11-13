@@ -56,7 +56,7 @@ export const awaitsPublishing = (card: EventCard) =>
 
 export type MonthSummary = { planned: number; toPublish: number; toComplete: number };
 
-/** Stav měsíce pro organizátora v jednom řádku: kolik je v plánu, co čeká na zveřejnění a co na doplnění. */
+/** Stav měsíce pro organizátora: kolik je v plánu, co čeká na zveřejnění a co na doplnění. */
 export function monthSummary(cards: EventCard[], monthKey: string): MonthSummary {
   const mine = cards.filter((c) => inPlan(c, monthKey));
   return {
@@ -64,6 +64,36 @@ export function monthSummary(cards: EventCard[], monthKey: string): MonthSummary
     toPublish: mine.filter(awaitsPublishing).length,
     toComplete: planGaps(cards, monthKey).length,
   };
+}
+
+/** „1 termín“, „3 termíny“, „9 termínů“. */
+const plural = (count: number, one: string, few: string, many: string) => `${count} ${count === 1 ? one : count >= 2 && count <= 4 ? few : many}`;
+
+export type MonthTask = { state: PlanState; title: string; detail: string; action: string };
+
+/**
+ * Stav měsíce převedený na úkoly organizátora v bloku „Čeká na vás“. Každý úkol vede na harmonogram
+ * zúžený na příslušné termíny (stejný filtr jako výběr Stav).
+ */
+export function monthTasks(summary: MonthSummary, monthName: string): MonthTask[] {
+  const tasks: MonthTask[] = [];
+  if (summary.toComplete > 0) {
+    tasks.push({
+      state: "doplnit",
+      title: `${monthName}: ${plural(summary.toComplete, "termín", "termíny", "termínů")} k doplnění`,
+      detail: "Chybí téma, vedoucí nebo oprava v Kalendáři.",
+      action: "Zobrazit termíny",
+    });
+  }
+  if (summary.toPublish > 0) {
+    tasks.push({
+      state: "navrhy",
+      title: `${monthName}: ${plural(summary.toPublish, "návrh čeká", "návrhy čekají", "návrhů čeká")} na zveřejnění`,
+      detail: "Kolegové je uvidí až po zveřejnění.",
+      action: "Zobrazit návrhy",
+    });
+  }
+  return tasks;
 }
 
 export const PLAN_STATES = ["navrhy", "doplnit"] as const;

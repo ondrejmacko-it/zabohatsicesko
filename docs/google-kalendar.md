@@ -8,8 +8,18 @@ simulace, testovací režim zapíná `CALENDAR_MODE=google-test`.
 
 - `CALENDAR_MODE=google-test` zapne adaptér `src/server/calendar/google.ts`. Jakákoli jiná hodnota
   znamená simulaci. Neúplná konfigurace integraci nespustí, do simulace se nevrací a nic nezapisuje.
-- Připojuje se **jeden účet za organizaci**: organizátor ve *Vzdělávání → Integrace* připojí účet, který
-  vlastní kalendář vzdělávání. Přihlášení uživatelů do Wiki je na tom nezávislé.
+- Připojuje se **jeden účet za organizaci** a platí pro celou Wiki, včetně zápisů vedoucích (odkaz na zápis
+  v pozvánce jde přes něj). Účet musí smět zapisovat do kalendáře vzdělávání.
+- **Propojení je automatické** (od 13. 11. 2026): když se organizátor nebo správce přihlásí účtem Google
+  a propojení chybí, Wiki ho hned po přihlášení pošle na souhlas ke Kalendáři a vrátí na Plán
+  (`needsCalendarConnection`, `/api/google/kalendar/pripojit?auto=1`). Účet z přihlášení jde Googlu jako
+  `login_hint`, výběr účtu se proto podruhé nenabízí. Ostatní role žádné oprávnění navíc nedostanou.
+- Když souhlas neproběhne (zrušení, chybějící zaškrtnutí oprávnění) nebo propojení později zanikne, má
+  organizátor v Plánu v „Čeká na vás“ jako první úkol „Propojte Kalendář Google“. Vede na stejný souhlas.
+- *Vzdělávání → Integrace* zůstává technická stránka: stav propojení, ruční připojení jiným účtem (s výběrem
+  účtu) a odpojení. Při vstupu kódem a fiktivní roli se propojuje jen tudy nebo z úkolu v Plánu.
+- Přihlášení a Kalendář jsou dva oddělené souhlasy za sebou. Přihlášení žádá jen identitu a žádný token
+  neukládá, Kalendář žádá `calendar.events` a ukládá obnovovací token.
 - Wiki žádá jen o rozsah `calendar.events`. Obnovovací token se ukládá šifrovaně (AES-256-GCM, klíč
   `TOKEN_ENCRYPTION_KEY` mimo databázi), přístupový token žije jen v paměti serveru.
 - Úprava posílá jen název, popis s odkazem na Wiki, začátek, konec a stav, vždy se `sendUpdates=all`.
@@ -45,8 +55,13 @@ simulace, testovací režim zapíná `CALENDAR_MODE=google-test`.
 | `TOKEN_ENCRYPTION_KEY` | 32 náhodných bajtů v base64 (`openssl rand -base64 32`). |
 | `APP_URL` | Veřejná adresa nasazení, ze které se skládá přesměrovací adresa i odkaz v pozvánce. |
 
-4. Po nasazení obnovit ukázková data (v testovacím režimu vzniknou akce bez vazby na pozvánku) a ve
-   *Vzdělávání → Integrace* připojit účet organizátora.
+4. Po nasazení obnovit ukázková data (v testovacím režimu vzniknou akce bez vazby na pozvánku).
+   Organizátor se přihlásí účtem Google a souhlas ke Kalendáři potvrdí rovnou při přihlášení. Bez
+   přihlášení Googlem jde účet připojit ve *Vzdělávání → Integrace*.
+
+Omezení, dokud je souhlasová obrazovka v režimu testování: Google po 7 dnech zneplatní obnovovací token,
+propojení zanikne a organizátor dostane úkol „Propojte Kalendář Google“. Možnosti, jak se toho zbavit, jsou
+v [google-workspace-moznosti.md](google-workspace-moznosti.md).
 
 ## Živý test (část 02 zadání)
 
@@ -92,3 +107,7 @@ připojení zatím jen testy proti napodobenému Googlu.
 Skutečné chování Googlu u těchto bodů potvrdí až živý test: přijetí vlastního ID události, oznámení
 a jejich doručení, podoba výskytů série a výjimek, chování `If-Match`, přesné kódy a důvody chyb,
 limity a obsah souhlasové obrazovky.
+
+**Automatické propojení při přihlášení** (13. 11. 2026) prošlo jen testy s napodobeným Googlem. Naživo
+zbývá ověřit: dva souhlasy za sebou, chování `login_hint`, návrat na Plán a úkol „Propojte Kalendář Google“
+po odebrání přístupu v Google účtu.

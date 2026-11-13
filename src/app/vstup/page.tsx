@@ -33,7 +33,7 @@ export default async function GatePage({ searchParams }: { searchParams: Promise
         <div className="panel gate-panel">
           <h1>Ukázka modulu Vzdělávání</h1>
           <p className="page-sub">
-            Prototyp pracuje výhradně s fiktivními daty.{" "}
+            Ukázka pracuje výhradně s fiktivními daty.{" "}
             {calendarMode() === "google-test"
               ? "Kalendář běží v testovacím režimu Googlu jen s testovacími příjemci, přepis v ukázkovém režimu."
               : "Kalendář a přepis běží v označeném ukázkovém režimu."}
