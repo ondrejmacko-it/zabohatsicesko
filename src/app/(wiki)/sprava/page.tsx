@@ -6,10 +6,12 @@ import { AccessForm, InviteForm } from "@/features/sprava/components/AccessForms
 import { rejectRequestAction } from "@/features/sprava/actions";
 import { GROUP_LABELS, ROLE_LABELS, USER_STATUS_LABELS } from "@/lib/labels";
 import { formatDate, toDateKey } from "@/lib/time";
-import { ROLES, type Role } from "@/lib/types";
+import type { Role } from "@/lib/types";
+import { CalendarStatusLine, InviteRecipients } from "@/features/vzdelavani/components/CalendarStatusLine";
+import { loadCalendarStatus } from "@/server/services/calendar-status";
 import { requireUser } from "@/server/auth/session";
-import { config } from "@/server/config";
-import { canManageUsers, isAdmin } from "@/server/policy";
+import { config, now } from "@/server/config";
+import { canManageUsers } from "@/server/policy";
 import { listAccounts, type Account } from "@/server/services/users";
 
 export const metadata: Metadata = { title: "Správa systému" };
@@ -18,8 +20,9 @@ export default async function AdminPage() {
   const user = await requireUser();
   // Stejná odpověď jako neexistující stránka: bez oprávnění se o správě nic nedozví.
   if (!canManageUsers(user)) notFound();
-  const accounts = await listAccounts(user);
-  const roles: Role[] = ROLES.filter((r) => r !== "admin" || isAdmin(user));
+  const [accounts, calendar] = await Promise.all([listAccounts(user), loadCalendarStatus(user)]);
+  // Jedna role pro plánování a správu. Starší hodnota „organizer“ se už nepřiděluje, pravidla ji berou stejně.
+  const roles: Role[] = ["admin", "member"];
   const pending = accounts.filter((a) => a.status === "pending");
   const others = accounts.filter((a) => a.status !== "pending");
 
@@ -38,18 +41,24 @@ export default async function AdminPage() {
         <h2 id="jak-to-funguje">Jak to funguje</h2>
         <ul className="prose-list">
           <li>
-            <strong>Role</strong> říká, co člověk smí dělat. Člen týmu vidí plán a zápisy, organizátor plánuje a zveřejňuje akce a
-            spravuje uživatele, správce navíc přiděluje roli správce.
+            <strong>Role</strong> říká, co člověk smí dělat. Člen týmu vidí plán a zápisy svých skupin. Správce plánuje a zveřejňuje
+            akce, spravuje účty, vidí vše a u každé akce smí nahrát záznam a zveřejnit zápis.
           </li>
           <li>
             <strong>Skupiny</strong> říkají, co člověk uvidí: jen akce a zápisy určené jeho skupinám. Všichni = celá firma, FP = finanční
             poradci, RM = relationship manažeři, Tým A = účastníci Action time.
           </li>
           <li>
-            <strong>Vedoucí akce</strong> není role. Organizátor ho vybere u konkrétní akce a vedoucí pak u ní nahrává záznam a
+            <strong>Vedoucí akce</strong> není role. Správce ho vybere u konkrétní akce a vedoucí pak u ní nahrává záznam a
             zveřejňuje zápis.
           </li>
         </ul>
+      </section>
+
+      <section className="section stack" aria-labelledby="pozvanky" id="pozvanky-kalendare">
+        <h2 id="pozvanky">Kalendář a pozvánky</h2>
+        <CalendarStatusLine status={calendar} now={now()} detailed />
+        <InviteRecipients status={calendar} />
       </section>
 
       <section className="section stack" aria-labelledby="zadosti">
@@ -101,7 +110,7 @@ export default async function AdminPage() {
               </details>
             ) : (
               <p className="small muted">
-                {a.id === user.id ? "Svůj účet měnit nemůžete." : "Účet správce může měnit jen jiný správce."}
+                Svůj účet měnit nemůžete.
               </p>
             )}
           </article>

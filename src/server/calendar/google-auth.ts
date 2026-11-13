@@ -140,13 +140,30 @@ export async function completeAuthorization(
     return "exchange_failed";
   }
   // Uživatel může na obrazovce souhlasu rozsah odškrtnout. Bez něj by integrace jen selhávala.
-  if (!(body.scope ?? "").split(" ").includes(CALENDAR_SCOPE)) return "missing_scope";
+  if (!grantsCalendar(body.scope ?? "")) return "missing_scope";
   if (!body.refresh_token) return "no_refresh_token";
-  const values = {
-    accountEmail: emailFromIdToken(body.id_token) ?? "neznámý účet",
-    encryptedRefreshToken: sealSecret(body.refresh_token, tokenEncryptionKey(), secretContext()),
+  await saveGrant(db, {
+    refreshToken: body.refresh_token,
     scopes: body.scope ?? "",
-    connectedBy: input.userId,
+    accountEmail: emailFromIdToken(body.id_token) ?? "neznámý účet",
+    userId: input.userId,
+  });
+  return "connected";
+}
+
+/** Má oprávnění od Googlu rozsah pro zápis událostí? Uživatel ho může na obrazovce souhlasu odškrtnout. */
+export const grantsCalendar = (scopes: string) => scopes.split(" ").includes(CALENDAR_SCOPE);
+
+/** Uloží propojení Kalendáře pro celou Wiki. Obnovovací token jde do databáze jen šifrovaný. */
+export async function saveGrant(
+  db: Executor,
+  grant: { refreshToken: string; scopes: string; accountEmail: string; userId: string },
+): Promise<void> {
+  const values = {
+    accountEmail: grant.accountEmail,
+    encryptedRefreshToken: sealSecret(grant.refreshToken, tokenEncryptionKey(), secretContext()),
+    scopes: grant.scopes,
+    connectedBy: grant.userId,
     connectedAt: new Date(),
   };
   await db
@@ -154,7 +171,21 @@ export async function completeAuthorization(
     .values({ orgId: config.orgId, provider: PROVIDER, ...values })
     .onConflictDoUpdate({ target: [integrationCredentials.orgId, integrationCredentials.provider], set: values });
   accessCache.delete(config.orgId);
-  return "connected";
+}
+
+/** Zneplatní token u Googlu. Používá se pro oprávnění, které Wiki dostala, ale neuloží. */
+export async function revokeToken(token: string, fetchImpl: FetchLike = fetch): Promise<void> {
+  try {
+    await fetchImpl(REVOKE_URL, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ token }).toString(),
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+  } catch {
+    // Zneplatnění lze dokončit v nastavení účtu Google. Token se u nás nikam neuložil.
+    logError("google.oauth", "revoke_failed");
+  }
 }
 
 // ——— Přístupový token pro volání API ———
@@ -229,18 +260,7 @@ export async function disconnect(db: Executor, fetchImpl: FetchLike = fetch): Pr
   if (!row) return;
   const refreshToken = googleCalendarConfig() ? openSecret(row.encryptedRefreshToken, tokenEncryptionKey(), secretContext()) : null;
   await forgetCredential(db);
-  if (!refreshToken) return;
-  try {
-    await fetchImpl(REVOKE_URL, {
-      method: "POST",
-      headers: { "content-type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({ token: refreshToken }).toString(),
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-    });
-  } catch {
-    // Lokální odpojení už proběhlo. Zneplatnění u Googlu lze dokončit v nastavení účtu.
-    logError("google.oauth", "revoke_failed");
-  }
+  if (refreshToken) await revokeToken(refreshToken, fetchImpl);
 }
 
 /** Jen pro testy: zahodí přístupové tokeny v paměti. */

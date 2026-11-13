@@ -12,7 +12,7 @@ const PRESETS: Array<{ label: string; role: Role; groups: Group[] }> = [
   { label: "Účastník FP", role: "member", groups: ["vsichni", "fp"] },
   { label: "Účastník RM", role: "member", groups: ["vsichni", "rm"] },
   { label: "Člen Týmu A", role: "member", groups: ["vsichni", "tym-a"] },
-  { label: "Organizátor", role: "organizer", groups: [...GROUPS] },
+  { label: "Správce", role: "admin", groups: [...GROUPS] },
 ];
 
 function AccessFields({ roles, role: initialRole, groups: initialGroups }: { roles: Role[]; role: Role; groups: Group[] }) {
@@ -42,7 +42,7 @@ function AccessFields({ roles, role: initialRole, groups: initialGroups }: { rol
       </div>
       <label className="field">
         <span className="field-label">Role (co smí dělat)</span>
-        <select className="select" name="role" value={role} onChange={(e) => setRole(e.target.value as Role)}>
+        <select className="select" name="role" value={role === "organizer" ? "admin" : role} onChange={(e) => setRole(e.target.value as Role)}>
           {roles.map((r) => (
             <option key={r} value={r}>
               {ROLE_LABELS[r]}

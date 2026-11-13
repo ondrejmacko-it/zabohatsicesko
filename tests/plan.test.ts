@@ -176,7 +176,7 @@ describe("úprava zveřejněné akce a Kalendář", () => {
     );
   });
 
-  test("importovaná akce bez vazby čeká na rozhodnutí, nová pozvánka až na výslovný pokyn", async () => {
+  test("importovaná akce bez vazby: zveřejnění samo vazbu nezakládá, novou pozvánku jde vyžádat i ručně", async () => {
     const { revision, ...input } = await inputOf("ev-11-26", { topicTitle: "Změna" });
     await updateEvent(organizer, "ev-11-26", revision, input, "publish");
     expect(await link("ev-11-26")).toBeUndefined();

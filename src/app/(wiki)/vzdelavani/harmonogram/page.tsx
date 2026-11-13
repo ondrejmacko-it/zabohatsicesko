@@ -1,13 +1,16 @@
 import type { Metadata } from "next";
 import type { EventCard } from "@/server/services/events";
 import Link from "next/link";
+import { after } from "next/server";
 import { ActionForm } from "@/components/ActionForm";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { Icon } from "@/components/Icon";
 import { Menu } from "@/components/Menu";
 import { generateMonthAction } from "@/features/vzdelavani/actions";
+import { CalendarStatusLine } from "@/features/vzdelavani/components/CalendarStatusLine";
 import { EventDialog } from "@/features/vzdelavani/components/EventDialog";
 import { EventPeek } from "@/features/vzdelavani/components/EventPeek";
+import { PublishMonthDialog, type InviteMode } from "@/features/vzdelavani/components/PublishMonthDialog";
 import { PlanFilters } from "@/features/vzdelavani/components/PlanFilters";
 import { Agenda, Legend, NextEventsList, ScheduleGrid } from "@/features/vzdelavani/components/Schedule";
 import { TemplateDialog } from "@/features/vzdelavani/components/TemplateDialog";
@@ -15,11 +18,13 @@ import { PLAN_STATES, filterCards, matchesPlanFilter, monthSummary, monthTasks }
 import styles from "@/features/vzdelavani/components/schedule.module.css";
 import { formatMonth, isValidMonthKey, monthOf, shiftMonth, toDateKey } from "@/lib/time";
 import { EVENT_TYPES } from "@/lib/types";
+import { syncPublished } from "@/server/calendar/sync";
 import { requireUser } from "@/server/auth/session";
 import { now } from "@/server/config";
 import { defaultAudience } from "@/server/domain/generation";
 import { isOrganizer } from "@/server/policy";
-import { listMonth, listPeople, loadTemplate, nextEventsFor } from "@/server/services/events";
+import { listMonth, listMonthDrafts, listPeople, loadTemplate, nextEventsFor } from "@/server/services/events";
+import { loadCalendarStatus } from "@/server/services/calendar-status";
 import { listTasks } from "@/server/services/journey";
 import { listPreviewOptions, resolvePreview } from "@/server/services/preview";
 import { listTopics } from "@/server/services/topics";
@@ -51,6 +56,11 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
     ? await Promise.all([listPeople(user), listTopics(user), listPreviewOptions(user)])
     : [[], [], null];
 
+  const calendar = managing ? await loadCalendarStatus(user) : null;
+  const monthDrafts = managing ? await listMonthDrafts(user, monthKey) : null;
+  const inviteMode: InviteMode =
+    calendar?.mode !== "google" ? "simulation" : !calendar.connection ? "disconnected" : calendar.attendeeSource;
+
   const types = EVENT_TYPES.filter((t) => monthCards.some((c) => c.type === t && monthOf(toDateKey(new Date(c.startsAt))) === monthKey));
   const type = types.find((t) => t === params.typ);
   const state = managing ? PLAN_STATES.find((s) => s === params.stav) : undefined;
@@ -58,6 +68,9 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   const filtering = Boolean(type || state);
   const upcoming = await nextEventsFor(viewer, TOP_ROWS, filtering ? (card) => matchesPlanFilter(card, { type, state }) : undefined, Boolean(state));
   const syncing = monthCards.some((c) => c.syncStatus === "pending");
+  // Čekající pozvánky (nový host ve skupině, obnovené propojení) i zveřejněné akce bez vazby se odešlou
+  // samy, jakmile správce otevře Plán. Souběh hlídá zámek u každé vazby v `syncPending`.
+  if (managing) after(() => syncPublished());
 
   const current = { mesic: monthKey, pohled: listView ? "seznam" : undefined, jako: preview ? params.jako : undefined, typ: type, stav: state };
   const link = (change: Partial<typeof current> & { akce?: string }) => {
@@ -124,10 +137,11 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
     {preview && (
       <p className="notice" role="status">
         Díváte se jako <strong>{preview.label}</strong>. Celá stránka ukazuje jen to, co tento pohled opravdu vidí. Návrhy a úpravy
-        jsou schované, úkoly jsou jen ke čtení. <Link href={link({ jako: undefined })}>Zpět na pohled organizátora</Link>
+        jsou schované, úkoly jsou jen ke čtení. <Link href={link({ jako: undefined })}>Zpět na pohled správce</Link>
       </p>
     )}
       </div>
+      {calendar && <CalendarStatusLine status={calendar} now={now()} />}
       <div className="plan-top">
         <section className="section" aria-labelledby="ceka">
           <h2 id="ceka">
@@ -188,10 +202,23 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
           </div>
           {managing && (
             <div className="row">
-              <Menu label="Nástroje organizátora" className="organizer-tools">
+              <Menu label="Nástroje správce" className="organizer-tools">
                 <ActionForm action={generateMonthAction} fields={{ month: monthKey }} label="Doplnit měsíc ze šablony" pendingLabel="Doplňuji…" />
                 <TemplateDialog slots={template} />
               </Menu>
+              {monthDrafts && calendar && monthDrafts.drafts.length > 0 && (
+                <PublishMonthDialog
+                  key={monthDrafts.drafts.map((d) => `${d.id}:${d.revision}`).join("|")}
+                  monthKey={monthKey}
+                  monthName={formatMonth(monthKey)}
+                  drafts={monthDrafts.drafts}
+                  changeDrafts={monthDrafts.changeDrafts}
+                  people={people}
+                  topics={topics.map((t) => t.name)}
+                  recipients={calendar.recipients}
+                  inviteMode={inviteMode}
+                />
+              )}
               <EventDialog
                 mode="create"
                 initial={{
@@ -217,7 +244,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
         </div>
 
         {summary && !summary.planned && (
-          <p className="notice month-summary-empty">Měsíc je zatím prázdný. Doplňte ho ze šablony v Nástrojích organizátora, nebo přidejte akci.</p>
+          <p className="notice month-summary-empty">Měsíc je zatím prázdný. Doplňte ho ze šablony v Nástrojích správce, nebo přidejte akci.</p>
         )}
 
         {listView ? (

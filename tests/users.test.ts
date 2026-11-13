@@ -115,21 +115,18 @@ describe("kdo smí co měnit", () => {
     expect(await pendingRequestCount(await getDb(), participant)).toBe(0);
   });
 
-  test("organizátor roli správce nepřidělí ani správci nic nezmění, nikdo nemění sám sebe", async () => {
-    await expect(inviteUser(organizer, { email: KOLEGA, name: "X y", role: "admin", groups: [] })).rejects.toMatchObject({ code: "forbidden" });
-    await expect(updateAccess(organizer, "demo-vedouci", { role: "admin", groups: [], status: "active" })).rejects.toMatchObject({
-      code: "forbidden",
-    });
-    await expect(updateAccess(organizer, "demo-spravce", { role: "member", groups: [], status: "disabled" })).rejects.toMatchObject({
-      code: "forbidden",
-    });
+  test("obě hodnoty role správce smí totéž, nikdo nemění sám sebe", async () => {
     await expect(updateAccess(admin, "demo-spravce", { role: "member", groups: [], status: "active" })).rejects.toMatchObject({
       code: "forbidden",
     });
-    await updateAccess(admin, "demo-vedouci", { role: "admin", groups: ["vsichni"], status: "active" });
+    await expect(updateAccess(organizer, organizer.id, { role: "member", groups: [], status: "active" })).rejects.toMatchObject({
+      code: "forbidden",
+    });
+    await updateAccess(organizer, "demo-vedouci", { role: "admin", groups: ["vsichni"], status: "active" });
     const accounts = await listAccounts(organizer);
-    expect(accounts.find((a) => a.id === "demo-vedouci")?.editable).toBe(false);
-    expect(accounts.find((a) => a.id === "demo-ucastnik")?.editable).toBe(true);
+    expect(accounts.find((a) => a.id === "demo-vedouci")?.editable).toBe(true);
+    expect(accounts.find((a) => a.id === organizer.id)?.editable).toBe(false);
+    await updateAccess(admin, "demo-vedouci", { role: "member", groups: ["vsichni", "fp", "rm", "tym-a"], status: "active" });
   });
 
   test("odebraný správce už nemůže měnit ostatní, i s rolí načtenou před odebráním", async () => {

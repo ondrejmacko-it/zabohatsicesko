@@ -33,7 +33,7 @@ export function statusAdvice(card: EventCard): string | null {
   // Rozpracovaný návrh změny má v detailu vlastní upozornění s tlačítky.
   if (card.unpublishedChanges) return null;
   if (card.syncStatus === "pending") return "Změna se právě posílá do Kalendáře. Není potřeba nic dělat, stránka se obnoví sama.";
-  if (card.syncStatus === "unlinked") return "Akce je zveřejněná ve Wiki, ale nemá pozvánku. Založte ji nebo spárujte níže v části Google Kalendář.";
+  if (card.syncStatus === "unlinked") return "Akce je zveřejněná ve Wiki a pozvánka se zakládá. Pokud tu stav zůstane, leží ve stejném čase v Kalendáři jiná pozvánka: níže v části Google Kalendář ji spárujte, nebo založte novou.";
   return null;
 }
 
