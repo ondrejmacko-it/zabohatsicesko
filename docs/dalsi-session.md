@@ -19,8 +19,10 @@ ani o pixel mimo osu, vše je jasné na první pohled.
    konzoli přidal obě přesměrovací adresy. Postup: přihlášení správce (při druhém přihlášení má přijít jedna
    obrazovka Googlu s Kalendářem), nový účet a žádost, schválení ve Správě, řádek „Kalendář“ na Plánu,
    zveřejnění akce, změna, zrušení, odkaz na zápis v pozvánce.
-2. Zeptej se a po mém potvrzení účtů z tabulky „Kalendář a pozvánky“ ve Správě nastav na preview
-   `CALENDAR_ATTENDEES=audience` (posílá skutečné e-maily) a ověř se mnou, že pozvánky chodí skupině akce.
+2. Skutečné pozvánky jsou na preview této větve zapnuté (`CALENDAR_ATTENDEES=audience`, jen pro tuto větev).
+   Ověř se mnou, že zveřejněné budoucí akce mají v Kalendáři hosty podle skupin a že nový účet ve skupině
+   dostane pozvánky sám. Návrhy se do Kalendáře neposílají, dokud je nezveřejním: navrhni hromadné zveřejnění
+   měsíce (zeptej se, posílá e-maily). Po sloučení PR přenes proměnnou na všechny preview (zeptej se).
 3. Dialog akce: ukaž skutečné hosty podle vybrané skupiny (`loadCalendarStatus().recipients`) místo testovací
    adresy a nabídni doporučená témata s počtem zájemců.
 4. Dokonči sloučení rolí v textech: hledej „organizátor“ v `src/` (Integrace, `SyncPanelView`, `EventPeek`,
@@ -56,7 +58,9 @@ posunu). **Naživo proti Googlu neověřeno nic z níže uvedeného.**
   brána nabídne „Přihlásit se bez Kalendáře“ (`?kalendar=ne`), `?jiny=1` vynutí výběr účtu.
 - **Příjemci pozvánek** (`attendees.ts`, `listRecipients`): v režimu Googlu aktivní účty skupiny akce. Nově
   i fiktivní role svázaná s účtem Google ze seznamu `GOOGLE_LOGIN_ACCOUNTS` (dostane pozvánku na adresu Google).
-  Přepínač zůstává `CALENDAR_ATTENDEES=audience`, **na preview není zapnutý**, čeká na potvrzení účtů.
+  Přepínač `CALENDAR_ATTENDEES=audience` je od 13. 11. v noci zapnutý jen pro preview této větve. Budoucí
+  vazby jsou vrácené do fronty, odešlou se, když správce otevře Plán (`after(syncPending)` na stránce Plán).
+  Osobní účet uživatele je na jeho žádost z databáze smazaný (i vazba na Google), nezakládat ho znovu.
 - **Stav Kalendáře** (`services/calendar-status.ts`, `CalendarStatusLine.tsx`): řádek na Plánu (jen správce mimo
   náhled) a ve Správě v sekci „Kalendář a pozvánky“ s tabulkou, kdo dostane pozvánku podle skupiny. Propojení
   se při načtení ověří u Googlu (vypršelý souhlas se pozná hned). V režimu Testing ukazuje datum vypršení

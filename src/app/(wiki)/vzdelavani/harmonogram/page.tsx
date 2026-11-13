@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { EventCard } from "@/server/services/events";
 import Link from "next/link";
+import { after } from "next/server";
 import { ActionForm } from "@/components/ActionForm";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { Icon } from "@/components/Icon";
@@ -16,6 +17,7 @@ import { PLAN_STATES, filterCards, matchesPlanFilter, monthSummary, monthTasks }
 import styles from "@/features/vzdelavani/components/schedule.module.css";
 import { formatMonth, isValidMonthKey, monthOf, shiftMonth, toDateKey } from "@/lib/time";
 import { EVENT_TYPES } from "@/lib/types";
+import { syncPending } from "@/server/calendar/sync";
 import { requireUser } from "@/server/auth/session";
 import { now } from "@/server/config";
 import { defaultAudience } from "@/server/domain/generation";
@@ -62,6 +64,9 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   const filtering = Boolean(type || state);
   const upcoming = await nextEventsFor(viewer, TOP_ROWS, filtering ? (card) => matchesPlanFilter(card, { type, state }) : undefined, Boolean(state));
   const syncing = monthCards.some((c) => c.syncStatus === "pending");
+  // Čekající pozvánky (nový host ve skupině, obnovené propojení) se odešlou samy, jakmile správce otevře Plán.
+  // Souběh hlídá zámek u každé vazby v `syncPending`.
+  if (managing && syncing) after(() => syncPending());
 
   const current = { mesic: monthKey, pohled: listView ? "seznam" : undefined, jako: preview ? params.jako : undefined, typ: type, stav: state };
   const link = (change: Partial<typeof current> & { akce?: string }) => {
