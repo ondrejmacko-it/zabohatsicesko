@@ -1,10 +1,11 @@
 import { eq } from "drizzle-orm";
 import { toDateKey, toTimeKey } from "@/lib/time";
 import type { EventSnapshot, EventType, Group, SimAttendee } from "@/lib/types";
+import { audienceAttendees } from "@/server/calendar/attendees";
 import { CalendarError } from "@/server/calendar/provider";
 import { listNotifications } from "@/server/calendar/simulated";
 import { calendarProvider, pairingCandidates } from "@/server/calendar/sync";
-import { calendarMode, config, googleCalendarConfig, type CalendarMode } from "@/server/config";
+import { attendeeSource, calendarMode, config, type AttendeeSource, type CalendarMode } from "@/server/config";
 import { getDb } from "@/server/db/client";
 import { calendarLinks, users, type ManagedFields } from "@/server/db/schema";
 import { calendarSummary, snapshotOf, type EventRow } from "@/server/domain/snapshot";
@@ -60,14 +61,16 @@ export type SyncPanel = {
   notifications: Array<{ sequence: number; kind: string; recipients: number; at: string }>;
   candidates: Array<{ id: string; summary: string; startsAt: string; endsAt: string }>;
   inviteeCount: number;
+  /** Odkud se berou hosté nové pozvánky: publikum akce, nebo pevný seznam testovacích příjemců. */
+  attendeeSource: AttendeeSource;
 };
 
 async function syncPanel(viewer: Viewer, row: EventRow): Promise<SyncPanel | null> {
   if (!isOrganizer(viewer) || row.type === "holiday") return null;
   const db = await getDb();
   const [link] = await db.select().from(calendarLinks).where(eq(calendarLinks.eventId, row.id)).limit(1);
-  const members = await db.select({ groups: users.groups }).from(users).where(eq(users.orgId, config.orgId));
-  const audienceSize = members.filter((u) => u.groups.includes(row.audience)).length;
+  // Neplatná sestava hostů zastaví až synchronizaci, panel kvůli ní nespadne.
+  const invitees = await audienceAttendees(db, row.audience).catch(() => []);
   const mode = calendarMode();
   const panel: SyncPanel = {
     mode,
@@ -81,8 +84,8 @@ async function syncPanel(viewer: Viewer, row: EventRow): Promise<SyncPanel | nul
     calendarErrorCode: null,
     notifications: [],
     candidates: [],
-    // V testovacím režimu Googlu jde nová pozvánka jen testovacím příjemcům, ne publiku akce.
-    inviteeCount: mode === "google-test" ? (googleCalendarConfig()?.allowedAttendees.length ?? 0) : audienceSize,
+    attendeeSource: mode === "google-test" ? attendeeSource() : "audience",
+    inviteeCount: invitees.length,
   };
   try {
     if (link?.externalEventId) {

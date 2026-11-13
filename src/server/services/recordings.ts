@@ -4,7 +4,7 @@ import type { MinutesContent, RecordingState } from "@/lib/types";
 import { audit, logError, withinRateLimit } from "@/server/audit";
 import { config, now } from "@/server/config";
 import { getDb, queryRows, type Executor } from "@/server/db/client";
-import { minutes, recordingBlobs, recordings, transcriptionJobs } from "@/server/db/schema";
+import { calendarLinks, minutes, recordingBlobs, recordings, transcriptionJobs } from "@/server/db/schema";
 import type { EventRow } from "@/server/domain/snapshot";
 import { canHandleRecording, canReadPublishedMinutes, visibleEvent, type Viewer } from "@/server/policy";
 import { MAX_UPLOAD_BYTES, displayName, inspectAudio } from "@/server/recordings/audio";
@@ -211,6 +211,11 @@ export async function publishMinutes(viewer: Viewer, eventId: string, minutesId:
     .returning({ id: minutes.id });
   if (!row) throw new DomainError("conflict");
   await audit(db, viewer.id, "minutes.publish", "event", eventId);
+  // Pozvánka dostane odkaz na zápis a Kalendář o změně informuje pozvané. Odeslání spouští volající.
+  await db
+    .update(calendarLinks)
+    .set({ syncStatus: "pending", attempts: 0, errorCode: null, updatedAt: new Date() })
+    .where(and(eq(calendarLinks.eventId, eventId), eq(calendarLinks.syncStatus, "synced")));
 }
 
 export type RecordingPanel =

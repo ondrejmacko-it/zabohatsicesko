@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { GROUPS, type Group, type Role, type UserOrigin, type UserStatus } from "@/lib/types";
 import { audit } from "@/server/audit";
+import { requeueAttendeeSync } from "@/server/calendar/attendees";
 import { config } from "@/server/config";
 import { getDb, type Executor } from "@/server/db/client";
 import { userIdentities, users } from "@/server/db/schema";
@@ -72,6 +73,8 @@ export async function inviteUser(viewer: Viewer, input: AccessInput & { email: s
       .returning({ id: users.id });
     if (!inserted.length) throw new DomainError("email_taken");
     await audit(tx, viewer.id, "user.invited", "user", id);
+    // Pozvaný patří do publika hned: budoucí pozvánky jeho skupin ho přiberou.
+    await requeueAttendeeSync(tx, input.groups);
     return id;
   });
 }
@@ -90,7 +93,7 @@ export async function updateAccess(
   await db.transaction(async (tx) => {
     const ids = [viewer.id, userId].sort();
     const locked = await tx
-      .select({ id: users.id, role: users.role, status: users.status, orgId: users.orgId })
+      .select({ id: users.id, role: users.role, status: users.status, orgId: users.orgId, groups: users.groups })
       .from(users)
       .where(inArray(users.id, ids))
       .orderBy(asc(users.id))
@@ -114,6 +117,8 @@ export async function updateAccess(
           ? input.status === "disabled" ? "user.disabled" : "user.enabled"
           : "user.access_changed";
     await audit(tx, viewer.id, action, "user", userId);
+    // Publikum se mohlo změnit ve starých i nových skupinách. Budoucí pozvánky se podle toho upraví.
+    await requeueAttendeeSync(tx, [...new Set([...target.groups, ...input.groups])]);
   });
 }
 

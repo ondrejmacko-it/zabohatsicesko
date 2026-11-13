@@ -109,9 +109,14 @@ function AccountHead({ account: a }: { account: Account }) {
               : "Pozvánka čeká na první přihlášení"}
         </p>
       </div>
-      <span className={`badge${a.status === "active" ? " badge-ok" : a.status === "pending" ? " badge-ochre" : " badge-danger"}`}>
-        {USER_STATUS_LABELS[a.status]}
-      </span>
+      {a.status === "active" && a.origin !== "demo" && !a.googleLinked ? (
+        // Účet už platí, ale kolega se ještě nepřihlásil. „Aktivní“ by tu mátlo.
+        <span className="badge badge-ochre">Pozvaný</span>
+      ) : (
+        <span className={`badge${a.status === "active" ? " badge-ok" : a.status === "pending" ? " badge-ochre" : " badge-danger"}`}>
+          {USER_STATUS_LABELS[a.status]}
+        </span>
+      )}
     </div>
   );
 }

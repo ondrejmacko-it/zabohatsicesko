@@ -33,7 +33,7 @@ export function SyncPanelView({ eventId, sync }: { eventId: string; sync: SyncPa
       <div className="spread">
         <h2 id="kalendar">Google Kalendář</h2>
         <span className="row">
-          <span className="badge badge-outline">{sync.mode === "simulation" ? "simulace" : "test Google · jen testovací příjemci"}</span>
+          <span className="badge badge-outline">{sync.mode === "simulation" ? "simulace" : sync.attendeeSource === "allowlist" ? "test Google · jen testovací příjemci" : "test Google · publikum akce"}</span>
           <span className={statusBadge} role="status">
             {statusLabel}
           </span>
@@ -96,16 +96,18 @@ export function SyncPanelView({ eventId, sync }: { eventId: string; sync: SyncPa
               <ActionForm action={pairInviteAction} fields={{ id: eventId, externalId: c.id }} label="Spárovat" small />
             </div>
           ))}
-          {sync.mode === "google-test" && (
-            <p className="small muted">
-              Testovací režim: nová pozvánka půjde jen povoleným testovacím příjemcům ({sync.inviteeCount}), ne publiku akce.
-            </p>
-          )}
+          <p className="small muted">
+            {sync.attendeeSource === "allowlist"
+              ? `Testovací režim: nová pozvánka půjde jen povoleným testovacím příjemcům (${sync.inviteeCount}), ne publiku akce.`
+              : `Nová pozvánka půjde publiku akce (${sync.inviteeCount}). Hosty, které přidáte ručně v Kalendáři, Wiki nemění.`}
+          </p>
           <ActionForm action={createInviteAction} fields={{ id: eventId }} label="Vytvořit novou pozvánku" />
         </div>
       )}
 
       {sync.external && (
+        <details className="fold" open={sync.status !== "synced"}>
+          <summary>Podrobnosti pozvánky: hosté ({sync.external.attendees.length}) a oznámení</summary>
         <div className="stack invite">
           <dl className="dl">
             <dt>Pozvánka</dt>
@@ -149,6 +151,7 @@ export function SyncPanelView({ eventId, sync }: { eventId: string; sync: SyncPa
             </details>
           )}
         </div>
+        </details>
       )}
     </section>
   );

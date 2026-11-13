@@ -19,7 +19,15 @@ import { listTopics } from "@/server/services/topics";
 
 export const metadata: Metadata = { title: "Detail akce" };
 
-export default async function EventDetailPage({ params }: { params: Promise<{ id: string }> }) {
+/** Odkud uživatel přišel. Zpět ho vracíme tam, ne vždy na harmonogram. Jiná hodnota se ignoruje. */
+const ORIGINS: Record<string, { href: string; label: string }> = {
+  zapisy: { href: "/vzdelavani/zapisy", label: "Zpět na zápisy" },
+  "moje-cesta": { href: "/vzdelavani/moje-cesta", label: "Zpět na Moje cesta" },
+};
+
+type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ odkud?: string }> };
+
+export default async function EventDetailPage({ params, searchParams }: Props) {
   const user = await requireUser();
   const { id } = await params;
   // Neviditelná i neexistující akce vrací stejnou odpověď, aby ID neprozradilo, že akce existuje.
@@ -35,12 +43,13 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
   const status = primaryStatus(card);
   const [people, topics] = organizer ? await Promise.all([listPeople(user), listTopics(user)]) : [[], []];
   const handler = detail.recording.access === "handler";
+  const back = ORIGINS[(await searchParams).odkud ?? ""] ?? { href: `/vzdelavani/harmonogram?mesic=${monthOf(dayKey)}`, label: "Zpět na harmonogram" };
 
   return (
     <>
       <AutoRefresh active={detail.sync?.status === "pending"} />
       <p className="small back-link">
-        <Link href={`/vzdelavani/harmonogram?mesic=${monthOf(dayKey)}`}>← Zpět na harmonogram</Link>
+        <Link href={back.href}>← {back.label}</Link>
       </p>
 
       <div className="page-head detail-head">
@@ -89,21 +98,30 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
       )}
 
       <section className="section" aria-label="Údaje o akci">
-        <dl className="dl">
-          <dt>Datum</dt>
-          <dd>{formatDate(dayKey)}</dd>
-          <dt>Čas</dt>
-          <dd>
-            <Icon name="calendar" /> {formatEventTime(start, new Date(card.endsAt), card.allDay)}
-          </dd>
-          <dt>Typ</dt>
-          <dd>{TYPE_LABELS[card.type]}</dd>
+        {/* Kdy a kdo: to hlavní, co kolega z akce potřebuje, je nahoře a výrazně. Typ a publikum nese nadpis. */}
+        <dl className="key-facts">
+          <div>
+            <dt>Kdy</dt>
+            <dd>
+              <Icon name="calendar" /> {formatDate(dayKey)} · {formatEventTime(start, new Date(card.endsAt), card.allDay)}
+            </dd>
+          </div>
           {card.type !== "holiday" && (
-            <>
-              <dt>Téma</dt>
-              <dd>{card.topicTitle ?? <span className="muted">zatím nedoplněno</span>}</dd>
+            <div>
               <dt>Vede</dt>
               <dd>{detail.leadName ?? <span className="muted">zatím nedoplněno</span>}</dd>
+            </div>
+          )}
+          <div>
+            <dt>Pro koho</dt>
+            <dd>{GROUP_LABELS[card.audience]}</dd>
+          </div>
+        </dl>
+        <dl className="dl">
+          {card.type !== "holiday" && !card.topicTitle && (
+            <>
+              <dt>Téma</dt>
+              <dd className="muted">zatím nedoplněno</dd>
             </>
           )}
           {detail.reviewerName && (
@@ -112,8 +130,6 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
               <dd>{detail.reviewerName}</dd>
             </>
           )}
-          <dt>Publikum</dt>
-          <dd>{GROUP_LABELS[card.audience]}</dd>
           {detail.cancelReason && card.planStatus === "cancelled" && (
             <>
               <dt>Důvod zrušení</dt>

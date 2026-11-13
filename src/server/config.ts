@@ -65,6 +65,16 @@ const list = (value: string | undefined) =>
     .map((item) => item.trim())
     .filter(Boolean);
 
+export type AttendeeSource = "allowlist" | "audience";
+
+/**
+ * Komu jdou pozvánky v režimu Googlu. Výchozí je pevný seznam testovacích příjemců. Skutečné publikum
+ * akce se zapíná výslovně `CALENDAR_ATTENDEES=audience`, překlep tedy nikdy nerozešle e-maily kolegům.
+ */
+export function attendeeSource(): AttendeeSource {
+  return process.env.CALENDAR_ATTENDEES?.trim() === "audience" ? "audience" : "allowlist";
+}
+
 export type GoogleCalendarConfig = {
   clientId: string;
   clientSecret: string;

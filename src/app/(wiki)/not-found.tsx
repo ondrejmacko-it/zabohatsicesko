@@ -5,9 +5,12 @@ export default function NotFound() {
     <section className="stack">
       <h1>Záznam není dostupný</h1>
       <p>Záznam neexistuje nebo k němu nemáte přístup.</p>
-      <p>
+      <p className="row">
+        <Link className="btn btn-primary" href="/vzdelavani/moje-cesta">
+          Přejít na Moje cesta
+        </Link>
         <Link className="btn" href="/vzdelavani/harmonogram">
-          Zpět na harmonogram
+          Otevřít harmonogram
         </Link>
       </p>
     </section>

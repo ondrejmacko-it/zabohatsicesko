@@ -56,41 +56,49 @@ export default async function SchedulePage({ searchParams }: { searchParams: Sea
               <Icon name="chevronRight" />
             </Link>
           </div>
-          <div className="row view-toggle" role="group" aria-label="Zobrazení">
-            <Link className="pill" href={link(monthKey, false)} aria-current={!listView ? "page" : undefined}>
-              Měsíc
-            </Link>
-            <Link className="pill" href={link(monthKey, true)} aria-current={listView ? "page" : undefined}>
-              Seznam
-            </Link>
+          <div className="row">
+            <div className="row view-toggle" role="group" aria-label="Zobrazení">
+              <Link className="pill" href={link(monthKey, false)} aria-current={!listView ? "page" : undefined}>
+                Měsíc
+              </Link>
+              <Link className="pill" href={link(monthKey, true)} aria-current={listView ? "page" : undefined}>
+                Seznam
+              </Link>
+            </div>
+            {organizer && (
+              <>
+                <EventDialog
+                  mode="create"
+                  initial={{
+                    type: "other",
+                    label: "Jiná akce",
+                    date: newDate,
+                    endDate: null,
+                    startTime: "09:00",
+                    endTime: "11:00",
+                    topicTitle: "",
+                    audience: defaultAudience("other"),
+                    leadId: "",
+                    reviewerId: "",
+                  }}
+                  published={null}
+                  people={people}
+                  topics={topics}
+                  inviteeCount={0}
+                />
+                <details className="menu">
+                  <summary className="btn">
+                    <Icon name="more" /> Nástroje organizátora
+                  </summary>
+                  <div className="menu-list organizer-tools">
+                    <ActionForm action={generateMonthAction} fields={{ month: monthKey }} label="Doplnit měsíc ze šablony" pendingLabel="Doplňuji…" />
+                    <TemplateDialog slots={template} />
+                  </div>
+                </details>
+              </>
+            )}
           </div>
         </div>
-
-        {organizer && (
-          <div className="row organizer-tools">
-            <EventDialog
-              mode="create"
-              initial={{
-                type: "other",
-                label: "Jiná akce",
-                date: newDate,
-                endDate: null,
-                startTime: "09:00",
-                endTime: "11:00",
-                topicTitle: "",
-                audience: defaultAudience("other"),
-                leadId: "",
-                reviewerId: "",
-              }}
-              published={null}
-              people={people}
-              topics={topics}
-              inviteeCount={0}
-            />
-            <ActionForm action={generateMonthAction} fields={{ month: monthKey }} label="Doplnit měsíc ze šablony" pendingLabel="Doplňuji…" />
-            <TemplateDialog slots={template} />
-          </div>
-        )}
 
         {listView ? (
           <Agenda monthKey={monthKey} cards={cards} todayKey={todayKey} />

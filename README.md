@@ -66,6 +66,7 @@ Vzor je v `.env.example`. Hodnoty tajemství patří do správce tajemství host
 | `DEMO_CLOCK` | ne | `real` = skutečný čas místo ukázkového. |
 | `SIM_LATENCY_MS` | ne | Zpoždění simulací v ms (výchozí 1200). |
 | `CALENDAR_MODE` | ne | `google-test` zapne testovací režim Google Kalendáře. Jinak simulace. |
+| `CALENDAR_ATTENDEES` | ne | `audience` zve v režimu Googlu skutečné publikum akce (aktivní účty skupiny). Jinak jen `GOOGLE_ALLOWED_ATTENDEES`. |
 | `GOOGLE_*`, `TOKEN_ENCRYPTION_KEY` | v režimu `google-test` | Viz [docs/google-kalendar.md](docs/google-kalendar.md). |
 | `LOGIN_MODE` | ne | `google-test` přidá přihlášení účtem Google. Jinak jen fiktivní role. |
 | `GOOGLE_LOGIN_ACCOUNTS` | ne | Zaváděcí seznam účtů, ostatní zve a schvaluje Správa systému, viz [docs/google-prihlaseni.md](docs/google-prihlaseni.md). |
