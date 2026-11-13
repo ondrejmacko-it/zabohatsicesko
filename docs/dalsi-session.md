@@ -4,9 +4,33 @@ Zkopíruj text níže jako první zprávu nové relace Claude Code (repo `ondrej
 
 ---
 
-Pokračuj na demu modulu Vzdělávání. Nečti znovu celé zadání ani celý kód. Kontext máš v `README.md`,
-`docs/predani.md`, `docs/google-kalendar.md` a `docs/google-prihlaseni.md`, pravidla v `CLAUDE.md`.
-Uživateli tykej, piš přátelsky. Větší změny nejdřív navrhni, nejasnosti se ptej.
+Pokračuj na demu modulu Vzdělávání (repo `ondrejmacko-it/zabohatsicesko`). Nečti znovu celé zadání ani celý kód.
+Kontext máš v `docs/dalsi-session.md`, `README.md` a `docs/google-prihlaseni.md`, pravidla v `CLAUDE.md`.
+Tykej mi, piš přátelsky. Větší změny nejdřív navrhni, na nejasnosti se ptej.
+
+Stav 13. 11. 2026 večer: `main` obsahuje PR #1 až #13. Větev `claude/focused-dirac-gphy4f` má draft PR do `main`
+(přestavěný Plán, detail akce v náhledu „Zobrazit jako“, automatické propojení Kalendáře při přihlášení
+organizátora Googlem). Pokud už je sloučený, vyjdi z `main`.
+
+Co udělat, v tomto pořadí:
+
+1. Živý test na preview větve `claude/focused-dirac-gphy4f` (adresa a `APP_URL` jsou v poznámkách níže). Zeptej se,
+   jestli jsem v Google konzoli přidal obě přesměrovací adresy. Projdi se mnou: přihlášení organizátora Googlem
+   (má ho samo poslat na souhlas ke Kalendáři a vrátit na Plán), účet ze seznamu, neznámý účet a čekající žádost
+   na `/sprava`, schválení, úkol „Propojit Kalendář“ po zrušení přístupu v Google účtu.
+2. Po úspěšném testu nastav na preview `CALENDAR_ATTENDEES=audience` a ověř se mnou, že se akce po zveřejnění
+   sama objeví v kalendáři lidí ze skupiny a že se změna a zrušení propíšou. Pozor: posílá skutečné pozvánky,
+   nejdřív si se mnou potvrď, které účty jsou ve skupinách.
+3. Doplň `docs/google-kalendar.md` a `docs/google-prihlaseni.md` o automatické propojení Kalendáře.
+4. Zjisti a navrhni (neprogramuj): co by znamenal Google Workspace a servisní účet, aby odpadl i jednorázový
+   souhlas organizátora a sedmidenní platnost v režimu Testing. Ověř v dokumentaci Googlu, nespoléhej na paměť.
+5. Projdi zbylé „ukázkové“ texty na technické stránce Integrace a rozdělení Zápisů do více měsíců (naživo
+   viděn jen jeden měsíc). Štítek „Ukázka“ a přepínač rolí zůstávají.
+
+Production na Vercelu nemá proměnné prostředí a buildy z `main` se přeskakují, živý test běží na preview.
+Na `main` nepushuj, merge dělám já přes PR. Respektuj limit kontextu.
+
+---
 
 ## Stav 13. 11. 2026 večer (větev `claude/focused-dirac-gphy4f`, zatím bez PR)
 
