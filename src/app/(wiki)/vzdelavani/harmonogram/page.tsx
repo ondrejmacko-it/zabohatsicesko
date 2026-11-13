@@ -1,14 +1,17 @@
 import type { Metadata } from "next";
+import type { EventCard } from "@/server/services/events";
 import Link from "next/link";
 import { ActionForm } from "@/components/ActionForm";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { Icon } from "@/components/Icon";
+import { Menu } from "@/components/Menu";
 import { generateMonthAction } from "@/features/vzdelavani/actions";
 import { EventDialog } from "@/features/vzdelavani/components/EventDialog";
+import { EventPeek } from "@/features/vzdelavani/components/EventPeek";
 import { PlanFilters } from "@/features/vzdelavani/components/PlanFilters";
 import { Agenda, Legend, NextEventsList, ScheduleGrid } from "@/features/vzdelavani/components/Schedule";
 import { TemplateDialog } from "@/features/vzdelavani/components/TemplateDialog";
-import { PLAN_STATES, filterCards, monthSummary, monthTasks } from "@/features/vzdelavani/status";
+import { PLAN_STATES, filterCards, matchesPlanFilter, monthSummary, monthTasks } from "@/features/vzdelavani/status";
 import styles from "@/features/vzdelavani/components/schedule.module.css";
 import { formatMonth, isValidMonthKey, monthOf, shiftMonth, toDateKey } from "@/lib/time";
 import { EVENT_TYPES } from "@/lib/types";
@@ -23,7 +26,7 @@ import { listTopics } from "@/server/services/topics";
 
 export const metadata: Metadata = { title: "Plán vzdělávání" };
 
-type SearchParams = Promise<{ mesic?: string; pohled?: string; jako?: string; typ?: string; stav?: string }>;
+type SearchParams = Promise<{ mesic?: string; pohled?: string; jako?: string; typ?: string; stav?: string; akce?: string }>;
 
 /** Kolik řádků se v horních blocích vejde bez rozbalení. Oba bloky tak zůstávají podobně vysoké. */
 const TOP_ROWS = 3;
@@ -39,12 +42,9 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   // Náhled očima skupiny nebo kolegy počítá server stejnými pravidly jako pro skutečného uživatele.
   const preview = await resolvePreview(user, params.jako);
   const managing = organizer && !preview;
-  const [monthCards, upcoming, template, ownTasks] = await Promise.all([
-    listMonth(preview?.viewer ?? user, monthKey),
-    nextEventsFor(user, TOP_ROWS),
-    loadTemplate(),
-    listTasks(user),
-  ]);
+  // Celá stránka, tedy i oba horní bloky, se počítá pro stejného diváka jako harmonogram.
+  const viewer = preview?.viewer ?? user;
+  const [monthCards, template, viewerTasks] = await Promise.all([listMonth(viewer, monthKey), loadTemplate(), listTasks(viewer)]);
   const activeSlots = template.filter((s) => s.active);
   const slotTimes = Object.fromEntries(activeSlots.map((s) => [s.isoWeekday, `${s.startTime}–${s.endTime}`]));
   const [people, topics, previewOptions] = organizer
@@ -56,22 +56,30 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   const state = managing ? PLAN_STATES.find((s) => s === params.stav) : undefined;
   const cards = filterCards(monthCards, monthKey, { type, state });
   const filtering = Boolean(type || state);
+  const upcoming = await nextEventsFor(viewer, TOP_ROWS, filtering ? (card) => matchesPlanFilter(card, { type, state }) : undefined, Boolean(state));
   const syncing = monthCards.some((c) => c.syncStatus === "pending");
 
   const current = { mesic: monthKey, pohled: listView ? "seznam" : undefined, jako: preview ? params.jako : undefined, typ: type, stav: state };
-  const link = (change: Partial<typeof current>) => {
+  const link = (change: Partial<typeof current> & { akce?: string }) => {
     const query = new URLSearchParams();
     for (const [key, value] of Object.entries({ ...current, ...change })) if (value) query.set(key, value);
     return `/vzdelavani/harmonogram?${query}`;
   };
+  // Klik na akci otevře náhled v okně nad Plánem. Měsíc, pohled i filtry zůstávají v adrese.
+  const peekHref = (card: EventCard) => link({ akce: card.id });
+  const peekId = (params.akce ?? "").slice(0, 120);
   const newDate = monthOf(todayKey) === monthKey ? todayKey : `${monthKey}-01`;
   const emptyText = filtering ? "Filtru v tomto měsíci neodpovídá žádná akce." : undefined;
 
   // Stav měsíce patří organizátorovi mezi úkoly: odkaz zúží harmonogram na termíny, kterých se týká.
+  // Počty ve filtru Stav jsou za celý měsíc, úkoly měsíce respektují vybraný typ akce.
   const summary = managing && monthKey >= monthOf(todayKey) ? monthSummary(monthCards, monthKey) : null;
+  const taskSummary = summary && type ? monthSummary(filterCards(monthCards, monthKey, { type }), monthKey) : summary;
+  const ownTasks = viewerTasks.filter((task) => !state && (!type || task.eventType === type));
+  const hiddenTasks = viewerTasks.length - ownTasks.length;
   const tasks = [
     ...ownTasks,
-    ...(summary ? monthTasks(summary, formatMonth(monthKey).split(" ")[0]!) : []).map((task) => ({
+    ...(taskSummary ? monthTasks(taskSummary, formatMonth(monthKey).split(" ")[0]!).filter((task) => !state || task.state === state) : []).map((task) => ({
       key: `mesic-${task.state}`,
       title: task.title,
       detail: task.detail,
@@ -85,7 +93,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
         <span className="item-title">{task.title}</span>
         <span className="item-meta">{task.detail}</span>
       </span>
-      {task.external ? (
+      {preview ? null : task.external ? (
         <a className="btn btn-small btn-primary" href={task.href}>
           {task.action}
         </a>
@@ -100,13 +108,40 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   return (
     <>
       <AutoRefresh active={syncing} />
+      {peekId && <EventPeek key={peekId} user={user} eventId={peekId} preview={preview} previewKey={current.jako} closeHref={link({})} />}
+      <div className="plan-filter-bar">
+    {(previewOptions || types.length > 1) && (
+      <PlanFilters
+        key={`${params.jako ?? ""}|${type ?? ""}|${state ?? ""}`}
+        keep={Object.fromEntries(Object.entries({ mesic: monthKey, pohled: current.pohled }).filter((e): e is [string, string] => Boolean(e[1])))}
+        types={types}
+        type={type}
+        preview={previewOptions && { ...previewOptions, value: preview ? (params.jako ?? "") : "" }}
+        states={summary && summary.planned ? { summary, value: state } : null}
+        resetHref={filtering || preview ? link({ jako: undefined, typ: undefined, stav: undefined }) : null}
+      />
+    )}
+    {preview && (
+      <p className="notice" role="status">
+        Díváte se jako <strong>{preview.label}</strong>. Celá stránka ukazuje jen to, co tento pohled opravdu vidí. Návrhy a úpravy
+        jsou schované, úkoly jsou jen ke čtení. <Link href={link({ jako: undefined })}>Zpět na pohled organizátora</Link>
+      </p>
+    )}
+      </div>
       <div className="plan-top">
         <section className="section" aria-labelledby="ceka">
           <h2 id="ceka">
-            Čeká na vás{tasks.length > 0 && <span className="count-badge">{tasks.length}</span>}
+            {preview ? "Úkoly v náhledu" : "Čeká na vás"}
+            {tasks.length > 0 && <span className="count-badge">{tasks.length}</span>}
           </h2>
           {tasks.length === 0 ? (
-            <p className="muted">Teď po vás nic nechceme. Úkoly se tu objeví, když povedete akci nebo budete kontrolovat zápis.</p>
+            <p className="muted">
+              {hiddenTasks > 0
+                ? "Vybranému filtru neodpovídá žádný úkol."
+                : preview
+                  ? "Tento pohled teď žádný úkol nemá."
+                  : "Teď po vás nic nechceme. Úkoly se tu objeví, když povedete akci nebo budete kontrolovat zápis."}
+            </p>
           ) : (
             <>
               <ul className="brief-list">{tasks.slice(0, TOP_ROWS).map(taskRow)}</ul>
@@ -118,23 +153,28 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
               )}
             </>
           )}
+          {hiddenTasks > 0 && (
+            <p className="hint">
+              Filtr skrývá další úkoly ({hiddenTasks}). <Link href={link({ typ: undefined, stav: undefined })}>Zobrazit všechny</Link>
+            </p>
+          )}
         </section>
         <section className="section" aria-labelledby="nejblizsi">
           <h2 id="nejblizsi">Nejbližší akce</h2>
-          <NextEventsList cards={upcoming} todayKey={todayKey} />
+          <NextEventsList cards={upcoming} todayKey={todayKey} hrefFor={peekHref} emptyText={filtering ? "Filtru v nejbližších týdnech neodpovídá žádná akce." : preview ? "Tento pohled v nejbližších týdnech žádnou zveřejněnou akci nemá." : undefined} />
         </section>
       </div>
 
       <section className="section" aria-labelledby="mesic">
         <div className="spread schedule-toolbar">
           <div className="row">
-            <Link className="btn btn-small" href={link({ mesic: shiftMonth(monthKey, -1) })} aria-label="Předchozí měsíc">
+            <Link className="btn" href={link({ mesic: shiftMonth(monthKey, -1) })} aria-label="Předchozí měsíc">
               <Icon name="chevronLeft" />
             </Link>
             <h2 id="mesic" className="month-title">
               {formatMonth(monthKey)}
             </h2>
-            <Link className="btn btn-small" href={link({ mesic: shiftMonth(monthKey, 1) })} aria-label="Další měsíc">
+            <Link className="btn" href={link({ mesic: shiftMonth(monthKey, 1) })} aria-label="Další měsíc">
               <Icon name="chevronRight" />
             </Link>
             <div className="row view-toggle" role="group" aria-label="Zobrazení">
@@ -148,15 +188,10 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
           </div>
           {managing && (
             <div className="row">
-              <details className="menu">
-                <summary className="btn">
-                  <Icon name="more" /> Nástroje organizátora
-                </summary>
-                <div className="menu-list organizer-tools">
-                  <ActionForm action={generateMonthAction} fields={{ month: monthKey }} label="Doplnit měsíc ze šablony" pendingLabel="Doplňuji…" />
-                  <TemplateDialog slots={template} />
-                </div>
-              </details>
+              <Menu label="Nástroje organizátora" className="organizer-tools">
+                <ActionForm action={generateMonthAction} fields={{ month: monthKey }} label="Doplnit měsíc ze šablony" pendingLabel="Doplňuji…" />
+                <TemplateDialog slots={template} />
+              </Menu>
               <EventDialog
                 mode="create"
                 initial={{
@@ -185,34 +220,16 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
           <p className="notice month-summary-empty">Měsíc je zatím prázdný. Doplňte ho ze šablony v Nástrojích organizátora, nebo přidejte akci.</p>
         )}
 
-        {(previewOptions || types.length > 1) && (
-          <PlanFilters
-            key={`${params.jako ?? ""}|${type ?? ""}|${state ?? ""}`}
-            keep={Object.fromEntries(Object.entries({ mesic: monthKey, pohled: current.pohled }).filter((e): e is [string, string] => Boolean(e[1])))}
-            types={types}
-            type={type}
-            preview={previewOptions && { ...previewOptions, value: preview ? (params.jako ?? "") : "" }}
-            states={summary && summary.planned ? { summary, value: state } : null}
-            resetHref={filtering || preview ? link({ jako: undefined, typ: undefined, stav: undefined }) : null}
-          />
-        )}
-        {preview && (
-          <p className="notice" role="status">
-            Díváte se jako <strong>{preview.label}</strong>. Vidíte jen zveřejněné akce, které tento pohled opravdu vidí. Návrhy a úpravy
-            jsou schované. <Link href={link({ jako: undefined })}>Zpět na pohled organizátora</Link>
-          </p>
-        )}
-
         {listView ? (
-          <Agenda monthKey={monthKey} cards={cards} todayKey={todayKey} emptyText={emptyText} as={current.jako} />
+          <Agenda monthKey={monthKey} cards={cards} todayKey={todayKey} emptyText={emptyText} hrefFor={peekHref} managing={managing} />
         ) : (
           <>
             <div className={styles.desktopOnly}>
-              <ScheduleGrid monthKey={monthKey} cards={cards} todayKey={todayKey} slotTimes={slotTimes} as={current.jako} />
+              <ScheduleGrid monthKey={monthKey} cards={cards} todayKey={todayKey} slotTimes={slotTimes} hrefFor={peekHref} managing={managing} />
               <Legend organizer={managing} />
             </div>
             <div className={styles.mobileOnly}>
-              <Agenda monthKey={monthKey} cards={cards} todayKey={todayKey} emptyText={emptyText} as={current.jako} />
+              <Agenda monthKey={monthKey} cards={cards} todayKey={todayKey} emptyText={emptyText} hrefFor={peekHref} managing={managing} />
             </div>
           </>
         )}

@@ -4,7 +4,7 @@ import type { EventType, Group } from "@/lib/types";
 import { needsCalendarConnection } from "@/server/calendar/google-auth";
 import { config, now } from "@/server/config";
 import { getDb } from "@/server/db/client";
-import { calendarLinks, events, minutes, recordings } from "@/server/db/schema";
+import { calendarLinks, events, minutes, recordings, users } from "@/server/db/schema";
 import { canHandleRecording, canManageUsers, canReadPublishedMinutes, isOrganizer, type Viewer } from "@/server/policy";
 import { pendingRequestCount } from "@/server/services/users";
 
@@ -60,11 +60,70 @@ export async function listPublishedMinutes(viewer: Viewer, filter: MinutesFilter
     .map(({ item }) => item);
 }
 
+export type MissingMinutesItem = {
+  eventId: string;
+  title: string;
+  type: EventType;
+  startsAt: string;
+  leadName: string | null;
+  /** Rozpracovaný stav: návrh zápisu čeká na kontrolu, nebo se nahrávka teprve zpracovává. */
+  state: "none" | "draft" | "processing";
+  /** Uživatel je vedoucí nebo kontrolor, smí tedy nahrát záznam a zápis zveřejnit. */
+  canHandle: boolean;
+};
+
+/**
+ * Proběhlé zveřejněné akce bez zveřejněného zápisu, nejnovější první. Vedoucí a kontrolor vidí ty své,
+ * organizátor všechny (kvůli přehledu). Nahrát a zveřejnit smí dál jen vedoucí a kontrolor akce.
+ * `handlesAny`: uživatel u nějaké proběhlé akce zápis řeší, i kdyby už měl vše hotovo.
+ */
+export async function listMissingMinutes(viewer: Viewer): Promise<{ items: MissingMinutesItem[]; handlesAny: boolean }> {
+  const db = await getDb();
+  const reference = now();
+  const past = await db
+    .select()
+    .from(events)
+    .where(and(eq(events.orgId, config.orgId), sql`(${events.published}->>'endsAt')::timestamptz < ${reference.toISOString()}::timestamptz`))
+    .orderBy(desc(events.startsAt));
+  const organizer = isOrganizer(viewer);
+  const held = past.filter((row) => row.published?.status === "published" && row.published.type !== "holiday");
+  const handled = new Set(held.filter((row) => canHandleRecording(viewer, row)).map((row) => row.id));
+  const visible = held.filter((row) => organizer || handled.has(row.id));
+  if (!visible.length) return { items: [], handlesAny: handled.size > 0 };
+  const [states, people] = await Promise.all([
+    db
+      .select({ eventId: recordings.eventId, minutesStatus: minutes.status })
+      .from(recordings)
+      .leftJoin(minutes, eq(minutes.recordingId, recordings.id))
+      .where(isNull(recordings.supersededAt)),
+    db.select({ id: users.id, name: users.name }).from(users).where(eq(users.orgId, config.orgId)),
+  ]);
+  const byEvent = new Map(states.map((s) => [s.eventId, s.minutesStatus]));
+  const names = new Map(people.map((u) => [u.id, u.name]));
+  const items = visible
+    .filter((row) => byEvent.get(row.id) !== "published")
+    .map((row) => {
+      const snapshot = row.published!;
+      const status = byEvent.get(row.id);
+      return {
+        eventId: row.id,
+        title: snapshot.topicTitle ? `${snapshot.label}: ${snapshot.topicTitle}` : snapshot.label,
+        type: snapshot.type,
+        startsAt: snapshot.startsAt,
+        leadName: snapshot.leadId ? (names.get(snapshot.leadId) ?? null) : null,
+        state: status === "draft" ? ("draft" as const) : byEvent.has(row.id) ? ("processing" as const) : ("none" as const),
+        canHandle: handled.has(row.id),
+      };
+    });
+  return { items, handlesAny: handled.size > 0 };
+}
+
 /** Nejnovější proběhlé akce bez zápisu. Starší dluhy by přehled zahltily, jsou dohledatelné v harmonogramu. */
 const MAX_MINUTES_TASKS = 4;
 
 /** `external`: odkaz vede mimo stránky Wiki (přesměrování na Google), proto běžná navigace prohlížeče. */
-export type JourneyTask = { key: string; title: string; detail: string; href: string; action: string; external?: boolean };
+/** `eventType`: úkol patří ke konkrétní akci, filtr Typ akce na Plánu ho podle něj schová nebo nechá. */
+export type JourneyTask = { key: string; title: string; detail: string; href: string; action: string; external?: boolean; eventType?: EventType };
 
 /** Co na uživatele čeká: zápisy k dokončení u akcí, které vede nebo kontroluje, a úkoly organizátora. */
 export async function listTasks(viewer: Viewer): Promise<JourneyTask[]> {
@@ -93,13 +152,13 @@ export async function listTasks(viewer: Viewer): Promise<JourneyTask[]> {
       if (tasks.length >= MAX_MINUTES_TASKS) break;
       const today = toDateKey(new Date(snapshot.endsAt)) === toDateKey(reference);
       if (today && state !== "draft") {
-        tasks.push({ key: `nahravka-${row.id}`, title: "Nahrajte audio z dnešní akce", detail: `${title}. Zápis se z nahrávky připraví sám, vy ho jen zkontrolujete.`, href: `/vzdelavani/akce/${row.id}?odkud=prehled#nahravka`, action: "Nahrát audio" });
+        tasks.push({ key: `nahravka-${row.id}`, title: "Nahrajte audio z dnešní akce", detail: `${title}. Zápis se z nahrávky připraví sám, vy ho jen zkontrolujete.`, href: `/vzdelavani/akce/${row.id}?odkud=prehled#nahravka`, action: "Nahrát audio", eventType: snapshot.type });
         continue;
       }
       tasks.push(
         state === "draft"
-          ? { key: `zapis-${row.id}`, title, detail: "Návrh zápisu čeká na kontrolu a zveřejnění.", href: `/vzdelavani/akce/${row.id}?odkud=prehled#nahravka`, action: "Zkontrolovat zápis" }
-          : { key: `nahravka-${row.id}`, title, detail: "Proběhla a nemá zápis. Připraví se z nahrávky.", href: `/vzdelavani/akce/${row.id}?odkud=prehled#nahravka`, action: "Nahrát nahrávku" },
+          ? { key: `zapis-${row.id}`, title, detail: "Návrh zápisu čeká na kontrolu a zveřejnění.", href: `/vzdelavani/akce/${row.id}?odkud=prehled#nahravka`, action: "Zkontrolovat zápis", eventType: snapshot.type }
+          : { key: `nahravka-${row.id}`, title, detail: "Proběhla a nemá zápis. Připraví se z nahrávky.", href: `/vzdelavani/akce/${row.id}?odkud=prehled#nahravka`, action: "Nahrát nahrávku", eventType: snapshot.type },
       );
     }
   }
@@ -114,7 +173,7 @@ export async function listTasks(viewer: Viewer): Promise<JourneyTask[]> {
       .innerJoin(events, eq(events.id, calendarLinks.eventId))
       .where(and(eq(events.orgId, config.orgId), eq(calendarLinks.syncStatus, "attention")));
     for (const { event } of stuck) {
-      tasks.push({ key: `kalendar-${event.id}`, title: event.published?.label ?? "Akce", detail: "Pozvánka v Kalendáři neodpovídá Wiki a čeká na váš zásah.", href: `/vzdelavani/akce/${event.id}?odkud=prehled#kalendar`, action: "Vyřešit pozvánku" });
+      tasks.push({ key: `kalendar-${event.id}`, title: event.published?.label ?? "Akce", detail: "Pozvánka v Kalendáři neodpovídá Wiki a čeká na váš zásah.", href: `/vzdelavani/akce/${event.id}?odkud=prehled#kalendar`, action: "Vyřešit pozvánku", eventType: event.published?.type });
     }
   }
   if (canManageUsers(viewer)) {

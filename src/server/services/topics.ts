@@ -4,7 +4,7 @@ import { toDateKey } from "@/lib/time";
 import { audit } from "@/server/audit";
 import { config, now } from "@/server/config";
 import { getDb, queryRows, type Executor } from "@/server/db/client";
-import { topicInterests, topics } from "@/server/db/schema";
+import { topicInterests, topics, users } from "@/server/db/schema";
 import { rankTopics, type RankedTopic, type TopicStat } from "@/server/domain/topics";
 import { canSeeAudience, isOrganizer, type Viewer } from "@/server/policy";
 import { DomainError } from "@/server/services/errors";
@@ -46,6 +46,25 @@ export async function listTopics(viewer: Viewer): Promise<RankedTopic[]> {
       nextPlanned: r.next_planned ? toDateKey(new Date(r.next_planned)) : null,
     }));
   return rankTopics(stats);
+}
+
+/**
+ * Jména zájemců podle tématu. Vidí je jen organizátor a správce (kvůli plánování), ostatní znají jen počet:
+ * kolega tak nevidí, kdo z jiných si o téma řekl. Jen aktivní účty, abecedně.
+ */
+export async function listTopicInterested(viewer: Viewer): Promise<Map<string, string[]>> {
+  if (!isOrganizer(viewer)) throw new DomainError("forbidden");
+  const db = await getDb();
+  const rows = await db
+    .select({ topicId: topicInterests.topicId, name: users.name })
+    .from(topicInterests)
+    .innerJoin(topics, eq(topics.id, topicInterests.topicId))
+    .innerJoin(users, eq(users.id, topicInterests.userId))
+    .where(and(eq(topics.orgId, config.orgId), eq(users.orgId, config.orgId), eq(users.status, "active")))
+    .orderBy(asc(users.name));
+  const byTopic = new Map<string, string[]>();
+  for (const row of rows) byTopic.set(row.topicId, [...(byTopic.get(row.topicId) ?? []), row.name]);
+  return byTopic;
 }
 
 async function requireVisibleTopic(db: Executor, viewer: Viewer, topicId: string) {

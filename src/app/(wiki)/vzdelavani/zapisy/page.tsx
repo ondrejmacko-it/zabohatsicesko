@@ -1,16 +1,19 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { GROUP_LABELS, TYPE_LABELS } from "@/lib/labels";
+import { Icon } from "@/components/Icon";
+import { AddMinutesPicker, MinutesPeek } from "@/features/vzdelavani/components/MinutesPeek";
 import { TopicsSection } from "@/features/vzdelavani/components/TopicsSection";
 import { groupByMonth } from "@/features/vzdelavani/minutes";
 import { formatDate, formatMonth, toDateKey } from "@/lib/time";
 import { GROUPS, type Group } from "@/lib/types";
 import { requireUser } from "@/server/auth/session";
-import { listPublishedMinutes } from "@/server/services/journey";
+import { isOrganizer } from "@/server/policy";
+import { listMissingMinutes, listPublishedMinutes } from "@/server/services/journey";
 
 export const metadata: Metadata = { title: "Zápisy a témata" };
 
-type SearchParams = Promise<{ q?: string; typ?: string; skupina?: string }>;
+type SearchParams = Promise<{ q?: string; typ?: string; skupina?: string; zapis?: string; pridat?: string }>;
 
 export default async function MinutesPage({ searchParams }: { searchParams: SearchParams }) {
   const user = await requireUser();
@@ -25,11 +28,33 @@ export default async function MinutesPage({ searchParams }: { searchParams: Sear
   const filtered = query || type || audience ? await listPublishedMinutes(user, { query, type, audience }) : all;
   const filtering = Boolean(query || type || audience);
   const months = groupByMonth(filtered);
+  // Okna nad stránkou řídí adresa: hledání a filtry pod nimi zůstávají.
+  const link = (change: { zapis?: string; pridat?: string } = {}) => {
+    const search = new URLSearchParams();
+    for (const [key, value] of Object.entries({ q: query, typ: type, skupina: audience, ...change })) if (value) search.set(key, value);
+    const text = search.toString();
+    return text ? `/vzdelavani/zapisy?${text}` : "/vzdelavani/zapisy";
+  };
+  const missing = await listMissingMinutes(user);
+  const canAdd = isOrganizer(user) || missing.handlesAny;
+  const peekId = (params.zapis ?? "").slice(0, 120);
 
   return (
     <>
+    {peekId ? (
+      <MinutesPeek key={peekId} user={user} eventId={peekId} closeHref={link()} />
+    ) : (
+      canAdd && params.pridat === "1" && <AddMinutesPicker items={missing.items} hrefFor={(id) => link({ zapis: id })} closeHref={link()} />
+    )}
     <section className="section" aria-labelledby="zapisy">
-      <h2 id="zapisy">Zápisy</h2>
+      <div className="spread">
+        <h2 id="zapisy">Zápisy</h2>
+        {canAdd && (
+          <Link className="btn btn-primary" href={link({ pridat: "1" })} scroll={false}>
+            <Icon name="plus" /> Přidat zápis{missing.items.length > 0 && <span className="count-badge">{missing.items.length}</span>}
+          </Link>
+        )}
+      </div>
       <p className="lead-text">
         Shrnutí proběhlých akcí, které jsou určené vám: o čem to bylo, co se rozhodlo a co dál. Stejný zápis najdete i přímo u akce
         v Plánu.
@@ -102,7 +127,7 @@ export default async function MinutesPage({ searchParams }: { searchParams: Sear
             <ul className="card-list">
               {items.map((m) => (
                 <li key={m.eventId}>
-                  <Link className="item-card" href={`/vzdelavani/akce/${m.eventId}?odkud=zapisy#zapis`}>
+                  <Link className="item-card" href={link({ zapis: m.eventId })} scroll={false}>
                     <p className="eyebrow">
                       {formatDate(toDateKey(new Date(m.startsAt)))} · {TYPE_LABELS[m.type]} · {GROUP_LABELS[m.audience]}
                     </p>

@@ -14,6 +14,9 @@
   --ochre: #9d6219;
   --ochre-dark: #7a4a12;
   --ochre-soft: #f6eee3;
+  --draft: #fcf3df;
+  --draft-strong: #f1dcb4;
+  --draft-line: #e0c188;
   --beige: #f4f1ee;
   --band: #faf8f5;
   --beige-strong: #e2dbd5;
@@ -711,35 +714,95 @@ fieldset.field > legend {
 
 .menu {
   position: relative;
+  display: inline-flex;
 }
 
-.menu > summary {
-  list-style: none;
-}
-
-.menu > summary::-webkit-details-marker {
-  display: none;
-}
-
+/* Seznam je ukotvený k oknu prohlížeče, polohu počítá komponenta Menu. Nic ho proto neořízne. */
 .menu-list {
-  position: absolute;
-  right: 0;
-  z-index: 10;
+  position: fixed;
+  z-index: 50;
   display: flex;
   flex-direction: column;
-  min-width: 200px;
-  max-width: calc(100vw - 48px);
-  margin-top: 6px;
+  gap: 2px;
+  width: max-content;
+  min-width: 220px;
+  max-width: calc(100vw - 16px);
+  max-height: calc(100dvh - 16px);
   padding: 6px;
+  overflow-y: auto;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--surface);
-  box-shadow: 0 10px 30px rgba(35, 35, 35, 0.15);
+  box-shadow: 0 12px 32px rgba(35, 35, 35, 0.18);
+}
+
+.menu-list[hidden] {
+  display: none;
 }
 
 .menu-list .btn {
   justify-content: flex-start;
+  width: 100%;
   border-color: transparent;
+  background: transparent;
+  font-weight: 500;
+  text-align: left;
+}
+
+.menu-list .btn:hover,
+.menu-list .btn:focus-visible {
+  background: var(--beige);
+}
+
+.menu-list .action-form,
+.menu-list form {
+  display: flex;
+  flex-direction: column;
+}
+
+.menu-list .small,
+.menu-list .form-error {
+  padding: 2px 12px 6px;
+}
+
+.menu-divider {
+  width: 100%;
+  margin: 4px 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+}
+
+.menu-list .menu-danger {
+  color: var(--danger);
+}
+
+.btn-icon {
+  padding-inline: 8px;
+}
+
+/* Okno otevřené z jiného okna to první po dobu práce nahradí. Po zavření se první vrátí. */
+body > .dialog[open]:has(~ .dialog[open]) {
+  visibility: hidden;
+}
+
+.dialog-head {
+  align-items: center;
+}
+
+.dialog-head h2 {
+  margin: 0;
+}
+
+.dialog-confirm {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dialog-confirm p {
+  margin: 0;
 }
 
 /* ——— Tabulky ——— */
@@ -967,27 +1030,9 @@ fieldset.field > legend {
   text-align: center;
 }
 
-/* Nabídka nástrojů organizátora: výsledek akce (např. doplnění měsíce) se vypíše přímo v ní. */
-.organizer-tools {
-  width: 260px;
-  gap: 2px;
-}
-
-.organizer-tools .small,
-.organizer-tools .form-error {
-  margin: 0;
-  padding: 2px 12px 6px;
-}
-
 @media (max-width: 760px) {
   .view-toggle {
     display: none;
-  }
-
-  /* Na mobilu je nabídka pod názvem měsíce u levého okraje, proto se rozbalí doprava. */
-  .organizer-tools {
-    right: auto;
-    left: 0;
   }
 }
 
@@ -1625,4 +1670,271 @@ a.brief-link:hover {
 .form-main > legend {
   padding: 0 6px;
   font-weight: 650;
+}
+
+/* ——— Chybějící údaj: v celé Wiki stejně, menší, kurzívou a okrově, aby se nepletl se skutečnou hodnotou ——— */
+.todo {
+  color: var(--ochre);
+  font-size: 0.9em;
+  font-style: italic;
+  font-weight: 500;
+}
+
+/* Vedlejší vysvětlující text pod hlavním obsahem. */
+.hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.badge-draft {
+  background: var(--draft-strong);
+  color: var(--ochre-dark);
+}
+
+/* ——— Náhled akce v okně ——— */
+.status-band {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 14px;
+  border-left: 4px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--beige);
+  font-size: 14px;
+}
+
+.status-band span {
+  color: var(--ink-soft);
+}
+
+.status-draft {
+  border-left-color: var(--ochre);
+  background: var(--draft);
+}
+
+.status-regular {
+  border-left-color: var(--ok);
+  background: var(--ok-soft);
+}
+
+.status-extra {
+  border-left-color: var(--ink-soft);
+  background: var(--beige-strong);
+}
+
+.fact-list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.fact-list > div {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 12px;
+  padding: 10px 14px;
+}
+
+.fact-list > div + div {
+  border-top: 1px solid var(--line);
+}
+
+.fact-list dt {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.fact-list dd {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.fact-list dd svg {
+  vertical-align: -2px;
+}
+
+.peek-actions {
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.peek-actions > :first-child {
+  margin-right: auto;
+}
+
+/* ——— Zarovnání: prvky v jednom řádku mají stejnou výšku ——— */
+.plan-filters .btn {
+  min-height: 40px;
+}
+
+.schedule-toolbar,
+.schedule-toolbar > .row {
+  align-items: center;
+}
+
+.schedule-toolbar .pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+}
+
+.schedule-toolbar .month-title {
+  margin: 0;
+  line-height: 36px;
+}
+
+/* Filtry Plánu jsou nad celou stránkou: mění oba horní bloky i harmonogram. */
+.plan-filter-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.plan-filter-bar:empty {
+  display: none;
+}
+
+.plan-filter-bar .plan-filters,
+.plan-filter-bar .notice {
+  margin: 0;
+}
+
+.brief-main .item-title .badge {
+  margin-left: 8px;
+  vertical-align: 2px;
+}
+
+/* ——— Témata jako karty: obsah, ne další odstavec textu ——— */
+.topic-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.topic-card {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--band);
+}
+
+.topic-card.topic-recommended {
+  border-color: var(--draft-line);
+  background: var(--ochre-soft);
+}
+
+.topic-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.topic-main p {
+  margin: 0;
+}
+
+.topic-card .topic-actions {
+  display: flex;
+  flex: none;
+  gap: 6px;
+  align-items: center;
+  margin: 0;
+}
+
+.topic-count,
+.topic-people > summary {
+  margin-top: 4px;
+  color: var(--ink-soft);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.topic-people > summary {
+  width: fit-content;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: var(--line-strong);
+  text-underline-offset: 3px;
+}
+
+.chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chip {
+  padding: 2px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: 13px;
+}
+
+@media (max-width: 900px) {
+  .topic-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ——— Zápis v okně: sekce uvnitř okna nemá vlastní rámeček ——— */
+.peek-eyebrow {
+  margin: -8px 0 0;
+}
+
+.peek-section > .section {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.peek-section > .section > h2,
+.peek-section > .section > .spread > h2 {
+  font-size: 17px;
+}
+
+.picker-list .brief-row {
+  justify-content: space-between;
+}
+
+.btn .count-badge {
+  margin-left: 2px;
+}
+
+.btn-primary .count-badge {
+  background: #fff;
+  color: var(--ochre-dark);
+}
+
+.topic-main .item-title {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  align-items: center;
+}
+
+.topic-main .item-title .topic-badge {
+  margin-left: 0;
 }

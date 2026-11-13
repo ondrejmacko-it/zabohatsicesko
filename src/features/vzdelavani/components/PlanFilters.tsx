@@ -78,7 +78,7 @@ export function PlanFilters({ keep, types, type, preview, states, resetHref }: P
         </button>
       </noscript>
       {resetHref && (
-        <Link className="btn btn-small" href={resetHref}>
+        <Link className="btn" href={resetHref}>
           Zrušit filtry
         </Link>
       )}

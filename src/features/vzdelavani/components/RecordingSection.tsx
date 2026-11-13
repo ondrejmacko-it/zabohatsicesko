@@ -15,7 +15,7 @@ const STATE_BADGE: Record<RecordingState, string> = {
   failed: "badge badge-danger",
 };
 
-function MinutesView({ content }: { content: MinutesContent }) {
+export function MinutesView({ content }: { content: MinutesContent }) {
   const list = (title: string, items: string[]) =>
     items.length > 0 && (
       <div>

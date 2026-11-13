@@ -1,37 +1,52 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useActionState, useEffect, useState } from "react";
+import Link from "next/link";
+import { Children, useActionState, useEffect, useState } from "react";
 import { ActionMessage } from "@/components/ActionForm";
-import { Icon } from "@/components/Icon";
+import { Menu } from "@/components/Menu";
 import { Modal } from "@/components/Modal";
 import { submitKeepingValues } from "@/features/shared/keep-values";
 import type { CancelImpact } from "@/server/services/impact";
 import { cancelEventAction, deleteDraftAction, previewCancelAction, type ActionResult } from "../actions";
 
-/** Kontextové možnosti detailu akce: zrušení zveřejněné akce a smazání návrhu. */
-export function EventMenu({ id, revision, canCancel, canDelete }: { id: string; revision: number; canCancel: boolean; canDelete: boolean }) {
+type Props = {
+  id: string;
+  revision: number;
+  canCancel: boolean;
+  canDelete: boolean;
+  /** Odkazy nahoře v nabídce (zápis, celý detail). */
+  links?: Array<{ href: string; label: string }>;
+  /** Další položky připravené serverem, například „Nahradit pravidelný termín“. */
+  children?: React.ReactNode;
+};
+
+/** Další možnosti akce v jedné nabídce: odkazy, méně časté úpravy a pod čarou zrušení nebo smazání. */
+export function EventMenu({ id, revision, canCancel, canDelete, links = [], children }: Props) {
   const [dialog, setDialog] = useState<"cancel" | "delete" | null>(null);
-  if (!canCancel && !canDelete) return null;
+  const hasExtra = Children.toArray(children).length > 0;
+  if (!canCancel && !canDelete && links.length === 0 && !hasExtra) return null;
   return (
     <>
-      <details className="menu">
-        <summary className="btn" aria-label="Další možnosti">
-          <Icon name="more" /> Další možnosti
-        </summary>
-        <div className="menu-list">
-          {canCancel && (
-            <button type="button" className="btn" onClick={() => setDialog("cancel")}>
-              Zrušit akci…
-            </button>
-          )}
-          {canDelete && (
-            <button type="button" className="btn" onClick={() => setDialog("delete")}>
-              Smazat návrh…
-            </button>
-          )}
-        </div>
-      </details>
+      <Menu label="Další možnosti">
+        {links.map((link) => (
+          <Link key={link.href} className="btn" href={link.href}>
+            {link.label}
+          </Link>
+        ))}
+        {children}
+        {(canCancel || canDelete) && (links.length > 0 || hasExtra) && <hr className="menu-divider" />}
+        {canCancel && (
+          <button type="button" className="btn menu-danger" onClick={() => setDialog("cancel")}>
+            Zrušit akci…
+          </button>
+        )}
+        {canDelete && (
+          <button type="button" className="btn menu-danger" onClick={() => setDialog("delete")}>
+            Smazat návrh…
+          </button>
+        )}
+      </Menu>
       {dialog === "cancel" && <CancelDialog id={id} revision={revision} onClose={() => setDialog(null)} />}
       {dialog === "delete" && <DeleteDialog id={id} revision={revision} onClose={() => setDialog(null)} />}
     </>
