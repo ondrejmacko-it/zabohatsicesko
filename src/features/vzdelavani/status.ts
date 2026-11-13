@@ -9,9 +9,9 @@ export function primaryStatus(card: EventCard): { label: string; tone: Tone } | 
   if (card.planStatus === "cancelled") return { label: "Zrušeno", tone: "danger" };
   if (card.type === "holiday") return { label: "Svátek", tone: "neutral" };
   if (card.planStatus === "draft") return { label: "Návrh", tone: "outline" };
-  if (card.syncStatus === "attention") return { label: "Kalendář: pozornost", tone: "danger" };
-  if (card.unpublishedChanges) return { label: "Neveřejné změny", tone: "ochre" };
-  if (card.syncStatus === "pending") return { label: "Kalendář: čeká", tone: "ochre" };
+  if (card.syncStatus === "attention") return { label: "Kalendář čeká na opravu", tone: "danger" };
+  if (card.unpublishedChanges) return { label: "Zveřejněno · máš návrh změny", tone: "ochre" };
+  if (card.syncStatus === "pending") return { label: "Kalendář se synchronizuje", tone: "ochre" };
   if (card.extraordinary) return { label: "Mimořádná akce", tone: "neutral" };
   return null;
 }

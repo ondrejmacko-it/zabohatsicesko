@@ -137,3 +137,51 @@ describe("potvrzení dopadu změny", () => {
     await expect(changeImpact(participant, PUBLISHED_RM, same)).rejects.toMatchObject({ code: "forbidden" });
   });
 });
+
+describe("zahození návrhu změny a zápis po výměně nahrávky", () => {
+  test("zahození vrátí zveřejněnou verzi, Kalendář nechá být a bez návrhu ho server odmítne", async () => {
+    const { resetDemo, organizer, participant, PUBLISHED_RM } = await import("./helpers");
+    const { discardDraftChanges, getEventCard, updateEvent } = await import("@/server/services/events");
+    const { formValuesOf } = await import("@/server/services/detail");
+    await resetDemo();
+    const before = (await getEventCard(organizer, PUBLISHED_RM))!;
+    await expect(discardDraftChanges(organizer, PUBLISHED_RM, before.row.revision)).rejects.toMatchObject({ code: "invalid_state" });
+    const form = formValuesOf(before.row.published!);
+    await updateEvent(organizer, PUBLISHED_RM, before.row.revision, { ...form, audience: "fp", topicId: null, topicTitle: "Jiné téma", leadId: form.leadId || null, reviewerId: form.reviewerId || null }, "draft");
+    const draft = (await getEventCard(organizer, PUBLISHED_RM))!;
+    expect(draft.card.unpublishedChanges).toBe(true);
+    await expect(discardDraftChanges(participant, PUBLISHED_RM, draft.row.revision)).rejects.toMatchObject({ code: "forbidden" });
+    await discardDraftChanges(organizer, PUBLISHED_RM, draft.row.revision);
+    const after = (await getEventCard(organizer, PUBLISHED_RM))!;
+    expect(after.card.unpublishedChanges).toBe(false);
+    expect(after.card.audience).toBe("rm");
+    expect(after.card.topicTitle).toBe(before.card.topicTitle);
+    expect(after.card.syncStatus).toBe(before.card.syncStatus);
+    expect(after.row.published).toEqual(before.row.published);
+  });
+
+  test("výměna nahrávky nechá publiku zveřejněný zápis", async () => {
+    const { resetDemo, lead, participant, asFile, fixtureWav, PAST_FP } = await import("./helpers");
+    const { getDb } = await import("@/server/db/client");
+    const { events } = await import("@/server/db/schema");
+    const { eq } = await import("drizzle-orm");
+    const rec = await import("@/server/services/recordings");
+    const { listPublishedMinutes } = await import("@/server/services/journey");
+    const db = await resetDemo();
+    const load = async () => (await db.select().from(events).where(eq(events.id, PAST_FP)))[0]!;
+    let panel = await rec.recordingPanel(lead, await load());
+    if (panel.access !== "handler") throw new Error("vedoucí musí mít přístup");
+    if (!panel.minutes) {
+      await rec.processTranscriptionJob(await rec.uploadRecording(lead, PAST_FP, asFile(fixtureWav(), "a.wav")));
+      panel = await rec.recordingPanel(lead, await load());
+      if (panel.access !== "handler" || !panel.minutes) throw new Error("chybí návrh zápisu");
+    }
+    if (panel.minutes.status !== "published") await rec.publishMinutes(lead, PAST_FP, panel.minutes.id, panel.minutes.version);
+    expect((await listPublishedMinutes(participant)).filter((m) => m.eventId === PAST_FP)).toHaveLength(1);
+
+    await rec.uploadRecording(lead, PAST_FP, asFile(fixtureWav(), "b.wav"));
+    const reader = await rec.recordingPanel(participant, await (await getDb()).select().from(events).where(eq(events.id, PAST_FP)).then((r) => r[0]!));
+    expect(reader).toMatchObject({ access: "reader", state: "available" });
+    expect((await listPublishedMinutes(participant)).filter((m) => m.eventId === PAST_FP)).toHaveLength(1);
+  });
+});

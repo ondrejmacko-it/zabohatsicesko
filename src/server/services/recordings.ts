@@ -286,10 +286,16 @@ export async function recordingPanel(viewer: Viewer, row: EventRow): Promise<Rec
     };
   }
   if (!canReadPublishedMinutes(viewer, row)) return { access: "none" };
-  const published = draft?.status === "published" ? draft : null;
+  // Výměna nahrávky zveřejněný zápis neschová: publikum ho čte dál, dokud vedoucí neschválí zápis z náhrady.
+  const [published] = await db
+    .select()
+    .from(minutes)
+    .where(and(eq(minutes.eventId, row.id), eq(minutes.status, "published")))
+    .orderBy(desc(minutes.publishedAt))
+    .limit(1);
   return {
     access: "reader",
-    state: published ? "available" : "awaiting",
+    state: published ? "available" : recording ? "processing" : "awaiting",
     minutes: published?.content ?? null,
     publishedAt: published?.publishedAt?.toISOString() ?? null,
   };

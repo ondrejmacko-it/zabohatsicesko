@@ -7,7 +7,7 @@ import { calendarLinks, events, minutes, recordings } from "@/server/db/schema";
 import { canHandleRecording, canManageUsers, canReadPublishedMinutes, isOrganizer, type Viewer } from "@/server/policy";
 import { pendingRequestCount } from "@/server/services/users";
 
-// Čtecí pohledy pro stránky Moje cesta a Zápisy. Přístup rozhoduje policy.ts u každého řádku.
+// Čtecí pohledy pro stránky Přehled a Zápisy. Přístup rozhoduje policy.ts u každého řádku.
 
 export type MinutesItem = {
   eventId: string;
@@ -30,13 +30,14 @@ export async function listPublishedMinutes(viewer: Viewer, filter: MinutesFilter
   const rows = await db
     .select({ event: events, content: minutes.content, publishedAt: minutes.publishedAt })
     .from(minutes)
-    .innerJoin(recordings, and(eq(recordings.id, minutes.recordingId), isNull(recordings.supersededAt)))
     .innerJoin(events, eq(events.id, minutes.eventId))
     .where(and(eq(events.orgId, config.orgId), eq(minutes.status, "published")))
-    .orderBy(desc(events.startsAt));
+    .orderBy(desc(events.startsAt), desc(minutes.publishedAt));
+  // Po výměně nahrávky zůstává starší zveřejněný zápis, dokud vedoucí neschválí nový. U akce platí nejnovější.
+  const seen = new Set<string>();
   const needle = fold(filter.query?.trim() ?? "");
   return rows
-    .filter(({ event }) => canReadPublishedMinutes(viewer, event))
+    .filter(({ event }) => canReadPublishedMinutes(viewer, event) && !seen.has(event.id) && Boolean(seen.add(event.id)))
     .map(({ event, content, publishedAt }) => {
       const snapshot = event.published!;
       const title = snapshot.topicTitle ? `${snapshot.label}: ${snapshot.topicTitle}` : snapshot.label;
@@ -88,10 +89,15 @@ export async function listTasks(viewer: Viewer): Promise<JourneyTask[]> {
       // Datum v názvu: stejně pojmenované akce se opakují každý týden.
       const title = `${snapshot.topicTitle ? `${snapshot.label}: ${snapshot.topicTitle}` : snapshot.label} · ${formatDayMonth(toDateKey(new Date(snapshot.startsAt)))}`;
       if (tasks.length >= MAX_MINUTES_TASKS) break;
+      const today = toDateKey(new Date(snapshot.endsAt)) === toDateKey(reference);
+      if (today && state !== "draft") {
+        tasks.push({ key: `nahravka-${row.id}`, title: "Nahraj audio z dnešní akce", detail: `${title}. Zápis se z nahrávky připraví sám, ty ho jen zkontroluješ.`, href: `/vzdelavani/akce/${row.id}?odkud=prehled#nahravka`, action: "Nahrát audio" });
+        continue;
+      }
       tasks.push(
         state === "draft"
-          ? { key: `zapis-${row.id}`, title, detail: "Návrh zápisu čeká na vaši kontrolu a zveřejnění.", href: `/vzdelavani/akce/${row.id}?odkud=moje-cesta#nahravka`, action: "Zkontrolovat zápis" }
-          : { key: `nahravka-${row.id}`, title, detail: "Akce proběhla a zatím nemá zápis. Nahrajte nahrávku, zápis se z ní připraví.", href: `/vzdelavani/akce/${row.id}?odkud=moje-cesta#nahravka`, action: "Nahrát nahrávku" },
+          ? { key: `zapis-${row.id}`, title, detail: "Návrh zápisu čeká na vaši kontrolu a zveřejnění.", href: `/vzdelavani/akce/${row.id}?odkud=prehled#nahravka`, action: "Zkontrolovat zápis" }
+          : { key: `nahravka-${row.id}`, title, detail: "Akce proběhla a zatím nemá zápis. Nahrajte nahrávku, zápis se z ní připraví.", href: `/vzdelavani/akce/${row.id}?odkud=prehled#nahravka`, action: "Nahrát nahrávku" },
       );
     }
   }
@@ -103,7 +109,7 @@ export async function listTasks(viewer: Viewer): Promise<JourneyTask[]> {
       .innerJoin(events, eq(events.id, calendarLinks.eventId))
       .where(and(eq(events.orgId, config.orgId), eq(calendarLinks.syncStatus, "attention")));
     for (const { event } of stuck) {
-      tasks.push({ key: `kalendar-${event.id}`, title: event.published?.label ?? "Akce", detail: "Pozvánka v Kalendáři neodpovídá Wiki a čeká na váš zásah.", href: `/vzdelavani/akce/${event.id}?odkud=moje-cesta#kalendar`, action: "Vyřešit pozvánku" });
+      tasks.push({ key: `kalendar-${event.id}`, title: event.published?.label ?? "Akce", detail: "Pozvánka v Kalendáři neodpovídá Wiki a čeká na váš zásah.", href: `/vzdelavani/akce/${event.id}?odkud=prehled#kalendar`, action: "Vyřešit pozvánku" });
     }
   }
   if (canManageUsers(viewer)) {

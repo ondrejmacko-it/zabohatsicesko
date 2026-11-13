@@ -24,6 +24,14 @@ export const GROUP_LABELS: Record<Group, string> = {
   "tym-a": "Tým A",
 };
 
+/** Vysvětlení zkratek skupin přímo u výběru publika. */
+export const GROUP_HINTS: Record<Group, string> = {
+  vsichni: "Pozvánku dostanou všichni kolegové s přístupem do Wiki.",
+  fp: "FP = finanční poradci.",
+  rm: "RM = relationship manažeři.",
+  "tym-a": "Tým A = kolegové ze skupiny Tým A, pro kterou je Action time.",
+};
+
 export const ROLE_LABELS: Record<Role, string> = {
   admin: "Správce ZBC",
   organizer: "Organizátor",

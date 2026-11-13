@@ -45,7 +45,7 @@ describe("přístup k nahrávce a zápisu", () => {
 
     const row = (await loadEventRow(await getDb(), PAST_FP))!;
     const draftView = await recordingPanel(participant, row);
-    expect(draftView).toEqual({ access: "reader", state: "awaiting", minutes: null, publishedAt: null });
+    expect(draftView).toEqual({ access: "reader", state: "processing", minutes: null, publishedAt: null });
     expect((await recordingPanel(outsider, row)).access).toBe("none");
 
     const handler = await recordingPanel(lead, row);

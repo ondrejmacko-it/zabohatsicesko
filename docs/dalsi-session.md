@@ -8,65 +8,46 @@ Pokračuj na demu modulu Vzdělávání. Nečti znovu celé zadání ani celý k
 `docs/predani.md`, `docs/google-kalendar.md` a `docs/google-prihlaseni.md`, pravidla v `CLAUDE.md`.
 Uživateli tykej, piš přátelsky. Větší změny nejdřív navrhni, nejasnosti se ptej.
 
-## Zadání příští relace (odsouhlaseno 13. 11.)
+## Stav 13. 11. 2026 odpoledne (větev `oprava/bezpecne-zverejneni-akci`, draft PR #10)
 
-Pokračuj na větvi `oprava/bezpecne-zverejneni-akci` (draft PR #10). Přihlášení Googlem a `/sprava` teď neřeš,
-přijdou až na konec při živém testu. Pořadí:
+Relace znovu došla k limitu kontextu. Z šestibodového zadání je hotové toto (lint, typy, 101 z 101 testů, build,
+průchod v prohlížeči nad PGlite: organizátor a kolega mimo publikum na desktopu, vedoucí a účastník FP na 390 px):
 
-1. Ručně ověř v prohlížeči „Potvrdit dopad a zveřejnit“ (RM → FP) a případně oprav stav `pending` v `EventDialog`.
-2. Část 2: „K doplnění“ v harmonogramu, „Nahradit pravidelný termín“, správa témat (Upravit, Archivovat).
-3. Část 3: navigace Přehled · Harmonogram · Zápisy · Témata, Přehled podle role, Domov s Otevřít akci, kratší
-   mobilní záhlaví, pořadí polí v dialogu, stavy termínů, stav zápisu u minulé akce, zachování zveřejněného
-   zápisu při výměně nahrávky.
-4. Odsouhlasené nápady: stín původního termínu pro organizátora, dopad i v dialogu zrušení, „Zahodit návrh
-   změny“, lidské názvy stavů s větou co udělat, průvodce měsícem ve třech krocích, slovníček FP/RM/Tým A
-   u publika, úkol vedoucího „Nahraj audio z dnešní akce“. Formuláře na `/sprava` odeslat ručně jako dialog akce.
-5. Část 4: lint, typy, testy, build, průchod rolemi na desktopu i mobilu, aktualizace PR #10.
-6. Nakonec živý test: `APP_URL` a redirect URI pro aktuální větev, druhý Google účet, `/sprava`. Uživatel
-   zvažuje test rovnou na Production. Produkční deploy a merge dělá uživatel, Claude jen připraví postup.
+- **Bod 1:** „Potvrdit dopad a zveřejnit“ (RM → FP i zpět) funguje na desktopu i mobilu. Chyba se nepotvrdila,
+  tlačítko bylo zablokované jen po dobu ukládání. Teď během ukládání ukazuje „Ukládám…“.
+- **Bod 2 celý:** „K doplnění“ v harmonogramu (`planGaps` ve `status.ts`), „Nahradit pravidelný termín“ v detailu
+  budoucí akce ze šablony (`EventDialog` s `replace`), správa témat Upravit, Archivovat, Obnovit
+  (migrace `0006_topic_archive`, aditivní sloupec `topics.archived_at`).
+- **Bod 3 částečně:** navigace Přehled · Harmonogram · Zápisy · Témata, `/vzdelavani/moje-cesta` přesměruje na
+  `/vzdelavani/prehled`. Přehled podle role (organizátor má nahoře termíny k doplnění a návrhy ke zveřejnění,
+  kdo nemá úkol, vidí nejdřív nejbližší akci). Domov má „Otevřít akci“ nebo „Otevřít harmonogram“. Na mobilu
+  zkrácené záhlaví („Ukázka“, bez podtitulu a bez pruhu režimů). Stavy „Zveřejněno · máš návrh změny“,
+  „Kalendář čeká na opravu“, „Kalendář se synchronizuje“. Účastník u minulé akce vidí, jestli se zápis
+  připravuje. Výměna nahrávky nechá publiku poslední zveřejněný zápis, dokud vedoucí neschválí nový.
+- **Bod 4 částečně:** „Zahodit návrh změny“ jedním klikem (`discardDraftChanges`, Kalendář se nemění),
+  vysvětlení FP, RM a Tým A u publika (`GROUP_HINTS`), úkol vedoucího „Nahraj audio z dnešní akce“.
 
-Šetři kontext: nečti celé soubory, které neměníš, a commituj po každém bodu.
+**Zbývá (v tomto pořadí):**
 
-## Stav 13. 11. 2026 (větev `oprava/bezpecne-zverejneni-akci`, draft PR)
+1. Bod 3: pruh režimů (ukázkový čas, Kalendář, přepis) je na mobilu jen schovaný, **na stránku Integrace se
+   ještě nepřidal**. Pořadí polí v dialogu akce (dopředu typ, termín, téma, vedoucí, publikum, ostatní do
+   „Další nastavení“; pozor na `required` pole ve sbaleném `<details>`). Výslovné stažení zveřejněného zápisu
+   neexistuje, zatím platí jen „do schválení náhrady“.
+2. Bod 4: stín původního termínu pro organizátora, přehled dopadu (kdo dostane storno) v dialogu zrušení,
+   věta „co má člověk udělat“ u stavů, průvodce měsícem ve třech krocích, ruční odesílání formulářů na
+   `/sprava` (`AccessForms.tsx`).
+3. Bod 5: úplný průchod rolemi po dodělání bodů výše. Úkol „Nahraj audio z dnešní akce“ nejde v ukázkovém čase
+   (12. 11. 9:00) vidět, dnešní akce ještě neskončila. Ověřen jen typy a kódem, ne v prohlížeči.
+4. Bod 6, živý test: nic z něj neproběhlo. Větev `oprava/bezpecne-zverejneni-akci` nemá vlastní `APP_URL` ani
+   redirect URI v Googlu. Uživatel zvažuje test rovnou na Production (deploy a merge dělá sám). Připravit
+   přesný postup. Nahlášená chyba přihlášení druhým Google účtem a `/sprava` z 13. 11. pořád neověřena,
+   hypotézy: chybějící `APP_URL` a redirect URI větve, účet mimo `GOOGLE_LOGIN_ACCOUNTS`, `<form action>`
+   v `AccessForms.tsx`, stav účtu v Neonu (`users`, `user_identities`).
 
-Relace narazila na limit kontextu, proto je hotová **jen část 1 zadání (zveřejňování)**. Části 2 až 4 čekají.
+Pozor: preview sdílí databázi Neon. Migrace 0006 je aditivní, starší kód s ní běží.
 
-Hotovo a pokryto testy (`tests/publishing.test.ts`, celkem 96 z 96, lint, typy, build):
-- Formulář akce po chybě drží všechny hodnoty (odesílá se ručně, ne přes `<form action>`), chyba říká, co chybí.
-- Zrušení vychází ze zveřejněné verze, návrh změny zahodí. Akce zrušená před vznikem pozvánky nic nezakládá.
-- Účastník vidí zveřejněný termín i při návrhu přesunu (`listEvents` filtruje a řadí podle viditelné verze),
-  úkoly vedoucího a historie témat vychází ze zveřejněné verze.
-- Dopad změny počítá server (`src/server/services/impact.ts`): rozdíl název, téma, termín, publikum, koho Wiki
-  přidá a odebere, ruční hosté, poznámky k režimu a neověřenému Kalendáři. Zveřejnění významné změny bez
-  potvrzení (token vázaný na změnu a zveřejněnou revizi) server odmítne, úprava formuláře potvrzení zruší.
-
-Ověřeno v prohlížeči (PGlite, 390 px): FP návrh po odmítnutém zveřejnění beze změny polí, dialog dopadu RM → FP,
-zrušení potvrzení po další úpravě. **Neověřeno:** poslední krok „Potvrdit dopad a zveřejnit“ v prohlížeči.
-Automat viděl tlačítko zablokované (nejspíš právě probíhající uložení, data se podle všeho uložila), je
-potřeba to projít ručně a případně opravit stav `pending` v `EventDialog`. Živě proti Googlu neověřeno nic.
-
-**Nahlášená chyba 13. 11. (neověřeno, první úkol příští relace):** přidání dalšího Google účtu nefunguje a
-po pokusu „nefunguje správa“ na `/sprava`. Změny této větve se přihlášení ani správy nedotkly. Hypotézy k ověření
-v tomto pořadí: (1) preview větve `oprava/bezpecne-zverejneni-akci` nemá vlastní `APP_URL` ani redirect URI
-v Googlu, přihlášení proto končí na jiném preview se starším kódem nad stejnou databází; (2) nový účet není
-v `GOOGLE_LOGIN_ACCOUNTS`; (3) formuláře na `/sprava` (`AccessForms.tsx`) používají `<form action>` a po chybě
-se jim vrací výběry stejně jako dřív dialogu akce; (4) stav nového účtu v Neonu (`users`, `user_identities`).
-Od uživatele zjistit: adresu, na které to zkoušel, přesný text chyby a co přesně na `/sprava` nešlo.
-
-Další kroky v tomto pořadí:
-1. Ručně ověřit potvrzení dopadu v prohlížeči (viz výše). Organizátor v listopadu nevidí původní termín akce,
-   kterou má v návrhu přesunutou jinam: zvážit „stín“ původního termínu.
-2. Část 2 zadání: „K doplnění“ v harmonogramu, „Nahradit pravidelný termín“ (úprava typu už `generationKey`
-   drží, chybí jen viditelná akce a popis), správa témat (Upravit, Archivovat, nutná migrace `archived_at`).
-3. Část 3: navigace Přehled · Harmonogram · Zápisy · Témata (přejmenovat Moje cesta, starou adresu přesměrovat),
-   Přehled podle role, Domov s Otevřít akci, kratší záhlaví na mobilu, pořadí polí v dialogu, stavy
-   „Zveřejněno · máš návrh změny“ a „Kalendář čeká na opravu“, stav zápisu u minulé akce pro účastníka.
-   Výměna nahrávky dnes schová zveřejněný zápis (dotazy filtrují `superseded_at`): zachovat ho do schválení
-   náhrady nebo výslovného stažení (nové stavy zápisu vyžadují migraci CHECK u `minutes.status`).
-4. Část 4: průchod všemi rolemi na desktopu i mobilu, postup živého testu, aktualizace PR.
-
-K rozhodnutí pro Annu: má se střídání typů po svátku nebo zrušení posunout? Hromadné zveřejnění měsíce
-(až projde jeden běžný měsíc). Fiktivní nebo očištěný vzor zápisu pro školení, poradu a trénink.
+K rozhodnutí pro Annu: posun střídání typů po svátku nebo zrušení, hromadné zveřejnění měsíce, fiktivní vzory
+zápisu pro školení, poradu a trénink. Nově: co přesně znamená skupina Tým A (text nápovědy u publika je odhad).
 
 ## Stav kódu (starší)
 

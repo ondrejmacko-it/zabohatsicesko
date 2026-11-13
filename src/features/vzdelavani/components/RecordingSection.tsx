@@ -51,7 +51,11 @@ export function RecordingSection({ eventId, eventLabel, panel }: { eventId: stri
     return (
       <section className="section" id="zapis" aria-labelledby="zapis-title">
         <h2 id="zapis-title">Zápis</h2>
-        {panel.minutes ? <MinutesView content={panel.minutes} /> : <p className="muted">Zápis zatím není k dispozici.</p>}
+        {panel.minutes ? <MinutesView content={panel.minutes} /> : <p className="muted">
+            {panel.state === "processing"
+              ? "Zápis se připravuje. Objeví se tady, až ho vedoucí zkontroluje a zveřejní."
+              : "Zápis zatím není k dispozici, vedoucí ještě nenahrál záznam."}
+          </p>}
       </section>
     );
   }

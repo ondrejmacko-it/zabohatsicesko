@@ -1198,3 +1198,12 @@ details > summary {
   padding: 0;
   margin-top: 8px;
 }
+
+/* Mobil: kratší záhlaví. Technické podrobnosti ukázky jsou na stránce Integrace. */
+@media (max-width: 720px) {
+  .brand-tagline,
+  .demo-badge-detail,
+  .status-strip {
+    display: none;
+  }
+}

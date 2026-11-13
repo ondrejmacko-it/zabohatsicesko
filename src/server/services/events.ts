@@ -357,6 +357,44 @@ export async function cancelEvent(viewer: Viewer, id: string, expectedRevision: 
   });
 }
 
+/**
+ * Zahodí rozpracovaný návrh změny a vrátí pracovní verzi na poslední zveřejněnou. Zveřejněná verze
+ * se nemění, proto se Kalendář nesynchronizuje a pozvaní nic nedostanou.
+ */
+export async function discardDraftChanges(viewer: Viewer, id: string, expectedRevision: number): Promise<void> {
+  requireOrganizer(viewer);
+  const db = await getDb();
+  await db.transaction(async (tx) => {
+    const current = await loadEventRow(tx, id);
+    if (!current) throw new DomainError("not_found");
+    const last = current.published;
+    if (!last || current.status === "cancelled" || current.revision === current.publishedRevision) throw new DomainError("invalid_state");
+    const [row] = await tx
+      .update(events)
+      .set({
+        type: last.type,
+        label: last.label,
+        topicTitle: last.topicTitle,
+        topicId: last.topicId,
+        startsAt: new Date(last.startsAt),
+        endsAt: new Date(last.endsAt),
+        allDay: last.allDay,
+        audience: last.audience,
+        leadId: last.leadId,
+        reviewerId: last.reviewerId,
+        revision: sql`${events.revision} + 1`,
+        publishedRevision: sql`${events.revision} + 1`,
+        updatedBy: viewer.id,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(events.id, id), eq(events.revision, expectedRevision)))
+      .returning();
+    if (!row) throw new DomainError("conflict");
+    await tx.insert(eventRevisions).values({ eventId: id, revision: row.revision, action: "discard", snapshot: snapshotOf(row), actorId: viewer.id });
+    await audit(tx, viewer.id, "event.discard_changes", "event", id);
+  });
+}
+
 /** Smazat lze jen nezveřejněný návrh. Vygenerovaný slot se zapíše jako výjimka, aby se nevrátil. */
 export async function deleteDraft(viewer: Viewer, id: string, expectedRevision: number): Promise<void> {
   requireOrganizer(viewer);

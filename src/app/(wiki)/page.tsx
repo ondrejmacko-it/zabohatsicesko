@@ -24,9 +24,15 @@ export default async function HomePage() {
         <div className="stack">
           <NextEventCard card={next} />
           <div>
-            <Link className="btn btn-primary" href="/vzdelavani/moje-cesta">
-              Otevřít Moje cesta
-            </Link>
+            {next ? (
+              <Link className="btn btn-primary" href={`/vzdelavani/akce/${encodeURIComponent(next.id)}`}>
+                Otevřít akci
+              </Link>
+            ) : (
+              <Link className="btn btn-primary" href="/vzdelavani/harmonogram">
+                Otevřít harmonogram
+              </Link>
+            )}
           </div>
         </div>
       </section>

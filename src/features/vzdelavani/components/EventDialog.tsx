@@ -5,7 +5,7 @@ import { startTransition, useActionState, useEffect, useState } from "react";
 import { ActionMessage } from "@/components/ActionForm";
 import { Icon } from "@/components/Icon";
 import { Modal } from "@/components/Modal";
-import { EXTRAORDINARY_TYPES, GROUP_LABELS, TYPE_LABELS } from "@/lib/labels";
+import { EXTRAORDINARY_TYPES, GROUP_HINTS, GROUP_LABELS, TYPE_LABELS } from "@/lib/labels";
 import { EVENT_TYPES, GROUPS } from "@/lib/types";
 import { defaultAudience } from "@/server/domain/generation";
 import { topicFitsAudience } from "@/server/domain/topics";
@@ -280,6 +280,7 @@ function EventForm({ mode, id, revision, initial, published, people, topics, rep
                   </option>
                 ))}
               </select>
+              <span className="field-hint">{GROUP_HINTS[values.audience]}</span>
             </label>
           </div>
 

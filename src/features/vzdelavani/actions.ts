@@ -18,6 +18,7 @@ import {
   cancelEvent,
   createEvent,
   deleteDraft,
+  discardDraftChanges,
   generateMonth,
   updateEvent,
   updateTemplate,
@@ -163,6 +164,14 @@ export async function deleteDraftAction(_prev: ActionResult | null, formData: Fo
     const data = z.object({ id: z.string().max(80), revision: z.coerce.number().int().positive() }).parse(formObject(formData));
     await deleteDraft(user, data.id, data.revision);
     return { ok: true, message: "Návrh je smazaný." };
+  });
+}
+
+export async function discardChangesAction(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
+  return run(async (user) => {
+    const data = z.object({ id: z.string().max(80), revision: z.coerce.number().int().positive() }).parse(formObject(formData));
+    await discardDraftChanges(user, data.id, data.revision);
+    return { ok: true, message: "Návrh změny je zahozený, platí zveřejněná verze." };
   });
 }
 

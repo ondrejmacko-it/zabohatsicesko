@@ -1,14 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ActionForm } from "@/components/ActionForm";
 import { AutoRefresh } from "@/components/AutoRefresh";
+import { discardChangesAction } from "@/features/vzdelavani/actions";
 import { Icon } from "@/components/Icon";
 import { EventDialog } from "@/features/vzdelavani/components/EventDialog";
 import { EventMenu } from "@/features/vzdelavani/components/EventMenu";
 import { RecordingSection } from "@/features/vzdelavani/components/RecordingSection";
 import { SyncPanelView } from "@/features/vzdelavani/components/SyncPanelView";
 import { badgeClass, primaryStatus } from "@/features/vzdelavani/status";
-import { GROUP_LABELS, PLAN_STATUS_LABELS, TYPE_LABELS } from "@/lib/labels";
+import { EXTRAORDINARY_TYPES, GROUP_LABELS, PLAN_STATUS_LABELS, TYPE_LABELS } from "@/lib/labels";
 import { safeDecode } from "@/lib/params";
 import { formatDate, formatEventTime, monthOf, toDateKey } from "@/lib/time";
 import { requireUser } from "@/server/auth/session";
@@ -22,7 +24,7 @@ export const metadata: Metadata = { title: "Detail akce" };
 /** Odkud uživatel přišel. Zpět ho vracíme tam, ne vždy na harmonogram. Jiná hodnota se ignoruje. */
 const ORIGINS: Record<string, { href: string; label: string }> = {
   zapisy: { href: "/vzdelavani/zapisy", label: "Zpět na zápisy" },
-  "moje-cesta": { href: "/vzdelavani/moje-cesta", label: "Zpět na Moje cesta" },
+  prehled: { href: "/vzdelavani/prehled", label: "Zpět na Přehled" },
 };
 
 type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ odkud?: string }> };
@@ -59,9 +61,11 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
           </p>
           <h2 className="detail-title">{title}</h2>
           <div className="row detail-badges">
-            <span className={card.planStatus === "published" ? "badge badge-ok" : card.planStatus === "cancelled" ? "badge badge-danger" : "badge badge-outline"}>
-              {PLAN_STATUS_LABELS[card.planStatus]}
-            </span>
+            {(!status || !status.label.startsWith(PLAN_STATUS_LABELS[card.planStatus])) && (
+              <span className={card.planStatus === "published" ? "badge badge-ok" : card.planStatus === "cancelled" ? "badge badge-danger" : "badge badge-outline"}>
+                {PLAN_STATUS_LABELS[card.planStatus]}
+              </span>
+            )}
             {status && status.label !== PLAN_STATUS_LABELS[card.planStatus] && <span className={badgeClass(status.tone)}>{status.label}</span>}
             {card.past && card.planStatus === "published" && <span className="badge">Proběhlo</span>}
           </div>
@@ -79,7 +83,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
               inviteeCount={detail.sync?.inviteeCount ?? 0}
             />
           )}
-          {organizer && detail.form && detail.fromTemplate && card.planStatus !== "cancelled" && !card.past && (
+          {organizer && detail.form && detail.fromTemplate && !EXTRAORDINARY_TYPES.has(card.type) && card.planStatus !== "cancelled" && !card.past && (
             <EventDialog
               mode="edit"
               replace
@@ -107,7 +111,10 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
       </div>
 
       {card.unpublishedChanges && (
-        <p className="notice">Máte uložené, ale nezveřejněné změny. Kolegové a Kalendář zatím vidí zveřejněnou verzi.</p>
+        <div className="notice spread">
+          <p>Máš uložený návrh změny. Kolegové a Kalendář zatím vidí zveřejněnou verzi. Návrh zveřejni přes Upravit, nebo ho zahoď.</p>
+          <ActionForm action={discardChangesAction} fields={{ id: card.id, revision: String(detail.revision) }} label="Zahodit návrh změny" pendingLabel="Zahazuji…" small />
+        </div>
       )}
 
       <section className="section" aria-label="Údaje o akci">
