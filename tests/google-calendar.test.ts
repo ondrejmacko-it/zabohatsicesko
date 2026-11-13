@@ -4,6 +4,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi 
 import { GoogleCalendar, eventIdForKey } from "@/server/calendar/google";
 import {
   beginAuthorization,
+  needsCalendarConnection,
   clearAccessTokenCache,
   completeAuthorization,
   connectionStatus,
@@ -22,7 +23,8 @@ import { openSecret, sealSecret } from "@/server/integrations/secret-box";
 import { formValuesOf } from "@/server/services/detail";
 import { loadEventRow, updateEvent, type EventInput } from "@/server/services/events";
 import { inviteUser, updateAccess } from "@/server/services/users";
-import { PUBLISHED_RM, admin, organizer, resetDemo } from "./helpers";
+import { listTasks } from "@/server/services/journey";
+import { PUBLISHED_RM, admin, organizer, participant, resetDemo } from "./helpers";
 
 // Adaptér Google Kalendáře proti napodobenému HTTP. Ověřuje tvar požadavků a chování Wiki,
 // NE skutečné chování Googlu. Živý test podle zadání (část 02) tyto testy nenahrazují.
@@ -345,6 +347,18 @@ describe("testovací režim Google Kalendáře ve Wiki (napodobené HTTP)", () =
   };
   const link = async (id: string) => (await (await getDb()).select().from(calendarLinks).where(eq(calendarLinks.eventId, id)))[0];
 
+  test("o propojení Kalendáře žádá Wiki jen toho, kdo spravuje plán, a jen dokud propojení chybí", async () => {
+    const db = await getDb();
+    expect(await needsCalendarConnection(db, true)).toBe(true);
+    expect(await needsCalendarConnection(db, false)).toBe(false);
+    expect((await listTasks(organizer))[0]).toMatchObject({ key: "kalendar-propojeni", external: true });
+    expect((await listTasks(participant)).some((t) => t.key === "kalendar-propojeni")).toBe(false);
+
+    expect(await connect()).toBe("connected");
+    expect(await needsCalendarConnection(db, true)).toBe(false);
+    expect((await listTasks(organizer)).some((t) => t.key === "kalendar-propojeni")).toBe(false);
+  });
+
   async function publishTopic(id: string, topicTitle: string) {
     const row = (await loadEventRow(await getDb(), id))!;
     const v = formValuesOf(snapshotOf(row));
@@ -554,6 +568,11 @@ describe("OAuth stav a šifrování tokenů", () => {
   test("stav z callbacku platí jen pro téhož organizátora, stejný prohlížeč a krátkou dobu", () => {
     const cfg = googleCalendarConfig()!;
     const start = beginAuthorization(cfg, "demo-organizator", 1000);
+    // Po přihlášení Googlem jde účet jako nápověda a Google se neptá na výběr účtu.
+    const hinted = new URL(beginAuthorization(cfg, "demo-organizator", 1000, "organizator@example.invalid").url).searchParams;
+    expect(hinted.get("login_hint")).toBe("organizator@example.invalid");
+    expect(hinted.get("prompt")).toBe("consent");
+    expect(new URL(start.url).searchParams.get("login_hint")).toBeNull();
     const url = new URL(start.url);
     const state = url.searchParams.get("state")!;
     expect(url.searchParams.get("scope")).toBe("openid email https://www.googleapis.com/auth/calendar.events");

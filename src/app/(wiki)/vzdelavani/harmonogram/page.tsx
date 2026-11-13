@@ -79,15 +79,21 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
       action: task.action,
     })),
   ];
-  const taskRow = (task: (typeof tasks)[number]) => (
+  const taskRow = (task: (typeof tasks)[number] & { external?: boolean }) => (
     <li key={task.key} className="brief-row">
       <span className="brief-main">
         <span className="item-title">{task.title}</span>
         <span className="item-meta">{task.detail}</span>
       </span>
-      <Link className="btn btn-small btn-primary" href={task.href}>
-        {task.action}
-      </Link>
+      {task.external ? (
+        <a className="btn btn-small btn-primary" href={task.href}>
+          {task.action}
+        </a>
+      ) : (
+        <Link className="btn btn-small btn-primary" href={task.href}>
+          {task.action}
+        </Link>
+      )}
     </li>
   );
 

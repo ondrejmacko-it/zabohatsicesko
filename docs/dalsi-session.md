@@ -19,7 +19,7 @@ Uživateli tykej, piš přátelsky. Větší změny nejdřív navrhni, nejasnost
   - **Detail akce z náhledu „Zobrazit jako“** (`?jako=` na `/vzdelavani/akce/[id]`): počítá se pro vybranou
     skupinu nebo kolegu, jen ke čtení, nástroje vedoucího se v náhledu nenabízejí.
   - Domovská stránka vyká, vstupní stránka říká „Ukázka“ místo „Prototyp“.
-- Ověřeno: lint, typy, 114 ze 114 testů, build. Chromium nad PGlite: Plán za organizátora (1280 a 390 px),
+- Ověřeno: lint, typy, 115 ze 115 testů, build. Chromium nad PGlite: Plán za organizátora (1280 a 390 px),
   vedoucího a účastníka, filtr K doplnění, náhled za FP a za vedoucího včetně detailu, Zápisy se dvěma
   zveřejněnými zápisy (nadpis měsíce se ukazuje), bez vodorovného posunu. **Neověřeno:** Safari, živý Google.
 - **Živý test:** pro tuto větev je na Vercelu nastavená `APP_URL`
@@ -27,12 +27,14 @@ Uživateli tykej, piš přátelsky. Větší změny nejdřív navrhni, nejasnost
   přidat `<APP_URL>/api/google/prihlaseni/callback` a `<APP_URL>/api/google/kalendar/callback`. Přihlašovat se
   jen z této adresy větve, ne z adresy jednotlivého nasazení. `redirect_uri=` z chyby na staré větvi uživatel
   zatím neposlal.
-- **Návrh automatického Kalendáře (čeká na souhlas, neprogramováno):** po přihlášení Googlem si Wiki
-  u organizátora, pokud Kalendář není propojený, sama řekne o oprávnění ke Kalendáři (druhé přesměrování,
-  jedna souhlasová obrazovka). Ostatní role žádné oprávnění navíc nedostanou. Rozpojený Kalendář se ukáže
-  jako úkol v „Čeká na vás“ s jedním tlačítkem. Stránka Integrace zůstane jen jako technická adresa pro
-  správce. Servisní účet bez Google Workspace nejspíš nejde (pozvánky hostům), ověřit před rozhodnutím.
-  Pozor: dokud je OAuth aplikace v režimu Testing, obnovovací token vyprší po 7 dnech.
+- **Automatické propojení Kalendáře (odsouhlaseno a naprogramováno 13. 11., naživo neověřeno):** po přihlášení
+  Googlem pošle Wiki organizátora nebo správce, pokud propojení chybí, rovnou na souhlas ke Kalendáři
+  (`needsCalendarConnection`, `/api/google/kalendar/pripojit?auto=1`, účet jde jako `login_hint`) a vrátí ho na
+  Plán. Ostatní role nic navíc nedostanou. Chybějící propojení je první úkol v „Čeká na vás“. Jedno propojení
+  platí pro celou Wiki, zápisy vedoucího (odkaz na zápis v pozvánce) jdou přes něj. Stránka Integrace zůstává
+  jako technická adresa. Uživatel neví, kdo ve firmě vlastní kalendář: účet organizátora do něj musí smět
+  zapisovat. Dokud je OAuth aplikace v režimu Testing, propojení vyprší po 7 dnech. Dokumentace v
+  `docs/google-kalendar.md` a `docs/google-prihlaseni.md` tento tok zatím nepopisuje.
 - Otevřené: „Ukázka“ a přepínač rolí zůstávají. Texty na technické stránce Integrace jsou pořád „ukázkové“.
 
 ## Stav 13. 11. 2026 pozdě odpoledne (větev `ccr-aad79b00-uhlkt9`, PR do `main`)
