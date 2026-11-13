@@ -714,35 +714,95 @@ fieldset.field > legend {
 
 .menu {
   position: relative;
+  display: inline-flex;
 }
 
-.menu > summary {
-  list-style: none;
-}
-
-.menu > summary::-webkit-details-marker {
-  display: none;
-}
-
+/* Seznam je ukotvený k oknu prohlížeče, polohu počítá komponenta Menu. Nic ho proto neořízne. */
 .menu-list {
-  position: absolute;
-  right: 0;
-  z-index: 10;
+  position: fixed;
+  z-index: 50;
   display: flex;
   flex-direction: column;
-  min-width: 200px;
-  max-width: calc(100vw - 48px);
-  margin-top: 6px;
+  gap: 2px;
+  width: max-content;
+  min-width: 220px;
+  max-width: calc(100vw - 16px);
+  max-height: calc(100dvh - 16px);
   padding: 6px;
+  overflow-y: auto;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--surface);
-  box-shadow: 0 10px 30px rgba(35, 35, 35, 0.15);
+  box-shadow: 0 12px 32px rgba(35, 35, 35, 0.18);
+}
+
+.menu-list[hidden] {
+  display: none;
 }
 
 .menu-list .btn {
   justify-content: flex-start;
+  width: 100%;
   border-color: transparent;
+  background: transparent;
+  font-weight: 500;
+  text-align: left;
+}
+
+.menu-list .btn:hover,
+.menu-list .btn:focus-visible {
+  background: var(--beige);
+}
+
+.menu-list .action-form,
+.menu-list form {
+  display: flex;
+  flex-direction: column;
+}
+
+.menu-list .small,
+.menu-list .form-error {
+  padding: 2px 12px 6px;
+}
+
+.menu-divider {
+  width: 100%;
+  margin: 4px 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+}
+
+.menu-list .menu-danger {
+  color: var(--danger);
+}
+
+.btn-icon {
+  padding-inline: 8px;
+}
+
+/* Okno otevřené z jiného okna to první po dobu práce nahradí. Po zavření se první vrátí. */
+body > .dialog[open]:has(~ .dialog[open]) {
+  visibility: hidden;
+}
+
+.dialog-head {
+  align-items: center;
+}
+
+.dialog-head h2 {
+  margin: 0;
+}
+
+.dialog-confirm {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dialog-confirm p {
+  margin: 0;
 }
 
 /* ——— Tabulky ——— */
@@ -970,27 +1030,9 @@ fieldset.field > legend {
   text-align: center;
 }
 
-/* Nabídka nástrojů organizátora: výsledek akce (např. doplnění měsíce) se vypíše přímo v ní. */
-.organizer-tools {
-  width: 260px;
-  gap: 2px;
-}
-
-.organizer-tools .small,
-.organizer-tools .form-error {
-  margin: 0;
-  padding: 2px 12px 6px;
-}
-
 @media (max-width: 760px) {
   .view-toggle {
     display: none;
-  }
-
-  /* Na mobilu je nabídka pod názvem měsíce u levého okraje, proto se rozbalí doprava. */
-  .organizer-tools {
-    right: auto;
-    left: 0;
   }
 }
 

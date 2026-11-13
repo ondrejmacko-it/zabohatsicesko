@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Icon } from "@/components/Icon";
 import { RouteModal } from "@/components/RouteModal";
 import { Todo, missingText } from "@/components/Todo";
-import { GROUP_LABELS, PLAN_STATUS_LABELS } from "@/lib/labels";
+import { EXTRAORDINARY_TYPES, GROUP_LABELS, PLAN_STATUS_LABELS } from "@/lib/labels";
 import { formatDate, formatEventTime, toDateKey } from "@/lib/time";
 import type { Viewer } from "@/server/policy";
 import { isOrganizer } from "@/server/policy";
@@ -33,6 +33,21 @@ export async function EventPeek({ user, eventId, preview, previewKey, closeHref 
   const holiday = card.type === "holiday";
   const fullHref = `/vzdelavani/akce/${encodeURIComponent(card.id)}${previewKey ? `?jako=${encodeURIComponent(previewKey)}` : ""}`;
   const minutesReady = detail.recording.access === "reader" && Boolean(detail.recording.minutes);
+  const links = [...(minutesReady ? [{ href: `${fullHref}#zapis`, label: "Zobrazit zápis" }] : []), { href: fullHref, label: "Otevřít celý detail" }];
+  const replaceable = editable && detail.fromTemplate && !EXTRAORDINARY_TYPES.has(card.type) && !card.past;
+  const dialogProps = editable
+    ? {
+        mode: "edit" as const,
+        id: card.id,
+        revision: detail.revision,
+        initial: detail.form!,
+        published: detail.publishedForm,
+        people,
+        topics,
+        inviteeCount: detail.sync?.inviteeCount ?? 0,
+        planDays: template.filter((slot) => slot.active).map((slot) => slot.isoWeekday),
+      }
+    : null;
 
   return (
     <RouteModal title={card.label} closeHref={closeHref}>
@@ -70,26 +85,20 @@ export async function EventPeek({ user, eventId, preview, previewKey, closeHref 
         </div>
       </dl>
       {holiday && <p className="hint">Svátek je v plánu jen pro přehled, do Kalendáře se neposílá.</p>}
-      {!holiday && <p className="hint">Kalendář, nahrávku a zápis najdete v celém detailu.</p>}
+      {!holiday && <p className="hint">Kalendář, nahrávku a zápis najdete v celém detailu{managing ? " (Další možnosti)" : ""}.</p>}
       <div className="dialog-actions peek-actions">
-        <Link className="btn" href={minutesReady ? `${fullHref}#zapis` : fullHref}>
-          {minutesReady ? "Zobrazit zápis" : "Otevřít celý detail"}
-        </Link>
-        {managing && <EventMenu id={card.id} revision={detail.revision} canCancel={detail.canCancel} canDelete={detail.canDelete} />}
-        {editable && (
-          <EventDialog
-            mode="edit"
-            primary
-            id={card.id}
-            revision={detail.revision}
-            initial={detail.form!}
-            published={detail.publishedForm}
-            people={people}
-            topics={topics}
-            inviteeCount={detail.sync?.inviteeCount ?? 0}
-            planDays={template.filter((slot) => slot.active).map((slot) => slot.isoWeekday)}
-          />
+        {managing ? (
+          <EventMenu id={card.id} revision={detail.revision} canCancel={detail.canCancel} canDelete={detail.canDelete} links={links}>
+            {replaceable && <EventDialog {...dialogProps!} replace />}
+          </EventMenu>
+        ) : (
+          links.map((link, index) => (
+            <Link key={link.href} className={index === 0 ? "btn btn-primary" : "btn"} href={link.href}>
+              {link.label}
+            </Link>
+          ))
         )}
+        {editable && <EventDialog {...dialogProps!} primary />}
       </div>
     </RouteModal>
   );

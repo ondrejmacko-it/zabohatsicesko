@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ActionForm } from "@/components/ActionForm";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { Icon } from "@/components/Icon";
+import { Menu } from "@/components/Menu";
 import { generateMonthAction } from "@/features/vzdelavani/actions";
 import { EventDialog } from "@/features/vzdelavani/components/EventDialog";
 import { EventPeek } from "@/features/vzdelavani/components/EventPeek";
@@ -154,15 +155,10 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
           </div>
           {managing && (
             <div className="row">
-              <details className="menu">
-                <summary className="btn">
-                  <Icon name="more" /> Nástroje organizátora
-                </summary>
-                <div className="menu-list organizer-tools">
-                  <ActionForm action={generateMonthAction} fields={{ month: monthKey }} label="Doplnit měsíc ze šablony" pendingLabel="Doplňuji…" />
-                  <TemplateDialog slots={template} />
-                </div>
-              </details>
+              <Menu label="Nástroje organizátora" className="organizer-tools">
+                <ActionForm action={generateMonthAction} fields={{ month: monthKey }} label="Doplnit měsíc ze šablony" pendingLabel="Doplňuji…" />
+                <TemplateDialog slots={template} />
+              </Menu>
               <EventDialog
                 mode="create"
                 initial={{

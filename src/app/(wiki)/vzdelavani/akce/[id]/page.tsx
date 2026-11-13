@@ -50,6 +50,11 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
   const status = primaryStatus(card);
   const [people, topics] = organizer ? await Promise.all([listPeople(user), listTopics(user)]) : [[], []];
   const planDays = organizer ? (await loadTemplate()).filter((slot) => slot.active).map((slot) => slot.isoWeekday) : [];
+  const editable = organizer && detail.form && card.planStatus !== "cancelled";
+  const replaceable = editable && detail.fromTemplate && !EXTRAORDINARY_TYPES.has(card.type) && !card.past;
+  const dialogProps = editable
+    ? { mode: "edit" as const, id: card.id, revision: detail.revision, initial: detail.form!, published: detail.publishedForm, people, topics, inviteeCount: detail.sync?.inviteeCount ?? 0, planDays }
+    : null;
   // Nástroje vedoucího (nahrání, úprava zápisu) by v náhledu běžely pod organizátorem, proto se nenabízejí.
   const handlerPreview = Boolean(preview) && detail.recording.access === "handler";
   const handler = detail.recording.access === "handler" && !preview;
@@ -90,33 +95,6 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
           {organizer && statusAdvice(card) && <p className="small muted status-advice">{statusAdvice(card)}</p>}
         </div>
         <div className="row">
-          {organizer && detail.form && card.planStatus !== "cancelled" && (
-            <EventDialog
-              mode="edit"
-              id={card.id}
-              revision={detail.revision}
-              initial={detail.form}
-              published={detail.publishedForm}
-              people={people}
-              topics={topics}
-              inviteeCount={detail.sync?.inviteeCount ?? 0}
-              planDays={planDays}
-            />
-          )}
-          {organizer && detail.form && detail.fromTemplate && !EXTRAORDINARY_TYPES.has(card.type) && card.planStatus !== "cancelled" && !card.past && (
-            <EventDialog
-              mode="edit"
-              replace
-              id={card.id}
-              revision={detail.revision}
-              initial={detail.form}
-              published={detail.publishedForm}
-              people={people}
-              topics={topics}
-              inviteeCount={detail.sync?.inviteeCount ?? 0}
-              planDays={planDays}
-            />
-          )}
           {handler && card.past && (
             <a className="btn btn-primary" href="#nahravka">
               Nahrávka a zápis
@@ -127,7 +105,12 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
               Zobrazit zápis
             </a>
           )}
-          {organizer && <EventMenu id={card.id} revision={detail.revision} canCancel={detail.canCancel} canDelete={detail.canDelete} />}
+          {organizer && (
+            <EventMenu id={card.id} revision={detail.revision} canCancel={detail.canCancel} canDelete={detail.canDelete}>
+              {replaceable && <EventDialog {...dialogProps!} replace />}
+            </EventMenu>
+          )}
+          {editable && <EventDialog {...dialogProps!} primary />}
         </div>
       </div>
 

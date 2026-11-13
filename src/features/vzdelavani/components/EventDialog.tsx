@@ -148,7 +148,7 @@ function EventForm({ mode, id, revision, initial, published, people, topics, rep
   const requestClose = () => (dirty && !pending ? setConfirmDiscard(true) : onClose());
 
   return (
-    <Modal open title={replace ? "Nahradit pravidelný termín" : mode === "create" ? "Přidat akci" : "Upravit akci"} onRequestClose={requestClose} wide>
+    <Modal open title={replace ? "Nahradit pravidelný termín" : mode === "create" ? "Přidat akci" : "Upravit akci"} onRequestClose={requestClose} wide selfGuarded>
       {confirmDiscard ? (
         <div className="stack">
           <p>Máte neuložené změny. Opravdu chcete dialog zavřít a změny zahodit?</p>
