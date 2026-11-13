@@ -4,15 +4,20 @@ import { formatDayMonth } from "@/lib/time";
 import { GROUPS, type Group } from "@/lib/types";
 import { interestedLabel } from "@/server/domain/topics";
 import { isOrganizer, type Viewer } from "@/server/policy";
-import { listArchivedTopics, listTopics } from "@/server/services/topics";
+import { listArchivedTopics, listTopicInterested, listTopics } from "@/server/services/topics";
 
 /** Kolik nenaplánovaných témat z čela pořadí dostane štítek Doporučené. */
 const RECOMMENDED_COUNT = 3;
 
-/** Jeden seznam témat. Doporučená jsou nahoře se štítkem, správa je u každého řádku. */
+/** Témata jako karty. Doporučená jsou nahoře se štítkem, správa je v nabídce u každé karty. */
 export async function TopicsSection({ user }: { user: Viewer }) {
   const organizer = isOrganizer(user);
-  const [topics, archived] = await Promise.all([listTopics(user), listArchivedTopics(user)]);
+  const [topics, archived, interested] = await Promise.all([
+    listTopics(user),
+    listArchivedTopics(user),
+    // Jména zájemců smí vidět jen organizátor a správce, ostatním server pošle jen počet.
+    organizer ? listTopicInterested(user) : null,
+  ]);
   const recommended = new Set(topics.filter((t) => t.nextPlanned === null).slice(0, RECOMMENDED_COUNT).map((t) => t.id));
   const groups = GROUPS.filter((g) => organizer || user.groups.includes(g)) as Group[];
   const label = (g: string) => GROUP_LABELS[g as Group] ?? g;
@@ -25,45 +30,48 @@ export async function TopicsSection({ user }: { user: Viewer }) {
       </div>
       <p className="lead-text">
         O čem by vzdělávání mělo být. Dejte najevo zájem nebo navrhněte vlastní téma. Doporučená jsou ta, o která je největší zájem
-        a dlouho neproběhla. O zařazení do plánu rozhoduje organizátor.
+        a dlouho neproběhla. O zařazení do plánu rozhoduje organizátor.{organizer && " Kdo má o téma zájem, zjistíte kliknutím na počet zájemců."}
       </p>
       {topics.length === 0 ? (
         <p className="muted">Zatím tu nejsou žádná témata. Navrhněte první.</p>
       ) : (
-        <table className="table topics-table">
-          <thead>
-            <tr>
-              <th scope="col">Téma</th>
-              <th scope="col">Skupina</th>
-              <th scope="col">Zájemci</th>
-              <th scope="col">Naposledy</th>
-              <th scope="col">
-                <span className="visually-hidden">Akce</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {topics.map((t) => (
-              <tr key={t.id} className={recommended.has(t.id) ? "topic-recommended" : undefined}>
-                <td data-label="Téma">
-                  <strong>{t.name}</strong>
-                  {recommended.has(t.id) && <span className="badge badge-ochre topic-badge">Doporučené</span>}
-                  {t.nextPlanned && <span className="small muted"> · naplánováno na {formatDayMonth(t.nextPlanned)}</span>}
-                  {recommended.has(t.id) && <span className="small muted topic-reason">{t.reason}</span>}
-                </td>
-                <td data-label="Skupina">{label(t.audience)}</td>
-                <td data-label="Zájemci">{interestedLabel(t.interestCount)}</td>
-                <td data-label="Naposledy">{t.lastHeld ? formatDayMonth(t.lastHeld) : "zatím neproběhlo"}</td>
-                <td>
-                  <div className="row topic-actions">
-                    <InterestButton topicId={t.id} interested={t.interestedByViewer} topicName={t.name} />
-                    {organizer && <TopicManage topic={t} groups={groups} />}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <ul className="topic-list">
+          {topics.map((t) => {
+            const names = interested?.get(t.id) ?? [];
+            return (
+              <li key={t.id} className={recommended.has(t.id) ? "topic-card topic-recommended" : "topic-card"}>
+                <div className="topic-main">
+                  <p className="item-title">
+                    {t.name}
+                    {recommended.has(t.id) && <span className="badge badge-ochre topic-badge">Doporučené</span>}
+                  </p>
+                  <p className="item-meta">
+                    {label(t.audience)} · {t.lastHeld ? `naposledy ${formatDayMonth(t.lastHeld)}` : "zatím neproběhlo"}
+                    {t.nextPlanned && ` · naplánováno na ${formatDayMonth(t.nextPlanned)}`}
+                  </p>
+                  {names.length > 0 ? (
+                    <details className="topic-people">
+                      <summary>{interestedLabel(t.interestCount)}</summary>
+                      <ul className="chip-list">
+                        {names.map((name) => (
+                          <li key={name} className="chip">
+                            {name}
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  ) : (
+                    <p className="topic-count">{interestedLabel(t.interestCount)}</p>
+                  )}
+                </div>
+                <div className="topic-actions">
+                  <InterestButton topicId={t.id} interested={t.interestedByViewer} topicName={t.name} />
+                  {organizer && <TopicManage topic={t} groups={groups} />}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
       )}
 
       {archived.length > 0 && (

@@ -2,6 +2,7 @@
 
 import { useActionState, useState, useTransition } from "react";
 import { ActionForm, ActionMessage } from "@/components/ActionForm";
+import { Menu } from "@/components/Menu";
 import { Modal } from "@/components/Modal";
 import { submitKeepingValues } from "@/features/shared/keep-values";
 import { GROUP_LABELS } from "@/lib/labels";
@@ -88,26 +89,28 @@ function ProposeForm({ groups, onClose }: { groups: Group[]; onClose: () => void
 }
 
 /** Správa tématu pro organizátora: úprava názvu a skupiny, archivace. */
+/** Správa tématu v jedné nabídce: úprava názvu a skupiny, archivace s potvrzením. */
 export function TopicManage({ topic, groups }: { topic: { id: string; name: string; audience: string }; groups: Group[] }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="row topic-manage">
-      <button type="button" className="btn btn-small" onClick={() => setOpen(true)} aria-label={`Upravit téma ${topic.name}`}>
-        Upravit
-      </button>
-      <ActionForm
-        action={archiveTopicAction}
-        fields={{ topicId: topic.id, archived: "true" }}
-        label="Archivovat"
-        small
-        confirm={{
-          title: "Archivovat téma",
-          text: `Téma „${topic.name}“ zmizí z nabídky a z doporučení. Akce, které ho už měly, si vazbu nechají a téma můžete kdykoli obnovit.`,
-          confirmLabel: "Archivovat téma",
-        }}
-      />
+    <>
+      <Menu label={`Možnosti tématu ${topic.name}`} small iconOnly>
+        <button type="button" className="btn" onClick={() => setOpen(true)}>
+          Upravit téma
+        </button>
+        <ActionForm
+          action={archiveTopicAction}
+          fields={{ topicId: topic.id, archived: "true" }}
+          label="Archivovat…"
+          confirm={{
+            title: "Archivovat téma",
+            text: `Téma „${topic.name}“ zmizí z nabídky a z doporučení. Akce, které ho už měly, si vazbu nechají a téma můžete kdykoli obnovit.`,
+            confirmLabel: "Archivovat téma",
+          }}
+        />
+      </Menu>
       {open && <EditTopicForm topic={topic} groups={groups} onClose={() => setOpen(false)} />}
-    </div>
+    </>
   );
 }
 

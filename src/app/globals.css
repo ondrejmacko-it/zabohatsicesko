@@ -1812,3 +1812,129 @@ a.brief-link:hover {
   margin-left: 8px;
   vertical-align: 2px;
 }
+
+/* ——— Témata jako karty: obsah, ne další odstavec textu ——— */
+.topic-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.topic-card {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--band);
+}
+
+.topic-card.topic-recommended {
+  border-color: var(--draft-line);
+  background: var(--ochre-soft);
+}
+
+.topic-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.topic-main p {
+  margin: 0;
+}
+
+.topic-card .topic-actions {
+  display: flex;
+  flex: none;
+  gap: 6px;
+  align-items: center;
+  margin: 0;
+}
+
+.topic-count,
+.topic-people > summary {
+  margin-top: 4px;
+  color: var(--ink-soft);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.topic-people > summary {
+  width: fit-content;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: var(--line-strong);
+  text-underline-offset: 3px;
+}
+
+.chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chip {
+  padding: 2px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: 13px;
+}
+
+@media (max-width: 900px) {
+  .topic-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ——— Zápis v okně: sekce uvnitř okna nemá vlastní rámeček ——— */
+.peek-eyebrow {
+  margin: -8px 0 0;
+}
+
+.peek-section > .section {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.peek-section > .section > h2,
+.peek-section > .section > .spread > h2 {
+  font-size: 17px;
+}
+
+.picker-list .brief-row {
+  justify-content: space-between;
+}
+
+.btn .count-badge {
+  margin-left: 2px;
+}
+
+.btn-primary .count-badge {
+  background: #fff;
+  color: var(--ochre-dark);
+}
+
+.topic-main .item-title {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  align-items: center;
+}
+
+.topic-main .item-title .topic-badge {
+  margin-left: 0;
+}
