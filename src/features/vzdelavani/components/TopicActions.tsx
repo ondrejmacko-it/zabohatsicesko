@@ -10,7 +10,18 @@ import type { Group } from "@/lib/types";
 import { archiveTopicAction, proposeTopicAction, toggleInterestAction, updateTopicAction, type ActionResult } from "../actions";
 
 /** Přepínač zájmu. Jeden uživatel = nejvýš jeden zájem o téma (hlídá server). */
-export function InterestButton({ topicId, interested, topicName }: { topicId: string; interested: boolean; topicName: string }) {
+export function InterestButton({
+  topicId,
+  interested,
+  topicName,
+  primary = false,
+}: {
+  topicId: string;
+  interested: boolean;
+  topicName: string;
+  /** Hlavní akce karty, na kterou člověk přišel z pozvánky. */
+  primary?: boolean;
+}) {
   const [state, action, pending] = useActionState(toggleInterestAction, null);
   return (
     <form action={action}>
@@ -18,7 +29,7 @@ export function InterestButton({ topicId, interested, topicName }: { topicId: st
       <input type="hidden" name="interested" value={interested ? "false" : "true"} />
       <button
         type="submit"
-        className={interested ? "btn btn-small interest-on" : "btn btn-small"}
+        className={interested ? "btn btn-small interest-on" : primary ? "btn btn-small btn-primary" : "btn btn-small"}
         aria-pressed={interested}
         aria-label={`${interested ? "Zrušit zájem o téma" : "Mám zájem o téma"} ${topicName}`}
         disabled={pending}

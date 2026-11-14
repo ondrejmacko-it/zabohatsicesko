@@ -1,9 +1,10 @@
 "use server";
 
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { audit, hashKey, withinRateLimit } from "@/server/audit";
+import { RETURN_COOKIE, safeReturnPath } from "@/server/auth/return-path";
 import { accessCodeMatches, endSession, getCurrentUser, startSession } from "@/server/auth/session";
 import { listPersonas } from "@/server/auth/personas";
 import { config } from "@/server/config";
@@ -35,7 +36,11 @@ export async function enterDemo(_prev: GateState, formData: FormData): Promise<G
 
   await startSession(parsed.data.persona);
   await audit(db, parsed.data.persona, "session.start", "user", parsed.data.persona);
-  redirect("/");
+  // Kdo přišel odkazem z pozvánky, vrátí se tam, kam mířil.
+  const jar = await cookies();
+  const returnPath = safeReturnPath(jar.get(RETURN_COOKIE)?.value);
+  jar.delete(RETURN_COOKIE);
+  redirect(returnPath ?? "/");
 }
 
 /** Přepnutí fiktivní role. Vyžaduje platnou session, tedy už prošlou přístupovou bránu. */

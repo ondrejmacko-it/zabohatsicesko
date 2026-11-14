@@ -47,15 +47,27 @@ async function hasPublishedMinutes(db: Db, eventId: string): Promise<boolean> {
   return Boolean(row);
 }
 
-function desiredData(eventId: string, snapshot: EventSnapshot, minutesPublished: boolean): ManagedEventData {
+const TOPIC_LINK_PATH = "/vzdelavani/temata?tema=";
+
+/** Popis pozvánky bez řádku se zájmem o téma. Kvůli samotnému odkazu se pozvánka znovu nerozesílá. */
+const withoutTopicLink = (description: string) =>
+  description.split("\n").filter((line) => !line.includes(TOPIC_LINK_PATH)).join("\n");
+
+export function desiredData(eventId: string, snapshot: EventSnapshot, minutesPublished: boolean): ManagedEventData {
   const url = `${config.appUrl}/vzdelavani/akce/${eventId}`;
+  const startsAt = new Date(snapshot.startsAt);
+  const lines = minutesPublished
+    ? [`Zápis z akce je zveřejněný: ${url}#zapis`, `Podrobnosti ve firemní Wiki: ${url}`]
+    : [`Podrobnosti a zápis ve firemní Wiki: ${url}`];
+  // Zájem o téma jde dát najevo rovnou z pozvánky, dokud akce teprve bude.
+  if (snapshot.topicId && snapshot.status !== "cancelled" && startsAt > now()) {
+    lines.push(`Chcete toto téma i příště? Dejte ve Wiki najevo zájem: ${config.appUrl}${TOPIC_LINK_PATH}${encodeURIComponent(snapshot.topicId)}`);
+  }
   return {
     summary: calendarSummary(snapshot),
-    // Do pozvánky jde jen odkaz. Wiki u něj znovu ověří přístup, citlivý obsah v Kalendáři není.
-    description: minutesPublished
-      ? `Zápis z akce je zveřejněný: ${url}#zapis\nPodrobnosti ve firemní Wiki: ${url}`
-      : `Podrobnosti a zápis ve firemní Wiki: ${url}`,
-    startsAt: new Date(snapshot.startsAt),
+    // Do pozvánky jdou jen odkazy. Wiki u nich znovu ověří přístup, citlivý obsah v Kalendáři není.
+    description: lines.join("\n"),
+    startsAt,
     endsAt: new Date(snapshot.endsAt),
     cancelled: snapshot.status === "cancelled",
   };
@@ -216,7 +228,7 @@ async function pushToCalendar(
     const plan = upcoming
       ? planGuests(guests, external.attendees, previouslyManaged)
       : { add: [], remove: [], managed: previouslyManaged };
-    if (sameManaged(managed(external), managed(desired)) && external.description === desired.description && samePlan(plan)) {
+    if (sameManaged(managed(external), managed(desired)) && withoutTopicLink(external.description) === withoutTopicLink(desired.description) && samePlan(plan)) {
       return { external, managedAttendees: plan.managed };
     }
     return { external: await provider.patch(link.calendarId, external.id, desired, plan), managedAttendees: plan.managed };

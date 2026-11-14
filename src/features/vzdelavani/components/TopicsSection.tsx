@@ -10,15 +10,18 @@ import { listArchivedTopics, listTopicInterested, listTopics } from "@/server/se
 const RECOMMENDED_COUNT = 3;
 
 /** Témata jako karty. Doporučená jsou nahoře se štítkem, správa je v nabídce u každé karty. */
-export async function TopicsSection({ user }: { user: Viewer }) {
+export async function TopicsSection({ user, highlightId = null }: { user: Viewer; highlightId?: string | null }) {
   const organizer = isOrganizer(user);
-  const [topics, archived, interested] = await Promise.all([
+  const [ranked, archived, interested] = await Promise.all([
     listTopics(user),
     listArchivedTopics(user),
     // Jména zájemců smí vidět jen správce, ostatním server pošle jen počet.
     organizer ? listTopicInterested(user) : null,
   ]);
-  const recommended = new Set(topics.filter((t) => t.nextPlanned === null).slice(0, RECOMMENDED_COUNT).map((t) => t.id));
+  // Téma z odkazu v pozvánce je první a zvýrazněné, pořadí ostatních se nemění.
+  const highlighted = highlightId ? ranked.find((t) => t.id === highlightId) : undefined;
+  const topics = highlighted ? [highlighted, ...ranked.filter((t) => t !== highlighted)] : ranked;
+  const recommended = new Set(ranked.filter((t) => t.nextPlanned === null).slice(0, RECOMMENDED_COUNT).map((t) => t.id));
   const groups = GROUPS.filter((g) => organizer || user.groups.includes(g)) as Group[];
   const label = (g: string) => GROUP_LABELS[g as Group] ?? g;
 
@@ -32,6 +35,15 @@ export async function TopicsSection({ user }: { user: Viewer }) {
         O čem by vzdělávání mělo být. Dejte najevo zájem nebo navrhněte vlastní téma. Doporučená jsou ta, o která je největší zájem
         a dlouho neproběhla. O zařazení do plánu rozhoduje správce.{organizer && " Kdo má o téma zájem, zjistíte kliknutím na počet zájemců."}
       </p>
+      {highlightId && (
+        <p className="topic-from-invite" role="status">
+          {highlighted
+            ? highlighted.interestedByViewer
+              ? `Zájem o téma „${highlighted.name}“ už u vás evidujeme. Není potřeba nic dalšího.`
+              : `Přišli jste z pozvánky. Zájem o téma „${highlighted.name}“ potvrdíte tlačítkem Mám zájem.`
+            : "Téma z pozvánky tu nevidíte. Je archivované nebo určené jiné skupině."}
+        </p>
+      )}
       {topics.length === 0 ? (
         <p className="muted">Zatím tu nejsou žádná témata. Navrhněte první.</p>
       ) : (
@@ -39,7 +51,10 @@ export async function TopicsSection({ user }: { user: Viewer }) {
           {topics.map((t) => {
             const names = interested?.get(t.id) ?? [];
             return (
-              <li key={t.id} className={recommended.has(t.id) ? "topic-card topic-recommended" : "topic-card"}>
+              <li
+                key={t.id}
+                className={["topic-card", recommended.has(t.id) && "topic-recommended", t === highlighted && "topic-highlight"].filter(Boolean).join(" ")}
+              >
                 <div className="topic-main">
                   <p className="item-title">
                     {t.name}
@@ -65,7 +80,7 @@ export async function TopicsSection({ user }: { user: Viewer }) {
                   )}
                 </div>
                 <div className="topic-actions">
-                  <InterestButton topicId={t.id} interested={t.interestedByViewer} topicName={t.name} />
+                  <InterestButton topicId={t.id} interested={t.interestedByViewer} topicName={t.name} primary={t === highlighted} />
                   {organizer && <TopicManage topic={t} groups={groups} />}
                 </div>
               </li>

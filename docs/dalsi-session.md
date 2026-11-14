@@ -6,8 +6,8 @@ push a přepsání tohoto souboru (jen aktuální stav, historie je v gitu).
 
 ## Stav 14. 11. 2026 (větev `claude/vzdelavani-b8-e-ybvvgg`, draft PR #21 do `main`)
 
-Ověřeno: lint, typy, build, 165 ze 165 testů. Naživo proti Googlu neověřeno nic. Hotové jsou bloky A
-a B3 až B8 a B10. Production na Vercelu nemá proměnné prostředí a buildy z `main` se přeskakují.
+Ověřeno: lint, typy, build, 170 ze 170 testů, B9 v Chromiu nad PGlite na 1280 a 390 px. Naživo proti Googlu
+neověřeno nic. Hotové jsou bloky A a B3 až B10. Production na Vercelu nemá proměnné prostředí a buildy z `main` se přeskakují.
 
 Pravidla: tykej, piš přátelsky. Na `main` nepushuj, merge dělá uživatel přes PR. Produkci sám nenasazuj,
 jen ji připrav a nastav, co jde přes API. Osobní účet uživatele je z Wiki smazaný, nezakládej ho a nikam
@@ -19,40 +19,33 @@ na 1280 a 390 px (konzole bez chyb, žádný vodorovný posun).
 
 ## Kroky v pořadí (jeden na relaci)
 
-1. **B9 Zájem o téma z pozvánky.** Do `desiredData` v `src/server/calendar/sync.ts` přidat u budoucí akce
-   s `topicId` řádek s odkazem `<APP_URL>/vzdelavani/temata?tema=<id>`. Rozhodnuto: jen do nově zakládaných
-   pozvánek a do těch, které se stejně mění (kvůli odkazu se nic znovu nerozesílá, porovnání popisu v
-   `reconcile` tomu přizpůsobit). Stránka `temata` přesměruje na `/vzdelavani/zapisy?zajem=<id>#temata`,
-   `TopicsSection` kartu zvýrazní, zájem je běžné tlačítko (POST po přihlášení, GET nic nezapisuje).
-   Doplnit návrat po přihlášení: krátká cookie s interní cestou začínající `/vzdelavani`, čte ji `enterDemo`
-   a callback Google přihlášení. Test pravidel a oprávnění.
-2. **B11 a drobnosti.** `Consequences` do zrušení akce (`EventMenu`), stažení zápisu (`RecordingMenu`,
+1. **B11 a drobnosti.** `Consequences` do zrušení akce (`EventMenu`), stažení zápisu (`RecordingMenu`,
    rozšířit `confirm` v `ActionForm` o body) a odebrání přístupu (`AccountActions`). Zpráva po pozvání
    kolegy (`inviteMessage` v `AccessForms.tsx`): tykání zůstává, text doladit (kdo zve, k čemu Wiki je,
    odkaz, jedna věta jak se přihlásit). Při zapnuté lhůtě má detail akce psát „Pozvánka odejde za chvíli“.
-3. **Úklid a optimalizace.** Mrtvý kód a nepoužívané exporty, alias `isOrganizer`/`isAdmin` nahradit
+2. **Úklid a optimalizace.** Mrtvý kód a nepoužívané exporty, alias `isOrganizer`/`isAdmin` nahradit
    `canPlan`, sloučit role `admin` a `organizer` v databázi (migrace, zeptej se před ní), zápisy filtrovat
    v databázi, krátká mezipaměť odpovědí z Kalendáře na Plánu, velikost balíčku a rychlost stránek změřit
    před a po.
-4. **Bezpečnostní rozbor.** Oprávnění každé serverové akce a API, session a cookies, OAuth, CSP, tajemství
+3. **Bezpečnostní rozbor.** Oprávnění každé serverové akce a API, session a cookies, OAuth, CSP, tajemství
    v gitu a buildu, limity pokusů. Výstup: nálezy podle závažnosti a opravy s testy.
-5. **Živý test (blok C)** na preview této větve. Nejdřív nastav přes API vlastní `APP_URL`
+4. **Živý test (blok C)** na preview této větve. Nejdřív nastav přes API vlastní `APP_URL`
    (`https://zbc-vzdelavani-demo-git-<větev>-maci.vercel.app`) a `CALENDAR_ATTENDEES=audience` a zeptej se,
    zda uživatel přidal v Google konzoli `<adresa>/api/google/prihlaseni/callback`
    a `<adresa>/api/google/kalendar/callback`. Postup: přihlášení správce, řádek „Kalendář“ na Plánu, vazby
    a hosté budoucích akcí (Neon `calendar_links`), „Připravit další měsíc“, nový účet a žádost, schválení,
    pozvánky, odpovědi, zpět po zveřejnění, změna, zrušení, odkaz na zápis.
-6. **Dokumentace (blok D):** `README.md`, `docs/predani.md`, `docs/google-prihlaseni.md`,
+5. **Dokumentace (blok D):** `README.md`, `docs/predani.md`, `docs/google-prihlaseni.md`,
    `docs/google-kalendar.md` podle skutečného stavu (jedna role Správce, souhlas ke Kalendáři při přihlášení,
    `GOOGLE_OAUTH_PUBLISHED`, příjemci, řádek stavu, automatické vazby, fronta a cron, hromadné zveřejnění,
-   průvodce měsícem, Správa v oknech, hromadné pozvání, odpovědi, zpět po zveřejnění, `PUBLISH_UNDO_SEC`).
-7. **Production z `main`** (až uživatel sloučí PR). Přes API nastav nesecretní proměnné pro Production
+   průvodce měsícem, Správa v oknech, hromadné pozvání, odpovědi, zpět po zveřejnění, `PUBLISH_UNDO_SEC`, zájem o téma z pozvánky).
+6. **Production z `main`** (až uživatel sloučí PR). Přes API nastav nesecretní proměnné pro Production
    (`CALENDAR_MODE`, `LOGIN_MODE`, `CALENDAR_ATTENDEES=audience`, `APP_URL`, `GOOGLE_LOGIN_ACCOUNTS` podle
    preview). Uživatel doplní tajemství (`SESSION_SECRET`, `DEMO_ACCESS_CODE`, `TOKEN_ENCRYPTION_KEY`,
    `CRON_SECRET`, OAuth klient, `DATABASE_URL`), produkční přesměrovací adresy v Google konzoli a povolí
    buildy z `main` (ignored build step). Doporučení: samostatná větev databáze v Neonu pro produkci
    a zveřejnění OAuth aplikace (v režimu Testing souhlas vyprší po 7 dnech). Potom ověření v produkci.
-8. **Snímky (blok E):** každé okno a stav za každou roli na 1280 a 390 px jako ZIP se seznamem, mimo repo.
+7. **Snímky (blok E):** každé okno a stav za každou roli na 1280 a 390 px jako ZIP se seznamem, mimo repo.
 
 ## Otevřené otázky
 
@@ -60,12 +53,23 @@ na 1280 a 390 px (konzole bez chyb, žádný vodorovný posun).
   (výchozí `PUBLISH_UNDO_SEC=0`), kód zůstává a jde zapnout proměnnou. V dokumentaci ji popiš jako volitelnou.
 - Rozhodnuto 14. 11.: produkce dostane samostatnou větev databáze v Neonu (založ ji přes konektor
   a řekni uživateli, kam vložit `DATABASE_URL`) a zatím výchozí produkční adresu Vercelu jako `APP_URL`
-  (vlastní doménu jde přidat později). V kroku 7 napiš uživateli přesný seznam: co, kam a jak doplnit.
+  (vlastní doménu jde přidat později). V kroku 6 napiš uživateli přesný seznam: co, kam a jak doplnit.
+- Varování o hydrataci na `/vstup` v Playwrightu (styl `caret-color` u přepínačů) vzniká pořízením snímku
+  před dokončením hydratace, v běžném prohlížeči se neukáže.
 - Zavřít starý draft z `ccr-7b6bed1b-1ejvib` a PR #19, smazat větev `claude/vzdelavani-vercel-preview-52jflw`?
 - Odloženo, rozhoduje firma: poskytovatel přepisu a úložiště (`docs/nahravky-moznosti.md`), pravidlo
   střídání typů ve slotu šablony, kam trvale uložit zadání (do tohoto repa ne).
 
 ## Co je dobré vědět
+
+- **B9 Zájem o téma z pozvánky:** `desiredData` (`sync.ts`) přidá budoucí nezrušené akci s `topicId` řádek
+  s odkazem `/vzdelavani/temata?tema=<id>`. Jen do nových pozvánek a do těch, které se stejně mění
+  (`withoutTopicLink` v `reconcile`). Odkaz obslouží `temata/route.ts`: přihlášeného pošle na
+  `/vzdelavani/zapisy?zajem=<id>#temata`, nepřihlášenému uloží cíl do cookie `zbc_navrat` (15 minut, jen cesty
+  `/vzdelavani…`, `src/server/auth/return-path.ts`) a po přihlášení ho tam vrátí `enterDemo` i callback Googlu.
+  Když callback rovnou pokračuje na propojení Kalendáře (první přihlášení správce), návrat se nepoužije.
+  `TopicsSection` dá téma první a zvýrazní ho, zájem zapíše až tlačítko. Test `tests/zajem-z-pozvanky.test.ts`.
+  Naživo zbývá ověřit v kroku 4: jak Google řádek s odkazem v pozvánce zobrazí.
 
 - **B8 Zpět po zveřejnění (ve výchozím stavu vypnuté):** `unpublishEvents`, `listUndoable` (`services/events.ts`), `PublishUndoBar.tsx`
   v layoutu Wiki, sloupec `events.invite_hold_until` (migrace `0007`). Test `tests/zpet-po-zverejneni.test.ts` si lhůtu zapíná sám.

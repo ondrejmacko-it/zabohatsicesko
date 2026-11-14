@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { connection } from "next/server";
 import { listPersonas } from "@/server/auth/personas";
+import { RETURN_COOKIE, safeReturnPath } from "@/server/auth/return-path";
 import { calendarMode, config, googleLoginConfig } from "@/server/config";
 import { GateForm } from "./GateForm";
 
@@ -22,6 +24,7 @@ export default async function GatePage({ searchParams }: { searchParams: Promise
   const googleError = GOOGLE_RESULTS[googleResult];
   const isPending = googleResult === "ceka-na-schvaleni";
   const personas = await listPersonas();
+  const returning = safeReturnPath((await cookies()).get(RETURN_COOKIE)?.value) !== null;
   return (
     <>
       <header className="topbar">
@@ -39,6 +42,11 @@ export default async function GatePage({ searchParams }: { searchParams: Promise
               ? "Kalendář běží v testovacím režimu Googlu jen s testovacími příjemci, přepis v ukázkovém režimu."
               : "Kalendář a přepis běží v označeném ukázkovém režimu."}
           </p>
+          {returning && (
+            <p className="topic-from-invite" role="status">
+              Po přihlášení vás Wiki vrátí k tématu z pozvánky.
+            </p>
+          )}
           {googleLoginConfig() && (
             <section className="stack gate-google" aria-labelledby="google-prihlaseni">
               <h2 id="google-prihlaseni">Přihlášení účtem Google</h2>

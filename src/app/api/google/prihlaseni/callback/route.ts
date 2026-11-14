@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { NextResponse, after, type NextRequest } from "next/server";
 import { audit, logError } from "@/server/audit";
 import { completeLogin, verifyLoginState, type LoginFailure } from "@/server/auth/google-login";
+import { RETURN_COOKIE, returnCookieOptions, safeReturnPath } from "@/server/auth/return-path";
 import { SESSION_COOKIE, encodeSession, sessionCookieOptions } from "@/server/auth/session";
 import { config, googleLoginConfig } from "@/server/config";
 import { grantsCalendar, needsCalendarConnection, revokeToken, saveGrant } from "@/server/calendar/google-auth";
@@ -80,7 +81,10 @@ export async function GET(request: NextRequest) {
     // Druhé automatické přesměrování jen tehdy, když o Kalendář ještě nikdo nežádal (první přihlášení
     // správce z tohoto prohlížeče). Po odmítnutí nebo výslovném „bez Kalendáře“ zůstává úkol na Plánu.
     const connectNext = missing && !connected && pending.calendar === "later";
-    const response = finish(`${config.appUrl}${connectNext ? CONNECT_PATH : "/"}`);
+    // Kdo přišel odkazem z pozvánky, vrátí se tam, kam mířil. Propojení Kalendáře má přednost.
+    const returnPath = connectNext ? null : safeReturnPath(request.cookies.get(RETURN_COOKIE)?.value);
+    const response = finish(`${config.appUrl}${connectNext ? CONNECT_PATH : (returnPath ?? "/")}`);
+    if (returnPath) response.cookies.set(RETURN_COOKIE, "", { ...returnCookieOptions, maxAge: 0 });
     response.cookies.set(SESSION_COOKIE, encodeSession(result.userId, undefined, "google"), sessionCookieOptions);
     response.cookies.set(HINT_COOKIE, encodeHint(result.userId), hintCookieOptions);
     return response;

@@ -1989,6 +1989,16 @@ a.brief-link:hover {
   background: var(--ochre-soft);
 }
 
+.topic-card.topic-highlight {
+  border-color: var(--ochre);
+  box-shadow: 0 0 0 2px var(--ochre);
+}
+
+.topic-from-invite {
+  margin: 0 0 12px;
+  font-weight: 600;
+}
+
 .topic-main {
   display: flex;
   flex-direction: column;

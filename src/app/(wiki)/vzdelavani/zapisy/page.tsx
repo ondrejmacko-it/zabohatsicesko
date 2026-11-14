@@ -13,7 +13,7 @@ import { listMissingMinutes, listPublishedMinutes } from "@/server/services/jour
 
 export const metadata: Metadata = { title: "Zápisy a témata" };
 
-type SearchParams = Promise<{ q?: string; typ?: string; skupina?: string; tema?: string; zapis?: string; pridat?: string }>;
+type SearchParams = Promise<{ q?: string; typ?: string; skupina?: string; tema?: string; zajem?: string; zapis?: string; pridat?: string }>;
 
 export default async function MinutesPage({ searchParams }: { searchParams: SearchParams }) {
   const user = await requireUser();
@@ -157,7 +157,7 @@ export default async function MinutesPage({ searchParams }: { searchParams: Sear
         ))
       )}
     </section>
-    <TopicsSection user={user} />
+    <TopicsSection user={user} highlightId={(params.zajem ?? "").slice(0, 64) || null} />
     </>
   );
 }
