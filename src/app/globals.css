@@ -1291,7 +1291,7 @@ details > summary {
 }
 
 /* Údaje o akci tvoří jediný blok, bez dalšího rámečku kolem. */
-.facts-section {
+.section.facts-section {
   padding: 0;
   border: 0;
   background: transparent;

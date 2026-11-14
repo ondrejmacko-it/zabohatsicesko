@@ -114,7 +114,8 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
               {replaceable && <EventDialog {...dialogProps!} replace />}
             </EventMenu>
           )}
-          {editable && <EventDialog {...dialogProps!} primary />}
+          {/* U proběhlé akce, kterou správce sám vede, je hlavní krok nahrávka. Úprava zůstává vedle jako vedlejší. */}
+          {editable && <EventDialog {...dialogProps!} primary={!(handler && card.past)} />}
         </div>
       </div>
 

@@ -1,4 +1,5 @@
 import { ActionForm } from "@/components/ActionForm";
+import { Menu } from "@/components/Menu";
 import { ERROR_LABELS, SYNC_STATUS_LABELS } from "@/lib/labels";
 import { formatDayMonth, formatEventTime, toDateKey } from "@/lib/time";
 import type { SyncPanel } from "@/server/services/detail";
@@ -27,6 +28,14 @@ export function SyncPanelView({ eventId, sync }: { eventId: string; sync: SyncPa
       : sync.status === "none"
         ? "Návrh se do Kalendáře neposílá"
         : SYNC_STATUS_LABELS[sync.status];
+  // Když jsou v Kalendáři kandidáti ke spárování, je hlavní krok párování a nová pozvánka jde do nabídky.
+  const createInMenu = sync.status === "unlinked" && sync.candidates.length > 0;
+  const simulationTools = sync.mode === "simulation" && sync.status === "synced" && Boolean(sync.externalId);
+  const createInvite = (inMenu: boolean) => (
+    <ActionForm action={createInviteAction} fields={{ id: eventId }} label={inMenu ? "Vytvořit novou pozvánku…" : "Vytvořit novou pozvánku"} variant={inMenu ? "default" : "primary"}
+      confirm={inMenu ? { title: "Vytvořit novou pozvánku", text: "V Kalendáři je v tomto čase pozvánka, kterou jde spárovat. Nová pozvánka vznikne vedle ní a pozvaní dostanou e-mail.", confirmLabel: "Vytvořit" } : undefined}
+    />
+  );
 
   return (
     <section className="section" aria-labelledby="kalendar">
@@ -37,6 +46,16 @@ export function SyncPanelView({ eventId, sync }: { eventId: string; sync: SyncPa
           <span className={statusBadge} role="status">
             {statusLabel}
           </span>
+          <Menu label="Další možnosti Kalendáře" small iconOnly>
+            {createInMenu && createInvite(true)}
+            {simulationTools && (
+              <ActionForm action={simulateManualEditAction} fields={{ externalId: sync.externalId! }} label="Simulovat ruční úpravu v Kalendáři" />
+            )}
+            {(createInMenu || simulationTools) && <hr className="menu-divider" />}
+            <a className="btn" href="/vzdelavani/integrace">
+              Technické nastavení Kalendáře
+            </a>
+          </Menu>
         </span>
       </div>
 
@@ -88,20 +107,21 @@ export function SyncPanelView({ eventId, sync }: { eventId: string; sync: SyncPa
             Akce ve Wiki zatím není spárovaná s žádnou pozvánkou. Spárujte ji s existující pozvánkou, nebo výslovně
             založte novou. Wiki sama novou pozvánku nevytvoří, aby nevznikl duplikát.
           </p>
-          {sync.candidates.map((c) => (
+          {sync.candidates.map((c, i) => (
             <div key={c.id} className="spread candidate">
               <span>
                 {c.summary} · {formatEventTime(new Date(c.startsAt), new Date(c.endsAt), false)}
               </span>
-              <ActionForm action={pairInviteAction} fields={{ id: eventId, externalId: c.id }} label="Spárovat" small />
+              <ActionForm action={pairInviteAction} fields={{ id: eventId, externalId: c.id }} label="Spárovat" variant={i === 0 ? "primary" : "default"} small />
             </div>
           ))}
           <p className="small muted">
             {sync.attendeeSource === "allowlist"
               ? `Testovací režim: nová pozvánka půjde jen povoleným testovacím příjemcům (${sync.inviteeCount}), ne publiku akce.`
               : `Nová pozvánka půjde publiku akce (${sync.inviteeCount}). Hosty, které přidáte ručně v Kalendáři, Wiki nemění.`}
+            {createInMenu && " Novou pozvánku místo spárování založíte v nabídce ⋯."}
           </p>
-          <ActionForm action={createInviteAction} fields={{ id: eventId }} label="Vytvořit novou pozvánku" />
+          {!createInMenu && <div className="row">{createInvite(false)}</div>}
         </div>
       )}
 
@@ -137,19 +157,6 @@ export function SyncPanelView({ eventId, sync }: { eventId: string; sync: SyncPa
                   : "zatím žádné"}
             </dd>
           </dl>
-          {sync.mode === "simulation" && sync.status === "synced" && sync.externalId && (
-            <details className="small">
-              <summary>Nástroje ukázky</summary>
-              <div className="section-actions">
-                <ActionForm
-                  action={simulateManualEditAction}
-                  fields={{ externalId: sync.externalId }}
-                  label="Simulovat ruční úpravu v Kalendáři"
-                  small
-                />
-              </div>
-            </details>
-          )}
         </div>
         </details>
       )}
