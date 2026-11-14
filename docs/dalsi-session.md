@@ -6,43 +6,47 @@ Zkopíruj text níže jako první zprávu nové relace Claude Code (repo `ondrej
 
 Pokračuj na demu modulu Vzdělávání (repo `ondrejmacko-it/zabohatsicesko`). Nečti znovu celé zadání ani celý kód.
 Kontext máš v `docs/dalsi-session.md`, `README.md`, `docs/google-prihlaseni.md` a `docs/google-kalendar.md`,
-pravidla v `CLAUDE.md`. Tykej mi, piš přátelsky. Úpravy níže jsou odsouhlasené, rovnou je udělej. Ptej se jen
-na věci označené „zeptej se“.
+pravidla v `CLAUDE.md`. Tykej mi, piš přátelsky. Ptej se jen na věci označené „zeptej se“.
 
-Stav: práce pokračuje na větvi `claude/tender-fermat-oepq6p` (vychází z `claude/blissful-mendel-ejkw5s`, draft PR #16
-do `main`). Zeptej se, jestli ji mám přidat do PR #16, nebo otevřít vlastní PR. Pokud je PR sloučený, vyjdi z `main`.
-Můj osobní účet je z Wiki smazaný, nezakládej ho znovu a nikam ho nezvi.
+Stav: větev `claude/dreamy-hamilton-kboc7a` z `main` (PR #16 až #18 jsou sloučené), draft PR do `main`.
+Pokud je sloučený, vyjdi z `main`. Můj osobní účet je z Wiki smazaný, nezakládej ho znovu a nikam ho nezvi.
 
 Zásada pro celé UI: hlavní údaje a hlavní akce musí vyniknout, vedlejší texty jsou menší a tlumené, nic není
 ani o pixel mimo osu, vše je jasné na první pohled.
 
-1. Živý test se mnou krok za krokem. Skutečné pozvánky (`CALENDAR_ATTENDEES=audience`), vlastní `APP_URL`
-   a přesměrovací adresy v Google konzoli má jen preview větve `claude/blissful-mendel-ejkw5s`. Zeptej se, kde
-   testovat (nová větev potřebuje totéž). Postup: přihlášení správce (při druhém přihlášení jedna obrazovka
-   Googlu s Kalendářem), řádek „Kalendář“ na Plánu, všech 6 zveřejněných budoucích akcí má vazbu a hosty podle
-   skupin, nový účet a žádost, schválení ve Správě a pozvánky, které mu samy dojdou, změna, zrušení, odkaz na zápis.
-   Hromadné zveřejnění („Zveřejnit návrhy“ na Plánu) před prvním ostrým použitím na preview potvrď se mnou,
-   posílá e-maily. Po sloučení PR přenes proměnnou na všechny preview (zeptej se).
-2. Dialog akce: ukaž skutečné hosty podle vybrané skupiny (`loadCalendarStatus().recipients`) místo testovací
-   adresy a nabídni doporučená témata s počtem zájemců.
-3. Dokonči sloučení rolí v textech: hledej „organizátor“ v `src/` (Integrace, `SyncPanelView`, `EventPeek`,
-   detail akce, `status.ts`, legenda, nápovědy, výběr „Zobrazit jako: Organizátor (vidím vše)“) a nahraď
-   „správce“. Persona „Organizátor ukázky“ na `/vstup` a v seedu: přejmenuj nebo sluč (zeptej se, mění seed).
-4. Okno „Přidat zápis“ a detail akce za správce u cizí akce: ověř v prohlížeči „Nahrát záznam“, úpravu,
-   zveřejnění i stažení zápisu.
-5. Správa: úpravy uživatele v okně (`Modal`), řádkové akce v menu (`Menu`). Menu místo řady tlačítek v detailu
-   akce pro vedoucího, na Integraci a v `SyncPanelView`. Doověř okna (zápis za čtenáře, nahrání záznamu
-   a `AutoRefresh`, „Přidat zápis“ na 1280 px, Plán za účastníka na 390 px). Varování o hydrataci na Plánu
-   trvá (viděno 13. 11., příčina nehledána). Po každém bloku 1280 a 390 px.
-6. Dokumentace: `README.md`, `docs/predani.md`, `docs/google-prihlaseni.md`, `docs/google-kalendar.md` podle
-   stavu (jedna role Správce, souhlas ke Kalendáři při přihlášení, `GOOGLE_OAUTH_PUBLISHED`, příjemci pozvánek,
-   řádek stavu Kalendáře, automatické vazby a fronta z Plánu, hromadné zveřejnění měsíce).
-7. Snímky každého okna a stavu za každou roli na 1280 a 390 px jako ZIP se seznamem. Do repa je nedávej.
+1. Živý test se mnou krok za krokem (14. 11. odložen). Zeptej se, na které větvi. Testovací větev potřebuje
+   vlastní `APP_URL` a `CALENDAR_ATTENDEES=audience` jen pro sebe (nastav přes API, ne pro všechna preview,
+   rozhodnuto 14. 11.) a dvě přesměrovací adresy v Google konzoli (přidám já). Postup: přihlášení správce
+   (při druhém přihlášení jedna obrazovka s Kalendářem), řádek „Kalendář“ na Plánu, zveřejněné budoucí akce
+   mají vazbu a hosty podle skupin, dialog akce ukazuje skutečné hosty, nový účet a žádost, schválení ve Správě
+   (okno „Schválit…“) a pozvánky, které mu samy dojdou, změna, zrušení, odkaz na zápis. Hromadné zveřejnění
+   před prvním ostrým použitím potvrď se mnou, posílá e-maily. Propojení v režimu Testing vyprší kolem 19. 11.
+2. Persona „Organizátor ukázky“ zůstává (rozhodnuto 14. 11.: zatím nechat). Zeptej se znovu až po živém testu.
+3. Snímky každého okna a stavu za každou roli na 1280 a 390 px jako ZIP se seznamem. Do repa je nedávej.
+4. Varování o hydrataci na Plánu (viděno 13. 11.) se 14. 11. v Chromiu neukázalo, sleduj dál.
 
 Production na Vercelu nemá proměnné prostředí a buildy z `main` se přeskakují, vše běží na preview.
 Na `main` nepushuj, merge dělám já. Respektuj limit kontextu.
 
 ---
+
+## Stav 14. 11. 2026 (větev `claude/dreamy-hamilton-kboc7a`)
+
+Ověřeno: lint, typy, 136 ze 136 testů. V Chromiu nad PGlite na 1280 a 390 px bez vodorovného posunu: dialog akce,
+Správa (menu, okno, uložení, odebrání a vrácení přístupu se zachovanými skupinami), nahrávka za vedoucího i za
+správce u cizí akce (nahrání, zveřejnění, stažení, okno nahrazení), „Přidat zápis“, Plán za účastníka, Integrace.
+**Naživo proti Googlu neověřeno.** Build se v této relaci nespouštěl (lint, typy a testy ano).
+
+- **Dialog akce:** pod Publikem kdo dostane pozvánku podle skupiny a režimu (`InviteHint`, `inviteModeOf`
+  v `calendar-status.ts`, data z `loadCalendarStatus().recipients`). Doporučená témata ukazují počet zájemců
+  zvlášť od historie (`RankedTopic.history`).
+- **Texty:** „organizátor“ v UI nahrazen „správce“ (výběr „Zobrazit jako: Správce (vidím vše)“, detail akce,
+  Integrace, Témata, hláška vlastníka pozvánky). Komentáře v kódu a persona zůstaly.
+- **Správa:** řádek účtu má stav a menu (Upravit roli a skupiny…, Odebrat přístup…, u žádosti tlačítko
+  Schválit… a v menu Zamítnout…). Úpravy v okně (`AccountActions`). `ActionForm.fields` bere i pole hodnot.
+- **Menu:** nahrávka (Nahradit nahrávku… v okně, Stáhnout zveřejněný zápis…), Integrace při propojení
+  (Připojit znovu, Odpojit…), Nástroje ukázky v panelu Kalendáře. Text akce bez vazby odpovídá automatickým vazbám.
+- **Dokumentace** upravena podle stavu (README, predani, google-prihlaseni, google-kalendar).
 
 ## Stav 13. 11. 2026 pozdě v noci (větev `claude/tender-fermat-oepq6p`)
 
