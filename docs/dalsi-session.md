@@ -13,7 +13,7 @@ Dřív: B9 a brána na pozvánku. Naživo proti Googlu neověřeno nic. Hotové 
 na pozvánku a krok 0. Preview větve PR #21 má (jen pro tuto větev) `GATE_MODE=invite`, vlastní `APP_URL`
 a `CALENDAR_ATTENDEES=audience`. V Neonu jsou ručně provedené migrace `0007` a `0008` (konektor na preview
 nedosáhne, aplikace by je jinak udělala při prvním požadavku) a první odkaz s kódem pro `demo-organizator`
-(platí do 21. 11., uživatel ho dostal v chatu). Zda se uživatel odkazem dostal dovnitř, neověřeno. Production na Vercelu nemá
+(uživatel se jím 14. 11. přihlásil, funguje). Production na Vercelu nemá
 proměnné prostředí a buildy z `main` se přeskakují.
 
 Pravidla: tykej, piš přátelsky. Na `main` nepushuj, merge dělá uživatel přes PR. Produkci sám nenasazuj,
@@ -23,6 +23,37 @@ ho nezvi. Ostré zveřejňování a skutečné pozvánky na preview smíš spou�
 Zásada UI: hlavní údaje a akce vyniknou, vedlejší texty jsou menší a tlumené, nic mimo osu. Každou novinku
 pochopí člověk, který Wiki vidí poprvé: jedna věta, žádné technické pojmy. Po každém kroku ověř v prohlížeči
 na 1280 a 390 px (konzole bez chyb, žádný vodorovný posun).
+
+## Nové zadání uživatele (14. 11. pozdě večer) – má přednost před kroky níže
+
+Uživatel se na preview přihlásil prvním odkazem a kódem (funguje). Ke snímkům Plánu, Správy a přihlášení chce:
+
+1. **Kalendář bez potvrzování.** Blok „Kalendář · Propojeno · účtem … · Souhlas platí do …“ z Plánu odstranit,
+   nebo dát úplně dolů. Cíl: každý člověk je v kalendářové skupině podle svých skupin a akce se mu do kalendáře
+   samy přidají, změní a smažou. Nic nepotvrzuje, přijde jen informační e-mail. Než začneš, navrhni a nech
+   uživatele vybrat: (a) dál pozvánky jako hosté (`sendUpdates=all`), akce se v Gmailu přidá sama (výchozí
+   nastavení Googlu), ale tlačítka Ano/Ne nejdou skrýt, nebo (b) sdílený kalendář pro každou skupinu (ACL podle
+   skupin). Bez Workspace ale musí každý sdílený kalendář jednou přidat sám. Kdo to bude nastavovat, do toho
+   zahrň i zveřejnění OAuth aplikace (Testing = souhlas na 7 dní).
+2. **Upozornění po přihlášení kódem** nech, ale dej pod něj větší mezeru. Text o adrese pro pozvánky ukaž jen
+   tehdy, když účet má skutečný e-mail (ne `@example.invalid` ani prázdný). Jinak jedna věta, co dělat.
+3. **Pozvánky a kódy s oprávněními:** při vytváření odkazu nebo kódu správce nastaví roli a skupiny. Člověk bez
+   Googlu se dá pozvat i bez e-mailu (jen jméno, role, skupiny, kód). Rozšířit `inviteUser`/`createAccess`,
+   oprávnění dál hlídá server, doplnit testy.
+4. **Žádné duplicity:** stav Kalendáře je teď na Plánu i ve Správě a tabulka „Kdo co dostane“ opakuje seznam
+   uživatelů. Každá informace jen jednou.
+5. **Správa systému přehledněji a barevněji:** uživatele seřadit pod sebe podle funkce (Správci, Vedoucí akcí,
+   členové podle skupin) s barevným rozlišením. U seznamu přímo vytváření pozvánky nebo kódu s právy. Sekce
+   systematicky oddělit (Lidé, Pozvánky a kódy, Kalendář dole). Návrh rozvržení nejdřív ukaž uživateli.
+6. **Rychlost:** je to pomalé a seká se. Měř před a po. Podezření: `simulatedLatency()` (`src/server/settings.ts`)
+   čeká bez `SIM_LATENCY_MS` 1200 ms a preview proměnnou nemá. Neon po nečinnosti usíná (studený start).
+   Funkce už běží ve `fra1` stejně jako Neon. Dál zkontroluj velikost balíčku a zbytečné dotazy a překreslování.
+   Navrhni nastavit `SIM_LATENCY_MS=0` na preview přes API.
+7. **Přihlašovací stránka je ošklivá:** navrhni hezčí vzhled `/vstup` (karta, hierarchie, Google jako hlavní
+   akce, kód jako druhá možnost, stav „Pozvánka pro …“) a ověř ho na 1280 a 390 px.
+
+Pořadí: 6 (rychlá výhra), 2, 7, 4 + 5 + 3 (Správa), 1 (po rozhodnutí uživatele). Původní kroky 1 až 7 níže
+se posouvají za toto zadání.
 
 ## Zadání uživatele ze 14. 11. večer (odsouhlasené, rozplánované do kroků níže)
 
@@ -36,8 +67,7 @@ do zápisu programujeme my, model běží přes API uživatele (například Open
 
 ## Kroky v pořadí (jeden na relaci)
 
-0. **Hotovo** včetně `GATE_MODE=invite` na preview a prvního odkazu. Na začátku další relace se zeptej, zda
-   odkaz fungoval. Další odkazy už uživatel vytváří ve Správě.
+0. **Hotovo** včetně `GATE_MODE=invite` na preview a prvního odkazu (uživatel se kódem přihlásil).
 
 1. **B11 a drobnosti.** `Consequences` do zrušení akce (`EventMenu`), stažení zápisu (`RecordingMenu`,
    rozšířit `confirm` v `ActionForm` o body) a odebrání přístupu (`AccountActions`). Zpráva po pozvání
