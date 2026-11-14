@@ -17,31 +17,49 @@ proti Googlu připravený pro ChatGPT agenta: `docs/zivy-test-chatgpt.md` (uživ
 adresy, propojí Kalendář a předá jednorázové kódy). Další krok: živý test, pak „Nové zadání“ níže.
 Persona „Organizátor ukázky“ se v seedu z #19 jmenuje „Druhý správce ukázky“ (účet zůstává), zeptat se znovu po živém testu. Varování o hydrataci na Plánu sledovat.
 
-## Živý test 14. 11. v noci (preview `claude/adoring-ramanujan-rot348`), zjištění k opravě
+## ZADÁNÍ PRO DALŠÍ RELACI (uživatel 14. 11. v noci, má přednost před vším níže)
 
-Uživatel je přihlášený osobním odkazem (vytvořen ručně v Neonu pro `demo-organizator`, platí do 21. 11.) a Googlem,
-Kalendář propojený (souhlas do 19. 11.). Všechny zveřejněné budoucí akce mají vazbu `synced`, hosté odpovídají
-skupinám (v DB: FP a Všichni 2, RM a Tým A 1). Kalendář testovacího účtu FP ukazuje akce FP správně, RM a Tým A ne.
-Uživatel chce tyto drobnosti opravit (navrhnout, pak udělat):
+Větev `claude/adoring-ramanujan-rot348`, draft PR #23 (nahrazuje #19 až #22, sloučí uživatel přes Squash and merge).
+Preview má jen pro sebe `APP_URL`, `CALENDAR_ATTENDEES=audience`, `GATE_MODE=invite`. Uživatel je přihlášený
+osobním odkazem (ručně v Neonu pro `demo-organizator`, platí do 21. 11.) a Googlem, Kalendář propojený
+(Testing, souhlas do 19. 11.). Hosté sedí se skupinami (ověřeno v DB i v Google Kalendáři účtu FP).
+Cíl: vše opravit, dodělat, ověřit a připravit **verzi 1.0 na production** (první vydaná verze), pak rychlost.
 
-1. **Wiki ukazuje „dnes“ 12. 11., skutečně je 14. 11.** (Plán, Nejbližší akce). Zjistit zdroj času ukázky
-   (`src/lib/time.ts`, `settings.ts`). S propojeným Googlem musí platit skutečný čas, jinak se synchronizují
-   proběhlé akce (13. 11. dostal pozvánku).
-2. **26. 11. Trénink RM je v kalendáři účtu FP** a Wiki ukazuje „Přijalo 0 z 2“, přestože vazba má jen
-   1 spravovaného hosta. V pozvánce zůstal starý host z doby `GOOGLE_ALLOWED_ATTENDEES` (Wiki mazala jen hosty
-   ze `managed_attendees`). Totéž u proběhlých 11. a 12. 11. Navrhnout úklid: při synchronizaci odebrat adresy
-   ze seznamu povolených testovacích příjemců, které do publika nepatří. Ručně přidané hosty nechat.
-3. **Okno akce: hosté jako e-mail** („Účastník FP, zbc.test.spravce@…“). Adresu Google spárovat s účtem
-   (`user_identities`) a ukázat jméno, e-mail jen vedlejší. Zvážit, jestli správce sám patří do „Čeká“.
-4. **Řádek Kalendář na Plánu je technický**: dlouhé ID kalendáře `…@group.calendar.google.com`, „pozvánky
-   dostává: účty podle skupin (2)“, „Obnovte ho jedním potvrzením“ bez tlačítka. Zkrátit na jednu větu, ID schovat,
-   akci obnovení dát jako tlačítko. Souvisí s bodem 1 a 4 nového zadání níže (blok dolů, bez duplicit).
-5. **Detail akce, Google Kalendář: štítek „test Google · publikum akce“** je žargon. Přepsat srozumitelně.
-6. Ověřit: proč 19. 11. Trénink RM bez tématu a vedoucího je zveřejněný (seed, nebo záměr) a pozvánka má jen
-   obecný název. Opakovaná „Test série“ (pá 16:30) a „Něco“ v kalendáři testovacího účtu nejsou z Wiki.
+**A. Opravy z živého testu (rozhodnuto, udělat)**
+1. Wiki ukazuje „dnes“ 12. 11., skutečně je 14. 11. Najít zdroj času ukázky a s propojeným Googlem a v produkci
+   používat skutečný čas. Proběhlé akce se nesynchronizují.
+2. Staří hosté v pozvánkách: 26. 11. Trénink RM je v kalendáři účtu FP („Přijalo 0 z 2“, vazba má 1 spravovaného
+   hosta). Host zůstal z doby `GOOGLE_ALLOWED_ATTENDEES`. Synchronizace má odebrat adresy, které do publika
+   nepatří a přidala je Wiki (i testovací allowlist), ručně přidané hosty nechat. Test.
+3. Okno a detail akce: hosté jménem účtu (párovat přes `user_identities`), e-mail jen vedlejší.
+4. **Řádek „Kalendář“ na Plánu odstranit** (i duplicitu ve Správě). Kalendář zůstává připojený natrvalo od prvního
+   přihlášení správce. Když souhlas zmizí (uživatel ho odebere v účtu Google nebo vyprší), Wiki to pozná a správci
+   **po každém přihlášení vyskočí okno s Kalendářem** (jedno tlačítko „Připojit Kalendář“) a úkol bude v „Čeká na vás“.
+   Trvalé propojení vyžaduje zveřejnit OAuth aplikaci z režimu Testing (7 dní). Připravit postup pro uživatele
+   (Google konzole, ověření citlivého rozsahu `calendar.events`), klikání dělá uživatel. Zeptej se: připojený
+   Kalendář je jeden firemní přes účet správce (dosavadní stav), nebo má mít každý uživatel vlastní?
+5. Štítek „test Google · publikum akce“ v detailu akce přepsat srozumitelně (nebo odstranit).
+6. Trénink RM 19. 11. je zveřejněný bez tématu i vedoucího: zjistit proč (seed, automatika) a opravit.
 
-Pokračování živého testu potom: nový účet a žádost (třetí Google účet, osobní účet uživatele ne), schválení
-ve Správě do FP a ověření hostů v DB, změna času, zrušení, odkaz na zápis. Pro ChatGPT: `docs/zivy-test-chatgpt.md`.
+**B. Detail akce a texty**: přepracovat detail akce a okno akce. Jen užitečné, důležité a srozumitelné informace,
+žádné duplicity, žádné náhodné nebo technické texty. Každá věta musí dávat smysl člověku, který Wiki vidí poprvé.
+Hlavní údaje a akce vyniknou, vedlejší menší a tlumené, nic mimo osu. Návrh rozvržení nejdřív ukázat uživateli.
+
+**C. Verze 1.0 na production**: dodělat rozpracované z „Nového zadání“ níže (body 2, 3, 5, 7), projít a otestovat
+skutečné přihlášení (osobní odkaz, Google, kód), žádosti a schválení, pozvánky (vznik, změna, zrušení, odkaz
+na zápis), zabezpečení (oprávnění na serveru, CSP, cookies, rate limit, tajemství, logy bez citlivých dat,
+security review). Production na Vercelu nemá proměnné a buildy z `main` se přeskakují: připravit seznam proměnných
+pro Production, nesecretní nastavit přes API (`api.vercel.com`, tým `maci`), tajemství a Google konzoli nechat
+uživateli, ignored build step pro `main` upravit až po souhlasu. Produkci sám nenasazuj a na `main` nepushuj,
+merge dělá uživatel. Před ostrým hromadným zveřejněním potvrdit s uživatelem (posílá e-maily).
+
+**D. Rychlost (hlavní priorita po 1.0)**: web je pomalý a seká se i na rychlém internetu. Měřit před a po
+(TTFB, LCP, doba akcí). Podezření: `simulatedLatency()` v `src/server/settings.ts` čeká bez `SIM_LATENCY_MS`
+1200 ms (nastavit 0 přes API a v produkci vypnout), studený start Neonu, volání Googlu při každém načtení
+(ověření propojení v `loadCalendarStatus`), `after(syncPending)` na Plánu, zbytečné dotazy, velikost balíčku.
+
+Další: persona „Organizátor ukázky“ (v seedu „Druhý správce ukázky“) zeptat se. Snímky všech oken za každou roli
+na 1280 a 390 px jako ZIP (ne do repa) až na verzi 1.0. Varování o hydrataci sledovat.
 
 ## Stav 14. 11. 2026 večer (větev `claude/vzdelavani-b8-e-ybvvgg`, draft PR #21 do `main`)
 
