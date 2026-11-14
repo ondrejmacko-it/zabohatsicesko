@@ -35,7 +35,7 @@ Na `main` nepushuj, merge dělám já. Respektuj limit kontextu.
 Ověřeno: lint, typy, 136 ze 136 testů. V Chromiu nad PGlite na 1280 a 390 px bez vodorovného posunu: dialog akce,
 Správa (menu, okno, uložení, odebrání a vrácení přístupu se zachovanými skupinami), nahrávka za vedoucího i za
 správce u cizí akce (nahrání, zveřejnění, stažení, okno nahrazení), „Přidat zápis“, Plán za účastníka, Integrace.
-**Naživo proti Googlu neověřeno.** Build se v této relaci nespouštěl (lint, typy a testy ano).
+Build prošel. **Naživo proti Googlu neověřeno.**
 
 - **Dialog akce:** pod Publikem kdo dostane pozvánku podle skupiny a režimu (`InviteHint`, `inviteModeOf`
   v `calendar-status.ts`, data z `loadCalendarStatus().recipients`). Doporučená témata ukazují počet zájemců
