@@ -10,29 +10,19 @@ pravidla v `CLAUDE.md`. Tykej mi, piš přátelsky. Vše níže je odsouhlasené
 na věci označené „zeptej se“. Rozsah je velký: jdi po blocích v uvedeném pořadí, po každém bloku commit a push,
 a když dojde limit kontextu, zapiš stav sem a skonči.
 
-Stav: draft PR #19 (`claude/tender-fermat-oepq6p` do `main`). Navazující práce ze 14. 11. je na větvi
-`ccr-5d4e285a-rvyp3j` (vychází z PR #19, bez vlastního PR). Zeptej se hned na začátku, jestli ji mám přidat
-do PR #19, nebo otevřít vlastní PR. Pokud je vše sloučené, vyjdi z `main`. Můj osobní účet je z Wiki smazaný,
-nezakládej ho znovu a nikam ho nezvi. Ostré zveřejňování a skutečné pozvánky na preview smíš spouštět bez ptaní.
+Stav: draft PR z větve `ccr-7b6bed1b-1ejvib` do `main` (obsahuje i PR #19 a práci z `ccr-5d4e285a-rvyp3j`,
+PR #19 jde zavřít). Pokračuj na té větvi, nebo z `main`, pokud je sloučeno. Hotové jsou bloky A, B3, B4
+a sdílená komponenta z B11. Zbývá B5 až B11, potom C, D, E. Můj osobní účet je z Wiki smazaný, nezakládej ho
+znovu a nikam ho nezvi. Ostré zveřejňování a skutečné pozvánky na preview smíš spouštět bez ptaní.
+Přesměrovací adresy v Google konzoli přidám, až bude vše hotové (řekni si o ně před blokem C).
+Až bude vše hotové, chci připravit kompletní Production z `main` (proměnné prostředí, `CRON_SECRET`, vlastní
+`APP_URL`, adresy v Google konzoli): navrhni postup a projdi ho se mnou, sám produkci nenasazuj.
 
 Zásada pro celé UI: hlavní údaje a hlavní akce musí vyniknout, vedlejší texty jsou menší a tlumené, nic není
 ani o pixel mimo osu, vše je jasné na první pohled. Každou novinku má pochopit i člověk, který Wiki vidí
 poprvé: jedna věta, co se stane, žádné technické pojmy. Po každém bloku ověř v prohlížeči 1280 a 390 px.
 
-A. Dluhy ze 14. 11.
-1. Doověř v prohlížeči: menu „Další možnosti“ u Nahrávky a zápisu (Nahradit nahrávku v okně, Stáhnout
-   zveřejněný zápis) za vedoucího i za správce u cizí akce, okno „Přidat zápis“, zápis za čtenáře, `AutoRefresh`
-   po nahrání, panel Kalendáře u akce bez vazby, „Správa propojení“ na Integraci, Plán za účastníka na 390 px.
-   Zjisti, proč stránka Zápisy za správce nenabídla žádný odkaz s `?zapis=` (14. 11. automat žádný nenašel).
-   Projdi okem texty po náhradě „organizátor“ za „správce“.
-2. Test oprávnění `loadInvitePreview` (člen týmu dostane `forbidden`) a režimů hostů.
-
-B. Nové funkce (každá s testem pravidel a oprávnění na serveru)
-3. „Připravit další měsíc“: jedno tlačítko na Plánu, průvodce ve třech krocích v jednom okně (doplnit
-   ze šablony, témata podle zájmu, zveřejnit). Staví na `generateMonthAction`, `suggestTopics`
-   a `PublishMonthDialog`. Jednotlivé nástroje zůstanou v menu.
-4. Pozvánky nezávislé na otevření Plánu: Vercel Cron volá chráněnou cestu, která spustí `syncPublished`.
-   Tajemství cronu doplním já (zeptej se, až bude cesta hotová). Volání z Plánu zůstane jako záloha.
+B. Nové funkce (každá s testem pravidel a oprávnění na serveru). Body 3 a 4 jsou hotové.
 5. Odpovědi z Kalendáře v Plánu: u zveřejněné akce „přijalo 3 z 5“, v okně akce jména podle odpovědi.
    Jen pro správce a vedoucího akce. Data už vrací panel synchronizace (`external.attendees`).
 6. Správa: po pozvání kolegy tlačítko „Kopírovat zprávu s odkazem“ (hotový text s adresou Wiki).
@@ -43,8 +33,9 @@ B. Nové funkce (každá s testem pravidel a oprávnění na serveru)
 9. Zájem o téma z pozvánky: odkaz v popisu události na stránku Témata se zvýrazněným tématem, zájem jedním
    klikem po přihlášení. Žádný zápis bez přihlášení.
 10. Zápisy: vyhledávání v textu zveřejněných zápisů a filtr podle tématu. Jen zápisy, které uživatel smí číst.
-11. Blok „Co se stane po kliknutí“ ve stejné podobě jako blok hostů v dialogu akce u: zrušení akce,
-    hromadného zveřejnění, stažení zápisu, odebrání přístupu. Jedna sdílená komponenta.
+11. Blok „Co se stane po kliknutí“: komponenta `src/components/Consequences.tsx` je hotová a je v hromadném
+    zveřejnění a v průvodci měsícem. Doplň ji do: zrušení akce (`EventMenu`), stažení zápisu (`RecordingMenu`,
+    rozšiř `confirm` v `ActionForm` o body), odebrání přístupu (`AccountActions`).
 
 C. Živý test se mnou krok za krokem na preview větve, která obsahuje vše výše (potřebuje vlastní `APP_URL`
    a `CALENDAR_ATTENDEES=audience`, nastav sám přes API). Zeptej se, jestli jsem v Google konzoli přidal
@@ -66,6 +57,31 @@ Production na Vercelu nemá proměnné prostředí a buildy z `main` se přeskak
 Na `main` nepushuj, merge dělám já. Respektuj limit kontextu.
 
 ---
+
+## Stav 14. 11. 2026 večer (větev `ccr-7b6bed1b-1ejvib`, draft PR do `main`)
+
+Ověřeno: lint, typy, 147 ze 147 testů, build. V Chromiu nad PGlite na 1280 a 390 px bez chyb v konzoli a bez
+vodorovného posunu. **Naživo proti Googlu neověřeno nic.**
+
+- **Doověřeno (blok A):** Přidat zápis, nahrání, `AutoRefresh` (editor se objeví sám), zveřejnění, menu
+  „Další možnosti“ (Nahradit nahrávku v okně, Stáhnout zápis s potvrzením) za vedoucího i správce u cizí akce,
+  zápis za čtenáře na 390 px, panel Kalendáře u akce bez vazby, Plán za účastníka na 390 px. Stránka Zápisy
+  14. 11. nenabídla odkaz s `?zapis=` jen proto, že čerstvá ukázková data nemají žádný zveřejněný zápis.
+  Odkazy jsou po zveřejnění a v okně „Přidat zápis“. Slovo „organizátor“ v UI ani seedu nezbylo.
+  **Neověřeno:** „Správa propojení“ na Integraci (zobrazí se jen s propojeným Googlem, patří do živého testu).
+- **Test hostů:** `tests/hoste-akce.test.ts` (oprávnění `loadInvitePreview`, čtyři režimy).
+- **Průvodce „Připravit další měsíc“** (`PrepareMonthDialog.tsx`, `prepareMonth`, `prepareMonthAction`):
+  tlačítko v liště Plánu, cílí vždy na měsíc po aktuálním. Krok 1 doplní šablonu, krok 2 témata a vedoucí
+  (doporučené téma předvyplněné, u řádku „téma chce N zájemců“), krok 3 dopad a zveřejnění přes
+  `publishMonthAction`. Společné části s hromadným zveřejněním jsou v `MonthDrafts.tsx`.
+  Test `tests/pruvodce-mesicem.test.ts`. Globální pravidlo `[hidden] { display: none !important }` je nové.
+- **Cron pozvánek:** `GET /api/cron/kalendar` (`src/server/cron.ts`, `vercel.json`, denně 5:17 UTC), chráněno
+  `CRON_SECRET` (aspoň 16 znaků, bez hodnoty zavřeno). Test `tests/cron.test.ts`. **Pozor:** Vercel Cron běží
+  jen na produkčním nasazení a plán Hobby dovolí jen jedno spuštění denně. Na preview tedy cron neběží,
+  volání z Plánu zůstává hlavní cestou. `CRON_SECRET` doplní uživatel při přípravě Production.
+- **Návrh k bodu 8 (zpět po zveřejnění), neimplementováno:** sloupec `send_after` u `calendar_links`, fronta
+  přeskočí vazby před tímto časem, klient po 10 s zavolá odeslání (záloha Plán a cron). Vrácení jen u prvního
+  zveřejnění, dokud vazba nemá `externalId`: nová revize „návrh“, pořadí revizí se nemění. Před prací potvrdit.
 
 ## Stav 14. 11. 2026 (větev `ccr-5d4e285a-rvyp3j`, vychází z PR #19)
 
