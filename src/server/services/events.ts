@@ -141,8 +141,6 @@ export async function listMonth(viewer: Viewer, monthKey: string): Promise<Event
   return listEvents(viewer, new Date(start.getTime() - 7 * 86_400_000), new Date(end.getTime() + 7 * 86_400_000));
 }
 
-/** Nejbližší zveřejněná akce pro uživatele (bez svátků a zrušených). */
-/** Nejbližší zveřejněné akce, které uživatel uvidí, od nejbližší. */
 /**
  * Nejbližší akce uživatele. Běžně jen zveřejněné. Filtr Plánu (`match`) může výběr zúžit a správci
  * při filtru podle stavu ukázat i návrhy (`includeDrafts`): viditelnost dál určuje `listEvents`.
