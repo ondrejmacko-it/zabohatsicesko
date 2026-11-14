@@ -6,7 +6,7 @@ import { EVENT_TYPES, GROUPS } from "@/lib/types";
 import { isValidDateKey, isValidMonthKey, isValidTime } from "@/lib/time";
 import { audit } from "@/server/audit";
 import { disconnect as disconnectCalendar } from "@/server/calendar/google-auth";
-import { simulateManualEdit } from "@/server/calendar/simulated";
+import { simulateManualEdit, simulateResponses } from "@/server/calendar/simulated";
 import { pairWithExisting, requestNewInvite, requestRetry, syncEvent, syncPublished } from "@/server/calendar/sync";
 import { calendarMode } from "@/server/config";
 import { getDb } from "@/server/db/client";
@@ -20,10 +20,13 @@ import {
   deleteDraft,
   discardDraftChanges,
   generateMonth,
+  prepareMonth,
   publishDrafts,
+  unpublishEvents,
   updateEvent,
   updateTemplate,
   type EventInput,
+  type MonthPreparation,
 } from "@/server/services/events";
 import { ImpactNotConfirmed, assertImpactConfirmed, cancelImpact, changeImpact, type CancelImpact, type ChangeImpact } from "@/server/services/impact";
 import {
@@ -162,6 +165,33 @@ export async function cancelEventAction(_prev: ActionResult | null, formData: Fo
   });
 }
 
+/**
+ * Vrátí právě zveřejněné akce mezi návrhy, dokud jejich pozvánka čeká ve lhůtě. Oprávnění a lhůtu
+ * ověřuje `unpublishEvents`. Co už odešlo, zůstane zveřejněné a zpráva to řekne.
+ */
+export async function unpublishAction(ids: string[]): Promise<ActionResult> {
+  return run(async (user) => {
+    const parsed = z.array(z.string().min(1).max(80)).min(1).max(100).parse(ids);
+    const { reverted, skipped } = await unpublishEvents(user, parsed);
+    if (!reverted.length) return { ok: false, error: "Vrátit už nejde, pozvánka mezitím odešla. Akci můžete upravit nebo zrušit." };
+    const count = reverted.length;
+    const what = count === 1 ? "Akce je zpět mezi návrhy." : `Zpět mezi návrhy: ${count} ${count < 5 ? "akce" : "akcí"}.`;
+    const rest = skipped
+      ? ` ${skipped === 1 ? "Jedna pozvánka už odešla, ta akce zůstala" : "Některé pozvánky už odešly, ty akce zůstaly"} zveřejněná.`
+      : " Nikomu nic neodešlo.";
+    return { ok: true, message: what + rest };
+  });
+}
+
+/** Po uplynutí lhůty odešle čekající pozvánky. Zálohou je otevření Plánu správcem a denní cron. */
+export async function sendHeldInvitesAction(): Promise<ActionResult> {
+  return run(async (user) => {
+    if (!isOrganizer(user)) throw new DomainError("forbidden");
+    after(() => syncPublished());
+    return { ok: true };
+  });
+}
+
 /** Koho se zrušení dotkne. Dialog zrušení to ukáže ještě před potvrzením. */
 export async function previewCancelAction(id: string): Promise<ActionResult & { impact?: CancelImpact }> {
   return run(async (user) => ({ ok: true, impact: await cancelImpact(user, z.string().max(80).parse(id)) }));
@@ -196,6 +226,16 @@ export async function generateMonthAction(_prev: ActionResult | null, formData: 
   });
 }
 
+/** První krok průvodce měsícem: doplní termíny ze šablony a vrátí návrhy k doplnění témat a zveřejnění. */
+export async function prepareMonthAction(month: string): Promise<ActionResult & { preparation?: MonthPreparation }> {
+  let preparation: MonthPreparation | undefined;
+  const result = await run(async (user) => {
+    preparation = await prepareMonth(user, z.string().refine(isValidMonthKey).parse(month));
+    return { ok: true };
+  });
+  return result.ok ? { ...result, preparation } : result;
+}
+
 /** Zveřejní vybrané návrhy měsíce najednou. Pole formuláře: `pick` (ID), `rev-<id>`, `topic-<id>`, `lead-<id>`. */
 export async function publishMonthAction(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
   return run(async (user) => {
@@ -215,7 +255,7 @@ export async function publishMonthAction(_prev: ActionResult | null, formData: F
       : "";
     if (!published.length) return { ok: false, error: `Nic se nezveřejnilo.${skippedNote}` };
     const count = `${published.length} ${published.length === 1 ? "akce" : published.length < 5 ? "akce" : "akcí"}`;
-    return { ok: true, message: `Zveřejněno: ${count}. Pozvánky do Kalendáře se odesílají.${skippedNote}` };
+    return { ok: true, message: `Zveřejněno: ${count}.${skippedNote}` };
   });
 }
 
@@ -378,7 +418,7 @@ export async function archiveTopicAction(_prev: ActionResult | null, formData: F
   });
 }
 
-// ——— Ukázkové přepínače (jen organizátor) ———
+// ——— Ukázkové přepínače (jen správce) ———
 
 export async function setSimulationAction(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
   return run(async (user) => {
@@ -399,6 +439,16 @@ export async function simulateManualEditAction(_prev: ActionResult | null, formD
     const data = z.object({ externalId: z.string().max(80) }).parse(formObject(formData));
     await simulateManualEdit(await getDb(), data.externalId);
     return { ok: true, message: "V simulovaném Kalendáři se změnil název pozvánky." };
+  });
+}
+
+export async function simulateResponsesAction(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
+  return run(async (user) => {
+    if (!isOrganizer(user)) throw new DomainError("forbidden");
+    if (calendarMode() !== "simulation") throw new DomainError("invalid_state");
+    const data = z.object({ externalId: z.string().max(80) }).parse(formObject(formData));
+    await simulateResponses(await getDb(), data.externalId);
+    return { ok: true, message: "Hosté v simulovaném Kalendáři odpověděli na pozvánku." };
   });
 }
 

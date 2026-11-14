@@ -47,15 +47,27 @@ async function hasPublishedMinutes(db: Db, eventId: string): Promise<boolean> {
   return Boolean(row);
 }
 
-function desiredData(eventId: string, snapshot: EventSnapshot, minutesPublished: boolean): ManagedEventData {
+const TOPIC_LINK_PATH = "/vzdelavani/temata?tema=";
+
+/** Popis pozvánky bez řádku se zájmem o téma. Kvůli samotnému odkazu se pozvánka znovu nerozesílá. */
+const withoutTopicLink = (description: string) =>
+  description.split("\n").filter((line) => !line.includes(TOPIC_LINK_PATH)).join("\n");
+
+export function desiredData(eventId: string, snapshot: EventSnapshot, minutesPublished: boolean): ManagedEventData {
   const url = `${config.appUrl}/vzdelavani/akce/${eventId}`;
+  const startsAt = new Date(snapshot.startsAt);
+  const lines = minutesPublished
+    ? [`Zápis z akce je zveřejněný: ${url}#zapis`, `Podrobnosti ve firemní Wiki: ${url}`]
+    : [`Podrobnosti a zápis ve firemní Wiki: ${url}`];
+  // Zájem o téma jde dát najevo rovnou z pozvánky, dokud akce teprve bude.
+  if (snapshot.topicId && snapshot.status !== "cancelled" && startsAt > now()) {
+    lines.push(`Chcete toto téma i příště? Dejte ve Wiki najevo zájem: ${config.appUrl}${TOPIC_LINK_PATH}${encodeURIComponent(snapshot.topicId)}`);
+  }
   return {
     summary: calendarSummary(snapshot),
-    // Do pozvánky jde jen odkaz. Wiki u něj znovu ověří přístup, citlivý obsah v Kalendáři není.
-    description: minutesPublished
-      ? `Zápis z akce je zveřejněný: ${url}#zapis\nPodrobnosti ve firemní Wiki: ${url}`
-      : `Podrobnosti a zápis ve firemní Wiki: ${url}`,
-    startsAt: new Date(snapshot.startsAt),
+    // Do pozvánky jdou jen odkazy. Wiki u nich znovu ověří přístup, citlivý obsah v Kalendáři není.
+    description: lines.join("\n"),
+    startsAt,
     endsAt: new Date(snapshot.endsAt),
     cancelled: snapshot.status === "cancelled",
   };
@@ -99,7 +111,7 @@ async function markAttention(db: Db, eventId: string, errorCode: string, attempt
 /**
  * Propíše zveřejněnou revizi akce do Kalendáře. Posílá vždy nejnovější zveřejněný snímek,
  * takže starší revize nikdy nepřepíše novější. Opakované volání je bezpečné.
- * @param force přepsat ruční změnu provedenou mimo Wiki (rozhodnutí organizátora)
+ * @param force přepsat ruční změnu provedenou mimo Wiki (rozhodnutí správce)
  */
 export async function syncEvent(eventId: string, options: { force?: boolean } = {}): Promise<void> {
   const db = await getDb();
@@ -114,6 +126,8 @@ export async function syncEvent(eventId: string, options: { force?: boolean } = 
       const revision = row?.publishedRevision ?? 0;
       const [current] = await db.select().from(calendarLinks).where(eq(calendarLinks.eventId, eventId)).limit(1);
       if (!row || !snapshot || !current) return;
+      // Lhůta po prvním zveřejnění: pozvánka počká, vazba zůstane ve frontě a odešle ji další běh.
+      if (row.inviteHoldUntil && row.inviteHoldUntil > new Date()) return;
       if (current.syncedRevision >= revision && current.syncStatus === "synced") return;
 
       const desired = desiredData(eventId, snapshot, await hasPublishedMinutes(db, eventId));
@@ -177,7 +191,7 @@ export async function syncEvent(eventId: string, options: { force?: boolean } = 
         .where(and(eq(calendarLinks.eventId, eventId), lt(calendarLinks.syncedRevision, revision + 1)));
       await audit(db, null, "calendar.synced", "event", eventId);
 
-      // Pokud mezitím organizátor zveřejnil novější revizi, rovnou ji odešleme.
+      // Pokud mezitím správce zveřejnil novější revizi, rovnou ji odešleme.
       const [latest] = await db.select({ rev: events.publishedRevision }).from(events).where(eq(events.id, eventId));
       if ((latest?.rev ?? 0) <= revision) return;
       await db.update(calendarLinks).set({ syncStatus: "pending" }).where(eq(calendarLinks.eventId, eventId));
@@ -214,7 +228,7 @@ async function pushToCalendar(
     const plan = upcoming
       ? planGuests(guests, external.attendees, previouslyManaged)
       : { add: [], remove: [], managed: previouslyManaged };
-    if (sameManaged(managed(external), managed(desired)) && external.description === desired.description && samePlan(plan)) {
+    if (sameManaged(managed(external), managed(desired)) && withoutTopicLink(external.description) === withoutTopicLink(desired.description) && samePlan(plan)) {
       return { external, managedAttendees: plan.managed };
     }
     return { external: await provider.patch(link.calendarId, external.id, desired, plan), managedAttendees: plan.managed };
@@ -322,7 +336,7 @@ export async function syncPublished(): Promise<void> {
   await syncPending();
 }
 
-// ——— Akce organizátora nad vazbou ———
+// ——— Akce správce nad vazbou ———
 
 function requireOrganizer(viewer: Viewer) {
   if (!isOrganizer(viewer)) throw new DomainError("forbidden");
@@ -343,7 +357,7 @@ export async function requestRetry(viewer: Viewer, eventId: string): Promise<voi
 
 /**
  * Po novém připojení účtu vrátí do fronty akce, které zastavilo odvolání přístupu.
- * Ostatní chyby (například ruční změnu v Kalendáři) dál řeší organizátor sám.
+ * Ostatní chyby (například ruční změnu v Kalendáři) dál řeší správce sám.
  * @returns ID akcí, které má volající znovu synchronizovat
  */
 export async function resumeAfterReconnect(db: Db): Promise<string[]> {
@@ -355,7 +369,7 @@ export async function resumeAfterReconnect(db: Db): Promise<string[]> {
   return resumed.map((r) => r.eventId);
 }
 
-/** Organizátor výslovně rozhodl založit novou pozvánku pro zveřejněnou akci bez vazby. */
+/** Správce výslovně rozhodl založit novou pozvánku pro zveřejněnou akci bez vazby. */
 export async function requestNewInvite(viewer: Viewer, eventId: string): Promise<void> {
   requireOrganizer(viewer);
   const db = await getDb();
@@ -374,7 +388,7 @@ export async function requestNewInvite(viewer: Viewer, eventId: string): Promise
 /** Spáruje akci s existující pozvánkou. Hosté a RSVP pozvánky zůstanou, Wiki převezme jen spravovaná pole. */
 export async function pairWithExisting(viewer: Viewer, eventId: string, externalEventId: string): Promise<void> {
   requireOrganizer(viewer);
-  // Spárovat lze jen nespárovanou pozvánku ze stejného dne, kterou organizátor viděl v nabídce.
+  // Spárovat lze jen nespárovanou pozvánku ze stejného dne, kterou správce viděl v nabídce.
   const external = (await pairingCandidates(viewer, eventId)).find((c) => c.id === externalEventId);
   if (!external) throw new DomainError("invalid_state");
   const db = await getDb();

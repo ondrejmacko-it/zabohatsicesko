@@ -26,15 +26,22 @@ export type CalendarStatus = {
   audienceRecipients: GroupRecipients;
 };
 
+/** Jak se zveřejnění propíše do Kalendáře. Určuje jen texty o dopadu, o zápisu rozhoduje synchronizace. */
+export type InviteMode = "simulation" | "allowlist" | "audience" | "disconnected";
+
+/** Hosté podle skupiny pro dialogy plánování. */
+export type InvitePreview = { mode: InviteMode; recipients: GroupRecipients };
+
+export function inviteModeOf(status: Pick<CalendarStatus, "mode" | "connection" | "attendeeSource">): InviteMode {
+  return status.mode !== "google" ? "simulation" : !status.connection ? "disconnected" : status.attendeeSource;
+}
+
 const DAY_MS = 24 * 3600 * 1000;
 
-export async function loadCalendarStatus(viewer: Viewer): Promise<CalendarStatus> {
-  if (!canPlan(viewer)) throw new DomainError("forbidden");
+async function loadRecipients(google: boolean) {
   const db = await getDb();
   const cfg = googleCalendarConfig();
-  const google = calendarMode() === "google-test";
   const source: AttendeeSource = google ? attendeeSource() : "audience";
-
   const people = await listRecipients(db, cfg !== null);
   const byGroup = (list: Array<{ email: string; name: string; groups: string[] }>) =>
     Object.fromEntries(GROUPS.map((g) => [g, list.filter((u) => u.groups.includes(g)).map(({ email, name }) => ({ email, name }))])) as GroupRecipients;
@@ -44,8 +51,29 @@ export async function loadCalendarStatus(viewer: Viewer): Promise<CalendarStatus
     const fixed = (await audienceAttendees(db, "vsichni", "allowlist")).map(({ email, name }) => ({ email, name }));
     recipients = Object.fromEntries(GROUPS.map((g) => [g, fixed])) as GroupRecipients;
   }
+  return { attendeeSource: source, recipients, audienceRecipients };
+}
 
-  const base = { attendeeSource: source, recipients, audienceRecipients };
+/**
+ * Komu půjde pozvánka podle skupiny, pro dialog akce. Čte jen databázi: propojení u Googlu neověřuje,
+ * takže okno akce nečeká na cizí službu. Vypršelý souhlas ukáže řádek stavu Kalendáře na Plánu.
+ */
+export async function loadInvitePreview(viewer: Viewer): Promise<InvitePreview> {
+  if (!canPlan(viewer)) throw new DomainError("forbidden");
+  const google = calendarMode() === "google-test";
+  const { attendeeSource: source, recipients } = await loadRecipients(google);
+  if (!google) return { mode: "simulation", recipients };
+  const cfg = googleCalendarConfig();
+  const connected = cfg ? Boolean(await connectionStatus(await getDb())) : false;
+  return { mode: connected ? source : "disconnected", recipients };
+}
+
+export async function loadCalendarStatus(viewer: Viewer): Promise<CalendarStatus> {
+  if (!canPlan(viewer)) throw new DomainError("forbidden");
+  const db = await getDb();
+  const cfg = googleCalendarConfig();
+  const google = calendarMode() === "google-test";
+  const base = await loadRecipients(google);
   if (!google) return { mode: "simulation", connection: null, problem: null, calendarId: null, ...base };
   if (!cfg) return { mode: "google", connection: null, problem: googleCalendarConfigProblems().length ? "not_configured" : "not_connected", calendarId: null, ...base };
 

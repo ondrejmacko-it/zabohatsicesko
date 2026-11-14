@@ -14,7 +14,7 @@ testovací účty a OAuth klienta. Výchozí režim dema zůstává vstup kódem
 - ID token se ověřuje na serveru (část 02 zadání): podpis veřejným klíčem Googlu (pevně RS256),
   vydavatel, příjemce (`aud` a `azp` = náš klient), platnost, nonce této žádosti a `email_verified`.
 - **Google říká jen, kdo se přihlásil.** Roli a skupiny čte Wiki z databáze při každém požadavku.
-- Kdo smí dovnitř, určuje **Správa systému** ve Wiki (`/sprava`, správce ZBC a organizátor):
+- Kdo smí dovnitř, určuje **Správa systému** ve Wiki (`/sprava`, správce):
   pozvánka na adresu Google, nebo schválení žádosti, která vznikne po prvním přihlášení neznámého účtu
   (nejvýš 20 čekajících). Roli správce přiděluje a správcům účty mění jen jiný správce, nikdo nemění sám sebe.
 - `GOOGLE_LOGIN_ACCOUNTS` je jen volitelný zaváděcí seznam (adresa → uživatel, například fiktivní role).
@@ -28,15 +28,17 @@ testovací účty a OAuth klienta. Výchozí režim dema zůstává vstup kódem
 - Do provozního logu jde u neúspěchu jen kód důvodu, nikdy adresa ani `sub`.
 - Přihlášení samo oprávnění ke Kalendáři nedává. Používá stejného OAuth klienta, ale jiný rozsah a jinou
   přesměrovací adresu ([google-kalendar.md](google-kalendar.md)).
-- **Organizátor a správce:** když propojení Kalendáře chybí, pošle je Wiki hned po přihlášení na druhý
-  souhlas (jen `calendar.events`, stejný účet jako `login_hint`) a vrátí je na Plán. Když souhlas zruší,
-  jsou přihlášení a v Plánu mají úkol „Propojte Kalendář Google“. Účastník a vedoucí druhý souhlas nevidí nikdy.
+- **Správce:** když propojení Kalendáře chybí, Wiki si ho vyžádá sama. Prohlížeč, ze kterého se už jednou
+  přihlásil, pozná podle podepsané cookie `zbc_google_hint` a Google ukáže jedinou obrazovku s identitou
+  i `calendar.events`. Z nového prohlížeče následuje po přihlášení druhý souhlas (`login_hint`). Odmítnutý
+  souhlas: brána nabídne „Přihlásit se bez Kalendáře“, v Plánu je úkol „Propojte Kalendář Google“.
+  Účastník a vedoucí o Kalendář nežádají nikdy.
 
 ## Co nastavit po dodání přístupů
 
 1. V OAuth klientovi (stejný jako pro Kalendář) přidat přesměrovací adresy
    `<APP_URL>/api/google/prihlaseni/callback` a `<APP_URL>/api/google/kalendar/callback`. Bez druhé skončí
-   automatické propojení organizátora chybou `redirect_uri_mismatch`. Testovací účty přidat mezi testovací uživatele
+   automatické propojení správce chybou `redirect_uri_mismatch`. Testovací účty přidat mezi testovací uživatele
    souhlasové obrazovky.
 2. Proměnné prostředí (jen Preview):
 
@@ -44,7 +46,7 @@ testovací účty a OAuth klienta. Výchozí režim dema zůstává vstup kódem
 |---|---|
 | `LOGIN_MODE` | `google-test` |
 | `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET` | OAuth klient pro test, sdílený s Kalendářem. |
-| `GOOGLE_LOGIN_ACCOUNTS` | Volitelné. `adresa=id-uzivatele` oddělené čárkou, např. organizátor na `demo-organizator` a příjemce na `demo-ucastnik`. Každá adresa i každý uživatel jen jednou. |
+| `GOOGLE_LOGIN_ACCOUNTS` | Volitelné. `adresa=id-uzivatele` oddělené čárkou, např. správce na `demo-organizator` a příjemce na `demo-ucastnik`. Každá adresa i každý uživatel jen jednou. |
 | `APP_URL` | Veřejná adresa nasazení, ze které se skládá přesměrovací adresa. |
 
 ## Živý test
@@ -55,7 +57,7 @@ testovací účty a OAuth klienta. Výchozí režim dema zůstává vstup kódem
    ukázky) se objeví v čekajících žádostech. Po schválení s rolí a skupinami vstoupí.
 3. Zrušení souhlasu na obrazovce Googlu vrátí na vstup se zprávou o zrušení.
 4. Po „Odebrat přístup“ ve Správě přestane běžící session platit hned (bez nového nasazení).
-5. Organizátor bez propojeného Kalendáře: po přihlášení následuje souhlas ke Kalendáři a návrat na Plán.
+5. Správce bez propojeného Kalendáře: po přihlášení následuje souhlas ke Kalendáři a návrat na Plán.
    Po odebrání přístupu aplikaci v Google účtu se při další synchronizaci objeví úkol „Propojte Kalendář Google“.
 6. Účastník přihlášený Googlem nevidí akce mimo své publikum a nedostane se k cizí nahrávce
    (stejná pravidla jako u fiktivní role).

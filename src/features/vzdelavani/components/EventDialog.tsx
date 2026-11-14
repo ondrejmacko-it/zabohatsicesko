@@ -6,16 +6,18 @@ import { ActionMessage } from "@/components/ActionForm";
 import { Icon } from "@/components/Icon";
 import { Modal } from "@/components/Modal";
 import { EXTRAORDINARY_TYPES, GROUP_HINTS, GROUP_LABELS, TYPE_LABELS } from "@/lib/labels";
-import { isoWeekday } from "@/lib/time";
+import { formatDayMonth, isoWeekday } from "@/lib/time";
 import { EVENT_TYPES, GROUPS } from "@/lib/types";
 import { defaultAudience } from "@/server/domain/generation";
 import { topicFitsAudience } from "@/server/domain/topics";
+import { interestedLabel } from "@/server/domain/topics";
+import type { InvitePreview } from "@/server/services/calendar-status";
 import type { EventFormValues } from "@/server/services/detail";
 import type { ChangeImpact } from "@/server/services/impact";
 import { previewImpactAction, saveEventAction, type ActionResult } from "../actions";
 
 export type Person = { id: string; name: string };
-export type TopicOption = { name: string; audience: string; reason: string };
+export type TopicOption = { name: string; audience: string; interestCount: number; lastHeld: string | null; nextPlanned: string | null };
 
 type Props = {
   mode: "create" | "edit";
@@ -26,7 +28,8 @@ type Props = {
   published: EventFormValues | null;
   people: Person[];
   topics: TopicOption[];
-  inviteeCount: number;
+  /** Skuteční hosté podle skupiny a režim Kalendáře. Null, když je stránka neumí zjistit. */
+  invite: InvitePreview | null;
   /** Nahrazení pravidelného termínu jinou akcí na stejném místě v rozpisu. */
   replace?: boolean;
   /** Dny v týdnu (1 = pondělí), kdy se podle šablony běžně plánuje. Jiný den dialog výrazně ohlásí. */
@@ -34,6 +37,19 @@ type Props = {
   /** Tlačítko Upravit jako hlavní krok (v náhledu akce). */
   primary?: boolean;
 };
+
+const peopleCount = (count: number) => `${count} ${count === 1 ? "člověk" : count >= 2 && count <= 4 ? "lidé" : "lidí"}`;
+
+/** Co se s pozvánkou stane po zveřejnění, podle režimu Kalendáře. */
+const INVITE_NOTES: Record<InvitePreview["mode"], string> = {
+  simulation: "Ukázkový režim: e-maily se neposílají, pozvánka se zapíše jen do ukázkového kalendáře.",
+  allowlist: "Testovací režim: pozvánka půjde jen na testovací adresy, kolegům ze skupiny zatím ne.",
+  audience: "Po zveřejnění jim Google pošle e-mail s pozvánkou.",
+  disconnected: "Kalendář není propojený. Akce bude vidět ve Wiki, pozvánky odejdou po propojení.",
+};
+
+/** Kolik jmen se ukáže hned. Zbytek je po rozkliknutí, aby blok nenatahoval okno. */
+const GUESTS_SHOWN = 6;
 
 const WEEKDAY_NAMES = ["", "pondělí", "úterý", "středu", "čtvrtek", "pátek", "sobotu", "neděli"];
 
@@ -69,12 +85,12 @@ function replacementOf(initial: EventFormValues): EventFormValues {
   return { ...initial, type: "workshop", label: TYPE_LABELS.workshop, topicTitle: "" };
 }
 
-function EventForm({ mode, id, revision, initial, published, people, topics, replace, planDays, onClose }: Props & { onClose: () => void }) {
+function EventForm({ mode, id, revision, initial, published, people, topics, invite, replace, planDays, onClose }: Props & { onClose: () => void }) {
   const router = useRouter();
   const [values, setValues] = useState(() => (replace ? replacementOf(initial) : initial));
   const [multiDay, setMultiDay] = useState(initial.endDate !== null);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
-  // Méně časté údaje jsou sbalené. Otevřené jsou, když je organizátor už vyplnil jinak než výchozím způsobem.
+  // Méně časté údaje jsou sbalené. Otevřené jsou, když je správce už vyplnil jinak než výchozím způsobem.
   const [moreOpen, setMoreOpen] = useState(initial.reviewerId !== "" || initial.label !== TYPE_LABELS[initial.type]);
   const [impact, setImpact] = useState<{ key: string; data: ChangeImpact } | null>(null);
   const [previewError, setPreviewError] = useState<ActionResult | null>(null);
@@ -99,7 +115,7 @@ function EventForm({ mode, id, revision, initial, published, people, topics, rep
   const significant = SIGNIFICANT.some(changed);
 
   // Formulář se neodesílá přes <form action>: React by po akci vrátil výběry (typ, publikum) na první
-  // možnost. Ruční odeslání nechá po chybě všechna pole tak, jak je organizátor vyplnil.
+  // možnost. Ruční odeslání nechá po chybě všechna pole tak, jak je správce vyplnil.
   const submit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget, (event.nativeEvent as SubmitEvent).submitter);
@@ -119,7 +135,9 @@ function EventForm({ mode, id, revision, initial, published, people, topics, rep
   };
   const weekday = /^\d{4}-\d{2}-\d{2}$/.test(values.date) ? isoWeekday(values.date) : null;
   const unusualDay = !isHoliday && planDays !== undefined && planDays.length > 0 && weekday !== null && !planDays.includes(weekday);
-  const suggestions = topics.filter((t) => topicFitsAudience(t.audience, values.audience)).slice(0, 3);
+  // Pořadí určuje server (nenaplánovaná, podle zájmu, déle neprobraná). Už naplánovaná témata se nenabízejí.
+  const suggestions = topics.filter((t) => topicFitsAudience(t.audience, values.audience) && t.nextPlanned === null && t.name !== values.topicTitle).slice(0, 3);
+  const guests = invite?.recipients[values.audience] ?? [];
 
   useEffect(() => {
     if (!dirty) return;
@@ -253,12 +271,17 @@ function EventForm({ mode, id, revision, initial, published, people, topics, rep
                   </datalist>
                 </label>
                 {suggestions.length > 0 && (
-                  <div className="span-2 suggestions" aria-label="Doporučená témata">
-                    <span className="field-hint">Doporučená témata pro {GROUP_LABELS[values.audience]}:</span>
+                  <div className="span-2 suggestions" role="group" aria-label="Doporučená témata">
+                    <span className="field-hint">Doporučená témata pro skupinu {GROUP_LABELS[values.audience]}, kliknutím vyplníte:</span>
                     {suggestions.map((t) => (
                       <button key={t.name} type="button" className="suggestion" onClick={() => set("topicTitle", t.name)}>
                         <span className="suggestion-name">{t.name}</span>
-                        <span className="field-hint">{t.reason}</span>
+                        <span className="suggestion-meta">
+                          <span className="suggestion-count" data-empty={t.interestCount === 0}>
+                            {interestedLabel(t.interestCount)}
+                          </span>
+                          <span className="field-hint">{t.lastHeld ? `naposledy ${formatDayMonth(t.lastHeld)}` : "zatím neproběhlo"}</span>
+                        </span>
                       </button>
                     ))}
                   </div>
@@ -294,6 +317,39 @@ function EventForm({ mode, id, revision, initial, published, people, topics, rep
               </select>
               <span className="field-hint">{GROUP_HINTS[values.audience]}</span>
             </label>
+            {invite && !isHoliday && (
+              <div className="span-2 guest-preview" role="status" aria-live="polite">
+                <p className="guest-preview-head">
+                  <Icon name="calendar" />
+                  <span>
+                    {invite.mode === "allowlist" ? "Pozvánka půjde na" : guests.length >= 2 && guests.length <= 4 ? "Pozvánku dostanou" : "Pozvánku dostane"}{" "}
+                    <strong>{guests.length ? (invite.mode === "allowlist" ? `${guests.length} testovací ${guests.length === 1 ? "adresu" : guests.length < 5 ? "adresy" : "adres"}` : peopleCount(guests.length)) : "zatím nikdo"}</strong>
+                  </span>
+                </p>
+                {guests.length > 0 ? (
+                  <div className="guest-preview-names">
+                    {guests.slice(0, GUESTS_SHOWN).map((g) => (
+                      <span key={g.email} className="guest-chip" title={g.email}>
+                        {g.name}
+                      </span>
+                    ))}
+                    {guests.length > GUESTS_SHOWN && (
+                      <details className="guest-more">
+                        <summary>a dalších {guests.length - GUESTS_SHOWN}</summary>
+                        {guests.slice(GUESTS_SHOWN).map((g) => (
+                          <span key={g.email} className="guest-chip" title={g.email}>
+                            {g.name}
+                          </span>
+                        ))}
+                      </details>
+                    )}
+                  </div>
+                ) : (
+                  <p className="field-hint">Ve skupině {GROUP_LABELS[values.audience]} není žádný aktivní účet s adresou. Lidi do skupin přidáte ve Správě.</p>
+                )}
+                <p className="field-hint">{INVITE_NOTES[invite.mode]}</p>
+              </div>
+            )}
           </div>
           {!isHoliday && <p className="field-hint">Návrh jde uložit i neúplný. Pro zveřejnění je potřeba téma a vedoucí.</p>}
           </fieldset>

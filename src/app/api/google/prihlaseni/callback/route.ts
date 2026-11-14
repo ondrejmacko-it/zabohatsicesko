@@ -1,9 +1,11 @@
 import { and, eq } from "drizzle-orm";
 import { NextResponse, after, type NextRequest } from "next/server";
 import { audit, logError } from "@/server/audit";
+import { DEVICE_COOKIE, confirmDevice, deviceCookieOptions, trustedDevice } from "@/server/auth/access-links";
 import { completeLogin, verifyLoginState, type LoginFailure } from "@/server/auth/google-login";
+import { RETURN_COOKIE, returnCookieOptions, safeReturnPath } from "@/server/auth/return-path";
 import { SESSION_COOKIE, encodeSession, sessionCookieOptions } from "@/server/auth/session";
-import { config, googleLoginConfig } from "@/server/config";
+import { config, gateMode, googleLoginConfig } from "@/server/config";
 import { grantsCalendar, needsCalendarConnection, revokeToken, saveGrant } from "@/server/calendar/google-auth";
 import { resumeAfterReconnect, syncEvent } from "@/server/calendar/sync";
 import { getDb } from "@/server/db/client";
@@ -18,6 +20,7 @@ const FAILURES: Record<LoginFailure, string> = {
   not_allowed: "ucet-neni-povoleny",
   account_conflict: "ucet-neni-povoleny",
   requests_full: "ucet-neni-povoleny",
+  not_invited: "jiny-ucet",
 };
 
 // Návrat z Googlu. Kód se smění jen tehdy, když stav odpovídá podepsané cookie téhož prohlížeče.
@@ -42,7 +45,13 @@ export async function GET(request: NextRequest) {
 
   try {
     const db = await getDb();
-    const result = await completeLogin(db, cfg, { code, nonce: pending.nonce, verifier: pending.verifier });
+    const result = await completeLogin(db, cfg, {
+      code,
+      nonce: pending.nonce,
+      verifier: pending.verifier,
+      // Na pozvánku se nikdo cizí nepřihlásí ani nepožádá o přístup.
+      allowRequests: gateMode() !== "invite",
+    });
     const grant = result.grant;
     if (!result.ok) {
       // Oprávnění ke Kalendáři od účtu, který se dovnitř nedostal, Wiki nedrží.
@@ -52,6 +61,16 @@ export async function GET(request: NextRequest) {
         return finish(gateUrl("ceka-na-schvaleni"));
       }
       return finish(gateUrl(FAILURES[result.reason]));
+    }
+    // Vstup na pozvánku: odkaz v tomto prohlížeči patří jednomu člověku a nikdo jiný se jím nepřihlásí.
+    let deviceCookie: string | null = null;
+    if (gateMode() === "invite") {
+      const device = await trustedDevice(db, request.cookies.get(DEVICE_COOKIE)?.value);
+      deviceCookie = device && device.userId === result.userId ? await confirmDevice(db, device) : null;
+      if (!deviceCookie) {
+        if (grant) await revokeToken(grant.refreshToken);
+        return finish(gateUrl("jiny-ucet"));
+      }
     }
     await audit(db, result.userId, "session.start.google", "user", result.userId);
     const [account] = await db.select({ id: users.id, role: users.role, groups: users.groups }).from(users).where(and(eq(users.orgId, config.orgId), eq(users.id, result.userId))).limit(1);
@@ -80,9 +99,13 @@ export async function GET(request: NextRequest) {
     // Druhé automatické přesměrování jen tehdy, když o Kalendář ještě nikdo nežádal (první přihlášení
     // správce z tohoto prohlížeče). Po odmítnutí nebo výslovném „bez Kalendáře“ zůstává úkol na Plánu.
     const connectNext = missing && !connected && pending.calendar === "later";
-    const response = finish(`${config.appUrl}${connectNext ? CONNECT_PATH : "/"}`);
+    // Kdo přišel odkazem z pozvánky, vrátí se tam, kam mířil. Propojení Kalendáře má přednost.
+    const returnPath = connectNext ? null : safeReturnPath(request.cookies.get(RETURN_COOKIE)?.value);
+    const response = finish(`${config.appUrl}${connectNext ? CONNECT_PATH : (returnPath ?? "/")}`);
+    if (returnPath) response.cookies.set(RETURN_COOKIE, "", { ...returnCookieOptions, maxAge: 0 });
     response.cookies.set(SESSION_COOKIE, encodeSession(result.userId, undefined, "google"), sessionCookieOptions);
     response.cookies.set(HINT_COOKIE, encodeHint(result.userId), hintCookieOptions);
+    if (deviceCookie) response.cookies.set(DEVICE_COOKIE, deviceCookie, deviceCookieOptions);
     return response;
   } catch (error) {
     logError("google.login", "callback_failed", error);

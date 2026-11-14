@@ -1,16 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ActionForm } from "@/components/ActionForm";
-import { AccessForm, InviteForm } from "@/features/sprava/components/AccessForms";
-import { rejectRequestAction } from "@/features/sprava/actions";
+import { BulkInviteDialog } from "@/features/sprava/components/BulkInvite";
+import { AccountActions, InviteDialog } from "@/features/sprava/components/AccountActions";
 import { GROUP_LABELS, ROLE_LABELS, USER_STATUS_LABELS } from "@/lib/labels";
 import { formatDate, toDateKey } from "@/lib/time";
 import type { Role } from "@/lib/types";
 import { CalendarStatusLine, InviteRecipients } from "@/features/vzdelavani/components/CalendarStatusLine";
 import { loadCalendarStatus } from "@/server/services/calendar-status";
 import { requireUser } from "@/server/auth/session";
-import { config, now } from "@/server/config";
+import { gateMode, now } from "@/server/config";
 import { canManageUsers } from "@/server/policy";
 import { listAccounts, type Account } from "@/server/services/users";
 
@@ -25,6 +24,8 @@ export default async function AdminPage() {
   const roles: Role[] = ["admin", "member"];
   const pending = accounts.filter((a) => a.status === "pending");
   const others = accounts.filter((a) => a.status !== "pending");
+  // Na pozvánku žádosti nevznikají. Sekce zůstane, jen dokud čeká starší žádost z doby otevřeného vstupu.
+  const invite = gateMode() === "invite";
 
   return (
     <>
@@ -34,6 +35,10 @@ export default async function AdminPage() {
           <p className="page-sub">
             Kdo smí do Wiki a co uvidí. Google jen ověří, kdo se přihlašuje. Roli a skupiny přidělujete tady.
           </p>
+        </div>
+        <div className="row page-head-actions">
+          <BulkInviteDialog roles={roles} />
+          <InviteDialog roles={roles} />
         </div>
       </div>
 
@@ -48,6 +53,11 @@ export default async function AdminPage() {
             <strong>Skupiny</strong> říkají, co člověk uvidí: jen akce a zápisy určené jeho skupinám. Všichni = celá firma, FP = finanční
             poradci, RM = relationship manažeři, Tým A = účastníci Action time.
           </li>
+          {invite && (
+            <li>
+              <strong>Vstup</strong> je jen na pozvánku. Po pozvání dostanete zprávu s osobním odkazem, kterou kolegovi pošlete.
+            </li>
+          )}
           <li>
             <strong>Vedoucí akce</strong> není role. Správce ho vybere u konkrétní akce a vedoucí pak u ní nahrává záznam a
             zveřejňuje zápis.
@@ -61,60 +71,22 @@ export default async function AdminPage() {
         <InviteRecipients status={calendar} />
       </section>
 
-      <section className="section stack" aria-labelledby="zadosti">
-        <h2 id="zadosti">Čekající žádosti {pending.length > 0 && <span className="badge badge-ochre">{pending.length}</span>}</h2>
-        {pending.length === 0 ? (
-          <p className="muted small">Nikdo nečeká. Nový kolega se přihlásí účtem Google a jeho žádost se objeví tady.</p>
-        ) : (
-          pending.map((a) => (
-            <article key={a.id} className="item-card stack">
-              <AccountHead account={a} />
-              <AccessForm userId={a.id} roles={roles} role={a.role} groups={a.groups} mode="approve" />
-              <ActionForm
-                action={rejectRequestAction}
-                fields={{ userId: a.id }}
-                label="Zamítnout"
-                small
-                variant="danger"
-                confirm={{
-                  title: "Zamítnout žádost",
-                  text: `Žádost účtu ${a.email} zmizí. Pokud se přihlásí znovu, vznikne nová žádost.`,
-                  confirmLabel: "Zamítnout",
-                }}
-              />
-            </article>
-          ))
-        )}
-      </section>
-
-      <section className="section stack" aria-labelledby="pozvat">
-        <h2 id="pozvat">Pozvat kolegu</h2>
-        <InviteForm roles={roles} appUrl={config.appUrl} />
-      </section>
+      {!(invite && pending.length === 0) && (
+        <section className="section stack" aria-labelledby="zadosti">
+          <h2 id="zadosti">Čekající žádosti {pending.length > 0 && <span className="count-badge">{pending.length}</span>}</h2>
+          {pending.length === 0 ? (
+            <p className="muted small">Nikdo nečeká. Nový kolega se přihlásí účtem Google a jeho žádost se objeví tady.</p>
+          ) : (
+            <ul className="account-list">{pending.map((a) => accountRow(a, roles))}</ul>
+          )}
+        </section>
+      )}
 
       <section className="section stack" aria-labelledby="uzivatele">
-        <h2 id="uzivatele">Uživatelé</h2>
-        {others.map((a) => (
-          <article key={a.id} className="item-card stack">
-            <AccountHead account={a} />
-            {a.editable ? (
-              <details>
-                <summary className="small">{a.status === "disabled" ? "Vrátit přístup" : "Upravit roli a skupiny"}</summary>
-                <AccessForm
-                  userId={a.id}
-                  roles={roles}
-                  role={a.role}
-                  groups={a.groups}
-                  mode={a.status === "disabled" ? "restore" : "edit"}
-                />
-              </details>
-            ) : (
-              <p className="small muted">
-                Svůj účet měnit nemůžete.
-              </p>
-            )}
-          </article>
-        ))}
+        <h2 id="uzivatele">
+          Uživatelé <span className="count-badge">{others.length}</span>
+        </h2>
+        <ul className="account-list">{others.map((a) => accountRow(a, roles))}</ul>
       </section>
 
       <p className="small muted">
@@ -124,31 +96,37 @@ export default async function AdminPage() {
   );
 }
 
-function AccountHead({ account: a }: { account: Account }) {
+function accountRow(a: Account, roles: Role[]) {
+  // Účet už platí, ale kolega se ještě nepřihlásil. „Aktivní“ by tu mátlo.
+  const invited = a.status === "active" && a.origin !== "demo" && !a.googleLinked;
   return (
-    <div className="spread">
-      <div>
-        <p className="item-title">{a.name}</p>
-        <p className="item-meta">
-          {a.email} · {ROLE_LABELS[a.role]}
-          {a.groups.length > 0 && ` · ${a.groups.map((g) => GROUP_LABELS[g]).join(", ")}`}
+    <li key={a.id} className="account-row" data-status={a.status}>
+      <div className="account-main">
+        <p className="account-name">
+          <span className="item-title">{a.name}</span>
+          <span className={`badge${invited || a.status === "pending" ? " badge-ochre" : a.status === "active" ? " badge-ok" : " badge-danger"}`}>
+            {invited ? "Pozvaný" : USER_STATUS_LABELS[a.status]}
+          </span>
         </p>
         <p className="item-meta">
+          {a.status !== "pending" && <strong>{ROLE_LABELS[a.role]}</strong>}
+          {a.status !== "pending" && a.groups.length > 0 && ` · ${a.groups.map((g) => GROUP_LABELS[g]).join(", ")}`}
+          {a.status === "pending" && "Žádá o přístup"}
+        </p>
+        <p className="item-meta account-contact">
+          {a.email} ·{" "}
           {a.origin === "demo"
-            ? "Fiktivní role ukázky"
+            ? "fiktivní role ukázky"
             : a.googleLinked
-              ? `Účet Google svázán${a.lastLoginAt ? `, naposledy ${formatDate(toDateKey(a.lastLoginAt))}` : ""}`
-              : "Pozvánka čeká na první přihlášení"}
+              ? `účet Google svázán${a.lastLoginAt ? `, naposledy ${formatDate(toDateKey(a.lastLoginAt))}` : ""}`
+              : "čeká na první přihlášení"}
         </p>
       </div>
-      {a.status === "active" && a.origin !== "demo" && !a.googleLinked ? (
-        // Účet už platí, ale kolega se ještě nepřihlásil. „Aktivní“ by tu mátlo.
-        <span className="badge badge-ochre">Pozvaný</span>
+      {a.editable ? (
+        <AccountActions account={{ id: a.id, name: a.name, email: a.email, role: a.role, groups: a.groups, status: a.status }} roles={roles} />
       ) : (
-        <span className={`badge${a.status === "active" ? " badge-ok" : a.status === "pending" ? " badge-ochre" : " badge-danger"}`}>
-          {USER_STATUS_LABELS[a.status]}
-        </span>
+        <span className="item-meta">Váš účet</span>
       )}
-    </div>
+    </li>
   );
 }

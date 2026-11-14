@@ -36,7 +36,7 @@ serveru) nebo tlačítkem *Vzdělávání → Integrace → Obnovit ukázková d
 | Příkaz | Co dělá |
 |---|---|
 | `npm run lint` · `npm run typecheck` | ESLint a TypeScript |
-| `npm test` | 115 testů: správa uživatelů, přístupy, plán a revize, Kalendář, přihlášení Google, témata, nahrávky, čas a session |
+| `npm test` | 178 testů: správa uživatelů, přístupy, plán a revize, Kalendář, přihlášení Google, témata, nahrávky, čas a session |
 | `npm run build` | Produkční build (vyžaduje `SESSION_SECRET` a `DEMO_ACCESS_CODE`) |
 | `npm run db:migrate` · `npm run db:reset` | Migrace a seed, nebo obnova ukázkových dat |
 
@@ -44,8 +44,8 @@ serveru) nebo tlačítkem *Vzdělávání → Integrace → Obnovit ukázková d
 
 | Role | Co ukazuje |
 |---|---|
-| Správce ZBC ukázky | Přiděluje role a skupiny, zve a schvaluje účty Google (Správa systému). Plánuje jako organizátor. |
-| Organizátor ukázky | Plánuje, zveřejňuje, spravuje vazbu na Kalendář. K audiu nemá automatický přístup. |
+| Správce ZBC ukázky | Plánuje a zveřejňuje akce, spravuje Kalendář, přiděluje role a skupiny, zve a schvaluje účty Google. U každé akce smí nahrát záznam a zveřejnit nebo stáhnout zápis. |
+| Druhý správce ukázky | Druhá fiktivní persona se stejnou rolí Správce (v databázi starší hodnota `organizer`, pravidla ji berou stejně). |
 | Vedoucí ukázky | Vede akce, nahrává záznam, kontroluje a zveřejňuje zápis. |
 | Účastník FP | Kolega ze skupiny finančních poradců. Čte plán a zveřejněné zápisy své skupiny. |
 | Účastník RM | Kolega mimo publikum tréninku poradců. Přístup k cizí akci je zamítnut i přímým odkazem. |
@@ -97,19 +97,20 @@ docs/predani.md               # ověření, stav integrací a podmínky nasazen�
 
 Hlavní rozhodnutí:
 
-- **Návrh a zveřejnění jsou oddělené.** Organizátor může uložit rozpracovanou změnu. Kolegové i Kalendář
+- **Návrh a zveřejnění jsou oddělené.** Správce může uložit rozpracovanou změnu. Kolegové i Kalendář
   vidí jen poslední zveřejněný snímek akce. Každá změna má revizi, souběžná úprava starší revize neprojde.
 - **Kalendář dostává vždy nejnovější zveřejněnou revizi.** Synchronizace běží pod zámkem na akci,
   zapisuje jen spravovaná pole (název, čas, stav, odkaz do Wiki) a hosty, RSVP i odkaz na schůzku nemění.
   Vytvoření pozvánky má stabilní klíč, opakování nevyrobí duplikát. Ruční změnu v Kalendáři ukáže
-  organizátorovi a přepíše ji jen s jeho souhlasem.
-- **Importovaná akce bez vazby sama pozvánku nezaloží.** Organizátor ji spáruje s existující pozvánkou,
-  nebo výslovně založí novou. Akce založené ve Wiki pozvánku dostanou při zveřejnění.
+  správci a přepíše ji jen s jeho souhlasem.
+- **Zveřejněná akce dostane pozvánku sama.** Budoucí zveřejněná akce bez vazby ji dostane po otevření Plánu
+  správcem, po zveřejnění (i hromadném „Zveřejnit návrhy“) a po obnově dat. Výjimka: když ve stejném čase
+  leží v Kalendáři cizí pozvánka, správce ji spáruje, nebo výslovně založí novou, aby nevznikl duplikát.
 - **Šablona doplňuje jen prázdné sloty.** Klíč návrhu je slot + původní datum. Ruční úpravy i přesuny
   zůstanou, smazaný návrh se nevrátí. Svátky ČR vzniknou jako viditelný záznam bez pozvánky.
 - **Témata jdou do návrhu měsíce rovnou.** Budoucím termínům firemního vzdělávání generování předvyplní
   doporučené téma jejich publika: jen téma se zájemci, které ještě nemá termín, každé nejvýš jednou.
-  Vzniká jako návrh, organizátor ho před zveřejněním změní nebo smaže.
+  Vzniká jako návrh, správce ho před zveřejněním změní nebo smaže.
 - **Nahrávka patří k ID akce, ne k odhadu z obsahu.** Rozpoznaný typ obsahu jen doporučí šablonu zápisu
   a upozorní na nesoulad.
 
@@ -117,8 +118,8 @@ Hlavní rozhodnutí:
 
 - Přístupy ověřuje server u každého výpisu, detailu, uploadu, stažení, opakování i zveřejnění
   (`src/server/policy.ts`). Neviditelná a neexistující akce vrací stejnou odpověď.
-- Audio a pracovní přepis vidí jen vedoucí akce a pověřený kontrolor. Organizátor k nim automaticky přístup
-  nemá. Zveřejněný zápis vidí publikum akce.
+- Audio a pracovní přepis vidí vedoucí akce, pověřený kontrolor a správce (smí u každé akce nahrát záznam,
+  zveřejnit i stáhnout zápis). Zveřejněný zápis vidí publikum akce.
 - Soubory se ověřují podle obsahu (signatura a struktura WAV/MP3/M4A, délka), limit 4 MB a 15 minut.
   Ukládají se soukromě pod generovaným klíčem a vydávají se jen autorizovanou serverovou cestou.
   Nahrazená nahrávka se smaže.

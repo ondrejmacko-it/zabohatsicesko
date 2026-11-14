@@ -26,7 +26,7 @@ export function canManageAccount(viewer: Viewer, target: { id: string; role: Rol
 }
 
 /**
- * Co smí uživatel z akce vidět. Organizátor vidí pracovní verzi, ostatní jen zveřejněný snímek
+ * Co smí uživatel z akce vidět. Správce vidí pracovní verzi, ostatní jen zveřejněný snímek
  * akce pro svou skupinu (nebo akce, kterou vedou či kontrolují). Jinak null.
  */
 export function visibleEvent(viewer: Viewer, row: EventRow): EventSnapshot | null {
@@ -52,6 +52,11 @@ export function canHandleRecording(viewer: Viewer, row: EventRow): boolean {
 export function canReadPublishedMinutes(viewer: Viewer, row: EventRow): boolean {
   const snapshot = row.published;
   return snapshot !== null && (canPlan(viewer) || viewer.groups.includes(snapshot.audience) || isEventHandler(viewer, snapshot));
+}
+
+/** Odpovědi pozvaných z Kalendáře (kdo přijal, kdo odmítl): správce a vedoucí zveřejněné akce. */
+export function canSeeResponses(viewer: Viewer, row: EventRow): boolean {
+  return row.published !== null && (canPlan(viewer) || row.published.leadId === viewer.id);
 }
 
 export function canSeeAudience(viewer: Viewer, audience: string): boolean {

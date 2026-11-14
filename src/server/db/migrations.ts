@@ -261,4 +261,29 @@ ALTER TABLE calendar_links ADD COLUMN managed_attendees text[];
 ALTER TABLE topics ADD COLUMN archived_at timestamptz;
 `,
   },
+  {
+    id: "0007_invite_hold",
+    sql: `
+-- Lhůta po prvním zveřejnění: do tohoto času pozvánka neodejde a zveřejnění jde vrátit na návrh.
+ALTER TABLE events ADD COLUMN invite_hold_until timestamptz;
+`,
+  },
+  {
+    id: "0008_access_links",
+    sql: `
+-- Osobní odkazy k přihlášení a jednorázové kódy. Ukládá se jen otisk, hodnotu vidí správce jednou při vytvoření.
+CREATE TABLE access_links (
+  id text PRIMARY KEY,
+  org_id text NOT NULL,
+  user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  kind text NOT NULL CHECK (kind IN ('link', 'code')),
+  token_hash text NOT NULL UNIQUE,
+  created_by text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  expires_at timestamptz NOT NULL,
+  used_at timestamptz
+);
+CREATE INDEX access_links_user_idx ON access_links (user_id, kind);
+`,
+  },
 ];

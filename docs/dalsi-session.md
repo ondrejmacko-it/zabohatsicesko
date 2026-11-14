@@ -1,194 +1,174 @@
 # Prompt pro další session
 
-Zkopíruj text níže jako první zprávu nové relace Claude Code (repo `ondrejmacko-it/zabohatsicesko`).
+Jako první zprávu nové relace stačí napsat: **„Pokračuj podle `docs/dalsi-session.md`.“**
+Úvodní prompt drž krátký, jinak sebere kontext. Jedna relace = jeden krok ze seznamu níže, po kroku commit,
+push a přepsání tohoto souboru (jen aktuální stav, historie je v gitu).
 
----
+## Sloučeno 14. 11. 2026 v noci (větev `claude/adoring-ramanujan-rot348`, jeden draft PR do `main`)
 
-Pokračuj na demu modulu Vzdělávání (repo `ondrejmacko-it/zabohatsicesko`). Nečti znovu celé zadání ani celý kód.
-Kontext máš v `docs/dalsi-session.md`, `README.md`, `docs/google-prihlaseni.md` a `docs/google-kalendar.md`,
-pravidla v `CLAUDE.md`. Tykej mi, piš přátelsky. Úpravy níže jsou odsouhlasené, rovnou je udělej. Ptej se jen
-na věci označené „zeptej se“.
+Větev spojuje všechny otevřené drafty: #21 (obsahuje celé #19 a #20) a #22. U funkcí, které #21 a #22 dělaly
+souběžně (hosté a témata v dialogu akce, Správa v okně a menu, menu nahrávky), zůstalo řešení z #21, které je
+bohatší. Z #22 přibyla historie témat zvlášť (`RankedTopic.history`), pole hodnot v `ActionForm.fields`, stažení
+zápisu i bez zveřejněného textu v `panel.publicMinutes`, přesnější text `calendar_not_organizer`, dokumentace
+a dva testy. Staré větve a PR #19 až #22 zůstaly beze změny, uživatel je zavře. Ověřeno: lint, typy,
+178 ze 178 testů, build, Chromium nad PGlite (Plán, dialog akce, Správa na 1280 a 390 px, konzole bez chyb).
+Preview této větve má jen pro sebe `APP_URL`, `CALENDAR_ATTENDEES=audience` a `GATE_MODE=invite`. Živý test
+proti Googlu připravený pro ChatGPT agenta: `docs/zivy-test-chatgpt.md` (uživatel přidá dvě přesměrovací
+adresy, propojí Kalendář a předá jednorázové kódy). Další krok: živý test, pak „Nové zadání“ níže.
+Persona „Organizátor ukázky“ se v seedu z #19 jmenuje „Druhý správce ukázky“ (účet zůstává), zeptat se znovu po živém testu. Varování o hydrataci na Plánu sledovat.
 
-Stav: práce pokračuje na větvi `claude/tender-fermat-oepq6p` (vychází z `claude/blissful-mendel-ejkw5s`, draft PR #16
-do `main`). Zeptej se, jestli ji mám přidat do PR #16, nebo otevřít vlastní PR. Pokud je PR sloučený, vyjdi z `main`.
-Můj osobní účet je z Wiki smazaný, nezakládej ho znovu a nikam ho nezvi.
+## Stav 14. 11. 2026 večer (větev `claude/vzdelavani-b8-e-ybvvgg`, draft PR #21 do `main`)
 
-Zásada pro celé UI: hlavní údaje a hlavní akce musí vyniknout, vedlejší texty jsou menší a tlumené, nic není
-ani o pixel mimo osu, vše je jasné na první pohled.
+Ověřeno: lint, typy, build, 176 ze 176 testů. V Chromiu nad PGlite na 1280 a 390 px (konzole bez chyb, bez
+vodorovného posunu): okna „Nový odkaz k přihlášení“ a „Jednorázový kód“ v menu účtu, zpráva po pozvání kolegy,
+hromadné pozvání s osobním odkazem u každého řádku, Správa s `GATE_MODE=invite` po přihlášení kódem.
+Dřív: B9 a brána na pozvánku. Naživo proti Googlu neověřeno nic. Hotové jsou bloky A, B3 až B10, vstup
+na pozvánku a krok 0. Preview větve PR #21 má (jen pro tuto větev) `GATE_MODE=invite`, vlastní `APP_URL`
+a `CALENDAR_ATTENDEES=audience`. V Neonu jsou ručně provedené migrace `0007` a `0008` (konektor na preview
+nedosáhne, aplikace by je jinak udělala při prvním požadavku) a první odkaz s kódem pro `demo-organizator`
+(uživatel se jím 14. 11. přihlásil, funguje). Production na Vercelu nemá
+proměnné prostředí a buildy z `main` se přeskakují.
 
-1. Živý test se mnou krok za krokem. Skutečné pozvánky (`CALENDAR_ATTENDEES=audience`), vlastní `APP_URL`
-   a přesměrovací adresy v Google konzoli má jen preview větve `claude/blissful-mendel-ejkw5s`. Zeptej se, kde
-   testovat (nová větev potřebuje totéž). Postup: přihlášení správce (při druhém přihlášení jedna obrazovka
-   Googlu s Kalendářem), řádek „Kalendář“ na Plánu, všech 6 zveřejněných budoucích akcí má vazbu a hosty podle
-   skupin, nový účet a žádost, schválení ve Správě a pozvánky, které mu samy dojdou, změna, zrušení, odkaz na zápis.
-   Hromadné zveřejnění („Zveřejnit návrhy“ na Plánu) před prvním ostrým použitím na preview potvrď se mnou,
-   posílá e-maily. Po sloučení PR přenes proměnnou na všechny preview (zeptej se).
-2. Dialog akce: ukaž skutečné hosty podle vybrané skupiny (`loadCalendarStatus().recipients`) místo testovací
-   adresy a nabídni doporučená témata s počtem zájemců.
-3. Dokonči sloučení rolí v textech: hledej „organizátor“ v `src/` (Integrace, `SyncPanelView`, `EventPeek`,
-   detail akce, `status.ts`, legenda, nápovědy, výběr „Zobrazit jako: Organizátor (vidím vše)“) a nahraď
-   „správce“. Persona „Organizátor ukázky“ na `/vstup` a v seedu: přejmenuj nebo sluč (zeptej se, mění seed).
-4. Okno „Přidat zápis“ a detail akce za správce u cizí akce: ověř v prohlížeči „Nahrát záznam“, úpravu,
-   zveřejnění i stažení zápisu.
-5. Správa: úpravy uživatele v okně (`Modal`), řádkové akce v menu (`Menu`). Menu místo řady tlačítek v detailu
-   akce pro vedoucího, na Integraci a v `SyncPanelView`. Doověř okna (zápis za čtenáře, nahrání záznamu
-   a `AutoRefresh`, „Přidat zápis“ na 1280 px, Plán za účastníka na 390 px). Varování o hydrataci na Plánu
-   trvá (viděno 13. 11., příčina nehledána). Po každém bloku 1280 a 390 px.
-6. Dokumentace: `README.md`, `docs/predani.md`, `docs/google-prihlaseni.md`, `docs/google-kalendar.md` podle
-   stavu (jedna role Správce, souhlas ke Kalendáři při přihlášení, `GOOGLE_OAUTH_PUBLISHED`, příjemci pozvánek,
-   řádek stavu Kalendáře, automatické vazby a fronta z Plánu, hromadné zveřejnění měsíce).
-7. Snímky každého okna a stavu za každou roli na 1280 a 390 px jako ZIP se seznamem. Do repa je nedávej.
+Pravidla: tykej, piš přátelsky. Na `main` nepushuj, merge dělá uživatel přes PR. Produkci sám nenasazuj,
+jen ji připrav a nastav, co jde přes API. Osobní účet uživatele je z Wiki smazaný, nezakládej ho a nikam
+ho nezvi. Ostré zveřejňování a skutečné pozvánky na preview smíš spouštět bez ptaní.
 
-Production na Vercelu nemá proměnné prostředí a buildy z `main` se přeskakují, vše běží na preview.
-Na `main` nepushuj, merge dělám já. Respektuj limit kontextu.
+Zásada UI: hlavní údaje a akce vyniknou, vedlejší texty jsou menší a tlumené, nic mimo osu. Každou novinku
+pochopí člověk, který Wiki vidí poprvé: jedna věta, žádné technické pojmy. Po každém kroku ověř v prohlížeči
+na 1280 a 390 px (konzole bez chyb, žádný vodorovný posun).
 
----
+## Nové zadání uživatele (14. 11. pozdě večer) – má přednost před kroky níže
 
-## Stav 13. 11. 2026 pozdě v noci (větev `claude/tender-fermat-oepq6p`)
+Uživatel se na preview přihlásil prvním odkazem a kódem (funguje). Ke snímkům Plánu, Správy a přihlášení chce:
 
-Ověřeno: lint, typy, 134 ze 134 testů, build. V Chromiu nad PGlite okno „Zveřejnit návrhy“ za správce na 1280
-a 390 px (bez vodorovného posunu). **Naživo proti Googlu neověřeno.**
+1. **Kalendář bez potvrzování.** Blok „Kalendář · Propojeno · účtem … · Souhlas platí do …“ z Plánu odstranit,
+   nebo dát úplně dolů. Cíl: každý člověk je v kalendářové skupině podle svých skupin a akce se mu do kalendáře
+   samy přidají, změní a smažou. Nic nepotvrzuje, přijde jen informační e-mail. Než začneš, navrhni a nech
+   uživatele vybrat: (a) dál pozvánky jako hosté (`sendUpdates=all`), akce se v Gmailu přidá sama (výchozí
+   nastavení Googlu), ale tlačítka Ano/Ne nejdou skrýt, nebo (b) sdílený kalendář pro každou skupinu (ACL podle
+   skupin). Bez Workspace ale musí každý sdílený kalendář jednou přidat sám. Kdo to bude nastavovat, do toho
+   zahrň i zveřejnění OAuth aplikace (Testing = souhlas na 7 dní).
+2. **Upozornění po přihlášení kódem** nech, ale dej pod něj větší mezeru. Text o adrese pro pozvánky ukaž jen
+   tehdy, když účet má skutečný e-mail (ne `@example.invalid` ani prázdný). Jinak jedna věta, co dělat.
+3. **Pozvánky a kódy s oprávněními:** při vytváření odkazu nebo kódu správce nastaví roli a skupiny. Člověk bez
+   Googlu se dá pozvat i bez e-mailu (jen jméno, role, skupiny, kód). Rozšířit `inviteUser`/`createAccess`,
+   oprávnění dál hlídá server, doplnit testy.
+4. **Žádné duplicity:** stav Kalendáře je teď na Plánu i ve Správě a tabulka „Kdo co dostane“ opakuje seznam
+   uživatelů. Každá informace jen jednou.
+5. **Správa systému přehledněji a barevněji:** uživatele seřadit pod sebe podle funkce (Správci, Vedoucí akcí,
+   členové podle skupin) s barevným rozlišením. U seznamu přímo vytváření pozvánky nebo kódu s právy. Sekce
+   systematicky oddělit (Lidé, Pozvánky a kódy, Kalendář dole). Návrh rozvržení nejdřív ukaž uživateli.
+6. **Rychlost:** je to pomalé a seká se. Měř před a po. Podezření: `simulatedLatency()` (`src/server/settings.ts`)
+   čeká bez `SIM_LATENCY_MS` 1200 ms a preview proměnnou nemá. Neon po nečinnosti usíná (studený start).
+   Funkce už běží ve `fra1` stejně jako Neon. Dál zkontroluj velikost balíčku a zbytečné dotazy a překreslování.
+   Navrhni nastavit `SIM_LATENCY_MS=0` na preview přes API.
+7. **Přihlašovací stránka je ošklivá:** navrhni hezčí vzhled `/vstup` (karta, hierarchie, Google jako hlavní
+   akce, kód jako druhá možnost, stav „Pozvánka pro …“) a ověř ho na 1280 a 390 px.
 
-- **Proč 4 zveřejněné akce neměly pozvánku:** seed zakládá akce se záměrem `pair`, `publishInTx` vytvoří vazbu
-  jen pro `create` a fronta `syncPending` čte jen existující vazby. V režimu Googlu seed žádné vazby nezakládá.
-- **Automatické vazby** (`sync.ts`: `linkPublishedWithoutInvite`, `syncPublished`): každá zveřejněná budoucí
-  nezrušená akce bez vazby ji dostane a fronta založí pozvánku. Pozvánku, kterou Wiki založila dřív (před obnovou
-  dat), pozná podle klíče a nezdvojí. Výjimka: když ve stejném čase leží v Kalendáři cizí nespárovaná pozvánka,
-  akce zůstane „bez vazby“ a správce ji spáruje nebo založí novou. Bez propojeného Kalendáře se nezakládá nic.
-  Spouští se po otevření Plánu správcem, po zveřejnění, po hromadném zveřejnění a po obnově ukázkových dat.
-  Platí i v simulaci (ukázkové akce bez pozvánky ji dostanou po otevření Plánu).
-- **Hromadné zveřejnění** (`PublishMonthDialog`, `listMonthDrafts`, `publishDrafts`, `publishMonthAction`):
-  tlačítko „Zveřejnit návrhy (počet)“ vedle „Přidat akci“. Nahoře přehled dopadu (počet akcí, kolik lidí dostane
-  e-mail a z jakých skupin, podle režimu Kalendáře). Základ ze šablony je předvybraný, návrhy přidané navíc
-  ne. Téma a vedoucího jde doplnit přímo v řádku. Návrhy změn zveřejněných akcí v okně nejsou (jen počet),
-  server je odmítne stejně jako cizí měsíc, proběhlé termíny a zastaralou verzi návrhu.
-  Testy: `tests/hromadne-zverejneni.test.ts`, dva nové v `tests/google-calendar.test.ts`.
-- **Neuděláno z promptu:** živý test, hosté a témata v dialogu akce, texty „organizátor“, Správa v okně a menu,
-  doověření oken, dokumentace, snímky.
+Pořadí: 6 (rychlá výhra), 2, 7, 4 + 5 + 3 (Správa), 1 (po rozhodnutí uživatele). Původní kroky 1 až 7 níže
+se posouvají za toto zadání.
 
-## Stav 13. 11. 2026 noc (větev `claude/blissful-mendel-ejkw5s`, draft PR do `main`)
+## Zadání uživatele ze 14. 11. večer (odsouhlasené, rozplánované do kroků níže)
 
-Vychází z `claude/amazing-edison-51eo2g`. Ověřeno: lint, typy, 128 ze 128 testů, build. V Chromiu nad PGlite jen
-Plán a Správa za správce na 1280 a 390 px (řádek Kalendáře, tabulka příjemců, výběr role, bez vodorovného
-posunu). **Naživo proti Googlu neověřeno nic z níže uvedeného.**
+Vstup jen osobním odkazem, jednorázové kódy od správce pro lidi bez Gmailu, produkce z `main` jen s přihlášením,
+co nejlepší zabezpečení a optimalizace, vlastní bot pro přepis, plná automatizace, Apple zařízení podle norem,
+kompletní příprava produkce a krátký seznam toho, co musí doplnit uživatel (jen nezbytné).
 
-- **Souhlas ke Kalendáři při přihlášení** (`google-login.ts`, `api/google/prihlaseni/*`): po každém přihlášení
-  Googlem si prohlížeč uloží podepsanou cookie `zbc_google_hint` s ID uživatele. Při dalším přihlášení server
-  podle ní pozná aktivního správce, a pokud Wiki nemá propojení, požádá Google na jedné obrazovce o identitu
-  i `calendar.events` (`prompt=consent`, `access_type=offline`, `login_hint`). Callback propojení uloží
-  (`saveGrant`), jinak token hned zneplatní (`revokeToken`). První přihlášení z nového prohlížeče jde starou
-  cestou: druhé automatické přesměrování na `/api/google/kalendar/pripojit?auto=1`. Odmítnutý souhlas:
-  brána nabídne „Přihlásit se bez Kalendáře“ (`?kalendar=ne`), `?jiny=1` vynutí výběr účtu.
-- **Příjemci pozvánek** (`attendees.ts`, `listRecipients`): v režimu Googlu aktivní účty skupiny akce. Nově
-  i fiktivní role svázaná s účtem Google ze seznamu `GOOGLE_LOGIN_ACCOUNTS` (dostane pozvánku na adresu Google).
-  Přepínač `CALENDAR_ATTENDEES=audience` je od 13. 11. v noci zapnutý jen pro preview této větve. Budoucí
-  vazby jsou vrácené do fronty, odešlou se, když správce otevře Plán (`after(syncPending)` na stránce Plán).
-  Osobní účet uživatele je na jeho žádost z databáze smazaný (i vazba na Google), nezakládat ho znovu.
-- **Stav Kalendáře** (`services/calendar-status.ts`, `CalendarStatusLine.tsx`): řádek na Plánu (jen správce mimo
-  náhled) a ve Správě v sekci „Kalendář a pozvánky“ s tabulkou, kdo dostane pozvánku podle skupiny. Propojení
-  se při načtení ověří u Googlu (vypršelý souhlas se pozná hned). V režimu Testing ukazuje datum vypršení
-  (7 dní od souhlasu), dva dny předem nabídne „Obnovit propojení“. `GOOGLE_OAUTH_PUBLISHED=1` upozornění vypne.
-- **Jedna role Správce** (`policy.ts`: `canPlan`, `isOrganizer` a `isAdmin` jsou totéž): v databázi zůstávají
-  `admin` i `organizer`, Správa nabízí jen Správce a Člena týmu. Správce smí u každé akce nahrát záznam,
-  číst pracovní zápis, zveřejnit ho i stáhnout (`canHandleRecording`, `canReadPublishedMinutes`). Mezi úkoly
-  „Čeká na vás“ má dál jen akce, které sám vede nebo kontroluje. Testy: `tests/kalendar-prihlaseni.test.ts`,
-  upravené `access`, `users`, `zapisy-temata`.
-- **Nedoděláno z promptu:** hosté a doporučená témata v dialogu akce, zbylé texty „organizátor“ v UI, celá
-  část C, dokumentace `README.md`, `docs/predani.md`, `docs/google-*.md`, snímky. Živý test neproběhl.
+Rozhodnuto: odkaz platí do prvního přihlášení, zařízení si Wiki pamatuje 180 dní. Kód platí jednou, zařízení pak
+zůstane přihlášené 30 dní. Fiktivní role jen na preview a lokálně. Přepis: vlastní bot, logiku zpracování záznamu
+do zápisu programujeme my, model běží přes API uživatele (například OpenAI), klíč dodá uživatel.
 
-**Preview této větve:** `https://zbc-vzdelavani-demo-git-claude-blissful-mendel-ejkw5s-maci.vercel.app`, vlastní
-`APP_URL` je na Vercelu nastavená. V Google konzoli je potřeba přidat `<adresa>/api/google/prihlaseni/callback`
-a `<adresa>/api/google/kalendar/callback` (dělá uživatel). Přihlašovat se jen z této adresy větve.
+## Kroky v pořadí (jeden na relaci)
 
-**Diagnostika preview 13. 11. (proč se nic nepropisovalo):** Kalendář propojený je (12. 11. 17:48 testovacím
-účtem svázaným s `demo-organizator`), synchronizace běží (5 vazeb `synced`, poslední 13. 11. 19:41). Pozvánky
-ale šly jen na jednu adresu z `GOOGLE_ALLOWED_ATTENDEES`, protože `CALENDAR_ATTENDEES` na Vercelu není
-nastavené. Osobní účet uživatele je ve Wiki Člen týmu ve skupinách Všichni a FP (pozvaný), neplánuje a mezi
-hosty nebyl. Propojení v režimu Testing vyprší kolem 19. 11. Výchozí `APP_URL` preview míří na starou větev
-`ccr-2d4283fa-slno9d`, každá testovaná větev proto potřebuje vlastní.
+0. **Hotovo** včetně `GATE_MODE=invite` na preview a prvního odkazu (uživatel se kódem přihlásil).
 
-## Stav 13. 11. 2026 (větev `claude/amazing-edison-51eo2g`, bez PR)
+1. **B11 a drobnosti.** `Consequences` do zrušení akce (`EventMenu`), stažení zápisu (`RecordingMenu`,
+   rozšířit `confirm` v `ActionForm` o body) a odebrání přístupu (`AccountActions`). Zpráva po pozvání
+   kolegy (`inviteMessage` v `AccessForms.tsx`): tykání zůstává, text doladit (kdo zve, k čemu Wiki je,
+   odkaz, jedna věta jak se přihlásit). Při zapnuté lhůtě má detail akce psát „Pozvánka odejde za chvíli“.
+   **Bot pro přepis** (vlastní krok po kroku 3): rozhraní poskytovatele v `src/server/recordings`, přepis přes
+   API uživatele (`request_credential` pro hostitele API, klíč nikdy do repa ani do proměnné v chatu), vlastní
+   logika: dělení dlouhého záznamu, přepis po částech, sestavení zápisu (shrnutí, klíčové body, rozhodnutí,
+   další kroky) a kontrola vedoucím před zveřejněním. Zeptej se na poskytovatele a zpracování v EU.
+   **Apple zařízení** (vlastní krok): WCAG 2.2 AA a zásady Applu (cíle dotyku 44 px, `env(safe-area-inset-*)`,
+   pole 16 px proti přiblížení, `100dvh`, `dialog` v Safari). V prostředí je jen Chromium, skutečné Safari
+   projde uživatel podle krátkého seznamu.
+2. **Úklid a optimalizace.** Mrtvý kód a nepoužívané exporty, alias `isOrganizer`/`isAdmin` nahradit
+   `canPlan`, sloučit role `admin` a `organizer` v databázi (migrace, zeptej se před ní), zápisy filtrovat
+   v databázi, krátká mezipaměť odpovědí z Kalendáře na Plánu, velikost balíčku a rychlost stránek změřit
+   před a po.
+3. **Bezpečnostní rozbor.** Oprávnění každé serverové akce a API, session a cookies, OAuth, CSP, tajemství
+   v gitu a buildu, limity pokusů. Výstup: nálezy podle závažnosti a opravy s testy.
+4. **Živý test (blok C)** na preview této větve. Nejdřív nastav přes API vlastní `APP_URL`
+   (`https://zbc-vzdelavani-demo-git-<větev>-maci.vercel.app`) a `CALENDAR_ATTENDEES=audience` a zeptej se,
+   zda uživatel přidal v Google konzoli `<adresa>/api/google/prihlaseni/callback`
+   a `<adresa>/api/google/kalendar/callback`. Postup: přihlášení správce, řádek „Kalendář“ na Plánu, vazby
+   a hosté budoucích akcí (Neon `calendar_links`), „Připravit další měsíc“, nový účet a žádost, schválení,
+   pozvánky, odpovědi, zpět po zveřejnění, změna, zrušení, odkaz na zápis.
+5. **Dokumentace (blok D):** `README.md`, `docs/predani.md`, `docs/google-prihlaseni.md`,
+   `docs/google-kalendar.md` podle skutečného stavu (jedna role Správce, souhlas ke Kalendáři při přihlášení,
+   `GOOGLE_OAUTH_PUBLISHED`, příjemci, řádek stavu, automatické vazby, fronta a cron, hromadné zveřejnění,
+   průvodce měsícem, Správa v oknech, hromadné pozvání, odpovědi, zpět po zveřejnění, `PUBLISH_UNDO_SEC`, zájem o téma z pozvánky).
+6. **Production z `main`** (až uživatel sloučí PR). Přes API nastav nesecretní proměnné pro Production
+   (`CALENDAR_MODE`, `LOGIN_MODE`, `CALENDAR_ATTENDEES=audience`, `APP_URL`, `GOOGLE_LOGIN_ACCOUNTS` podle
+   preview). Uživatel doplní tajemství (`SESSION_SECRET`, `TOKEN_ENCRYPTION_KEY`,
+   `CRON_SECRET`, OAuth klient, `DATABASE_URL`), produkční přesměrovací adresy v Google konzoli a povolí
+   buildy z `main` (ignored build step). Doporučení: samostatná větev databáze v Neonu pro produkci
+   a zveřejnění OAuth aplikace (v režimu Testing souhlas vyprší po 7 dnech). Potom ověření v produkci.
+7. **Snímky (blok E):** každé okno a stav za každou roli na 1280 a 390 px jako ZIP se seznamem, mimo repo.
 
-Hotovo a ověřeno (lint, typy, 121 ze 121 testů, build; Chromium nad PGlite):
+## Otevřené otázky
 
-- **Okna (`src/components/Modal.tsx`):** vykreslují se přes portál do `<body>`. Okno otevřené z jiného okna to
-  první po dobu práce schová (pravidlo `body > .dialog[open]:has(~ .dialog[open])`), po zavření se první vrátí.
-  Klik mimo a Esc zavírají. Rozepsaný formulář (otisk polí se od otevření změnil) se nejdřív zeptá. Dialog akce
-  si změny hlídá sám (`selfGuarded`).
-- **Menu (`src/components/Menu.tsx`):** nahrazuje `details.menu`. Seznam je `position: fixed`, neořízne ho okno
-  ani tabulka, otevře se nahoru, když se dolů nevejde. Zavírá klik mimo, Esc, posun stránky a volba položky.
-  Položky zůstávají v dokumentu, aby si okna otevřená z menu držela stav. Odesílací tlačítka menu nezavírají.
-- **Okno akce (`EventPeek`):** vlevo „Další možnosti“ (Zobrazit zápis, Otevřít celý detail, Nahradit pravidelný
-  termín, pod čarou Zrušit akci nebo Smazat návrh), vpravo hlavní „Upravit“. Bez posuvníku na 1280 i 390 px.
-  Stejné rozložení má záhlaví celého detailu akce. Kdo není organizátor, má odkazy jako tlačítka.
-- **Plán:** filtry jsou úplně nahoře (`.plan-filter-bar`). „Čeká na vás“ i „Nejbližší akce“ se počítají pro
-  diváka z „Zobrazit jako“ (`listTasks`, `nextEventsFor` se stejnými pravidly, úkoly v náhledu bez tlačítek)
-  a respektují Typ akce i Stav (`matchesPlanFilter`, `JourneyTask.eventType`). Skryté úkoly ohlásí řádek
-  „Filtr skrývá další úkoly“.
-- **Témata:** karty ve dvou sloupcích, doporučená okrově. Jména zájemců po kliknutí na počet. **Vidí je jen
-  organizátor a správce** (`listTopicInterested`, jinak `forbidden`), ostatní jen počet. Je to opatrná volba,
-  čeká na potvrzení uživatele. Správa tématu je v menu (Upravit, Archivovat).
-- **Zápisy:** zápis se otevírá v okně nad stránkou (`?zapis=<id>`, `MinutesPeek`), vedoucí v něm rovnou nahraje
-  záznam a zápis zkontroluje. Tlačítko „Přidat zápis“ s počtem (`?pridat=1`, `listMissingMinutes`): vedoucí
-  a kontrolor vidí své proběhlé akce bez zápisu, organizátor všechny jako přehled s odkazem na akci. **Organizátor
-  sám nahrát nesmí**, pokud akci nevede (oprávnění se neměnila).
-- Testy: `tests/zapisy-temata.test.ts`.
+- Rozhodnuto 14. 11.: pozvánky odchází hned po zveřejnění. Lhůta „zpět po zveřejnění“ je vypnutá
+  (výchozí `PUBLISH_UNDO_SEC=0`), kód zůstává a jde zapnout proměnnou. V dokumentaci ji popiš jako volitelnou.
+- Rozhodnuto 14. 11.: produkce dostane samostatnou větev databáze v Neonu (založ ji přes konektor
+  a řekni uživateli, kam vložit `DATABASE_URL`) a zatím výchozí produkční adresu Vercelu jako `APP_URL`
+  (vlastní doménu jde přidat později). V kroku 6 napiš uživateli přesný seznam: co, kam a jak doplnit.
+- Varování o hydrataci na `/vstup` v Playwrightu (styl `caret-color` u přepínačů) vzniká pořízením snímku
+  před dokončením hydratace, v běžném prohlížeči se neukáže.
+- Zavřít starý draft z `ccr-7b6bed1b-1ejvib` a PR #19, smazat větev `claude/vzdelavani-vercel-preview-52jflw`?
+- Odloženo, rozhoduje firma: poskytovatel přepisu a úložiště (`docs/nahravky-moznosti.md`), pravidlo
+  střídání typů ve slotu šablony, kam trvale uložit zadání (do tohoto repa ne).
 
-Neověřeno: body v části A.3 promptu, Safari, živý Google. Správa (bod A.1) se nezačala.
+## Co je dobré vědět
 
-Rozhodnuto uživatelem 13. 11. večer: jména zájemců vidí ti, kdo plánují (tak to je). Správce a organizátor
-mají umět vše včetně zápisů u cizích akcí a role se mají sloučit do jedné. Kalendář má fungovat automaticky
-už od přihlášení (části A a B promptu).
+- **Vstup na pozvánku:** `gateMode()` v `config.ts` (`invite` vždy při `VERCEL_ENV=production`, jinak podle
+  `GATE_MODE`, výchozí `open`). Tabulka `access_links` (migrace `0008`, jen otisky), služba
+  `src/server/auth/access-links.ts`, odkaz `/pozvanka/<token>` dá prohlížeči cookie zařízení `zbc_zarizeni`
+  a přesměruje na `/vstup`. Bez platné cookie `/vstup` ukáže jen „Přístup jen na pozvánku“ a začátek přihlášení
+  Googlem vrací 404. Callback Googlu pustí jen účet, kterému odkaz patří. Kód: `enterWithCode`, session `code`
+  na 30 dní, v layoutu upozornění na e-mail pro pozvánky. V režimu `invite` není potřeba `DEMO_ACCESS_CODE`
+  a session fiktivní role neplatí. Správa: menu účtu „Nový odkaz k přihlášení“ a „Jednorázový kód“, pozvání
+  kolegy i hromadné pozvání vrací osobní odkaz ve zprávě (u hromadného `CopyMessage compact` na řádek).
+  Cizí účet Google v režimu `invite` žádost nezaloží (`completeLogin` s `allowRequests: false`, důvod
+  `not_invited` → brána „jiny-ucet“) a Správa pak sekci Čekající žádosti skryje, když je prázdná.
+  Testy `tests/vstup-na-pozvanku.test.ts`, `tests/users.test.ts`, `tests/hromadne-pozvani.test.ts`.
+- **První správce v produkci** nemá jak dostat odkaz z Wiki. Postup: po nasazení vlož přes Neon konektor řádek
+  do `access_links` (otisk SHA-256 náhodného tokenu, `kind='link'`, uživatel podle `GOOGLE_LOGIN_ACCOUNTS`)
+  a odkaz `<APP_URL>/pozvanka/<token>` pošli uživateli v chatu. Je to zápis do databáze, potvrď ho s uživatelem.
 
-Poznámky k prostředí: lokální běh `npx next dev -p 3100` nad PGlite, na `/vstup` kliknout na `label.persona`
-a odeslat. Po větší změně serverových modulů vývojový server restartuj (držel starou verzi modulu).
-`AGENTS.md` v kořeni je v repu, nemaž ho. Živý test: preview větve potřebuje vlastní `APP_URL`
-(`https://zbc-vzdelavani-demo-git-<větev>-maci.vercel.app`) a dvě přesměrovací adresy v Google konzoli
-(`/api/google/prihlaseni/callback`, `/api/google/kalendar/callback`). Větev `claude/festive-shannon-s7wa4o` je má.
-Všechny preview sdílí jednu databázi Neon. Starší historii relací najdeš v gitu tohoto souboru.
+- **B9 Zájem o téma z pozvánky:** `desiredData` (`sync.ts`) přidá budoucí nezrušené akci s `topicId` řádek
+  s odkazem `/vzdelavani/temata?tema=<id>`. Jen do nových pozvánek a do těch, které se stejně mění
+  (`withoutTopicLink` v `reconcile`). Odkaz obslouží `temata/route.ts`: přihlášeného pošle na
+  `/vzdelavani/zapisy?zajem=<id>#temata`, nepřihlášenému uloží cíl do cookie `zbc_navrat` (15 minut, jen cesty
+  `/vzdelavani…`, `src/server/auth/return-path.ts`) a po přihlášení ho tam vrátí `enterDemo` i callback Googlu.
+  Když callback rovnou pokračuje na propojení Kalendáře (první přihlášení správce), návrat se nepoužije.
+  `TopicsSection` dá téma první a zvýrazní ho, zájem zapíše až tlačítko. Test `tests/zajem-z-pozvanky.test.ts`.
+  Naživo zbývá ověřit v kroku 4: jak Google řádek s odkazem v pozvánce zobrazí.
 
-## Odsouhlaseno 12. 11. 2026
-
-- Hotové demo „jak by to vypadalo v realitě“, fiktivní role a simulace zůstávají jako přepínače.
-- Role smí přidělovat správce i organizátor (roli správce jen správce). Pozvánka i žádost.
-- Zatím osobní Gmaily, jeden firemní kalendář vzdělávání, jeden OAuth klient.
-- E-maily: žádný vlastní poskytovatel. Pozvánky a změny rozesílá Google. Zveřejněný zápis doplní odkaz
-  do pozvánky s rozesláním změny, ve Wiki je to v Moje cesta.
-
-## Rozhodnuto 12. 11. 2026 večer
-
-- Zásada UI: co je v dané části důležité, musí být vidět hned a přehledně. Proto je Přidat akci samostatné
-  tlačítko a v nabídce jsou jen méně časté nástroje.
-- Pořadí: nejdřív dodělat zbytek, potom živý test, potom testy, úpravy a změny včetně UI.
-- Nahrávky a přepis: zatím jen demo. Firma nemá žádné vlastní služby ani úložiště, uživatel může nabídnout
-  Google Disk. **Nic placeného se nezavádí, dokud to firma neschválí a nezaplatí.** Přepis teď není klíčový,
-  stačí znát možnosti. Požadavek na budoucí přepis: co nejkvalitnější čeština, ideálně bez chyb, zpracování
-  v EU. Delší záznamy (2 až 2,5 h) se v praxi otestují až na žádost firmy.
-
-## Vercel a přístupy
-
-- Tým `maci`, projekt `zbc-vzdelavani-demo`, plán Hobby. Preview se spouští pushem větve, produkci
-  přeskakuje ignored build step. `POST /v13/deployments` nepoužívat (vytvoří produkční deploy).
-- Proměnné pro Preview jsou nastavené (`CALENDAR_MODE`, `LOGIN_MODE`, `GOOGLE_*`, `TOKEN_ENCRYPTION_KEY`,
-  `APP_URL`, `GOOGLE_LOGIN_ACCOUNTS`). Nesecretní zakládá Claude přes API sám, tajemství doplní uživatel.
-- Preview chrání Vercel Authentication. Pro Playwright: sdílecí odkaz z dashboardu (Share, 23 h) a
-  dočasně povolený host preview v síťových pravidlech prostředí (po testu odebrat). Vercel runtime logy
-  přes konektor vrací 403, data jdou číst přes Neon konektor (projekt `neon-zbz-vzdelavani-demo`).
-- Do Wiki se automat dostane jen přístupovým kódem. Kód zná uživatel, nikam ho nezapisuj. Doporučeno
-  ho po testu 12. 11. změnit, protože byl v chatu.
-- Pozor: Google přihlášení a Kalendář sdílí jednoho OAuth klienta.
-
-## Čeká na odpověď uživatele
-
-- Výběr poskytovatele přepisu a úložiště: přehled je v `docs/nahravky-moznosti.md`, odloženo, rozhodne firma.
-- Skutečné pravidlo střídání typů ve slotu šablony a zda předvyplňovat téma i tréninkům.
-- Kam trvale uložit zadání (ZIP), aby ho nebylo nutné posílat. Do tohoto veřejného repa ne.
-
-## Úklid, rozhoduje uživatel
-
-- Token pro `api.vercel.com` v síťových tajemstvích prostředí Default a sloučená větev
-  `claude/vzdelavani-vercel-preview-52jflw`.
-- Jednobajtový soubor `h` v kořeni repa (commit „Create h“), nejspíš omyl.
-- Tento soubor uvádí názvy projektů na Vercelu a v Neonu. Nejsou to tajemství, u veřejného repa zvážit.
-
-Respektuj limit kontextu v `CLAUDE.md`. Na `main` nepushuj, merge dělá uživatel přes PR.
+- **B8 Zpět po zveřejnění (ve výchozím stavu vypnuté):** `unpublishEvents`, `listUndoable` (`services/events.ts`), `PublishUndoBar.tsx`
+  v layoutu Wiki, sloupec `events.invite_hold_until` (migrace `0007`). Test `tests/zpet-po-zverejneni.test.ts` si lhůtu zapíná sám.
+- **Vercel:** tým `maci` (`team_PtkXmFd9hI7UeUYovGkbwZQG`), projekt `zbc-vzdelavani-demo`
+  (`prj_MYpwzB5KekzHAVwbiUDrZv6CG12i`), plán Hobby. MCP konektor Vercelu projekt nevidí, používej přímé
+  `curl https://api.vercel.com/...` (proxy doplní přihlášení). Preview vzniká pushem větve.
+  `POST /v13/deployments` nepoužívat (vytvoří produkční deploy). Cron běží jen v produkci, jednou denně.
+  Preview chrání Vercel Authentication, runtime logy přes konektor vrací 403. Všechny preview sdílí jednu
+  databázi Neon (projekt `neon-zbz-vzdelavani-demo`). Google přihlášení a Kalendář sdílí jednoho OAuth klienta.
+- **Přístupový kód** do Wiki zná jen uživatel, nikam ho nezapisuj.
+- **Lokální běh:** `SIM_LATENCY_MS=0 npx next dev -p 3100` nad PGlite. Playwright je
+  v `/opt/node-tools/node_modules` (načíst přes `createRequire`), přihlášení na `/vstup`:
+  `label.persona:has(input[value="demo-spravce"])` a odeslat. Po větší změně serverových modulů server
+  restartuj. `AGENTS.md` v kořeni nemaž. Položky v `Menu` klikej až po `scrollIntoViewIfNeeded()` spouště,
+  posun stránky menu zavře (proto se dřív skript zasekl).
+- **Odsouhlaseno dřív:** fiktivní role a simulace zůstávají jako přepínače. E-maily rozesílá jen Google.
+  Jména zájemců o téma vidí jen správce. Nahrávky a přepis jsou zatím jen demo, nic placeného.

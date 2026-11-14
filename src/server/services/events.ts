@@ -5,13 +5,14 @@ import { addDays, fromPragueLocal, isoWeekday, monthRange, toDateKey } from "@/l
 import type { EventType, Group, PlanStatus, SyncStatus } from "@/lib/types";
 import { audit } from "@/server/audit";
 import { targetCalendarId } from "@/server/calendar/target";
-import { config, now } from "@/server/config";
+import { config, now, publishUndoSeconds } from "@/server/config";
 import { getDb, type Executor } from "@/server/db/client";
 import {
   calendarLinks,
   eventRevisions,
   events,
   generationExclusions,
+  recordings,
   templateSlots,
   users,
 } from "@/server/db/schema";
@@ -36,9 +37,9 @@ export type EventCard = {
   unpublishedChanges: boolean;
   extraordinary: boolean;
   past: boolean;
-  /** Jen pro organizátora. „unlinked“ = zveřejněná akce zatím bez vazby na pozvánku. */
+  /** Jen pro správce. „unlinked“ = zveřejněná akce zatím bez vazby na pozvánku. */
   syncStatus: SyncStatus | "unlinked" | null;
-  /** Jen pro organizátora: zveřejněný termín, pokud ho rozpracovaný návrh přesouvá jinam. */
+  /** Jen pro správce: zveřejněný termín, pokud ho rozpracovaný návrh přesouvá jinam. */
   movedFrom: { startsAt: string; endsAt: string; allDay: boolean } | null;
 };
 
@@ -116,7 +117,7 @@ export async function listEvents(viewer: Viewer, from: Date, to: Date): Promise<
     : [];
   const linkByEvent = new Map(links.map((l) => [l.eventId, l]));
   const [names, slotDays] = await Promise.all([userNames(db), templateWeekdays(db)]);
-  // Rozsah a pořadí se řídí verzí, kterou uživatel opravdu vidí (organizátor pracovní, ostatní zveřejněnou).
+  // Rozsah a pořadí se řídí verzí, kterou uživatel opravdu vidí (správce pracovní, ostatní zveřejněnou).
   return rows
     .map((row) => toCard(viewer, row, linkByEvent.get(row.id), names, slotDays))
     .filter((card): card is EventCard => card !== null && new Date(card.startsAt) < to && new Date(card.endsAt) >= from)
@@ -140,10 +141,8 @@ export async function listMonth(viewer: Viewer, monthKey: string): Promise<Event
   return listEvents(viewer, new Date(start.getTime() - 7 * 86_400_000), new Date(end.getTime() + 7 * 86_400_000));
 }
 
-/** Nejbližší zveřejněná akce pro uživatele (bez svátků a zrušených). */
-/** Nejbližší zveřejněné akce, které uživatel uvidí, od nejbližší. */
 /**
- * Nejbližší akce uživatele. Běžně jen zveřejněné. Filtr Plánu (`match`) může výběr zúžit a organizátorovi
+ * Nejbližší akce uživatele. Běžně jen zveřejněné. Filtr Plánu (`match`) může výběr zúžit a správci
  * při filtru podle stavu ukázat i návrhy (`includeDrafts`): viditelnost dál určuje `listEvents`.
  */
 export async function nextEventsFor(viewer: Viewer, limit: number, match?: (card: EventCard) => boolean, includeDrafts = false): Promise<EventCard[]> {
@@ -167,7 +166,7 @@ export async function loadEventRow(db: Executor, id: string): Promise<EventRow |
   return row ?? null;
 }
 
-// ——— Zápisy organizátora ———
+// ——— Zápisy správce ———
 
 export type EventInput = {
   type: EventType;
@@ -219,12 +218,19 @@ export type SaveMode = "draft" | "publish";
  * Zveřejnění uloží snímek, revizi a požadavek na synchronizaci v jedné transakci.
  * Svátek se nesynchronizuje. Vazbu tu dostane akce založená ve Wiki. Importované akci bez vazby
  * ji dozaloží `linkPublishedWithoutInvite` (nejdřív ověří, že ve stejném čase neleží cizí pozvánka).
+ * První zveřejnění nastaví krátkou lhůtu, po kterou fronta pozvánku neodešle a krok jde vrátit
+ * (`unpublishEvents`). Každé další zveřejnění lhůtu ruší a odchází hned.
  */
 async function publishInTx(tx: Executor, row: EventRow, actorId: string, action: string) {
   const snapshot = snapshotOf(row);
+  const holdSec = action === "publish" && row.publishedRevision === null && row.type !== "holiday" ? publishUndoSeconds() : 0;
   await tx
     .update(events)
-    .set({ published: snapshot, publishedRevision: row.revision })
+    .set({
+      published: snapshot,
+      publishedRevision: row.revision,
+      inviteHoldUntil: holdSec > 0 ? sql`now() + make_interval(secs => ${holdSec})` : null,
+    })
     .where(eq(events.id, row.id));
   await tx
     .insert(eventRevisions)
@@ -288,7 +294,7 @@ export async function createEvent(viewer: Viewer, input: EventInput, mode: SaveM
   return id;
 }
 
-/** Optimistická kontrola souběhu: změna projde jen nad revizí, kterou organizátor viděl. */
+/** Optimistická kontrola souběhu: změna projde jen nad revizí, kterou správce viděl. */
 export async function updateEvent(
   viewer: Viewer,
   id: string,
@@ -434,6 +440,103 @@ export async function deleteDraft(viewer: Viewer, id: string, expectedRevision: 
   });
 }
 
+// ——— Zpět po zveřejnění ———
+
+/** O kolik sekund smí vrácení dorazit po lhůtě (klik těsně před koncem odpočtu). */
+const UNDO_GRACE_SEC = 5;
+
+export type UndoablePublish = { id: string; label: string; topicTitle: string | null; remainingMs: number };
+
+/** Akce, které uživatel právě zveřejnil a jejich pozvánka ještě čeká ve lhůtě. */
+export async function listUndoable(viewer: Viewer): Promise<UndoablePublish[]> {
+  if (!isOrganizer(viewer)) return [];
+  const db = await getDb();
+  const rows = await db
+    .select({
+      id: events.id,
+      label: events.label,
+      topicTitle: events.topicTitle,
+      remainingMs: sql<number>`(extract(epoch from ${events.inviteHoldUntil} - now()) * 1000)::int`,
+    })
+    .from(events)
+    .where(
+      and(
+        eq(events.orgId, config.orgId),
+        eq(events.updatedBy, viewer.id),
+        eq(events.status, "published"),
+        sql`${events.revision} = ${events.publishedRevision}`,
+        gt(events.inviteHoldUntil, sql`now()`),
+      ),
+    )
+    .orderBy(asc(events.startsAt), asc(events.id));
+  return rows;
+}
+
+/**
+ * Vrátí právě zveřejněné akce mezi návrhy. Projde jen první zveřejnění ve lhůtě, jehož pozvánka
+ * ještě neodešla a ani se neodesílá. Vznikne nová revize „unpublish“, starší revize zůstávají.
+ * Čekající vazba se smaže, takže fronta nemá co odeslat. Ostatní akce se přeskočí beze změny.
+ */
+export async function unpublishEvents(viewer: Viewer, ids: string[]): Promise<{ reverted: string[]; skipped: number }> {
+  requireOrganizer(viewer);
+  const db = await getDb();
+  return db.transaction(async (tx) => {
+    const reverted: string[] = [];
+    for (const id of new Set(ids)) {
+      const [current] = await tx
+        .select()
+        .from(events)
+        .where(
+          and(
+            eq(events.id, id),
+            eq(events.orgId, config.orgId),
+            eq(events.status, "published"),
+            sql`${events.revision} = ${events.publishedRevision}`,
+            gt(events.inviteHoldUntil, sql`now() - make_interval(secs => ${UNDO_GRACE_SEC})`),
+          ),
+        )
+        .limit(1);
+      if (!current) continue;
+      const [recording] = await tx.select({ id: recordings.id }).from(recordings).where(eq(recordings.eventId, id)).limit(1);
+      if (recording) continue;
+      // Vazbu lze smazat jen netknutou: bez pozvánky, bez pokusu a bez zámku běžící synchronizace.
+      const [link] = await tx.select({ eventId: calendarLinks.eventId }).from(calendarLinks).where(eq(calendarLinks.eventId, id)).limit(1);
+      if (link) {
+        const removed = await tx
+          .delete(calendarLinks)
+          .where(
+            and(
+              eq(calendarLinks.eventId, id),
+              isNull(calendarLinks.externalEventId),
+              eq(calendarLinks.attempts, 0),
+              or(isNull(calendarLinks.leaseUntil), lt(calendarLinks.leaseUntil, sql`now()`)),
+            ),
+          )
+          .returning({ eventId: calendarLinks.eventId });
+        if (!removed.length) continue;
+      }
+      const [row] = await tx
+        .update(events)
+        .set({
+          status: "draft",
+          published: null,
+          publishedRevision: null,
+          inviteHoldUntil: null,
+          revision: sql`${events.revision} + 1`,
+          updatedBy: viewer.id,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(events.id, id), eq(events.revision, current.revision)))
+        .returning();
+      if (!row) continue;
+      await tx.insert(eventRevisions).values({ eventId: id, revision: row.revision, action: "unpublish", snapshot: snapshotOf(row), actorId: viewer.id });
+      await audit(tx, viewer.id, "event.unpublish", "event", id);
+      reverted.push(id);
+    }
+    return { reverted, skipped: new Set(ids).size - reverted.length };
+  });
+}
+
 // ——— Hromadné zveřejnění návrhů měsíce ———
 
 export type MonthDraft = {
@@ -561,7 +664,7 @@ async function plannedTopicIds(db: Executor): Promise<Set<string>> {
 
 /**
  * Doplní chybějící sloty měsíce podle šablony. Budoucím termínům firemního vzdělávání předvyplní
- * doporučené téma podle zájmu a historie. Vše vzniká jako návrh, který organizátor upraví a zveřejní.
+ * doporučené téma podle zájmu a historie. Vše vzniká jako návrh, který správce upraví a zveřejní.
  */
 export async function generateMonth(viewer: Viewer, monthKey: string): Promise<{ created: number; withTopic: number }> {
   requireOrganizer(viewer);
@@ -621,6 +724,36 @@ export async function generateMonth(viewer: Viewer, monthKey: string): Promise<{
     if (created) await audit(tx, viewer.id, "plan.generate", "month", monthKey);
     return { created, withTopic };
   });
+}
+
+export type MonthPreparation = {
+  created: number;
+  withTopic: number;
+  drafts: MonthDraft[];
+  changeDrafts: number;
+  /** Doporučené téma pro návrh, který zatím žádné nemá. Klíč je ID návrhu. */
+  suggestions: Record<string, { name: string; interestCount: number }>;
+};
+
+/**
+ * První krok průvodce „Připravit další měsíc“: doplní chybějící termíny ze šablony a vrátí návrhy měsíce
+ * s doporučeným tématem tam, kde chybí. Nic nezveřejňuje. Opakované volání nic nezdvojí.
+ */
+export async function prepareMonth(viewer: Viewer, monthKey: string): Promise<MonthPreparation> {
+  requireOrganizer(viewer);
+  // Uplynulý měsíc se nepřipravuje: jeho termíny by stejně nešly zveřejnit.
+  if (monthKey < toDateKey(now()).slice(0, 7)) throw new DomainError("invalid_state");
+  const { created, withTopic } = await generateMonth(viewer, monthKey);
+  const { drafts, changeDrafts } = await listMonthDrafts(viewer, monthKey);
+  const db = await getDb();
+  const planned = await plannedTopicIds(db);
+  const suggested = suggestTopics(
+    drafts.filter((d) => !d.topicTitle).map((d) => ({ generationKey: d.id, type: d.type, audience: d.audience })),
+    await listTopics(viewer),
+    planned,
+  );
+  const suggestions = Object.fromEntries([...suggested].map(([id, topic]) => [id, { name: topic.name, interestCount: topic.interestCount }]));
+  return { created, withTopic, drafts, changeDrafts, suggestions };
 }
 
 export type TemplateSlotInput = { isoWeekday: number; startTime: string; endTime: string; types: EventType[]; active: boolean };

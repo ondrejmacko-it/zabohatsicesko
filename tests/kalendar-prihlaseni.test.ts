@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, test } from "vitest";
 import { beginLogin, verifyLoginState } from "@/server/auth/google-login";
 import { audienceAttendees, listRecipients } from "@/server/calendar/attendees";
-import { loadCalendarStatus } from "@/server/services/calendar-status";
+import { inviteModeOf, loadCalendarStatus } from "@/server/services/calendar-status";
 import { admin, organizer, participant, resetDemo } from "./helpers";
 
 // Souhlas ke Kalendáři rovnou při přihlášení správce, příjemci pozvánek podle skupin a stav Kalendáře.
@@ -63,7 +63,16 @@ describe("příjemci pozvánek a stav Kalendáře v simulaci", () => {
       expect(status.mode).toBe("simulation");
       expect(status.connection).toBeNull();
       expect(status.recipients.fp.length).toBeGreaterThan(0);
+      expect(inviteModeOf(status)).toBe("simulation");
     }
     await expect(loadCalendarStatus(participant)).rejects.toMatchObject({ code: "forbidden" });
+  });
+
+  test("režim pozvánek pro dialog akce: nepropojený Kalendář, testovací adresa, publikum", () => {
+    const base = { mode: "google" as const, problem: null, calendarId: "cal", recipients: { vsichni: [], fp: [], rm: [], "tym-a": [] }, audienceRecipients: { vsichni: [], fp: [], rm: [], "tym-a": [] } };
+    const connection = { accountEmail: "kalendar@example.invalid", connectedAt: "2026-11-12T09:00:00.000Z", expiresAt: null };
+    expect(inviteModeOf({ ...base, connection: null, attendeeSource: "audience" })).toBe("disconnected");
+    expect(inviteModeOf({ ...base, connection, attendeeSource: "allowlist" })).toBe("allowlist");
+    expect(inviteModeOf({ ...base, connection, attendeeSource: "audience" })).toBe("audience");
   });
 });

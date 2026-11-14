@@ -10,7 +10,18 @@ import type { Group } from "@/lib/types";
 import { archiveTopicAction, proposeTopicAction, toggleInterestAction, updateTopicAction, type ActionResult } from "../actions";
 
 /** Přepínač zájmu. Jeden uživatel = nejvýš jeden zájem o téma (hlídá server). */
-export function InterestButton({ topicId, interested, topicName }: { topicId: string; interested: boolean; topicName: string }) {
+export function InterestButton({
+  topicId,
+  interested,
+  topicName,
+  primary = false,
+}: {
+  topicId: string;
+  interested: boolean;
+  topicName: string;
+  /** Hlavní akce karty, na kterou člověk přišel z pozvánky. */
+  primary?: boolean;
+}) {
   const [state, action, pending] = useActionState(toggleInterestAction, null);
   return (
     <form action={action}>
@@ -18,7 +29,7 @@ export function InterestButton({ topicId, interested, topicName }: { topicId: st
       <input type="hidden" name="interested" value={interested ? "false" : "true"} />
       <button
         type="submit"
-        className={interested ? "btn btn-small interest-on" : "btn btn-small"}
+        className={interested ? "btn btn-small interest-on" : primary ? "btn btn-small btn-primary" : "btn btn-small"}
         aria-pressed={interested}
         aria-label={`${interested ? "Zrušit zájem o téma" : "Mám zájem o téma"} ${topicName}`}
         disabled={pending}
@@ -88,7 +99,7 @@ function ProposeForm({ groups, onClose }: { groups: Group[]; onClose: () => void
   );
 }
 
-/** Správa tématu pro organizátora: úprava názvu a skupiny, archivace. */
+/** Správa tématu pro správce: úprava názvu a skupiny, archivace. */
 /** Správa tématu v jedné nabídce: úprava názvu a skupiny, archivace s potvrzením. */
 export function TopicManage({ topic, groups }: { topic: { id: string; name: string; audience: string }; groups: Group[] }) {
   const [open, setOpen] = useState(false);
@@ -119,7 +130,7 @@ function EditTopicForm({ topic, groups, onClose }: { topic: { id: string; name: 
   const [audience, setAudience] = useState(topic.audience);
   const [state, setState] = useState<ActionResult | null>(null);
   const [pending, start] = useTransition();
-  // Ruční odeslání: po chybě (například duplicitní název) zůstanou hodnoty tak, jak je organizátor vyplnil.
+  // Ruční odeslání: po chybě (například duplicitní název) zůstanou hodnoty tak, jak je správce vyplnil.
   const submit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);

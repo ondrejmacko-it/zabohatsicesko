@@ -1000,6 +1000,156 @@ body > .dialog[open]:has(~ .dialog[open]) {
   font-weight: 600;
 }
 
+.suggestion-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+}
+
+.suggestion-count {
+  color: var(--ochre-dark);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.suggestion-count[data-empty="true"] {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+/* Hosté podle skupiny v dialogu akce: počet vyniká, jména a poznámka k režimu jsou tlumené. */
+.guest-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--band);
+}
+
+.guest-preview-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 14px;
+}
+
+.guest-preview-head svg {
+  flex: none;
+  color: var(--muted);
+}
+
+.guest-preview-names {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+}
+
+.guest-chip {
+  padding: 1px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: 12px;
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+.guest-more {
+  display: contents;
+}
+
+.guest-more > summary {
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.guest-more[open] > summary {
+  display: none;
+}
+
+.guest-preview > .field-hint {
+  margin: 0;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+/* Kroky průvodce: aktuální krok vynikne, hotové a budoucí jsou tlumené. */
+.steps {
+  display: flex;
+  gap: 6px 18px;
+  flex-wrap: wrap;
+  margin: 0 0 14px;
+  padding: 0 0 12px;
+  border-bottom: 1px solid var(--line);
+  list-style: none;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.step-number {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.step[data-state="current"] {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.step[data-state="current"] .step-number {
+  border-color: var(--ochre);
+  background: var(--ochre);
+  color: #fff;
+}
+
+.step[data-state="done"] .step-number {
+  border-color: var(--ok);
+  color: var(--ok);
+}
+
+.step-lead {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.publish-interest {
+  color: var(--ochre-dark);
+  font-weight: 600;
+}
+
+.consequence-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding-left: 42px;
+  color: var(--ink-soft, inherit);
+  font-size: 13px;
+  line-height: 20px;
+}
+
 .slot {
   display: flex;
   flex-direction: column;
@@ -1839,6 +1989,30 @@ a.brief-link:hover {
   background: var(--ochre-soft);
 }
 
+.topic-card.topic-highlight {
+  border-color: var(--ochre);
+  box-shadow: 0 0 0 2px var(--ochre);
+}
+
+.access-code {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  font-variant-numeric: tabular-nums;
+}
+
+.code-input {
+  max-width: 16rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.topic-from-invite {
+  margin: 0 0 12px;
+  font-weight: 600;
+}
+
 .topic-main {
   display: flex;
   flex-direction: column;
@@ -2079,4 +2253,263 @@ p.cal-status {
   .publish-pick {
     grid-column: 1 / -1;
   }
+}
+
+/* Správa: účty jako řádky. Jméno a stav vyniknou, kontakt je tlumený, akce jsou vpravo na jedné ose. */
+.account-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.account-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+}
+
+.account-row + .account-row {
+  border-top: 1px solid var(--line);
+}
+
+.account-row[data-status="disabled"] .account-main {
+  opacity: 0.7;
+}
+
+.account-main > p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.account-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+
+.account-main strong {
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+
+.account-contact {
+  font-size: 12px;
+}
+
+.account-actions {
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+}
+
+/* ——— Odpovědi na pozvánku: hlavní je počet přijatých, jména jsou vedlejší ——— */
+.responses {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.responses-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin: 0;
+}
+
+.responses-head strong {
+  font-size: 16px;
+}
+
+.responses-head span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.responses-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+}
+
+.responses-list > div {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 12px;
+}
+
+.responses-list dt {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.responses-count {
+  color: var(--ink);
+}
+
+.responses-list dd {
+  margin: 0;
+  font-size: 14px;
+}
+
+.responses-accepted dd {
+  font-weight: 600;
+}
+
+/* ——— Pozvání: zpráva ke zkopírování a přehled hromadného pozvání ——— */
+.copy-message {
+  display: grid;
+  justify-items: start;
+  gap: 6px;
+}
+
+.copy-message .textarea {
+  width: 100%;
+}
+
+.page-head-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.bulk-rows {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  list-style: none;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.bulk-rows li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2px 12px;
+  padding: 8px 14px;
+  font-size: 14px;
+}
+
+.bulk-rows li + li {
+  border-top: 1px solid var(--line);
+}
+
+.bulk-rows span {
+  color: var(--muted);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+/* Po uložení: jméno vlevo, kopírování zprávy vpravo. Seznam se neroluje, aby šlo projít všechny. */
+.bulk-rows-links {
+  max-height: none;
+}
+
+.bulk-rows-links li {
+  align-items: center;
+}
+
+.bulk-person {
+  display: grid;
+  flex: 1 1 180px;
+  min-width: 0;
+  gap: 2px;
+}
+
+/* Když prohlížeč nedovolí kopírování, text zprávy zabere celý řádek. */
+.copy-message-compact:has(.textarea) {
+  flex-basis: 100%;
+}
+
+.bulk-problems ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  color: var(--ochre-dark);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+/* ——— Zpět po zveřejnění: pruh dole uprostřed, nad obsahem stránky ——— */
+.undo-bar {
+  position: fixed;
+  left: 50%;
+  bottom: 20px;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: max-content;
+  max-width: calc(100vw - 24px);
+  padding: 10px 12px 10px 16px;
+  border-radius: 12px;
+  background: var(--ink);
+  color: #fff;
+  box-shadow: 0 12px 32px rgba(35, 35, 35, 0.28);
+  transform: translateX(-50%);
+}
+
+.undo-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  margin: 0;
+  line-height: 1.35;
+}
+
+.undo-text strong {
+  overflow: hidden;
+  font-size: 0.9375rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.undo-text span {
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.undo-button {
+  flex: none;
+  border-color: #fff;
+  background: #fff;
+  color: var(--ink);
+}
+
+@media (max-width: 480px) {
+  .undo-bar {
+    right: 12px;
+    left: 12px;
+    width: auto;
+    max-width: none;
+    transform: none;
+  }
+
+  .undo-text {
+    flex: 1;
+  }
+}
+
+/* Věta zápisu, ve které se našel hledaný text. */
+.minutes-match {
+  margin: 6px 0 0;
+  padding-left: 10px;
+  border-left: 2px solid var(--line-strong);
+  color: var(--ink-soft);
+  font-size: 0.8125rem;
 }

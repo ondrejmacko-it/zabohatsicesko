@@ -28,7 +28,12 @@ export type SlotTimes = Record<number, string>;
 /** Kam vede klik na akci. Plán posílá odkaz, který otevře náhled v okně a zachová měsíc i filtry. */
 export type CardHref = (card: EventCard) => string;
 const pageHref: CardHref = (card) => `/vzdelavani/akce/${encodeURIComponent(card.id)}`;
-type Linking = { hrefFor?: CardHref; managing?: boolean };
+/** Odpovědi na pozvánku u akcí, kde je uživatel smí vidět (správce, vedoucí akce). */
+export type ResponseCounts = Record<string, { accepted: string[]; total: number }>;
+type Linking = { hrefFor?: CardHref; managing?: boolean; responses?: ResponseCounts };
+/** Odpovědi se na kartě ukazují jen u nadcházejících zveřejněných akcí, u proběhlých už nic neříkají. */
+const responsesOf = (card: EventCard, responses?: ResponseCounts) =>
+  card.planStatus === "published" && !card.past ? responses?.[card.id] : undefined;
 const dayOf = (card: EventCard) => toDateKey(new Date(card.startsAt));
 
 function byDay(cards: EventCard[]): Map<string, EventCard[]> {
@@ -40,7 +45,7 @@ function byDay(cards: EventCard[]): Map<string, EventCard[]> {
   return map;
 }
 
-/** Zveřejněné termíny, které rozpracovaný návrh přesouvá jinam. Vidí je jen organizátor. */
+/** Zveřejněné termíny, které rozpracovaný návrh přesouvá jinam. Vidí je jen správce. */
 function ghostsByDay(cards: EventCard[]): Map<string, EventCard[]> {
   const map = new Map<string, EventCard[]>();
   for (const card of cards) {
@@ -51,7 +56,7 @@ function ghostsByDay(cards: EventCard[]): Map<string, EventCard[]> {
   return map;
 }
 
-/** Stín původního termínu: kolegové a Kalendář ho vidí, dokud organizátor přesun nezveřejní. */
+/** Stín původního termínu: kolegové a Kalendář ho vidí, dokud správce přesun nezveřejní. */
 function GhostBlock({ card, hrefFor = pageHref }: { card: EventCard; hrefFor?: CardHref }) {
   const from = card.movedFrom!;
   return (
@@ -65,7 +70,8 @@ function GhostBlock({ card, hrefFor = pageHref }: { card: EventCard; hrefFor?: C
   );
 }
 
-function EventBlock({ card, hrefFor = pageHref, managing = false }: { card: EventCard } & Linking) {
+function EventBlock({ card, hrefFor = pageHref, managing = false, responses }: { card: EventCard } & Linking) {
+  const replies = responsesOf(card, responses);
   const status = primaryStatus(card);
   const tone = cardTone(card);
   const isHoliday = card.type === "holiday";
@@ -82,6 +88,11 @@ function EventBlock({ card, hrefFor = pageHref, managing = false }: { card: Even
           <span className={styles.line}>
             <span className={styles.key}>Vede</span> {card.leadName ?? <Todo>{missingText(managing, "vedoucího")}</Todo>}
           </span>
+          {replies && (
+            <span className={styles.line}>
+              <span className={styles.key}>Přijalo</span> {replies.accepted.length} z {replies.total}
+            </span>
+          )}
         </>
       )}
       {status && status.label !== "Zrušeno" && status.label !== "Svátek" && (
@@ -98,6 +109,7 @@ export function ScheduleGrid({
   slotTimes,
   hrefFor = pageHref,
   managing = false,
+  responses,
 }: {
   monthKey: string;
   cards: EventCard[];
@@ -155,7 +167,7 @@ export function ScheduleGrid({
                         {day === todayKey && <span className={styles.today}>dnes</span>}
                       </span>
                       {dayCards.map((card) => (
-                        <EventBlock key={card.id} card={card} hrefFor={hrefFor} managing={managing} />
+                        <EventBlock key={card.id} card={card} hrefFor={hrefFor} managing={managing} responses={responses} />
                       ))}
                       {inMonth && (ghosts.get(day) ?? []).map((card) => <GhostBlock key={`stin-${card.id}`} card={card} hrefFor={hrefFor} />)}
                     </td>
@@ -204,6 +216,7 @@ export function Agenda({
   emptyText,
   hrefFor = pageHref,
   managing = false,
+  responses,
 }: { monthKey: string; cards: EventCard[]; todayKey: string; emptyText?: string } & Linking) {
   const days = byDay(cards.filter((c) => monthOf(dayOf(c)) === monthKey));
   const ghosts = ghostsByDay(cards);
@@ -237,6 +250,7 @@ export function Agenda({
                 <ul className={styles.agendaEvents}>
                   {(days.get(day) ?? []).map((card) => {
                     const status = primaryStatus(card);
+                    const replies = responsesOf(card, responses);
                     return (
                       <li key={card.id}>
                         <Link href={hrefFor(card)} scroll={false} className={`${styles.agendaEvent} ${styles[cardTone(card)]}`}>
@@ -249,6 +263,7 @@ export function Agenda({
                               <span className={styles.line}>
                                 {card.topicTitle ?? <Todo>{missingText(managing, "téma")}</Todo>} ·{" "}
                                 {card.leadName ?? <Todo>{missingText(managing, "vedoucího")}</Todo>}
+                                {replies ? ` · přijalo ${replies.accepted.length} z ${replies.total}` : ""}
                               </span>
                             )}
                           </span>

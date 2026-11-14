@@ -6,7 +6,7 @@ export default defineConfig({
   test: {
     include: ["tests/**/*.test.ts"],
     environment: "node",
-    env: { PGLITE_DIR: "memory://", SIM_LATENCY_MS: "0" },
+    env: { PGLITE_DIR: "memory://", SIM_LATENCY_MS: "0", PUBLISH_UNDO_SEC: "0" },
     testTimeout: 30_000,
     hookTimeout: 60_000,
   },

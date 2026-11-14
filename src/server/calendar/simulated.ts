@@ -20,14 +20,15 @@ const toExternal = (row: SimRow): ExternalEvent => ({
 });
 
 /**
- * Simulace Google Kalendáře nad vlastními tabulkami. Chová se jako organizátorská kopie události:
+ * Simulace Google Kalendáře nad vlastními tabulkami. Chová se jako správcovská kopie události:
  * drží identitu, hosty s RSVP a odkaz na schůzku, číslo sekvence a záznam odeslaných oznámení.
  */
 export class SimulatedCalendar implements CalendarProvider {
   constructor(private readonly db: Executor) {}
 
-  private async gate(): Promise<void> {
-    await simulatedLatency();
+  /** Čtení pro přehledy (Plán) se uměle nezdržuje, zpoždění má ukázat jen průběh zápisu a detail. */
+  private async gate(latency = true): Promise<void> {
+    if (latency) await simulatedLatency();
     if (await readSwitch(this.db, "calendar.revoked")) throw new CalendarError("calendar_revoked", false);
     if (await readSwitch(this.db, "calendar.outage")) throw new CalendarError("calendar_unavailable", true);
   }
@@ -106,7 +107,7 @@ export class SimulatedCalendar implements CalendarProvider {
   }
 
   async listBetween(calendarId: string, from: Date, to: Date): Promise<ExternalEvent[]> {
-    await this.gate();
+    await this.gate(false);
     const rows = await this.db
       .select()
       .from(simCalendarEvents)
@@ -129,6 +130,16 @@ export async function simulateManualEdit(db: Executor, externalEventId: string):
     .update(simCalendarEvents)
     .set({ summary: sql`${simCalendarEvents.summary} || ' (upraveno v Kalendáři)'`, updatedAt: new Date() })
     .where(eq(simCalendarEvents.id, externalEventId));
+}
+
+/** Jen pro předvedení: hosté „odpoví“ na pozvánku. První polovina přijme, další odmítne, možná a bez odpovědi. */
+export async function simulateResponses(db: Executor, externalEventId: string): Promise<void> {
+  const [row] = await db.select({ attendees: simCalendarEvents.attendees }).from(simCalendarEvents).where(eq(simCalendarEvents.id, externalEventId)).limit(1);
+  if (!row) return;
+  const rest = ["declined", "tentative", "needsAction"] as const;
+  const half = Math.ceil(row.attendees.length / 2);
+  const attendees = row.attendees.map((a, i) => ({ ...a, responseStatus: i < half ? ("accepted" as const) : rest[(i - half) % rest.length]! }));
+  await db.update(simCalendarEvents).set({ attendees, updatedAt: new Date() }).where(eq(simCalendarEvents.id, externalEventId));
 }
 
 /** Kontrolní pohled ukázky: oznámení, která by Google poslal pozvaným. */

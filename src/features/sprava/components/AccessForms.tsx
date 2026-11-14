@@ -5,7 +5,8 @@ import { ActionMessage } from "@/components/ActionForm";
 import { submitKeepingValues } from "@/features/shared/keep-values";
 import { GROUP_LABELS, ROLE_LABELS } from "@/lib/labels";
 import { GROUPS, type Group, type Role } from "@/lib/types";
-import { inviteUserAction, updateAccessAction } from "../actions";
+import type { ActionResult } from "@/features/shared/run-action";
+import { inviteUserAction, updateAccessAction, type AccessMessage, type AccessResult } from "../actions";
 
 /** Výběr role a skupin. Nabízí jen role, které smí přihlášený uživatel přidělit (hlídá i server). */
 const PRESETS: Array<{ label: string; role: Role; groups: Group[] }> = [
@@ -15,7 +16,7 @@ const PRESETS: Array<{ label: string; role: Role; groups: Group[] }> = [
   { label: "Správce", role: "admin", groups: [...GROUPS] },
 ];
 
-function AccessFields({ roles, role: initialRole, groups: initialGroups }: { roles: Role[]; role: Role; groups: Group[] }) {
+export function AccessFields({ roles, role: initialRole, groups: initialGroups }: { roles: Role[]; role: Role; groups: Group[] }) {
   const [role, setRole] = useState(initialRole);
   const [groups, setGroups] = useState(initialGroups);
   const toggle = (group: Group, on: boolean) => setGroups((current) => (on ? [...current, group] : current.filter((g) => g !== group)));
@@ -72,34 +73,102 @@ type AccessProps = {
   groups: Group[];
   /** approve = čekající žádost, edit = aktivní účet, restore = účet s odebraným přístupem. */
   mode: "approve" | "edit" | "restore";
+  /** Zavolá se po úspěšném uložení (zavření okna). */
+  onDone?: () => void;
+  onCancel?: () => void;
 };
 
 /** Schválení žádosti, úprava přístupu, nebo jeho odebrání a vrácení. Stav posílá stisknuté tlačítko. */
-export function AccessForm({ userId, roles, role, groups, mode }: AccessProps) {
-  const [state, action, pending] = useActionState(updateAccessAction, null);
+export function AccessForm({ userId, roles, role, groups, mode, onDone, onCancel }: AccessProps) {
+  const [state, action, pending] = useActionState(async (prev: ActionResult | null, formData: FormData) => {
+    const result = await updateAccessAction(prev, formData);
+    if (result.ok) onDone?.();
+    return result;
+  }, null);
   return (
     <form action={action} onSubmit={submitKeepingValues(action)} className="stack">
       <input type="hidden" name="userId" value={userId} />
+      <input type="hidden" name="status" value="active" />
       <AccessFields roles={roles} role={role} groups={mode === "approve" && groups.length === 0 ? ["vsichni"] : groups} />
-      <div className="row">
-        <button type="submit" name="status" value="active" className="btn btn-primary btn-small" disabled={pending}>
-          {mode === "approve" ? "Schválit přístup" : mode === "restore" ? "Vrátit přístup" : "Uložit změny"}
+      <ActionMessage state={state} />
+      <div className="dialog-actions">
+        <button type="submit" className="btn btn-primary" disabled={pending}>
+          {pending ? "Ukládám…" : mode === "approve" ? "Schválit přístup" : mode === "restore" ? "Vrátit přístup" : "Uložit změny"}
         </button>
-        {mode === "edit" && (
-          <button type="submit" name="status" value="disabled" className="btn btn-danger btn-small" disabled={pending}>
-            Odebrat přístup
+        {onCancel && (
+          <button type="button" className="btn" onClick={onCancel}>
+            Zrušit
           </button>
         )}
       </div>
-      <ActionMessage state={state} />
     </form>
   );
 }
 
-export function InviteForm({ roles, appUrl }: { roles: Role[]; appUrl: string }) {
-  const [state, action, pending] = useActionState(inviteUserAction, null);
+/** Hotová zpráva pro pozvaného kolegu. Wiki sama e-mail neposílá, správce ji vloží do e-mailu nebo chatu. */
+export function inviteMessage(access: AccessMessage): string {
+  const until = new Intl.DateTimeFormat("cs-CZ", { day: "numeric", month: "numeric", timeZone: "Europe/Prague" }).format(new Date(access.expires));
+  const how = access.code
+    ? `Otevři svůj osobní odkaz a zadej jednorázový kód ${access.code}.`
+    : `Otevři svůj osobní odkaz a přihlas se účtem Google ${access.email}.`;
+  return `Ahoj, zvu tě do firemní Wiki Za bohatší Česko. Najdeš tam plán vzdělávání, témata a zápisy z akcí.\n\n${how}\n${access.link}\n\nOdkaz je jen pro tebe, nepřeposílej ho. Platí do ${until} a jen na první přihlášení, tvoje zařízení si pak Wiki zapamatuje.`;
+}
+
+/** Zkopíruje zprávu do schránky. Když to prohlížeč nedovolí, ukáže text k ručnímu označení. */
+export function CopyMessage({ text, compact = false }: { text: string; compact?: boolean }) {
+  const [copied, setCopied] = useState<"yes" | "manual" | null>(null);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied("yes");
+    } catch {
+      setCopied("manual");
+    }
+  };
+  if (compact) {
+    return (
+      <div className="copy-message copy-message-compact">
+        <button type="button" className="btn btn-small" onClick={copy}>
+          {copied === "yes" ? "Zkopírováno" : "Kopírovat zprávu"}
+        </button>
+        {copied === "manual" && <textarea className="textarea" readOnly rows={4} value={text} onFocus={(e) => e.currentTarget.select()} />}
+      </div>
+    );
+  }
   return (
-    <form action={action} onSubmit={submitKeepingValues(action)} className="stack" key={state?.ok ? state.message : undefined}>
+    <div className="copy-message">
+      <button type="button" className="btn btn-primary" onClick={copy}>
+        Kopírovat zprávu s odkazem
+      </button>
+      <span className="field-hint" role="status">
+        {copied === "yes" ? "Zkopírováno. Vložte zprávu do e-mailu nebo chatu." : "Wiki e-mail neposílá. Zprávu vložíte do e-mailu nebo chatu sami."}
+      </span>
+      {copied === "manual" && <textarea className="textarea" readOnly rows={4} value={text} onFocus={(e) => e.currentTarget.select()} />}
+    </div>
+  );
+}
+
+export function InviteForm({ roles, onCancel }: { roles: Role[]; onCancel?: () => void }) {
+  const [state, action, pending] = useActionState<AccessResult | null, FormData>(inviteUserAction, null);
+  if (state?.ok && state.access) {
+    return (
+      <div className="stack">
+        <p className="notice notice-ok" role="status">
+          <strong>{state.access.name} má přístup.</strong> Teď mu pošlete jeho osobní odkaz, přihlásí se adresou {state.access.email}.
+        </p>
+        <CopyMessage text={inviteMessage(state.access)} />
+        <div className="dialog-actions">
+          {onCancel && (
+            <button type="button" className="btn" onClick={onCancel}>
+              Hotovo
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+  return (
+    <form action={action} onSubmit={submitKeepingValues(action)} className="stack">
       <div className="form-grid">
         <label className="field">
           <span className="field-label">Jméno</span>
@@ -112,14 +181,19 @@ export function InviteForm({ roles, appUrl }: { roles: Role[]; appUrl: string })
       </div>
       <AccessFields roles={roles} role="member" groups={["vsichni"]} />
       <p className="field-hint">
-        Wiki zatím e-mail s pozvánkou neposílá. Pošlete kolegovi odkaz {appUrl} a ať se přihlásí touto adresou.
+        Po uložení dostanete hotovou zprávu s odkazem, kterou kolegovi pošlete. Wiki sama e-mail neposílá.
       </p>
-      <div>
+      <ActionMessage state={state} />
+      <div className="dialog-actions">
         <button type="submit" className="btn btn-primary" disabled={pending}>
           {pending ? "Ukládám…" : "Pozvat"}
         </button>
+        {onCancel && (
+          <button type="button" className="btn" onClick={onCancel}>
+            Zavřít
+          </button>
+        )}
       </div>
-      <ActionMessage state={state} />
     </form>
   );
 }

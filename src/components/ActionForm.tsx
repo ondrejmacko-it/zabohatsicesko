@@ -7,7 +7,7 @@ import { Modal } from "./Modal";
 type Props = {
   action: (prev: ActionResult | null, formData: FormData) => Promise<ActionResult>;
   /** Skrytá pole s identifikátory (ID akce, revize). */
-  fields?: Record<string, string>;
+  fields?: Record<string, string | string[]>;
   label: string;
   pendingLabel?: string;
   variant?: "primary" | "default" | "danger";
@@ -26,7 +26,9 @@ export function ActionForm({ action, fields = {}, label, pendingLabel, variant =
   }, null);
   const className = `btn${variant === "primary" ? " btn-primary" : variant === "danger" ? " btn-danger" : ""}${small ? " btn-small" : ""}`;
 
-  const hidden = Object.entries(fields).map(([name, value]) => <input key={name} type="hidden" name={name} value={value} />);
+  const hidden = Object.entries(fields).flatMap(([name, value]) =>
+    (Array.isArray(value) ? value : [value]).map((one, index) => <input key={`${name}-${index}`} type="hidden" name={name} value={one} />),
+  );
 
   return (
     <div className="action-form">

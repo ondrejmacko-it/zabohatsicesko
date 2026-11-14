@@ -2,13 +2,17 @@
 
 import { useActionState, useRef, useState } from "react";
 import { ActionMessage } from "@/components/ActionForm";
-import { uploadRecordingAction } from "../actions";
+import { uploadRecordingAction, type ActionResult } from "../actions";
 
 const MAX_BYTES = 4 * 1024 * 1024;
 
 /** Nahrání nahrávky k akci. Před odesláním ukáže, ke které akci se soubor přiřadí. */
-export function UploadForm({ eventId, eventLabel, replacing }: { eventId: string; eventLabel: string; replacing: boolean }) {
-  const [state, action, pending] = useActionState(uploadRecordingAction, null);
+export function UploadForm({ eventId, eventLabel, replacing, onDone }: { eventId: string; eventLabel: string; replacing: boolean; onDone?: () => void }) {
+  const [state, action, pending] = useActionState(async (prev: ActionResult | null, formData: FormData) => {
+    const result = await uploadRecordingAction(prev, formData);
+    if (result.ok) onDone?.();
+    return result;
+  }, null);
   const [file, setFile] = useState<File | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const tooLarge = file !== null && file.size > MAX_BYTES;
@@ -27,7 +31,12 @@ export function UploadForm({ eventId, eventLabel, replacing }: { eventId: string
           required
           onChange={(e) => setFile(e.target.files?.[0] ?? null)}
         />
-        <span className="field-hint">WAV, MP3 nebo M4A, nejvýš 4 MB a 15 minut. Soubor se uloží soukromě.</span>
+        <span className="field-hint">
+          WAV, MP3 nebo M4A, nejvýš 4 MB a 15 minut. Soubor se uloží soukromě. Na zkoušku:{" "}
+          <a href="/demo/testovaci-nahravka.wav" download>
+            stáhnout testovací nahrávku
+          </a>
+        </span>
       </label>
       {file && (
         <p className={tooLarge ? "notice notice-danger" : "notice"}>
@@ -42,9 +51,6 @@ export function UploadForm({ eventId, eventLabel, replacing }: { eventId: string
         <button type="submit" className="btn btn-primary" disabled={pending || !file || tooLarge}>
           {pending ? "Nahrávám…" : "Potvrdit a nahrát"}
         </button>
-        <a className="btn btn-small" href="/demo/testovaci-nahravka.wav" download>
-          Stáhnout testovací nahrávku
-        </a>
       </div>
     </form>
   );

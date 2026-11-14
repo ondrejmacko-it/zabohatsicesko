@@ -6,6 +6,7 @@ import { EXTRAORDINARY_TYPES, GROUP_LABELS, PLAN_STATUS_LABELS } from "@/lib/lab
 import { formatDate, formatEventTime, toDateKey } from "@/lib/time";
 import type { Viewer } from "@/server/policy";
 import { isOrganizer } from "@/server/policy";
+import { loadInvitePreview } from "@/server/services/calendar-status";
 import { getEventDetail } from "@/server/services/detail";
 import { listPeople, loadTemplate } from "@/server/services/events";
 import type { PlanPreview } from "@/server/services/preview";
@@ -13,6 +14,7 @@ import { listTopics } from "@/server/services/topics";
 import { cardTone, primaryStatus, statusAdvice } from "../status";
 import { EventDialog } from "./EventDialog";
 import { EventMenu } from "./EventMenu";
+import { ResponsesBlock } from "./ResponsesBlock";
 
 type Props = { user: Viewer; eventId: string; preview: PlanPreview | null; previewKey?: string; closeHref: string };
 
@@ -27,6 +29,7 @@ export async function EventPeek({ user, eventId, preview, previewKey, closeHref 
   const managing = isOrganizer(user) && !preview;
   const editable = managing && detail.form && card.planStatus !== "cancelled";
   const [people, topics, template] = editable ? await Promise.all([listPeople(user), listTopics(user), loadTemplate()]) : [[], [], []];
+  const { responses } = detail;
   const start = new Date(card.startsAt);
   const status = primaryStatus(card);
   const advice = managing ? statusAdvice(card) : null;
@@ -44,7 +47,7 @@ export async function EventPeek({ user, eventId, preview, previewKey, closeHref 
         published: detail.publishedForm,
         people,
         topics,
-        inviteeCount: detail.sync?.inviteeCount ?? 0,
+        invite: await loadInvitePreview(user),
         planDays: template.filter((slot) => slot.active).map((slot) => slot.isoWeekday),
       }
     : null;
@@ -84,6 +87,7 @@ export async function EventPeek({ user, eventId, preview, previewKey, closeHref 
           <dd>{GROUP_LABELS[card.audience]}</dd>
         </div>
       </dl>
+      {responses && <ResponsesBlock responses={responses} />}
       {holiday && <p className="hint">Svátek je v plánu jen pro přehled, do Kalendáře se neposílá.</p>}
       {!holiday && <p className="hint">Kalendář, nahrávku a zápis najdete v celém detailu{managing ? " (Další možnosti)" : ""}.</p>}
       <div className="dialog-actions peek-actions">

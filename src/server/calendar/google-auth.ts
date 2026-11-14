@@ -31,13 +31,13 @@ export type OAuthStart = { url: string; cookieValue: string };
 
 /**
  * Připraví přesměrování na souhlas. Stav a PKCE ověřovač zůstávají v podepsané HttpOnly cookie
- * vázané na prohlížeč organizátora, takže callback nejde podvrhnout z cizí relace.
+ * vázané na prohlížeč správce, takže callback nejde podvrhnout z cizí relace.
  */
 export function beginAuthorization(
   cfg: GoogleCalendarConfig,
   userId: string,
   nowSec = Math.floor(Date.now() / 1000),
-  /** Adresa účtu, kterým se organizátor právě přihlásil. Google pak nenabízí výběr účtu. */
+  /** Adresa účtu, kterým se správce právě přihlásil. Google pak nenabízí výběr účtu. */
   loginHint?: string,
 ): OAuthStart {
   const state = randomBytes(24).toString("base64url");

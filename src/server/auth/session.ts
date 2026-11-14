@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 import { googleSessionAllowed } from "@/server/auth/google-login";
-import { config } from "@/server/config";
+import { config, gateMode } from "@/server/config";
 import { getDb, type Executor } from "@/server/db/client";
 import { users } from "@/server/db/schema";
 import type { Viewer } from "@/server/policy";
@@ -13,16 +13,19 @@ import type { Viewer } from "@/server/policy";
 // Role a skupiny se při každém požadavku čtou z databáze, takže odebrání práv platí okamžitě.
 
 const SESSION_TTL_SEC = 12 * 60 * 60;
+/** Kdo vstoupil jednorázovým kódem, nemá jak se přihlásit znovu sám. Zařízení proto drží přihlášení 30 dní. */
+const CODE_SESSION_TTL_SEC = 30 * 24 * 60 * 60;
+const ttlOf = (method: SignInMethod) => (method === "code" ? CODE_SESSION_TTL_SEC : SESSION_TTL_SEC);
 export const SESSION_COOKIE = config.isProduction ? "__Host-zbc_session" : "zbc_session";
 
-/** Jak session vznikla: výběrem fiktivní role, nebo přihlášením Google identitou. */
-export type SignInMethod = "demo" | "google";
-type Payload = { uid: string; exp: number; via?: "google" };
+/** Jak session vznikla: výběrem fiktivní role, přihlášením Google identitou, nebo jednorázovým kódem od správce. */
+export type SignInMethod = "demo" | "google" | "code";
+type Payload = { uid: string; exp: number; via?: "google" | "code" };
 
 const sign = (data: string) => createHmac("sha256", config.sessionSecret).update(data).digest("base64url");
 
 export function encodeSession(userId: string, nowSec = Math.floor(Date.now() / 1000), method: SignInMethod = "demo"): string {
-  const payload: Payload = { uid: userId, exp: nowSec + SESSION_TTL_SEC, ...(method === "google" ? { via: "google" } : {}) };
+  const payload: Payload = { uid: userId, exp: nowSec + ttlOf(method), ...(method === "demo" ? {} : { via: method }) };
   const data = Buffer.from(JSON.stringify(payload)).toString("base64url");
   return `${data}.${sign(data)}`;
 }
@@ -44,7 +47,7 @@ export function readSession(
   try {
     const payload = JSON.parse(Buffer.from(data, "base64url").toString("utf8")) as Partial<Payload>;
     if (typeof payload.uid !== "string" || typeof payload.exp !== "number" || payload.exp <= nowSec) return null;
-    return { userId: payload.uid, method: payload.via === "google" ? "google" : "demo" };
+    return { userId: payload.uid, method: payload.via === "google" || payload.via === "code" ? payload.via : "demo" };
   } catch {
     return null;
   }
@@ -57,9 +60,10 @@ export const sessionCookieOptions = {
   path: "/",
   maxAge: SESSION_TTL_SEC,
 };
+const cookieOptionsOf = (method: SignInMethod) => ({ ...sessionCookieOptions, maxAge: ttlOf(method) });
 
 export async function startSession(userId: string, method: SignInMethod = "demo"): Promise<void> {
-  (await cookies()).set(SESSION_COOKIE, encodeSession(userId, undefined, method), sessionCookieOptions);
+  (await cookies()).set(SESSION_COOKIE, encodeSession(userId, undefined, method), cookieOptionsOf(method));
 }
 
 export async function endSession(): Promise<void> {
@@ -84,8 +88,9 @@ export async function resolveSessionUser(
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
   // Čekající žádost ani odebraný přístup dovnitř nepustí, ani se starší platnou cookie.
   if (!user || user.orgId !== config.orgId || user.status !== "active") return null;
-  // Session z výběru fiktivní role nikdy neotevře skutečný účet z pozvánky nebo žádosti.
-  if (session.method === "demo" && user.origin !== "demo") return null;
+  // Session z výběru fiktivní role nikdy neotevře skutečný účet z pozvánky nebo žádosti
+  // a při vstupu jen na pozvánku neplatí vůbec.
+  if (session.method === "demo" && (user.origin !== "demo" || gateMode() === "invite")) return null;
   return { id: user.id, name: user.name, email: user.email, role: user.role, groups: user.groups, signedInWith: session.method };
 }
 
