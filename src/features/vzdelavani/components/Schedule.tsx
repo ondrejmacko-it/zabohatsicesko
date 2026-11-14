@@ -40,7 +40,7 @@ function byDay(cards: EventCard[]): Map<string, EventCard[]> {
   return map;
 }
 
-/** Zveřejněné termíny, které rozpracovaný návrh přesouvá jinam. Vidí je jen organizátor. */
+/** Zveřejněné termíny, které rozpracovaný návrh přesouvá jinam. Vidí je jen správce. */
 function ghostsByDay(cards: EventCard[]): Map<string, EventCard[]> {
   const map = new Map<string, EventCard[]>();
   for (const card of cards) {
@@ -51,7 +51,7 @@ function ghostsByDay(cards: EventCard[]): Map<string, EventCard[]> {
   return map;
 }
 
-/** Stín původního termínu: kolegové a Kalendář ho vidí, dokud organizátor přesun nezveřejní. */
+/** Stín původního termínu: kolegové a Kalendář ho vidí, dokud správce přesun nezveřejní. */
 function GhostBlock({ card, hrefFor = pageHref }: { card: EventCard; hrefFor?: CardHref }) {
   const from = card.movedFrom!;
   return (

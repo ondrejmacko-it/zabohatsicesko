@@ -17,7 +17,7 @@
     },
     {
       "id": "demo-organizator",
-      "name": "Organizátor ukázky",
+      "name": "Druhý správce ukázky",
       "role": "organizer",
       "groups": [
         "vsichni",

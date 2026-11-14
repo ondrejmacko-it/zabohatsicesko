@@ -9,7 +9,7 @@ import { getDb } from "@/server/db/client";
 import { isOrganizer } from "@/server/policy";
 import { AUTO_COOKIE, OAUTH_COOKIE, integrationsUrl, oauthCookieOptions, planUrl } from "../cookie";
 
-// Návrat z Googlu. Kód se smění jen tehdy, když stav odpovídá podepsané cookie téhož organizátora.
+// Návrat z Googlu. Kód se smění jen tehdy, když stav odpovídá podepsané cookie téhož správce.
 export async function GET(request: NextRequest) {
   const user = await getCurrentUser();
   const cfg = googleCalendarConfig();

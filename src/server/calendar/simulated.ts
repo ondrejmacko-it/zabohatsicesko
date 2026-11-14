@@ -20,7 +20,7 @@ const toExternal = (row: SimRow): ExternalEvent => ({
 });
 
 /**
- * Simulace Google Kalendáře nad vlastními tabulkami. Chová se jako organizátorská kopie události:
+ * Simulace Google Kalendáře nad vlastními tabulkami. Chová se jako správcovská kopie události:
  * drží identitu, hosty s RSVP a odkaz na schůzku, číslo sekvence a záznam odeslaných oznámení.
  */
 export class SimulatedCalendar implements CalendarProvider {

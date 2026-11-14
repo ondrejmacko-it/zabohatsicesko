@@ -11,7 +11,7 @@ const NOTIFICATION: Record<string, string> = { created: "pozvánka odeslána", u
 const describe = (f: ManagedFields) =>
   `${f.summary} · ${formatDayMonth(toDateKey(new Date(f.startsAt)))} ${formatEventTime(new Date(f.startsAt), new Date(f.endsAt), false)}${f.cancelled ? " · zrušeno" : ""}`;
 
-/** Stav vazby na Google Kalendář pro organizátora. Simulace i testovací režim Googlu mají stejné rozhraní. */
+/** Stav vazby na Google Kalendář pro správce. Simulace i testovací režim Googlu mají stejné rozhraní. */
 export function SyncPanelView({ eventId, sync }: { eventId: string; sync: SyncPanel }) {
   const statusBadge =
     sync.status === "synced"

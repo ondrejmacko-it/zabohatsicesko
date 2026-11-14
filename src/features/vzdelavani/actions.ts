@@ -378,7 +378,7 @@ export async function archiveTopicAction(_prev: ActionResult | null, formData: F
   });
 }
 
-// ——— Ukázkové přepínače (jen organizátor) ———
+// ——— Ukázkové přepínače (jen správce) ———
 
 export async function setSimulationAction(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
   return run(async (user) => {
