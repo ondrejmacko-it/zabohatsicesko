@@ -12,9 +12,9 @@ type Props = {
   keep: Record<string, string>;
   types: EventType[];
   type: EventType | undefined;
-  /** Nabídka „Zobrazit jako“. Jen pro organizátora, jinak null. */
+  /** Nabídka „Zobrazit jako“. Jen pro správce, jinak null. */
   preview: { groups: Option[]; people: Option[]; value: string } | null;
-  /** Filtr podle stavu s počty za měsíc. Jen pro organizátora ve vlastním pohledu, jinak null. */
+  /** Filtr podle stavu s počty za měsíc. Jen pro správce ve vlastním pohledu, jinak null. */
   states: { summary: MonthSummary; value: PlanState | undefined } | null;
   resetHref: string | null;
 };
@@ -31,7 +31,7 @@ export function PlanFilters({ keep, types, type, preview, states, resetHref }: P
         <label className="field">
           <span className="field-label">Zobrazit jako</span>
           <select className="select" name="jako" defaultValue={preview.value} onChange={submit}>
-            <option value="">Organizátor (vidím vše)</option>
+            <option value="">Správce (vidím vše)</option>
             <optgroup label="Co vidí skupina">
               {preview.groups.map((o) => (
                 <option key={o.key} value={o.key}>

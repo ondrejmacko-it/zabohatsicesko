@@ -136,7 +136,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                 </dd>
               </dl>
               <p className="small muted">
-                Organizátora nebo správce, který se přihlásí účtem Google, pošle Wiki na souhlas sama a vrátí ho na Plán. Tato
+                Správce, který se přihlásí účtem Google, pošle Wiki na souhlas sama a vrátí ho na Plán. Tato
                 stránka slouží ke kontrole, ručnímu připojení jiným účtem a odpojení. Jedno připojení platí pro celou Wiki.
               </p>
               <p className="small muted">

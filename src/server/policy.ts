@@ -26,7 +26,7 @@ export function canManageAccount(viewer: Viewer, target: { id: string; role: Rol
 }
 
 /**
- * Co smí uživatel z akce vidět. Organizátor vidí pracovní verzi, ostatní jen zveřejněný snímek
+ * Co smí uživatel z akce vidět. Správce vidí pracovní verzi, ostatní jen zveřejněný snímek
  * akce pro svou skupinu (nebo akce, kterou vedou či kontrolují). Jinak null.
  */
 export function visibleEvent(viewer: Viewer, row: EventRow): EventSnapshot | null {

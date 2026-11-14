@@ -134,7 +134,7 @@ async function syncPanel(viewer: Viewer, row: EventRow): Promise<SyncPanel | nul
 export type EventDetail = {
   card: EventCard;
   revision: number;
-  /** Jen organizátor: pracovní hodnoty pro dialog a zveřejněné hodnoty pro posouzení dopadu změny. */
+  /** Jen správce: pracovní hodnoty pro dialog a zveřejněné hodnoty pro posouzení dopadu změny. */
   form: EventFormValues | null;
   publishedForm: EventFormValues | null;
   leadName: string | null;
@@ -142,7 +142,7 @@ export type EventDetail = {
   cancelReason: string | null;
   canCancel: boolean;
   canDelete: boolean;
-  /** Akce drží místo v rozpisu ze šablony. Organizátor ji může nahradit jiným typem akce. */
+  /** Akce drží místo v rozpisu ze šablony. Správce ji může nahradit jiným typem akce. */
   fromTemplate: boolean;
   sync: SyncPanel | null;
   recording: RecordingPanel;
