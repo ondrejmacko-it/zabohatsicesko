@@ -9,40 +9,54 @@ Kontext máš v `docs/dalsi-session.md`, `README.md`, `docs/google-prihlaseni.md
 pravidla v `CLAUDE.md`. Tykej mi, piš přátelsky. Úpravy níže jsou odsouhlasené, rovnou je udělej. Ptej se jen
 na věci označené „zeptej se“.
 
-Stav: práce pokračuje na větvi `claude/tender-fermat-oepq6p` (vychází z `claude/blissful-mendel-ejkw5s`, draft PR #16
-do `main`). Zeptej se, jestli ji mám přidat do PR #16, nebo otevřít vlastní PR. Pokud je PR sloučený, vyjdi z `main`.
-Můj osobní účet je z Wiki smazaný, nezakládej ho znovu a nikam ho nezvi.
+Stav: práce je na větvi `claude/sharp-babbage-5nqoac` (z `main` po sloučení PR #16 až #18), bez PR. Zeptej se,
+jestli otevřít draft PR do `main`. Pokud je větev sloučená, vyjdi z `main`. Můj osobní účet je z Wiki smazaný,
+nezakládej ho znovu a nikam ho nezvi.
 
 Zásada pro celé UI: hlavní údaje a hlavní akce musí vyniknout, vedlejší texty jsou menší a tlumené, nic není
 ani o pixel mimo osu, vše je jasné na první pohled.
 
-1. Živý test se mnou krok za krokem. Skutečné pozvánky (`CALENDAR_ATTENDEES=audience`), vlastní `APP_URL`
-   a přesměrovací adresy v Google konzoli má jen preview větve `claude/blissful-mendel-ejkw5s`. Zeptej se, kde
-   testovat (nová větev potřebuje totéž). Postup: přihlášení správce (při druhém přihlášení jedna obrazovka
-   Googlu s Kalendářem), řádek „Kalendář“ na Plánu, všech 6 zveřejněných budoucích akcí má vazbu a hosty podle
-   skupin, nový účet a žádost, schválení ve Správě a pozvánky, které mu samy dojdou, změna, zrušení, odkaz na zápis.
-   Hromadné zveřejnění („Zveřejnit návrhy“ na Plánu) před prvním ostrým použitím na preview potvrď se mnou,
-   posílá e-maily. Po sloučení PR přenes proměnnou na všechny preview (zeptej se).
-2. Dialog akce: ukaž skutečné hosty podle vybrané skupiny (`loadCalendarStatus().recipients`) místo testovací
-   adresy a nabídni doporučená témata s počtem zájemců.
-3. Dokonči sloučení rolí v textech: hledej „organizátor“ v `src/` (Integrace, `SyncPanelView`, `EventPeek`,
-   detail akce, `status.ts`, legenda, nápovědy, výběr „Zobrazit jako: Organizátor (vidím vše)“) a nahraď
-   „správce“. Persona „Organizátor ukázky“ na `/vstup` a v seedu: přejmenuj nebo sluč (zeptej se, mění seed).
-4. Okno „Přidat zápis“ a detail akce za správce u cizí akce: ověř v prohlížeči „Nahrát záznam“, úpravu,
-   zveřejnění i stažení zápisu.
-5. Správa: úpravy uživatele v okně (`Modal`), řádkové akce v menu (`Menu`). Menu místo řady tlačítek v detailu
-   akce pro vedoucího, na Integraci a v `SyncPanelView`. Doověř okna (zápis za čtenáře, nahrání záznamu
-   a `AutoRefresh`, „Přidat zápis“ na 1280 px, Plán za účastníka na 390 px). Varování o hydrataci na Plánu
-   trvá (viděno 13. 11., příčina nehledána). Po každém bloku 1280 a 390 px.
-6. Dokumentace: `README.md`, `docs/predani.md`, `docs/google-prihlaseni.md`, `docs/google-kalendar.md` podle
-   stavu (jedna role Správce, souhlas ke Kalendáři při přihlášení, `GOOGLE_OAUTH_PUBLISHED`, příjemci pozvánek,
-   řádek stavu Kalendáře, automatické vazby a fronta z Plánu, hromadné zveřejnění měsíce).
-7. Snímky každého okna a stavu za každou roli na 1280 a 390 px jako ZIP se seznamem. Do repa je nedávej.
+1. Menu místo řady tlačítek v detailu akce pro vedoucího, na Integraci a v `SyncPanelView` (komponenta `Menu`).
+2. Doověř v prohlížeči: okno „Přidat zápis“ a detail cizí akce za správce („Nahrát záznam“, úprava, zveřejnění
+   i stažení zápisu), zápis za čtenáře, nahrání záznamu a `AutoRefresh`, „Přidat zápis“ na 1280 px, Plán za
+   účastníka na 390 px, ve Správě schválení a zamítnutí čekající žádosti (seed žádnou nemá, založ ji přihlášením
+   neznámého účtu nebo v testu). Varování o hydrataci na Plánu (viděno 13. 11., příčina nehledána).
+   Po každém bloku 1280 a 390 px.
+3. Živý test se mnou krok za krokem, až řeknu (14. 11. jsem ho odložil). Zeptej se, kde testovat: nová větev
+   potřebuje vlastní `APP_URL` (nastav přes API) a dvě přesměrovací adresy v Google konzoli (přidám já).
+   Postup: přihlášení správce (při druhém přihlášení jedna obrazovka Googlu s Kalendářem), řádek „Kalendář“ na
+   Plánu, zveřejněné budoucí akce mají vazbu a hosty podle skupin, hosté v dialogu akce sedí s pozvánkou, nový
+   účet a žádost, schválení ve Správě a pozvánky, které mu samy dojdou, změna, zrušení, odkaz na zápis.
+   Hromadné zveřejnění („Zveřejnit návrhy“) před prvním ostrým použitím potvrď se mnou, posílá e-maily.
+   Propojení v režimu Testing vyprší kolem 19. 11.
+4. Snímky každého okna a stavu za každou roli na 1280 a 390 px jako ZIP se seznamem. Do repa je nedávej.
 
 Production na Vercelu nemá proměnné prostředí a buildy z `main` se přeskakují, vše běží na preview.
 Na `main` nepushuj, merge dělám já. Respektuj limit kontextu.
 
 ---
+
+## Stav 14. 11. 2026 (větev `claude/sharp-babbage-5nqoac`, bez PR)
+
+Ověřeno: lint, typy, 135 ze 135 testů, build. V Chromiu nad PGlite dialog „Přidat akci“ a Správa za správce
+na 1280 a 390 px (bez vodorovného posunu, bez chyb v konzoli). **Naživo proti Googlu neověřeno.**
+
+- **Vercel:** `CALENDAR_ATTENDEES=audience` je nově nastavená pro všechna preview (bez omezení na větev),
+  podle rozhodnutí uživatele. Starší proměnné omezené na větve zůstaly, mají stejnou hodnotu.
+- **Dialog akce:** pod výběrem publika blok „Pozvánku dostane N lidí“ se jmény (nad 8 jmen rozbalovací „a další“).
+  Data z `loadInviteRecipients` (`services/calendar-status.ts`, bez dotazu na Google, `loadCalendarStatus` ji
+  používá). V testovacím režimu (`allowlist`) řekne, kolik lidí ze skupiny zatím pozvánku nedostane.
+  Doporučená témata mají počet zájemců jako okrový odznak. Test v `tests/kalendar-prihlaseni.test.ts`.
+- **Role v textech:** „organizátor“ v UI i komentářích nahrazen „správcem“. Zůstává jen tam, kde jde o Googlem
+  definovaného organizátora události (`google.ts`, `simulated.ts`, `docs/google-kalendar.md`). Persona
+  `demo-organizator` se jmenuje „Správce vzdělávání“ (role v DB dál `organizer`, id beze změny). Na sdílené
+  databázi preview se nové jméno projeví až po „Obnovit ukázková data“.
+- **Správa:** žádost má hlavní tlačítko „Schválit…“ (okno s rolí a skupinami) a v menu „Zamítnout žádost…“.
+  Uživatel má menu ⋯ s „Upravit roli a skupiny“ (okno) a „Odebrat přístup…“ (potvrzení, role a skupiny
+  zůstanou), odebraný „Vrátit přístup…“. Úprava, odebrání a vrácení ověřené v prohlížeči, schválení ne.
+- **Dokumentace:** `README.md`, `docs/predani.md`, `docs/google-prihlaseni.md`, `docs/google-kalendar.md`
+  odpovídají stavu (jedna role Správce, souhlas ke Kalendáři při přihlášení, `GOOGLE_OAUTH_PUBLISHED`,
+  příjemci, řádek stavu, automatické vazby a fronta, hromadné zveřejnění).
 
 ## Stav 13. 11. 2026 pozdě v noci (větev `claude/tender-fermat-oepq6p`)
 
