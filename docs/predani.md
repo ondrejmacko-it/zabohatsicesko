@@ -10,9 +10,9 @@ Stav k 12. 11. 2026. Spuštění, proměnné prostředí a architektura jsou v [
 | Google Kalendář, testovací režim | **Připravený, vypnutý.** Adaptér Google Calendar API se zapíná `CALENDAR_MODE=google-test` | Proti napodobenému HTTP: vytvoření bez duplicit, úprava jen spravovaných polí, jeden výskyt série, odmítnutí zápisu do série a do cizí pozvánky, povolené kalendáře a příjemci, šifrování a obnova tokenu, odvolaný přístup, dělení chyb na přechodné a trvalé | **Neověřeno proti Googlu.** Živý test podle části 02 čeká na testovací účty, postup je v [google-kalendar.md](google-kalendar.md). |
 | Přihlášení Google identitou | **Připravené, vypnuté.** Druhý režim vedle fiktivních rolí, zapíná se `LOGIN_MODE=google-test` | Proti napodobenému Googlu: podpis, vydavatel, příjemce, platnost, nonce a ověřený e-mail v ID tokenu, vazba na stabilní `sub`, odmítnutí účtu mimo seznam a záměny účtu, okamžité ukončení session po odebrání, zákaz přepínání rolí | **Neověřeno proti Googlu.** Postup je v [google-prihlaseni.md](google-prihlaseni.md). Seznam účtů v proměnné prostředí je jen pro test. |
 | Přepis a zápis | **Ukázkový**: zná jen přiloženou syntetickou nahrávku (podle otisku SHA-256) | Celá cesta nahrání → zpracování → kontrola → oprava → zveřejnění, opakované doručení úlohy, nahrazení audia, výpadek a opakování | Skutečný přepis a shrnutí. Jiný soubor skončí čitelnou chybou „nepodporovaný soubor“. |
-| Úložiště nahrávek | Soukromé, v databázi, vydávání jen přes autorizovanou cestu | Přístup vedoucího, zamítnutí účastníka, organizátora bez role a kolegy mimo publikum, i přímým odkazem | Uchovávání a mazání podle pravidel firmy. |
+| Úložiště nahrávek | Soukromé, v databázi, vydávání jen přes autorizovanou cestu | Přístup vedoucího, zamítnutí účastníka a kolegy mimo publikum, přístup správce, i přímým odkazem | Uchovávání a mazání podle pravidel firmy. |
 
-Přepínače chybových stavů jsou v *Vzdělávání → Integrace* (jen organizátor). V produkci neexistují.
+Přepínače chybových stavů jsou v *Vzdělávání → Integrace* (jen správce). V produkci neexistují.
 
 ## Ověřené scénáře
 
@@ -22,7 +22,7 @@ Ručně v prohlížeči (Chromium, desktop 1440 px a iPhone 13) celý průchod p
 1. Špatný přístupový kód je odmítnut. Bez přihlášení vede stránka na vstup a API vrací 401.
 2. Domov → „Co tě čeká“ → Harmonogram listopadu: dny út–pá, svátek 17. 11., zrušený trénink 4. 11.,
    mimořádné akce (Setkání týmu, dvoudenní školení 20.–21. 11., AI workshop v pondělí 30. 11. ve svém týdnu).
-3. Organizátor upraví téma Tréninku RM 12. 11.: uložený návrh změny přežije obnovení stránky a kolegové
+3. Správce upraví téma Tréninku RM 12. 11.: uložený návrh změny přežije obnovení stránky a kolegové
    vidí původní verzi. Po zveřejnění se upraví **stejná** pozvánka (`demo-existing-rm-1112`), host a jeho
    RSVP i odkaz na schůzku zůstanou, odejde jedno oznámení, stav přejde Čeká → Synchronizováno.
 4. Mobil: agenda bez posunu do strany, detail stejného termínu.
@@ -31,7 +31,7 @@ Ručně v prohlížeči (Chromium, desktop 1440 px a iPhone 13) celý průchod p
    zpracování → Ke kontrole → oprava → zveřejnění. Audio přehraje.
 7. Účastník čte zveřejněný zápis, pracovní přepis ani audio nevidí.
 8. Kolega mimo publikum dostane „Záznam neexistuje nebo k němu nemáte přístup“ i přes přímý odkaz a API.
-   Organizátor bez role kontrolora audio nezíská.
+   Člen týmu bez role vedoucího nebo kontrolora audio nezíská, správce ano.
 
 ## Rozdíly oproti referenci
 
@@ -43,7 +43,7 @@ Ručně v prohlížeči (Chromium, desktop 1440 px a iPhone 13) celý průchod p
   kulisy bez interního obsahu. Na Domově je jen karta „Co tě čeká“.
 - **Formát data a času** v polích formuláře určuje prohlížeč uživatele.
 - **Střídání typů** ve slotu šablony (např. trénink poradců / portfolio) je zatím podle lichého a sudého
-  týdne. Ze vzoru v Numbers pevné pravidlo nevyplývá, organizátor může každý termín změnit ručně.
+  týdne. Ze vzoru v Numbers pevné pravidlo nevyplývá, správce může každý termín změnit ručně.
 
 - **Předvyplnění témat** při generování měsíce se týká jen firemního vzdělávání FP a RM. Tréninkům,
   Portfolio týmu a Action time téma určuje vedoucí. Rozsah je potřeba potvrdit s firmou.
@@ -61,7 +61,7 @@ Ručně v prohlížeči (Chromium, desktop 1440 px a iPhone 13) celý průchod p
    série převádí, nebo se nové akce zakládají od domluveného data; jak se střídají typy po výjimce.
 
 **Vypnutí integrace:** odpojení oprávnění zastaví zápisy. Změny zůstanou ve Wiki uložené a akce ukáže stav
-„Vyžaduje pozornost“. Po opětovném připojení organizátor spustí „Zkusit synchronizaci znovu“ a odešle se
+„Vyžaduje pozornost“. Po opětovném připojení správce spustí „Zkusit synchronizaci znovu“ a odešle se
 nejnovější zveřejněná verze, starší revize se nepošle.
 
 ## Před klientskými nahrávkami

@@ -44,11 +44,15 @@ serveru) nebo tlačítkem *Vzdělávání → Integrace → Obnovit ukázková d
 
 | Role | Co ukazuje |
 |---|---|
-| Správce ZBC ukázky | Přiděluje role a skupiny, zve a schvaluje účty Google (Správa systému). Plánuje jako organizátor. |
-| Organizátor ukázky | Plánuje, zveřejňuje, spravuje vazbu na Kalendář. K audiu nemá automatický přístup. |
+| Správce ZBC ukázky | Plánuje a zveřejňuje akce, přiděluje role a skupiny, zve a schvaluje účty Google (Správa systému). |
+| Správce vzdělávání | Druhý správce se stejnými právy. Na preview bývá svázaný s testovacím účtem Google, který propojuje Kalendář. |
 | Vedoucí ukázky | Vede akce, nahrává záznam, kontroluje a zveřejňuje zápis. |
 | Účastník FP | Kolega ze skupiny finančních poradců. Čte plán a zveřejněné zápisy své skupiny. |
 | Účastník RM | Kolega mimo publikum tréninku poradců. Přístup k cizí akci je zamítnut i přímým odkazem. |
+
+Role jsou jen dvě: **Správce** (plánuje, zveřejňuje, spravuje účty, Kalendář a u každé akce smí nahrát záznam,
+upravit, zveřejnit i stáhnout zápis) a **Člen týmu** (vidí akce a zápisy svých skupin, vede akce, ke kterým je
+přiřazený). V databázi zůstávají hodnoty `admin` i `organizer`, obě znamenají Správce.
 
 Demo běží v referenčním čase ze seedu (čt 12. 11. 2026 9:00), aby scénář seděl na listopadová data.
 `DEMO_CLOCK=real` přepne na skutečný čas.
@@ -67,6 +71,7 @@ Vzor je v `.env.example`. Hodnoty tajemství patří do správce tajemství host
 | `SIM_LATENCY_MS` | ne | Zpoždění simulací v ms (výchozí 1200). |
 | `CALENDAR_MODE` | ne | `google-test` zapne testovací režim Google Kalendáře. Jinak simulace. |
 | `CALENDAR_ATTENDEES` | ne | `audience` zve v režimu Googlu skutečné publikum akce (aktivní účty skupiny). Jinak jen `GOOGLE_ALLOWED_ATTENDEES`. |
+| `GOOGLE_OAUTH_PUBLISHED` | ne | `1`, když je souhlasová obrazovka Googlu zveřejněná. Vypne upozornění na vypršení propojení po 7 dnech (režim Testing). |
 | `GOOGLE_*`, `TOKEN_ENCRYPTION_KEY` | v režimu `google-test` | Viz [docs/google-kalendar.md](docs/google-kalendar.md). |
 | `LOGIN_MODE` | ne | `google-test` přidá přihlášení účtem Google. Jinak jen fiktivní role. |
 | `GOOGLE_LOGIN_ACCOUNTS` | ne | Zaváděcí seznam účtů, ostatní zve a schvaluje Správa systému, viz [docs/google-prihlaseni.md](docs/google-prihlaseni.md). |
@@ -97,19 +102,26 @@ docs/predani.md               # ověření, stav integrací a podmínky nasazen�
 
 Hlavní rozhodnutí:
 
-- **Návrh a zveřejnění jsou oddělené.** Organizátor může uložit rozpracovanou změnu. Kolegové i Kalendář
+- **Návrh a zveřejnění jsou oddělené.** Správce může uložit rozpracovanou změnu. Kolegové i Kalendář
   vidí jen poslední zveřejněný snímek akce. Každá změna má revizi, souběžná úprava starší revize neprojde.
 - **Kalendář dostává vždy nejnovější zveřejněnou revizi.** Synchronizace běží pod zámkem na akci,
   zapisuje jen spravovaná pole (název, čas, stav, odkaz do Wiki) a hosty, RSVP i odkaz na schůzku nemění.
   Vytvoření pozvánky má stabilní klíč, opakování nevyrobí duplikát. Ruční změnu v Kalendáři ukáže
-  organizátorovi a přepíše ji jen s jeho souhlasem.
-- **Importovaná akce bez vazby sama pozvánku nezaloží.** Organizátor ji spáruje s existující pozvánkou,
-  nebo výslovně založí novou. Akce založené ve Wiki pozvánku dostanou při zveřejnění.
+  správci a přepíše ji jen s jeho souhlasem.
+- **Každá zveřejněná budoucí akce dostane pozvánku sama.** Akce bez vazby ji získá po otevření Plánu správcem,
+  po zveřejnění, hromadném zveřejnění i obnově ukázkových dat. Pozvánku, kterou Wiki založila dřív, pozná
+  podle klíče a nezdvojí. Když ve stejném čase leží v Kalendáři cizí nespárovaná pozvánka, akce zůstane
+  „bez vazby“ a správce ji spáruje, nebo založí novou. Čekající pozvánky odešle fronta po otevření Plánu.
+- **Hromadné zveřejnění měsíce.** „Zveřejnit návrhy“ na Plánu ukáže dopad (počet akcí, kolik lidí dostane
+  e-mail a z jakých skupin). Návrhy ze šablony jsou předvybrané, téma a vedoucího jde doplnit v řádku.
+- **Kalendář od přihlášení.** Správce, který se přihlásí účtem Google, potvrdí souhlas ke Kalendáři rovnou
+  na přihlašovací obrazovce. Stav propojení a příjemce pozvánek podle skupin ukazuje řádek „Kalendář“
+  na Plánu a sekce „Kalendář a pozvánky“ ve Správě. Dialog akce ukazuje, kdo pozvánku dostane.
 - **Šablona doplňuje jen prázdné sloty.** Klíč návrhu je slot + původní datum. Ruční úpravy i přesuny
   zůstanou, smazaný návrh se nevrátí. Svátky ČR vzniknou jako viditelný záznam bez pozvánky.
 - **Témata jdou do návrhu měsíce rovnou.** Budoucím termínům firemního vzdělávání generování předvyplní
   doporučené téma jejich publika: jen téma se zájemci, které ještě nemá termín, každé nejvýš jednou.
-  Vzniká jako návrh, organizátor ho před zveřejněním změní nebo smaže.
+  Vzniká jako návrh, správce ho před zveřejněním změní nebo smaže.
 - **Nahrávka patří k ID akce, ne k odhadu z obsahu.** Rozpoznaný typ obsahu jen doporučí šablonu zápisu
   a upozorní na nesoulad.
 
@@ -117,8 +129,8 @@ Hlavní rozhodnutí:
 
 - Přístupy ověřuje server u každého výpisu, detailu, uploadu, stažení, opakování i zveřejnění
   (`src/server/policy.ts`). Neviditelná a neexistující akce vrací stejnou odpověď.
-- Audio a pracovní přepis vidí jen vedoucí akce a pověřený kontrolor. Organizátor k nim automaticky přístup
-  nemá. Zveřejněný zápis vidí publikum akce.
+- Audio a pracovní přepis vidí vedoucí akce, pověřený kontrolor a správce. Člen týmu bez těchto rolí k nim
+  přístup nemá. Zveřejněný zápis vidí publikum akce.
 - Soubory se ověřují podle obsahu (signatura a struktura WAV/MP3/M4A, délka), limit 4 MB a 15 minut.
   Ukládají se soukromě pod generovaným klíčem a vydávají se jen autorizovanou serverovou cestou.
   Nahrazená nahrávka se smaže.
