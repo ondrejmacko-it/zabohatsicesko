@@ -6,38 +6,61 @@ Zkopíruj text níže jako první zprávu nové relace Claude Code (repo `ondrej
 
 Pokračuj na demu modulu Vzdělávání (repo `ondrejmacko-it/zabohatsicesko`). Nečti znovu celé zadání ani celý kód.
 Kontext máš v `docs/dalsi-session.md`, `README.md`, `docs/google-prihlaseni.md` a `docs/google-kalendar.md`,
-pravidla v `CLAUDE.md`. Tykej mi, piš přátelsky. Úpravy níže jsou odsouhlasené, rovnou je udělej. Ptej se jen
-na věci označené „zeptej se“.
+pravidla v `CLAUDE.md`. Tykej mi, piš přátelsky. Vše níže je odsouhlasené 14. 11., rovnou to udělej. Ptej se jen
+na věci označené „zeptej se“. Rozsah je velký: jdi po blocích v uvedeném pořadí, po každém bloku commit a push,
+a když dojde limit kontextu, zapiš stav sem a skonči.
 
 Stav: draft PR #19 (`claude/tender-fermat-oepq6p` do `main`). Navazující práce ze 14. 11. je na větvi
-`ccr-5d4e285a-rvyp3j` (vychází z PR #19, bez vlastního PR). Zeptej se, jestli ji mám přidat do PR #19, nebo
-otevřít vlastní PR. Pokud je vše sloučené, vyjdi z `main`. Můj osobní účet je z Wiki smazaný, nezakládej ho
-znovu a nikam ho nezvi. Odsouhlaseno 14. 11.: ostré zveřejňování a skutečné pozvánky na preview smíš spouštět
-bez dalšího ptaní.
+`ccr-5d4e285a-rvyp3j` (vychází z PR #19, bez vlastního PR). Zeptej se hned na začátku, jestli ji mám přidat
+do PR #19, nebo otevřít vlastní PR. Pokud je vše sloučené, vyjdi z `main`. Můj osobní účet je z Wiki smazaný,
+nezakládej ho znovu a nikam ho nezvi. Ostré zveřejňování a skutečné pozvánky na preview smíš spouštět bez ptaní.
 
 Zásada pro celé UI: hlavní údaje a hlavní akce musí vyniknout, vedlejší texty jsou menší a tlumené, nic není
-ani o pixel mimo osu, vše je jasné na první pohled.
+ani o pixel mimo osu, vše je jasné na první pohled. Každou novinku má pochopit i člověk, který Wiki vidí
+poprvé: jedna věta, co se stane, žádné technické pojmy. Po každém bloku ověř v prohlížeči 1280 a 390 px.
 
-1. Živý test se mnou krok za krokem na preview větve, která obsahuje práci ze 14. 11. (potřebuje vlastní
-   `APP_URL` a `CALENDAR_ATTENDEES=audience`, `claude/tender-fermat-oepq6p` je má). Zeptej se, jestli jsem
-   v Google konzoli přidal `<adresa>/api/google/prihlaseni/callback` a `<adresa>/api/google/kalendar/callback`
-   (14. 11. ještě ne). Postup: přihlášení správce (při druhém přihlášení jedna obrazovka Googlu s Kalendářem),
-   řádek „Kalendář“ na Plánu, všech 6 zveřejněných budoucích akcí má vazbu a hosty podle skupin (v Neonu
-   tabulka `calendar_links`), hosté v dialogu akce odpovídají skupině, „Zveřejnit návrhy“ pro další měsíc,
-   nový účet a žádost, schválení ve Správě (okno) a pozvánky, které mu samy dojdou, změna, zrušení, odkaz
-   na zápis. Po sloučení PR přenes `CALENDAR_ATTENDEES` na všechny preview (zeptej se).
-2. Doověř v prohlížeči (14. 11. neověřeno): menu „Další možnosti“ u Nahrávky a zápisu (Nahradit nahrávku
-   v okně, Stáhnout zveřejněný zápis) za vedoucího i za správce u cizí akce, okno „Přidat zápis“, zápis
-   za čtenáře, `AutoRefresh` po nahrání, panel Kalendáře u akce bez vazby (Spárovat jako hlavní krok, nová
-   pozvánka v menu), „Správa propojení“ na Integraci (jen režim Googlu), Plán za účastníka na 390 px.
-   Projdi okem texty po náhradě „organizátor“ za „správce“. Po každém bloku 1280 a 390 px.
-3. Přidej test oprávnění `loadInvitePreview` (člen týmu dostane `forbidden`) a režimů hostů.
-4. Dokumentace: `README.md`, `docs/predani.md`, `docs/google-prihlaseni.md`, `docs/google-kalendar.md` podle
-   stavu (jedna role Správce, souhlas ke Kalendáři při přihlášení, `GOOGLE_OAUTH_PUBLISHED`, příjemci pozvánek,
-   řádek stavu Kalendáře, automatické vazby a fronta z Plánu, hromadné zveřejnění měsíce, jedna persona
-   správce, hosté v dialogu akce, Správa v oknech).
-5. Snímky každého okna a stavu za každou roli na 1280 a 390 px jako ZIP se seznamem. Do repa je nedávej.
-6. Nápady ze 14. 11., které uživatel může vybrat (zeptej se, které chce): viz „Nápady“ níže.
+A. Dluhy ze 14. 11.
+1. Doověř v prohlížeči: menu „Další možnosti“ u Nahrávky a zápisu (Nahradit nahrávku v okně, Stáhnout
+   zveřejněný zápis) za vedoucího i za správce u cizí akce, okno „Přidat zápis“, zápis za čtenáře, `AutoRefresh`
+   po nahrání, panel Kalendáře u akce bez vazby, „Správa propojení“ na Integraci, Plán za účastníka na 390 px.
+   Zjisti, proč stránka Zápisy za správce nenabídla žádný odkaz s `?zapis=` (14. 11. automat žádný nenašel).
+   Projdi okem texty po náhradě „organizátor“ za „správce“.
+2. Test oprávnění `loadInvitePreview` (člen týmu dostane `forbidden`) a režimů hostů.
+
+B. Nové funkce (každá s testem pravidel a oprávnění na serveru)
+3. „Připravit další měsíc“: jedno tlačítko na Plánu, průvodce ve třech krocích v jednom okně (doplnit
+   ze šablony, témata podle zájmu, zveřejnit). Staví na `generateMonthAction`, `suggestTopics`
+   a `PublishMonthDialog`. Jednotlivé nástroje zůstanou v menu.
+4. Pozvánky nezávislé na otevření Plánu: Vercel Cron volá chráněnou cestu, která spustí `syncPublished`.
+   Tajemství cronu doplním já (zeptej se, až bude cesta hotová). Volání z Plánu zůstane jako záloha.
+5. Odpovědi z Kalendáře v Plánu: u zveřejněné akce „přijalo 3 z 5“, v okně akce jména podle odpovědi.
+   Jen pro správce a vedoucího akce. Data už vrací panel synchronizace (`external.attendees`).
+6. Správa: po pozvání kolegy tlačítko „Kopírovat zprávu s odkazem“ (hotový text s adresou Wiki).
+7. Správa: „Pozvat víc lidí najednou“: vložený seznam adres, jedna role a skupiny, přehled před uložením,
+   duplicity a neplatné adresy vypsané po řádcích. Stejná validace a oprávnění jako `inviteUser`.
+8. Zpět po zveřejnění: zveřejnění se do Kalendáře odešle se zpožděním (kolem 10 s), do té doby jde jedním
+   klikem vrátit na návrh. Zeptej se, pokud by to měnilo pořadí revizí nebo chování fronty víc než o zpoždění.
+9. Zájem o téma z pozvánky: odkaz v popisu události na stránku Témata se zvýrazněným tématem, zájem jedním
+   klikem po přihlášení. Žádný zápis bez přihlášení.
+10. Zápisy: vyhledávání v textu zveřejněných zápisů a filtr podle tématu. Jen zápisy, které uživatel smí číst.
+11. Blok „Co se stane po kliknutí“ ve stejné podobě jako blok hostů v dialogu akce u: zrušení akce,
+    hromadného zveřejnění, stažení zápisu, odebrání přístupu. Jedna sdílená komponenta.
+
+C. Živý test se mnou krok za krokem na preview větve, která obsahuje vše výše (potřebuje vlastní `APP_URL`
+   a `CALENDAR_ATTENDEES=audience`, nastav sám přes API). Zeptej se, jestli jsem v Google konzoli přidal
+   `<adresa>/api/google/prihlaseni/callback` a `<adresa>/api/google/kalendar/callback` (14. 11. ještě ne).
+   Postup: přihlášení správce (při druhém přihlášení jedna obrazovka Googlu s Kalendářem), řádek „Kalendář“
+   na Plánu, všech 6 zveřejněných budoucích akcí má vazbu a hosty podle skupin (v Neonu `calendar_links`),
+   hosté v dialogu akce odpovídají skupině, „Připravit další měsíc“, nový účet a žádost, schválení ve Správě
+   a pozvánky, které mu samy dojdou, odpovědi v Plánu, změna, zrušení, odkaz na zápis. Po sloučení PR přenes
+   `CALENDAR_ATTENDEES` na všechny preview (zeptej se).
+
+D. Dokumentace podle stavu: `README.md`, `docs/predani.md`, `docs/google-prihlaseni.md`,
+   `docs/google-kalendar.md` (jedna role Správce, souhlas ke Kalendáři při přihlášení, `GOOGLE_OAUTH_PUBLISHED`,
+   příjemci pozvánek, řádek stavu Kalendáře, automatické vazby, fronta a cron, hromadné zveřejnění, průvodce
+   měsícem, hosté v dialogu akce, Správa v oknech, hromadné pozvání, odpovědi, zpět po zveřejnění).
+
+E. Snímky každého okna a stavu za každou roli na 1280 a 390 px jako ZIP se seznamem. Do repa je nedávej.
 
 Production na Vercelu nemá proměnné prostředí a buildy z `main` se přeskakují, vše běží na preview.
 Na `main` nepushuj, merge dělám já. Respektuj limit kontextu.
@@ -64,16 +87,8 @@ v konzoli a bez vodorovného posunu. **Naživo proti Googlu neověřeno nic**, p
 - **Varování o hydrataci na Plánu se nepodařilo vyvolat:** 22 stavů (Plán, seznam, okno akce, filtry, náhled,
   prosinec, po obnově dat, tři role, pásmo UTC, Praha i New York), konzole čistá. Klientské komponenty
   nečtou čas, pásmo ani `window`. Pokud se objeví znovu, zapiš přesnou adresu a text varování.
-- **Neuděláno:** živý test, doověření z bodu 2, dokumentace, snímky, test `loadInvitePreview`.
-
-## Nápady 14. 11. (čekají na výběr uživatele)
-
-Jedno tlačítko „Připravit další měsíc“ (šablona, témata a zveřejnění v jednom průvodci) · týdenní souhrn
-správci místo otevírání Plánu (fronta pozvánek by neměla záviset na návštěvě stránky, stačí Vercel Cron)
-· RSVP z Kalendáře přímo v Plánu (kdo přijal) · „Kopírovat odkaz na pozvání“ ve Správě po pozvání kolegy
-· hlasování o tématech jedním klikem z e-mailu nebo pozvánky · zpět (undo) po zveřejnění na pár sekund
-· vyhledávání v zápisech · import účtů ze seznamu adres · stav „co se stane po kliknutí“ u každé hlavní akce
-ve stejné podobě jako blok hostů.
+- **Neuděláno:** živý test, doověření (blok A), dokumentace, snímky. Nápady ze 14. 11. uživatel odsouhlasil
+  všechny, jsou v promptu jako blok B.
 
 ## Stav 13. 11. 2026 pozdě v noci (větev `claude/tender-fermat-oepq6p`)
 
