@@ -2090,3 +2090,14 @@ p.cal-status {
   color: var(--ochre-dark);
   font-weight: 600;
 }
+
+.account-side {
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.account-actions {
+  flex-wrap: nowrap;
+  gap: 6px;
+}

@@ -1,11 +1,13 @@
 "use client";
 
-import { useActionState, useState } from "react";
-import { ActionMessage } from "@/components/ActionForm";
+import { useActionState, useEffect, useState } from "react";
+import { ActionForm, ActionMessage } from "@/components/ActionForm";
+import { Menu } from "@/components/Menu";
+import { Modal } from "@/components/Modal";
 import { submitKeepingValues } from "@/features/shared/keep-values";
 import { GROUP_LABELS, ROLE_LABELS } from "@/lib/labels";
-import { GROUPS, type Group, type Role } from "@/lib/types";
-import { inviteUserAction, updateAccessAction } from "../actions";
+import { GROUPS, type Group, type Role, type UserStatus } from "@/lib/types";
+import { inviteUserAction, rejectRequestAction, updateAccessAction } from "../actions";
 
 /** Výběr role a skupin. Nabízí jen role, které smí přihlášený uživatel přidělit (hlídá i server). */
 const PRESETS: Array<{ label: string; role: Role; groups: Group[] }> = [
@@ -72,11 +74,17 @@ type AccessProps = {
   groups: Group[];
   /** approve = čekající žádost, edit = aktivní účet, restore = účet s odebraným přístupem. */
   mode: "approve" | "edit" | "restore";
+  /** Po úspěšném uložení (zavře okno). */
+  onDone?: () => void;
+  onCancel?: () => void;
 };
 
 /** Schválení žádosti, úprava přístupu, nebo jeho odebrání a vrácení. Stav posílá stisknuté tlačítko. */
-export function AccessForm({ userId, roles, role, groups, mode }: AccessProps) {
+export function AccessForm({ userId, roles, role, groups, mode, onDone, onCancel }: AccessProps) {
   const [state, action, pending] = useActionState(updateAccessAction, null);
+  useEffect(() => {
+    if (state?.ok) onDone?.();
+  }, [state, onDone]);
   return (
     <form action={action} onSubmit={submitKeepingValues(action)} className="stack">
       <input type="hidden" name="userId" value={userId} />
@@ -85,9 +93,9 @@ export function AccessForm({ userId, roles, role, groups, mode }: AccessProps) {
         <button type="submit" name="status" value="active" className="btn btn-primary btn-small" disabled={pending}>
           {mode === "approve" ? "Schválit přístup" : mode === "restore" ? "Vrátit přístup" : "Uložit změny"}
         </button>
-        {mode === "edit" && (
-          <button type="submit" name="status" value="disabled" className="btn btn-danger btn-small" disabled={pending}>
-            Odebrat přístup
+        {onCancel && (
+          <button type="button" className="btn btn-small" onClick={onCancel}>
+            Zrušit
           </button>
         )}
       </div>
@@ -121,5 +129,72 @@ export function InviteForm({ roles, appUrl }: { roles: Role[]; appUrl: string })
       </div>
       <ActionMessage state={state} />
     </form>
+  );
+}
+
+export type AccountRow = { id: string; name: string; email: string; role: Role; groups: Group[]; status: UserStatus };
+
+const MODAL_TITLES = { approve: "Schválit žádost", edit: "Upravit roli a skupiny", restore: "Vrátit přístup" } as const;
+
+/**
+ * Akce u účtu ve Správě. Hlavní krok (schválení žádosti) je vidět jako tlačítko, úprava, odebrání přístupu
+ * a zamítnutí jsou v menu. Role a skupiny se upravují v okně.
+ */
+export function AccountActions({ account: a, roles }: { account: AccountRow; roles: Role[] }) {
+  const mode = a.status === "pending" ? "approve" : a.status === "disabled" ? "restore" : "edit";
+  const [open, setOpen] = useState(false);
+  const close = () => setOpen(false);
+  return (
+    <div className="row account-actions">
+      {mode === "approve" && (
+        <button type="button" className="btn btn-primary btn-small" onClick={() => setOpen(true)}>
+          Schválit…
+        </button>
+      )}
+      <Menu label={`Možnosti účtu ${a.name}`} small iconOnly>
+        {mode !== "approve" && (
+          <button type="button" className="btn" onClick={() => setOpen(true)}>
+            {mode === "restore" ? "Vrátit přístup…" : "Upravit roli a skupiny…"}
+          </button>
+        )}
+        {mode === "edit" && (
+          <ActionForm
+            action={updateAccessAction}
+            fields={{ userId: a.id, status: "disabled", role: a.role, groups: a.groups }}
+            label="Odebrat přístup…"
+            variant="danger"
+            confirm={{
+              title: "Odebrat přístup",
+              text: `${a.name} (${a.email}) se do Wiki nepřihlásí a přestane dostávat pozvánky. Role a skupiny zůstanou uložené pro případné vrácení přístupu.`,
+              confirmLabel: "Odebrat přístup",
+            }}
+          />
+        )}
+        {mode === "approve" && (
+          <ActionForm
+            action={rejectRequestAction}
+            fields={{ userId: a.id }}
+            label="Zamítnout…"
+            variant="danger"
+            confirm={{
+              title: "Zamítnout žádost",
+              text: `Žádost účtu ${a.email} zmizí. Pokud se přihlásí znovu, vznikne nová žádost.`,
+              confirmLabel: "Zamítnout",
+            }}
+          />
+        )}
+      </Menu>
+      <Modal open={open} title={`${MODAL_TITLES[mode]}: ${a.name}`} onRequestClose={close}>
+        <AccessForm
+          userId={a.id}
+          roles={roles}
+          role={a.role}
+          groups={mode === "approve" && a.groups.length === 0 ? ["vsichni"] : a.groups}
+          mode={mode}
+          onDone={close}
+          onCancel={close}
+        />
+      </Modal>
+    </div>
   );
 }
