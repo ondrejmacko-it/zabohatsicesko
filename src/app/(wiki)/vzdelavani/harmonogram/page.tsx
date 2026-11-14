@@ -17,7 +17,7 @@ import { Agenda, Legend, NextEventsList, ScheduleGrid } from "@/features/vzdelav
 import { TemplateDialog } from "@/features/vzdelavani/components/TemplateDialog";
 import { PLAN_STATES, filterCards, matchesPlanFilter, monthSummary, monthTasks } from "@/features/vzdelavani/status";
 import styles from "@/features/vzdelavani/components/schedule.module.css";
-import { formatMonth, isValidMonthKey, monthOf, shiftMonth, toDateKey } from "@/lib/time";
+import { formatMonth, isValidMonthKey, monthOf, monthRange, shiftMonth, toDateKey } from "@/lib/time";
 import { EVENT_TYPES } from "@/lib/types";
 import { syncPublished } from "@/server/calendar/sync";
 import { requireUser } from "@/server/auth/session";
@@ -26,6 +26,7 @@ import { defaultAudience } from "@/server/domain/generation";
 import { isOrganizer } from "@/server/policy";
 import { listMonth, listMonthDrafts, listPeople, loadTemplate, nextEventsFor } from "@/server/services/events";
 import { inviteModeOf, loadCalendarStatus } from "@/server/services/calendar-status";
+import { listResponses } from "@/server/services/responses";
 import { listTasks } from "@/server/services/journey";
 import { listPreviewOptions, resolvePreview } from "@/server/services/preview";
 import { listTopics } from "@/server/services/topics";
@@ -50,7 +51,14 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   const managing = organizer && !preview;
   // Celá stránka, tedy i oba horní bloky, se počítá pro stejného diváka jako harmonogram.
   const viewer = preview?.viewer ?? user;
-  const [monthCards, template, viewerTasks] = await Promise.all([listMonth(viewer, monthKey), loadTemplate(), listTasks(viewer)]);
+  const range = monthRange(monthKey);
+  // Odpovědi na pozvánky vidí jen správce a vedoucí akce, pravidlo hlídá služba.
+  const [monthCards, template, viewerTasks, responses] = await Promise.all([
+    listMonth(viewer, monthKey),
+    loadTemplate(),
+    listTasks(viewer),
+    listResponses(viewer, range.start, range.end),
+  ]);
   const activeSlots = template.filter((s) => s.active);
   const slotTimes = Object.fromEntries(activeSlots.map((s) => [s.isoWeekday, `${s.startTime}–${s.endTime}`]));
   const [people, topics, previewOptions] = organizer
@@ -259,15 +267,15 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
         )}
 
         {listView ? (
-          <Agenda monthKey={monthKey} cards={cards} todayKey={todayKey} emptyText={emptyText} hrefFor={peekHref} managing={managing} />
+          <Agenda monthKey={monthKey} cards={cards} todayKey={todayKey} emptyText={emptyText} hrefFor={peekHref} managing={managing} responses={responses} />
         ) : (
           <>
             <div className={styles.desktopOnly}>
-              <ScheduleGrid monthKey={monthKey} cards={cards} todayKey={todayKey} slotTimes={slotTimes} hrefFor={peekHref} managing={managing} />
+              <ScheduleGrid monthKey={monthKey} cards={cards} todayKey={todayKey} slotTimes={slotTimes} hrefFor={peekHref} managing={managing} responses={responses} />
               <Legend organizer={managing} />
             </div>
             <div className={styles.mobileOnly}>
-              <Agenda monthKey={monthKey} cards={cards} todayKey={todayKey} emptyText={emptyText} hrefFor={peekHref} managing={managing} />
+              <Agenda monthKey={monthKey} cards={cards} todayKey={todayKey} emptyText={emptyText} hrefFor={peekHref} managing={managing} responses={responses} />
             </div>
           </>
         )}

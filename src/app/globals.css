@@ -2282,3 +2282,63 @@ p.cal-status {
   flex-wrap: nowrap;
   justify-content: flex-end;
 }
+
+/* ——— Odpovědi na pozvánku: hlavní je počet přijatých, jména jsou vedlejší ——— */
+.responses {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.responses-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin: 0;
+}
+
+.responses-head strong {
+  font-size: 16px;
+}
+
+.responses-head span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.responses-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+}
+
+.responses-list > div {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 12px;
+}
+
+.responses-list dt {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.responses-count {
+  color: var(--ink);
+}
+
+.responses-list dd {
+  margin: 0;
+  font-size: 14px;
+}
+
+.responses-accepted dd {
+  font-weight: 600;
+}

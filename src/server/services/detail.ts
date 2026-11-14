@@ -12,6 +12,7 @@ import { calendarSummary, snapshotOf, type EventRow } from "@/server/domain/snap
 import { isOrganizer, type Viewer } from "@/server/policy";
 import { getEventCard, type EventCard } from "@/server/services/events";
 import { recordingPanel, type RecordingPanel } from "@/server/services/recordings";
+import { getEventResponses, groupResponses, type EventResponses } from "@/server/services/responses";
 
 /** Hodnoty formuláře akce ve tvaru, který potřebuje dialog. */
 export type EventFormValues = {
@@ -146,6 +147,8 @@ export type EventDetail = {
   fromTemplate: boolean;
   sync: SyncPanel | null;
   recording: RecordingPanel;
+  /** Odpovědi na pozvánku z Kalendáře. Jen správce a vedoucí akce, jinak null. */
+  responses: EventResponses | null;
 };
 
 export async function getEventDetail(viewer: Viewer, id: string): Promise<EventDetail | null> {
@@ -157,7 +160,13 @@ export async function getEventDetail(viewer: Viewer, id: string): Promise<EventD
   const db = await getDb();
   const people = await db.select({ id: users.id, name: users.name }).from(users).where(eq(users.orgId, config.orgId));
   const names = new Map(people.map((u) => [u.id, u.name]));
-  const [sync, recording] = await Promise.all([syncPanel(viewer, row), recordingPanel(viewer, row)]);
+  // Správci už pozvánku načetl panel Kalendáře, vedoucí akce se na odpovědi ptá zvlášť (služba ověří právo).
+  const [sync, recording, leadResponses] = await Promise.all([
+    syncPanel(viewer, row),
+    recordingPanel(viewer, row),
+    organizer ? null : getEventResponses(viewer, row.id),
+  ]);
+  const invited = row.published?.status === "published" && sync?.external && !sync.external.cancelled ? sync.external.attendees : [];
   return {
     card,
     revision: row.revision,
@@ -171,5 +180,6 @@ export async function getEventDetail(viewer: Viewer, id: string): Promise<EventD
     fromTemplate: row.generationKey !== null && row.type !== "holiday",
     sync,
     recording,
+    responses: organizer ? (invited.length ? groupResponses(invited) : null) : leadResponses,
   };
 }

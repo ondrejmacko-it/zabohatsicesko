@@ -6,7 +6,7 @@ import { EVENT_TYPES, GROUPS } from "@/lib/types";
 import { isValidDateKey, isValidMonthKey, isValidTime } from "@/lib/time";
 import { audit } from "@/server/audit";
 import { disconnect as disconnectCalendar } from "@/server/calendar/google-auth";
-import { simulateManualEdit } from "@/server/calendar/simulated";
+import { simulateManualEdit, simulateResponses } from "@/server/calendar/simulated";
 import { pairWithExisting, requestNewInvite, requestRetry, syncEvent, syncPublished } from "@/server/calendar/sync";
 import { calendarMode } from "@/server/config";
 import { getDb } from "@/server/db/client";
@@ -411,6 +411,16 @@ export async function simulateManualEditAction(_prev: ActionResult | null, formD
     const data = z.object({ externalId: z.string().max(80) }).parse(formObject(formData));
     await simulateManualEdit(await getDb(), data.externalId);
     return { ok: true, message: "V simulovaném Kalendáři se změnil název pozvánky." };
+  });
+}
+
+export async function simulateResponsesAction(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
+  return run(async (user) => {
+    if (!isOrganizer(user)) throw new DomainError("forbidden");
+    if (calendarMode() !== "simulation") throw new DomainError("invalid_state");
+    const data = z.object({ externalId: z.string().max(80) }).parse(formObject(formData));
+    await simulateResponses(await getDb(), data.externalId);
+    return { ok: true, message: "Hosté v simulovaném Kalendáři odpověděli na pozvánku." };
   });
 }
 

@@ -9,6 +9,7 @@ import { Todo, missingText } from "@/components/Todo";
 import { EventDialog } from "@/features/vzdelavani/components/EventDialog";
 import { EventMenu } from "@/features/vzdelavani/components/EventMenu";
 import { RecordingSection } from "@/features/vzdelavani/components/RecordingSection";
+import { ResponsesBlock } from "@/features/vzdelavani/components/ResponsesBlock";
 import { SyncPanelView } from "@/features/vzdelavani/components/SyncPanelView";
 import { badgeClass, primaryStatus, statusAdvice } from "@/features/vzdelavani/status";
 import { EXTRAORDINARY_TYPES, GROUP_LABELS, PLAN_STATUS_LABELS, TYPE_LABELS } from "@/lib/labels";
@@ -167,6 +168,12 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
         {card.type === "holiday" && <p className="small muted section-actions">Svátek je v plánu jen pro přehled, do Kalendáře se neposílá.</p>}
       </section>
 
+      {detail.responses && (
+        <section className="section" aria-labelledby="odpovedi">
+          <h2 id="odpovedi">Kdo přijde</h2>
+          <ResponsesBlock responses={detail.responses} />
+        </section>
+      )}
       {detail.sync && <SyncPanelView eventId={card.id} sync={detail.sync} />}
       {handlerPreview ? (
         <section className="section" aria-labelledby="nahravka-nahled">

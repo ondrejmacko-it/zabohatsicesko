@@ -54,6 +54,11 @@ export function canReadPublishedMinutes(viewer: Viewer, row: EventRow): boolean 
   return snapshot !== null && (canPlan(viewer) || viewer.groups.includes(snapshot.audience) || isEventHandler(viewer, snapshot));
 }
 
+/** Odpovědi pozvaných z Kalendáře (kdo přijal, kdo odmítl): správce a vedoucí zveřejněné akce. */
+export function canSeeResponses(viewer: Viewer, row: EventRow): boolean {
+  return row.published !== null && (canPlan(viewer) || row.published.leadId === viewer.id);
+}
+
 export function canSeeAudience(viewer: Viewer, audience: string): boolean {
   return isOrganizer(viewer) || viewer.groups.includes(audience as Group);
 }

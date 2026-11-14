@@ -4,7 +4,7 @@ import { ERROR_LABELS, SYNC_STATUS_LABELS } from "@/lib/labels";
 import { formatDayMonth, formatEventTime, toDateKey } from "@/lib/time";
 import type { SyncPanel } from "@/server/services/detail";
 import type { ManagedFields } from "@/server/db/schema";
-import { createInviteAction, pairInviteAction, retrySyncAction, simulateManualEditAction } from "../actions";
+import { createInviteAction, pairInviteAction, retrySyncAction, simulateManualEditAction, simulateResponsesAction } from "../actions";
 
 const RSVP: Record<string, string> = { accepted: "přijato", declined: "odmítnuto", tentative: "možná", needsAction: "bez odpovědi" };
 const NOTIFICATION: Record<string, string> = { created: "pozvánka odeslána", updated: "oznámení o změně", cancelled: "oznámení o zrušení" };
@@ -50,6 +50,7 @@ export function SyncPanelView({ eventId, sync }: { eventId: string; sync: SyncPa
             <Menu label="Další možnosti" small>
               {createInMenu && <ActionForm action={createInviteAction} fields={{ id: eventId }} label="Vytvořit novou pozvánku" pendingLabel="Zakládám…" />}
               {demoEdit && <ActionForm action={simulateManualEditAction} fields={{ externalId: demoEdit }} label="Ukázka: simulovat ruční úpravu v Kalendáři" />}
+              {demoEdit && <ActionForm action={simulateResponsesAction} fields={{ externalId: demoEdit }} label="Ukázka: hosté odpoví na pozvánku" />}
             </Menu>
           )}
         </span>
