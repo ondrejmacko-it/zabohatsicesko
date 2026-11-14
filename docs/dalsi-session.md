@@ -4,13 +4,16 @@ Jako první zprávu nové relace stačí napsat: **„Pokračuj podle `docs/dals
 Úvodní prompt drž krátký, jinak sebere kontext. Jedna relace = jeden krok ze seznamu níže, po kroku commit,
 push a přepsání tohoto souboru (jen aktuální stav, historie je v gitu).
 
-## Stav 14. 11. 2026 večer (větev `claude/bold-ptolemy-t0ygu1` = PR #21 + krok 0, draft PR #21 je z `claude/vzdelavani-b8-e-ybvvgg`)
+## Stav 14. 11. 2026 večer (větev `claude/vzdelavani-b8-e-ybvvgg`, draft PR #21 do `main`; `claude/bold-ptolemy-t0ygu1` je stejná)
 
 Ověřeno: lint, typy, build, 176 ze 176 testů. V Chromiu nad PGlite na 1280 a 390 px (konzole bez chyb, bez
 vodorovného posunu): okna „Nový odkaz k přihlášení“ a „Jednorázový kód“ v menu účtu, zpráva po pozvání kolegy,
 hromadné pozvání s osobním odkazem u každého řádku, Správa s `GATE_MODE=invite` po přihlášení kódem.
 Dřív: B9 a brána na pozvánku. Naživo proti Googlu neověřeno nic. Hotové jsou bloky A, B3 až B10, vstup
-na pozvánku a krok 0 (kromě `GATE_MODE=invite` na preview, čeká na dohodu). Production na Vercelu nemá
+na pozvánku a krok 0. Preview větve PR #21 má (jen pro tuto větev) `GATE_MODE=invite`, vlastní `APP_URL`
+a `CALENDAR_ATTENDEES=audience`. V Neonu jsou ručně provedené migrace `0007` a `0008` (konektor na preview
+nedosáhne, aplikace by je jinak udělala při prvním požadavku) a první odkaz s kódem pro `demo-organizator`
+(platí do 21. 11., uživatel ho dostal v chatu). Zda se uživatel odkazem dostal dovnitř, neověřeno. Production na Vercelu nemá
 proměnné prostředí a buildy z `main` se přeskakují.
 
 Pravidla: tykej, piš přátelsky. Na `main` nepushuj, merge dělá uživatel přes PR. Produkci sám nenasazuj,
@@ -33,8 +36,8 @@ do zápisu programujeme my, model běží přes API uživatele (například Open
 
 ## Kroky v pořadí (jeden na relaci)
 
-0. **Hotovo** (doověření vstupu na pozvánku). Zbývá jen po dohodě nastavit na preview přes API `GATE_MODE=invite`
-   (uživatel pak potřebuje první odkaz, viz „První správce“ níže).
+0. **Hotovo** včetně `GATE_MODE=invite` na preview a prvního odkazu. Na začátku další relace se zeptej, zda
+   odkaz fungoval. Další odkazy už uživatel vytváří ve Správě.
 
 1. **B11 a drobnosti.** `Consequences` do zrušení akce (`EventMenu`), stažení zápisu (`RecordingMenu`,
    rozšířit `confirm` v `ActionForm` o body) a odebrání přístupu (`AccountActions`). Zpráva po pozvání
@@ -112,7 +115,9 @@ do zápisu programujeme my, model běží přes API uživatele (například Open
 
 - **B8 Zpět po zveřejnění (ve výchozím stavu vypnuté):** `unpublishEvents`, `listUndoable` (`services/events.ts`), `PublishUndoBar.tsx`
   v layoutu Wiki, sloupec `events.invite_hold_until` (migrace `0007`). Test `tests/zpet-po-zverejneni.test.ts` si lhůtu zapíná sám.
-- **Vercel:** tým `maci`, projekt `zbc-vzdelavani-demo`, plán Hobby. Preview vzniká pushem větve.
+- **Vercel:** tým `maci` (`team_PtkXmFd9hI7UeUYovGkbwZQG`), projekt `zbc-vzdelavani-demo`
+  (`prj_MYpwzB5KekzHAVwbiUDrZv6CG12i`), plán Hobby. MCP konektor Vercelu projekt nevidí, používej přímé
+  `curl https://api.vercel.com/...` (proxy doplní přihlášení). Preview vzniká pushem větve.
   `POST /v13/deployments` nepoužívat (vytvoří produkční deploy). Cron běží jen v produkci, jednou denně.
   Preview chrání Vercel Authentication, runtime logy přes konektor vrací 403. Všechny preview sdílí jednu
   databázi Neon (projekt `neon-zbz-vzdelavani-demo`). Google přihlášení a Kalendář sdílí jednoho OAuth klienta.
