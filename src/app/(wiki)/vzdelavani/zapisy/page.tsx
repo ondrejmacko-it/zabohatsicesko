@@ -13,7 +13,7 @@ import { listMissingMinutes, listPublishedMinutes } from "@/server/services/jour
 
 export const metadata: Metadata = { title: "Zápisy a témata" };
 
-type SearchParams = Promise<{ q?: string; typ?: string; skupina?: string; zapis?: string; pridat?: string }>;
+type SearchParams = Promise<{ q?: string; typ?: string; skupina?: string; tema?: string; zapis?: string; pridat?: string }>;
 
 export default async function MinutesPage({ searchParams }: { searchParams: SearchParams }) {
   const user = await requireUser();
@@ -25,13 +25,15 @@ export default async function MinutesPage({ searchParams }: { searchParams: Sear
   const groups = GROUPS.filter((g) => all.some((m) => m.audience === g));
   const type = types.find((t) => t === params.typ);
   const audience = groups.find((g: Group) => g === params.skupina);
-  const filtered = query || type || audience ? await listPublishedMinutes(user, { query, type, audience }) : all;
-  const filtering = Boolean(query || type || audience);
+  const topics = [...new Set(all.map((m) => m.topic).filter((t): t is string => t !== null))].sort((a, b) => a.localeCompare(b, "cs"));
+  const topic = topics.find((t) => t === params.tema);
+  const filtering = Boolean(query || type || audience || topic);
+  const filtered = filtering ? await listPublishedMinutes(user, { query, type, audience, topic }) : all;
   const months = groupByMonth(filtered);
   // Okna nad stránkou řídí adresa: hledání a filtry pod nimi zůstávají.
   const link = (change: { zapis?: string; pridat?: string } = {}) => {
     const search = new URLSearchParams();
-    for (const [key, value] of Object.entries({ q: query, typ: type, skupina: audience, ...change })) if (value) search.set(key, value);
+    for (const [key, value] of Object.entries({ q: query, typ: type, skupina: audience, tema: topic, ...change })) if (value) search.set(key, value);
     const text = search.toString();
     return text ? `/vzdelavani/zapisy?${text}` : "/vzdelavani/zapisy";
   };
@@ -66,6 +68,19 @@ export default async function MinutesPage({ searchParams }: { searchParams: Sear
             <span className="field-label">Hledat v zápisech</span>
             <input className="input" type="search" name="q" defaultValue={query} maxLength={80} placeholder="Téma, rozhodnutí, další krok…" />
           </label>
+          {topics.length > 1 && (
+            <label className="field">
+              <span className="field-label">Téma</span>
+              <select className="select" name="tema" defaultValue={topic ?? ""}>
+                <option value="">Všechna témata</option>
+                {topics.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           {types.length > 1 && (
             <label className="field">
               <span className="field-label">Typ akce</span>
@@ -133,6 +148,7 @@ export default async function MinutesPage({ searchParams }: { searchParams: Sear
                     </p>
                     <p className="item-title">{m.title}</p>
                     <p className="item-meta clamp">{m.summary}</p>
+                    {m.match && <p className="minutes-match">Nalezeno v zápisu: {m.match}</p>}
                   </Link>
                 </li>
               ))}

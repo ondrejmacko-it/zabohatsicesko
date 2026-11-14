@@ -18,9 +18,13 @@ export type MinutesItem = {
   startsAt: string;
   publishedAt: string | null;
   summary: string;
+  /** Téma akce, podle kterého jde zápisy filtrovat. */
+  topic: string | null;
+  /** Při hledání: věta zápisu, ve které se hledaný text našel (když není už ve shrnutí). */
+  match: string | null;
 };
 
-export type MinutesFilter = { query?: string; type?: string; audience?: string };
+export type MinutesFilter = { query?: string; type?: string; audience?: string; topic?: string };
 
 /** Porovnání bez ohledu na velikost písmen a diakritiku („skoleni“ najde „Školení“). */
 const fold = (text: string) => text.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
@@ -42,7 +46,9 @@ export async function listPublishedMinutes(viewer: Viewer, filter: MinutesFilter
     .map(({ event, content, publishedAt }) => {
       const snapshot = event.published!;
       const title = snapshot.topicTitle ? `${snapshot.label}: ${snapshot.topicTitle}` : snapshot.label;
-      const haystack = fold([title, content.summary, ...content.keyPoints, ...content.decisions, ...content.nextSteps].join("\n"));
+      const lines = [content.summary, ...content.keyPoints, ...content.decisions, ...content.nextSteps];
+      const haystack = fold([title, ...lines].join("\n"));
+      const hit = needle && !fold(`${title}\n${content.summary}`).includes(needle) ? lines.find((line) => fold(line).includes(needle)) : undefined;
       return {
         item: {
           eventId: event.id,
@@ -52,11 +58,13 @@ export async function listPublishedMinutes(viewer: Viewer, filter: MinutesFilter
           startsAt: snapshot.startsAt,
           publishedAt: publishedAt?.toISOString() ?? null,
           summary: content.summary,
+          topic: snapshot.topicTitle,
+          match: hit ?? null,
         },
         haystack,
       };
     })
-    .filter(({ item, haystack }) => (!needle || haystack.includes(needle)) && (!filter.type || item.type === filter.type) && (!filter.audience || item.audience === filter.audience))
+    .filter(({ item, haystack }) => (!needle || haystack.includes(needle)) && (!filter.type || item.type === filter.type) && (!filter.audience || item.audience === filter.audience) && (!filter.topic || item.topic === filter.topic))
     .map(({ item }) => item);
 }
 

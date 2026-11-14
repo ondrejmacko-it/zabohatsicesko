@@ -2459,3 +2459,12 @@ p.cal-status {
     flex: 1;
   }
 }
+
+/* Věta zápisu, ve které se našel hledaný text. */
+.minutes-match {
+  margin: 6px 0 0;
+  padding-left: 10px;
+  border-left: 2px solid var(--line-strong);
+  color: var(--ink-soft);
+  font-size: 0.8125rem;
+}

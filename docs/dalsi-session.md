@@ -10,10 +10,10 @@ pravidla v `CLAUDE.md`. Tykej mi, piš přátelsky. Vše níže je odsouhlasené
 na věci označené „zeptej se“. Rozsah je velký: jdi po blocích v uvedeném pořadí, po každém bloku commit a push,
 a když dojde limit kontextu, zapiš stav sem a skonči.
 
-Stav: práce je na větvi `claude/vzdelavani-b5-e-wfpwgh` (vychází z `ccr-7b6bed1b-1ejvib`, obsahuje ji celou,
-PR zatím nemá: založ draft PR do `main`, starý draft z `ccr-7b6bed1b-1ejvib` a PR #19 jdou zavřít). Pokračuj
-na té větvi, nebo z `main`, pokud je sloučeno. Hotové jsou bloky A a B3 až B7 a sdílená komponenta z B11.
-Zbývá B8 až B11, potom C, D, E. Můj osobní účet je z Wiki smazaný, nezakládej ho
+Stav: práce je na větvi `claude/vzdelavani-b8-e-ybvvgg` (obsahuje celou `claude/vzdelavani-b5-e-wfpwgh`, draft PR
+do `main` je založený; starý draft z `ccr-7b6bed1b-1ejvib` a PR #19 jdou zavřít, zeptej se). Pokračuj na té
+větvi, nebo z `main`, pokud je sloučeno. Hotové jsou bloky A, B3 až B8, B10 a sdílená komponenta z B11.
+Zbývá B9 a B11, potom C, D, E. Můj osobní účet je z Wiki smazaný, nezakládej ho
 znovu a nikam ho nezvi. Ostré zveřejňování a skutečné pozvánky na preview smíš spouštět bez ptaní.
 Přesměrovací adresy v Google konzoli přidám, až bude vše hotové (řekni si o ně před blokem C).
 Až bude vše hotové, chci připravit kompletní Production z `main` (proměnné prostředí, `CRON_SECRET`, vlastní
@@ -23,7 +23,7 @@ Zásada pro celé UI: hlavní údaje a hlavní akce musí vyniknout, vedlejší 
 ani o pixel mimo osu, vše je jasné na první pohled. Každou novinku má pochopit i člověk, který Wiki vidí
 poprvé: jedna věta, co se stane, žádné technické pojmy. Po každém bloku ověř v prohlížeči 1280 a 390 px.
 
-B. Nové funkce (každá s testem pravidel a oprávnění na serveru). Body 3 až 7 jsou hotové, nedělej je znovu.
+B. Nové funkce (každá s testem pravidel a oprávnění na serveru). Body 3 až 8 a 10 jsou hotové, nedělej je znovu.
 5. Odpovědi z Kalendáře v Plánu: u zveřejněné akce „přijalo 3 z 5“, v okně akce jména podle odpovědi.
    Jen pro správce a vedoucího akce. Data už vrací panel synchronizace (`external.attendees`).
 6. Správa: po pozvání kolegy tlačítko „Kopírovat zprávu s odkazem“ (hotový text s adresou Wiki).
@@ -59,6 +59,39 @@ Production na Vercelu nemá proměnné prostředí a buildy z `main` se přeskak
 Na `main` nepushuj, merge dělám já. Respektuj limit kontextu.
 
 ---
+
+## Stav 14. 11. 2026 pozdě v noci (větev `claude/vzdelavani-b8-e-ybvvgg`, draft PR do `main`)
+
+Ověřeno: lint, typy, 165 ze 165 testů. B8 v Chromiu nad PGlite na 1280 a 390 px bez chyb v konzoli a bez
+vodorovného posunu (pruh, vrácení, doběhnutí lhůty). B10 v prohlížeči neověřeno (čerstvá data nemají
+zveřejněný zápis, filtr se ukáže až od dvou témat). Naživo proti Googlu neověřeno nic.
+
+- **B8 Zpět po zveřejnění** (`unpublishEvents`, `listUndoable` v `services/events.ts`, `PublishUndoBar.tsx`
+  v layoutu Wiki, migrace `0007_invite_hold`): první zveřejnění nastaví u akce `invite_hold_until`
+  (10 s, `PUBLISH_UNDO_SEC`, 0 vypne; testy běží s 0). Fronta (`syncEvent`) do té doby pozvánku neodešle.
+  Pruh dole „Zveřejněno… odejde za N s“ s tlačítkem „Vrátit zpět“ vidí jen ten, kdo zveřejnil. Vrácení:
+  akce je znovu návrh, netknutá vazba se smaže, přibude revize `unpublish` na konec (pořadí revizí se
+  nemění). Nejde po odeslání, 5 s po lhůtě, při běžící synchronizaci a u akce s nahrávkou. Další
+  zveřejnění téže akce a zrušení lhůtu nemají. Po lhůtě pruh zavolá `sendHeldInvitesAction`, zálohou je
+  otevření Plánu a cron. Oproti návrhu je sloupec u `events`, ne u `calendar_links` (akce ze seedu vazbu
+  při zveřejnění ještě nemají). Test `tests/zpet-po-zverejneni.test.ts`. Drobnost k doladění: detail akce
+  během lhůty píše „Změna se právě posílá do Kalendáře“, přesnější by bylo „odejde za chvíli“.
+- **B10 Zápisy**: hledání v textu už existovalo, přibyl filtr „Téma“ (`?tema=`, `MinutesFilter.topic`)
+  a u výsledku řádek „Nalezeno v zápisu: …“, když shoda není v názvu ani shrnutí. Test
+  `tests/zapisy-hledani.test.ts`.
+- **Návrh k B9** (neimplementováno): do `desiredData` v `sync.ts` přidat u budoucí akce s `topicId` řádek
+  „Chcete téma znovu? Dejte vědět: `<APP_URL>/vzdelavani/temata?tema=<id>`“. Stránka `temata` přesměruje
+  na `/vzdelavani/zapisy?zajem=<id>#temata`, `TopicsSection` kartu zvýrazní a posune nahoru, zájem je běžné
+  tlačítko „Mám zájem“ (POST po přihlášení, GET nic nezapisuje). Chybí návrat po přihlášení: `requireUser`
+  posílá na `/vstup` a po vstupu na `/`. Potřeba krátká cookie s cílovou cestou (jen interní cesta začínající
+  `/vzdelavani`), kterou přečte `enterDemo` a callback Google přihlášení. Pozor: změna popisu rozešle
+  aktualizaci všem už synchronizovaným pozvánkám, zeptej se uživatele, jestli to nevadí.
+- **Neuděláno**: B9, B11 (`Consequences` do `EventMenu`, `RecordingMenu` přes `confirm` v `ActionForm`,
+  `AccountActions`), C, D, E. Preview této větve nemá vlastní `APP_URL` ani `CALENDAR_ATTENDEES`.
+- **Poznámka k prostředí**: Playwright je v `/opt/node-tools/node_modules` (načíst přes `createRequire`),
+  přihlášení: `label.persona:has(input[value="demo-spravce"])` a odeslat. Kontext relace je po úvodním
+  promptu a načtení pravidel zhruba na 150 tis. tokenech, na práci zbývá málo: nový prompt drž krátký
+  (stačí „pokračuj podle `docs/dalsi-session.md`“) a ber jeden blok na relaci.
 
 ## Stav 14. 11. 2026 noc (větev `claude/vzdelavani-b5-e-wfpwgh`, zatím bez PR)
 
