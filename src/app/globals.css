@@ -2126,6 +2126,11 @@ p.cal-status {
   flex-shrink: 0;
 }
 
+/* Vlastní účet nemá menu. Prázdné místo stejné šířky drží odznaky stavu v jedné ose s ostatními řádky. */
+.account-side .menu-placeholder {
+  width: 34px;
+}
+
 .account-actions {
   flex-wrap: nowrap;
   gap: 6px;

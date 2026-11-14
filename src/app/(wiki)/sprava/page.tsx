@@ -83,7 +83,7 @@ export default async function AdminPage() {
           <article key={a.id} className="item-card">
             <AccountHead
               account={a}
-              actions={a.editable ? <AccountActions account={a} roles={roles} /> : <span className="small muted">Váš účet</span>}
+              actions={a.editable ? <AccountActions account={a} roles={roles} /> : <span className="menu-placeholder" aria-hidden="true" />}
             />
           </article>
         ))}
@@ -100,7 +100,10 @@ function AccountHead({ account: a, actions }: { account: Account; actions: React
   return (
     <div className="spread">
       <div>
-        <p className="item-title">{a.name}</p>
+        <p className="item-title">
+          {a.name}
+          {!a.editable && a.status === "active" && <span className="small muted"> · váš účet</span>}
+        </p>
         <p className="item-meta">
           {a.email} · {ROLE_LABELS[a.role]}
           {a.groups.length > 0 && ` · ${a.groups.map((g) => GROUP_LABELS[g]).join(", ")}`}
