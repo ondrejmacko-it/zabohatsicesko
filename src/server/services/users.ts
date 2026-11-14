@@ -159,6 +159,8 @@ export type BulkInviteRow = {
   name: string;
   /** ok = pozve se, invalid = není adresa, duplicate = adresa je v seznamu dvakrát, existing = už ve Wiki je. */
   status: "ok" | "invalid" | "duplicate" | "existing";
+  /** Jen u uloženého pozvání: nový účet, kterému se vytvoří osobní odkaz. */
+  userId?: string;
 };
 
 const emailShape = z.string().email().max(254);
@@ -241,7 +243,7 @@ export async function inviteUsers(viewer: Viewer, input: AccessInput & { text: s
         invited += 1;
         await audit(tx, viewer.id, "user.invited", "user", id);
       }
-      result.push(inserted.length ? row : { ...row, status: "existing" });
+      result.push(inserted.length ? { ...row, userId: id } : { ...row, status: "existing" });
     }
     if (invited) await requeueAttendeeSync(tx, input.groups);
     return result;

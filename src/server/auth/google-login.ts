@@ -191,7 +191,7 @@ export async function verifyIdToken(
 
 // ——— Dokončení přihlášení ———
 
-export type LoginFailure = "exchange_failed" | "invalid_token" | "not_allowed" | "account_conflict" | "requests_full";
+export type LoginFailure = "exchange_failed" | "invalid_token" | "not_allowed" | "account_conflict" | "requests_full" | "not_invited";
 /**
  * Oprávnění ke Kalendáři, které Google vrátil spolu s přihlášením. Callback ho buď uloží (přihlásil se
  * správce), nebo hned zneplatní. `refreshToken` nikdy neopouští server a nezapisuje se do logu.
@@ -212,13 +212,14 @@ export const MAX_PENDING_REQUESTS = 20;
  *
  * Pořadí: (1) účet už svázaný přes stabilní `sub`, (2) pozvánka správce na ověřenou adresu nebo
  * zaváděcí seznam `GOOGLE_LOGIN_ACCOUNTS`, (3) jinak vznikne žádost, kterou schválí správce.
+ * Ve vstupu na pozvánku (`allowRequests: false`) žádost nevznikne a neznámý účet se odmítne.
  * Dovnitř pustí jen aktivní účet. Když stejnou adresu později získá jiný účet Google, nebo se účet
  * objeví u jiného uživatele, přihlášení se odmítne a vazbu musí vědomě změnit správce.
  */
 export async function completeLogin(
   db: Executor,
   cfg: GoogleLoginConfig,
-  input: { code: string; verifier: string; nonce: string },
+  input: { code: string; verifier: string; nonce: string; allowRequests?: boolean },
   fetchImpl: FetchLike = fetch,
   nowSec = Math.floor(Date.now() / 1000),
 ): Promise<LoginResult> {
@@ -276,6 +277,7 @@ export async function completeLogin(
     if (target) {
       userId = target;
     } else {
+      if (input.allowRequests === false) return fail("not_invited");
       const request = await createRequest(db, email, name);
       if (!request) return fail("requests_full");
       userId = request;

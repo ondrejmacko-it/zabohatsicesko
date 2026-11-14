@@ -2414,6 +2414,27 @@ p.cal-status {
   overflow-wrap: anywhere;
 }
 
+/* Po uložení: jméno vlevo, kopírování zprávy vpravo. Seznam se neroluje, aby šlo projít všechny. */
+.bulk-rows-links {
+  max-height: none;
+}
+
+.bulk-rows-links li {
+  align-items: center;
+}
+
+.bulk-person {
+  display: grid;
+  flex: 1 1 180px;
+  min-width: 0;
+  gap: 2px;
+}
+
+/* Když prohlížeč nedovolí kopírování, text zprávy zabere celý řádek. */
+.copy-message-compact:has(.textarea) {
+  flex-basis: 100%;
+}
+
 .bulk-problems ul {
   margin: 4px 0 0;
   padding-left: 18px;

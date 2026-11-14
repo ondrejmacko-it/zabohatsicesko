@@ -4,13 +4,14 @@ Jako první zprávu nové relace stačí napsat: **„Pokračuj podle `docs/dals
 Úvodní prompt drž krátký, jinak sebere kontext. Jedna relace = jeden krok ze seznamu níže, po kroku commit,
 push a přepsání tohoto souboru (jen aktuální stav, historie je v gitu).
 
-## Stav 14. 11. 2026 (větev `claude/vzdelavani-b8-e-ybvvgg`, draft PR #21 do `main`)
+## Stav 14. 11. 2026 večer (větev `claude/bold-ptolemy-t0ygu1` = PR #21 + krok 0, draft PR #21 je z `claude/vzdelavani-b8-e-ybvvgg`)
 
-Ověřeno: lint, typy, build, 175 ze 175 testů. V Chromiu nad PGlite na 1280 a 390 px: B9 a brána na pozvánku
-(`GATE_MODE=invite`: bez odkazu žádný formulář, špatný a použitý odkaz, přihlášení kódem, upozornění po kódu).
-**Neověřeno v prohlížeči:** okna „Nový odkaz k přihlášení“ a „Jednorázový kód“ v menu účtu ve Správě (skript
-se zasekl na kliknutí v menu, příčina nehledána) a zpráva po pozvání kolegy. Naživo proti Googlu neověřeno nic.
-Hotové jsou bloky A a B3 až B10 a vstup na pozvánku. Production na Vercelu nemá proměnné prostředí a buildy z `main` se přeskakují.
+Ověřeno: lint, typy, build, 176 ze 176 testů. V Chromiu nad PGlite na 1280 a 390 px (konzole bez chyb, bez
+vodorovného posunu): okna „Nový odkaz k přihlášení“ a „Jednorázový kód“ v menu účtu, zpráva po pozvání kolegy,
+hromadné pozvání s osobním odkazem u každého řádku, Správa s `GATE_MODE=invite` po přihlášení kódem.
+Dřív: B9 a brána na pozvánku. Naživo proti Googlu neověřeno nic. Hotové jsou bloky A, B3 až B10, vstup
+na pozvánku a krok 0 (kromě `GATE_MODE=invite` na preview, čeká na dohodu). Production na Vercelu nemá
+proměnné prostředí a buildy z `main` se přeskakují.
 
 Pravidla: tykej, piš přátelsky. Na `main` nepushuj, merge dělá uživatel přes PR. Produkci sám nenasazuj,
 jen ji připrav a nastav, co jde přes API. Osobní účet uživatele je z Wiki smazaný, nezakládej ho a nikam
@@ -32,10 +33,8 @@ do zápisu programujeme my, model běží přes API uživatele (například Open
 
 ## Kroky v pořadí (jeden na relaci)
 
-0. **Doověřit vstup na pozvánku.** V prohlížeči okna ve Správě (viz Neověřeno výše) na 1280 a 390 px. Hromadné
-   pozvání: vrátit každému řádku jeho osobní odkaz (teď jen pokyn vytvořit odkaz v menu účtu). Cizí účet Google
-   na zařízení s odkazem dnes založí čekající žádost (`completeLogin`), v režimu na pozvánku to vypnout.
-   Na preview nastav přes API `GATE_MODE=invite` až po dohodě (uživatel pak potřebuje první odkaz, viz níže).
+0. **Hotovo** (doověření vstupu na pozvánku). Zbývá jen po dohodě nastavit na preview přes API `GATE_MODE=invite`
+   (uživatel pak potřebuje první odkaz, viz „První správce“ níže).
 
 1. **B11 a drobnosti.** `Consequences` do zrušení akce (`EventMenu`), stažení zápisu (`RecordingMenu`,
    rozšířit `confirm` v `ActionForm` o body) a odebrání přístupu (`AccountActions`). Zpráva po pozvání
@@ -94,7 +93,10 @@ do zápisu programujeme my, model běží přes API uživatele (například Open
   Googlem vrací 404. Callback Googlu pustí jen účet, kterému odkaz patří. Kód: `enterWithCode`, session `code`
   na 30 dní, v layoutu upozornění na e-mail pro pozvánky. V režimu `invite` není potřeba `DEMO_ACCESS_CODE`
   a session fiktivní role neplatí. Správa: menu účtu „Nový odkaz k přihlášení“ a „Jednorázový kód“, pozvání
-  kolegy vrací osobní odkaz ve zprávě. Test `tests/vstup-na-pozvanku.test.ts`.
+  kolegy i hromadné pozvání vrací osobní odkaz ve zprávě (u hromadného `CopyMessage compact` na řádek).
+  Cizí účet Google v režimu `invite` žádost nezaloží (`completeLogin` s `allowRequests: false`, důvod
+  `not_invited` → brána „jiny-ucet“) a Správa pak sekci Čekající žádosti skryje, když je prázdná.
+  Testy `tests/vstup-na-pozvanku.test.ts`, `tests/users.test.ts`, `tests/hromadne-pozvani.test.ts`.
 - **První správce v produkci** nemá jak dostat odkaz z Wiki. Postup: po nasazení vlož přes Neon konektor řádek
   do `access_links` (otisk SHA-256 náhodného tokenu, `kind='link'`, uživatel podle `GOOGLE_LOGIN_ACCOUNTS`)
   a odkaz `<APP_URL>/pozvanka/<token>` pošli uživateli v chatu. Je to zápis do databáze, potvrď ho s uživatelem.
@@ -118,6 +120,7 @@ do zápisu programujeme my, model běží přes API uživatele (například Open
 - **Lokální běh:** `SIM_LATENCY_MS=0 npx next dev -p 3100` nad PGlite. Playwright je
   v `/opt/node-tools/node_modules` (načíst přes `createRequire`), přihlášení na `/vstup`:
   `label.persona:has(input[value="demo-spravce"])` a odeslat. Po větší změně serverových modulů server
-  restartuj. `AGENTS.md` v kořeni nemaž.
+  restartuj. `AGENTS.md` v kořeni nemaž. Položky v `Menu` klikej až po `scrollIntoViewIfNeeded()` spouště,
+  posun stránky menu zavře (proto se dřív skript zasekl).
 - **Odsouhlaseno dřív:** fiktivní role a simulace zůstávají jako přepínače. E-maily rozesílá jen Google.
   Jména zájemců o téma vidí jen správce. Nahrávky a přepis jsou zatím jen demo, nic placeného.

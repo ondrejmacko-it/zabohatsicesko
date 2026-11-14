@@ -4,6 +4,7 @@ import { after } from "next/server";
 import { z } from "zod";
 import { GROUPS, ROLES } from "@/lib/types";
 import { runAction, type ActionResult } from "@/features/shared/run-action";
+import { logError } from "@/server/audit";
 import { createAccess } from "@/server/auth/access-links";
 import { syncPending } from "@/server/calendar/sync";
 import { BULK_INVITE_MAX, inviteUser, inviteUsers, previewBulkInvite, rejectRequest, updateAccess, type BulkInviteRow } from "@/server/services/users";
@@ -72,16 +73,35 @@ export async function rejectRequestAction(_prev: ActionResult | null, formData: 
   });
 }
 
-export type BulkInviteResult = { ok: true; rows: BulkInviteRow[]; saved: boolean } | { ok: false; error: string };
+export type BulkInviteResultRow = BulkInviteRow & { access?: AccessMessage };
+export type BulkInviteResult = { ok: true; rows: BulkInviteResultRow[]; saved: boolean } | { ok: false; error: string };
 
 /** Hromadné pozvání ve dvou krocích jedním formulářem: „preview“ jen vyhodnotí seznam, „save“ pozve. */
 export async function bulkInviteAction(_prev: BulkInviteResult | null, formData: FormData): Promise<BulkInviteResult> {
-  let rows: BulkInviteRow[] = [];
+  let rows: BulkInviteResultRow[] = [];
   const saved = formData.get("step") === "save";
   const result = await runAction(async (user) => {
     const data = z.object({ ...access, text: z.string().max(BULK_INVITE_MAX * 300) }).parse({ ...accessOf(formData), text: formData.get("text") });
-    rows = saved ? await inviteUsers(user, data) : await previewBulkInvite(user, data.text, data.role);
-    if (saved) after(() => syncPending());
+    if (!saved) {
+      rows = await previewBulkInvite(user, data.text, data.role);
+      return { ok: true };
+    }
+    // Každý pozvaný hned dostane svůj osobní odkaz. Když se odkaz jednomu nepovede vytvořit, ostatní pozvání
+    // platí dál a správce mu odkaz vytvoří v menu účtu.
+    rows = [];
+    for (const row of await inviteUsers(user, data)) {
+      if (!row.userId) {
+        rows.push(row);
+        continue;
+      }
+      try {
+        rows.push({ ...row, access: accessOfCreated(await createAccess(user, row.userId, false)) });
+      } catch (error) {
+        logError("sprava.bulk_invite", "access_failed", error);
+        rows.push(row);
+      }
+    }
+    after(() => syncPending());
     return { ok: true };
   });
   return result.ok ? { ok: true, rows, saved } : result;

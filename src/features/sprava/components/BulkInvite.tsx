@@ -7,7 +7,7 @@ import { submitKeepingValues } from "@/features/shared/keep-values";
 import type { Role } from "@/lib/types";
 import type { BulkInviteRow } from "@/server/services/users";
 import { bulkInviteAction } from "../actions";
-import { AccessFields } from "./AccessForms";
+import { AccessFields, CopyMessage, inviteMessage } from "./AccessForms";
 
 const PROBLEM: Record<Exclude<BulkInviteRow["status"], "ok">, string> = {
   invalid: "není platná adresa",
@@ -28,11 +28,31 @@ function BulkInviteForm({ roles, onClose }: { roles: Role[]; onClose: () => void
   const reviewed = Boolean(state?.ok && !state.saved && checkedText === text);
 
   if (state?.ok && state.saved) {
+    const withLink = ok.filter((row) => row.access);
+    const withoutLink = ok.filter((row) => !row.access);
     return (
       <div className="stack">
         <p className="notice notice-ok" role="status">
-          <strong>Přístup má {people(ok.length)}.</strong> Každý potřebuje svůj osobní odkaz: v seznamu účtů u něj zvolte „Nový odkaz k přihlášení“ a zprávu mu pošlete.
+          <strong>Přístup má {people(ok.length)}.</strong> Každému pošlete jeho osobní odkaz. Zprávy jsou připravené níže.
         </p>
+        {withLink.length > 0 && (
+          <ul className="bulk-rows bulk-rows-links">
+            {withLink.map((row) => (
+              <li key={row.email}>
+                <span className="bulk-person">
+                  <strong>{row.name}</strong>
+                  <span>{row.email}</span>
+                </span>
+                <CopyMessage compact text={inviteMessage(row.access!)} />
+              </li>
+            ))}
+          </ul>
+        )}
+        {withoutLink.length > 0 && (
+          <p className="notice" role="status">
+            Odkaz se nepodařilo připravit pro: {withoutLink.map((row) => row.name).join(", ")}. V seznamu účtů u nich zvolte „Nový odkaz k přihlášení“.
+          </p>
+        )}
         {problems.length > 0 && <ProblemList rows={problems} title="Přeskočené řádky" />}
         <div className="dialog-actions">
           <button type="button" className="btn" onClick={onClose}>
@@ -65,7 +85,7 @@ function BulkInviteForm({ roles, onClose }: { roles: Role[]; onClose: () => void
             points={[
               ok.length > 0 && "Všichni dostanou roli a skupiny vybrané výše a hned se mohou přihlásit.",
               ok.length > 0 && "Budoucí akce jejich skupin je přiberou mezi hosty pozvánek.",
-              ok.length > 0 && "Wiki jim e-mail nepošle. Po uložení dostanete zprávu s odkazem ke zkopírování.",
+              ok.length > 0 && "Wiki jim e-mail nepošle. Po uložení dostanete pro každého zprávu s osobním odkazem ke zkopírování.",
               problems.length > 0 && `Řádky s chybou se přeskočí (${problems.length}).`,
             ]}
           />

@@ -30,11 +30,11 @@ const fakeFetch: typeof fetch = async (input) => {
   return Response.json({ id_token: nextToken });
 };
 
-async function login(email: string, sub: string, name?: string) {
+async function login(email: string, sub: string, name?: string, allowRequests?: boolean) {
   const claims = { iss: "https://accounts.google.com", aud: CLIENT_ID, sub, email, email_verified: true, nonce: NONCE, iat: NOW, exp: NOW + 600, name };
   const input = `${b64({ alg: "RS256", kid: "k" })}.${b64(claims)}`;
   nextToken = `${input}.${createSign("RSA-SHA256").update(input).sign(keys.privateKey).toString("base64url")}`;
-  return completeLogin(await getDb(), googleLoginConfig()!, { code: "c", verifier: "v", nonce: NONCE }, fakeFetch, NOW);
+  return completeLogin(await getDb(), googleLoginConfig()!, { code: "c", verifier: "v", nonce: NONCE, allowRequests }, fakeFetch, NOW);
 }
 
 const session = async (userId: string, method: "demo" | "google" = "google") => resolveSessionUser(await getDb(), { userId, method });
@@ -65,6 +65,13 @@ describe("žádost po prvním přihlášení", () => {
     // Opakované přihlášení novou žádost nezaloží.
     expect(await login(KOLEGA, "sub-kolegyne")).toMatchObject({ reason: "pending", created: false });
     expect(await pendingRequestCount(await getDb(), admin)).toBe(1);
+  });
+
+  test("ve vstupu na pozvánku neznámý účet žádost nezaloží a nic neuloží", async () => {
+    expect(await login(KOLEGA, "sub-kolegyne", "Nová Kolegyně", false)).toMatchObject({ ok: false, reason: "not_invited" });
+    const db = await getDb();
+    expect(await pendingRequestCount(db, admin)).toBe(0);
+    expect(await db.select().from(userIdentities)).toHaveLength(0);
   });
 
   test("po schválení vstoupí s přidělenou rolí a skupinami", async () => {

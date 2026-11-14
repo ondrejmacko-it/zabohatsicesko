@@ -9,7 +9,7 @@ import type { Role } from "@/lib/types";
 import { CalendarStatusLine, InviteRecipients } from "@/features/vzdelavani/components/CalendarStatusLine";
 import { loadCalendarStatus } from "@/server/services/calendar-status";
 import { requireUser } from "@/server/auth/session";
-import { now } from "@/server/config";
+import { gateMode, now } from "@/server/config";
 import { canManageUsers } from "@/server/policy";
 import { listAccounts, type Account } from "@/server/services/users";
 
@@ -24,6 +24,8 @@ export default async function AdminPage() {
   const roles: Role[] = ["admin", "member"];
   const pending = accounts.filter((a) => a.status === "pending");
   const others = accounts.filter((a) => a.status !== "pending");
+  // Na pozvánku žádosti nevznikají. Sekce zůstane, jen dokud čeká starší žádost z doby otevřeného vstupu.
+  const invite = gateMode() === "invite";
 
   return (
     <>
@@ -51,6 +53,11 @@ export default async function AdminPage() {
             <strong>Skupiny</strong> říkají, co člověk uvidí: jen akce a zápisy určené jeho skupinám. Všichni = celá firma, FP = finanční
             poradci, RM = relationship manažeři, Tým A = účastníci Action time.
           </li>
+          {invite && (
+            <li>
+              <strong>Vstup</strong> je jen na pozvánku. Po pozvání dostanete zprávu s osobním odkazem, kterou kolegovi pošlete.
+            </li>
+          )}
           <li>
             <strong>Vedoucí akce</strong> není role. Správce ho vybere u konkrétní akce a vedoucí pak u ní nahrává záznam a
             zveřejňuje zápis.
@@ -64,14 +71,16 @@ export default async function AdminPage() {
         <InviteRecipients status={calendar} />
       </section>
 
-      <section className="section stack" aria-labelledby="zadosti">
-        <h2 id="zadosti">Čekající žádosti {pending.length > 0 && <span className="count-badge">{pending.length}</span>}</h2>
-        {pending.length === 0 ? (
-          <p className="muted small">Nikdo nečeká. Nový kolega se přihlásí účtem Google a jeho žádost se objeví tady.</p>
-        ) : (
-          <ul className="account-list">{pending.map((a) => accountRow(a, roles))}</ul>
-        )}
-      </section>
+      {!(invite && pending.length === 0) && (
+        <section className="section stack" aria-labelledby="zadosti">
+          <h2 id="zadosti">Čekající žádosti {pending.length > 0 && <span className="count-badge">{pending.length}</span>}</h2>
+          {pending.length === 0 ? (
+            <p className="muted small">Nikdo nečeká. Nový kolega se přihlásí účtem Google a jeho žádost se objeví tady.</p>
+          ) : (
+            <ul className="account-list">{pending.map((a) => accountRow(a, roles))}</ul>
+          )}
+        </section>
+      )}
 
       <section className="section stack" aria-labelledby="uzivatele">
         <h2 id="uzivatele">

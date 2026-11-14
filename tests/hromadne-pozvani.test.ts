@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, test } from "vitest";
+import { createAccess, openAccessLink } from "@/server/auth/access-links";
 import { users } from "@/server/db/schema";
 import { inviteUser, inviteUsers, parseInviteList, previewBulkInvite } from "@/server/services/users";
 import { admin, lead, organizer, participant, resetDemo } from "./helpers";
@@ -37,6 +38,14 @@ describe("hromadné pozvání", () => {
     expect(rows.filter((r) => r.status === "ok").map((r) => r.email)).toEqual(["jana.nova@gmail.test", "petr.svoboda2@gmail.test"]);
     const invited = await db.select().from(users).where(eq(users.email, "jana.nova@gmail.test"));
     expect(invited[0]).toMatchObject({ name: "Jana Nová", role: "member", groups: ["vsichni", "fp"], status: "active", origin: "invite" });
+    // Každý uložený řádek nese nový účet, kterému jde hned vytvořit osobní odkaz.
+    const ids = rows.filter((r) => r.status === "ok").map((r) => r.userId!);
+    expect(ids[0]).toBe(invited[0]!.id);
+    for (const id of ids) {
+      const access = await createAccess(organizer, id, false);
+      expect(await openAccessLink(db, access.link.split("/pozvanka/")[1]!)).toMatchObject({ userId: id });
+    }
+    expect(rows.filter((r) => r.status !== "ok").every((r) => r.userId === undefined)).toBe(true);
     // Druhé odeslání téhož seznamu nikoho nezdvojí.
     expect((await inviteUsers(admin, { text: LIST, role: "member", groups: ["vsichni"] })).some((r) => r.status === "ok")).toBe(false);
   });

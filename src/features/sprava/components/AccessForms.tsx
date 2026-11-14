@@ -115,7 +115,7 @@ export function inviteMessage(access: AccessMessage): string {
 }
 
 /** Zkopíruje zprávu do schránky. Když to prohlížeč nedovolí, ukáže text k ručnímu označení. */
-export function CopyMessage({ text }: { text: string }) {
+export function CopyMessage({ text, compact = false }: { text: string; compact?: boolean }) {
   const [copied, setCopied] = useState<"yes" | "manual" | null>(null);
   const copy = async () => {
     try {
@@ -125,6 +125,16 @@ export function CopyMessage({ text }: { text: string }) {
       setCopied("manual");
     }
   };
+  if (compact) {
+    return (
+      <div className="copy-message copy-message-compact">
+        <button type="button" className="btn btn-small" onClick={copy}>
+          {copied === "yes" ? "Zkopírováno" : "Kopírovat zprávu"}
+        </button>
+        {copied === "manual" && <textarea className="textarea" readOnly rows={4} value={text} onFocus={(e) => e.currentTarget.select()} />}
+      </div>
+    );
+  }
   return (
     <div className="copy-message">
       <button type="button" className="btn btn-primary" onClick={copy}>

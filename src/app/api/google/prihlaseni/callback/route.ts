@@ -20,6 +20,7 @@ const FAILURES: Record<LoginFailure, string> = {
   not_allowed: "ucet-neni-povoleny",
   account_conflict: "ucet-neni-povoleny",
   requests_full: "ucet-neni-povoleny",
+  not_invited: "jiny-ucet",
 };
 
 // Návrat z Googlu. Kód se smění jen tehdy, když stav odpovídá podepsané cookie téhož prohlížeče.
@@ -44,7 +45,13 @@ export async function GET(request: NextRequest) {
 
   try {
     const db = await getDb();
-    const result = await completeLogin(db, cfg, { code, nonce: pending.nonce, verifier: pending.verifier });
+    const result = await completeLogin(db, cfg, {
+      code,
+      nonce: pending.nonce,
+      verifier: pending.verifier,
+      // Na pozvánku se nikdo cizí nepřihlásí ani nepožádá o přístup.
+      allowRequests: gateMode() !== "invite",
+    });
     const grant = result.grant;
     if (!result.ok) {
       // Oprávnění ke Kalendáři od účtu, který se dovnitř nedostal, Wiki nedrží.
