@@ -4,7 +4,7 @@ import { getDb, queryRows } from "@/server/db/client";
 import { isOrganizer, type Viewer } from "@/server/policy";
 
 /**
- * Počet věcí, které na uživatele čekají (odznak u Vzdělávání): organizátor vidí synchronizace
+ * Počet věcí, které na uživatele čekají (odznak u Vzdělávání): správce vidí synchronizace
  * vyžadující pozornost, vedoucí a kontrolor zápisy ke kontrole.
  */
 export async function pendingTaskCount(viewer: Viewer): Promise<number> {

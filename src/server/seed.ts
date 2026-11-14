@@ -89,7 +89,7 @@ export async function seedDatabase(tx: Executor): Promise<void> {
     });
     await tx.insert(eventRevisions).values({ eventId: e.id, revision: 1, action: "import", snapshot });
 
-    // Ukázkové pozvánky patří simulaci. V testovacím režimu Googlu začínají akce bez vazby a organizátor je spáruje.
+    // Ukázkové pozvánky patří simulaci. V testovacím režimu Googlu začínají akce bez vazby a správce je spáruje.
     if (calendarMode() === "simulation" && "calendarFixture" in e && e.calendarFixture) {
       const fixture = e.calendarFixture;
       const summary = calendarSummary(snapshot);

@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, test } from "vitest";
 import { beginLogin, verifyLoginState } from "@/server/auth/google-login";
 import { audienceAttendees, listRecipients } from "@/server/calendar/attendees";
-import { loadCalendarStatus } from "@/server/services/calendar-status";
+import { loadCalendarStatus, loadInviteRecipients } from "@/server/services/calendar-status";
 import { admin, organizer, participant, resetDemo } from "./helpers";
 
 // Souhlas ke Kalendáři rovnou při přihlášení správce, příjemci pozvánek podle skupin a stav Kalendáře.
@@ -65,5 +65,14 @@ describe("příjemci pozvánek a stav Kalendáře v simulaci", () => {
       expect(status.recipients.fp.length).toBeGreaterThan(0);
     }
     await expect(loadCalendarStatus(participant)).rejects.toMatchObject({ code: "forbidden" });
+  });
+
+  test("dialog akce dostane hosty podle skupiny bez dotazu na Google, jen pro správce", async () => {
+    const invite = await loadInviteRecipients(organizer);
+    const fp = (await audienceAttendees(db, "fp")).map((a) => a.email).sort();
+    expect(invite.attendeeSource).toBe("audience");
+    expect(invite.recipients.fp.map((r) => r.email).sort()).toEqual(fp);
+    expect(invite.recipients.rm.map((r) => r.email)).not.toEqual(invite.recipients.fp.map((r) => r.email));
+    await expect(loadInviteRecipients(participant)).rejects.toMatchObject({ code: "forbidden" });
   });
 });

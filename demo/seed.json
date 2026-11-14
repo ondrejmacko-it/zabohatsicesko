@@ -17,7 +17,7 @@
     },
     {
       "id": "demo-organizator",
-      "name": "Organizátor ukázky",
+      "name": "Správce vzdělávání",
       "role": "organizer",
       "groups": [
         "vsichni",

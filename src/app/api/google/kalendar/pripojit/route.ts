@@ -9,7 +9,7 @@ import { userIdentities } from "@/server/db/schema";
 import { isOrganizer } from "@/server/policy";
 import { AUTO_COOKIE, OAUTH_COOKIE, oauthCookieOptions } from "../cookie";
 
-// Začátek připojení Kalendáře. Jen organizátor a jen v nakonfigurovaném testovacím režimu.
+// Začátek připojení Kalendáře. Jen správce a jen v nakonfigurovaném testovacím režimu.
 export async function GET(request: NextRequest) {
   const user = await getCurrentUser();
   const cfg = googleCalendarConfig();

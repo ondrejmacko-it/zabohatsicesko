@@ -1339,7 +1339,7 @@ details > summary {
   margin-bottom: 12px;
 }
 
-/* Průvodce měsícem pro organizátora: tři kroky vedle sebe, na telefonu pod sebou. */
+/* Průvodce měsícem pro správce: tři kroky vedle sebe, na telefonu pod sebou. */
 .month-guide {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -2079,4 +2079,41 @@ p.cal-status {
   .publish-pick {
     grid-column: 1 / -1;
   }
+}
+
+/* Hosté pozvánky v dialogu akce: počet jako hlavní údaj, jména a vysvětlení tlumeně. */
+.invitees {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.invitees-head {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+}
+
+.invitees-names {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.invitees-more {
+  display: inline;
+}
+
+.invitees-more summary {
+  display: inline;
+  margin-left: 4px;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.suggestion-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
