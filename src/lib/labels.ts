@@ -81,7 +81,7 @@ export const ERROR_LABELS: Record<string, string> = {
   attendee_not_allowed: "Pozvánka by šla na adresu mimo povolené testovací příjemce. Nic se neodeslalo.",
   calendar_not_allowed: "Kalendář není na seznamu povolených. Nic se nezapsalo.",
   calendar_series_master: "Vazba míří na celou opakovanou sérii. Wiki mění jen jeden výskyt, spárujte konkrétní termín.",
-  calendar_not_organizer: "Originál pozvánky vlastní jiný účet. Připojte účet organizátora, nebo založte novou pozvánku.",
+  calendar_not_organizer: "Originál pozvánky vlastní jiný účet. Připojte účet správce, nebo založte novou pozvánku.",
   calendar_not_configured: "Testovací režim Google Kalendáře nemá úplnou konfiguraci na serveru.",
   unsupported_fixture: "Ukázkový přepis zná jen testovací nahrávku. Pro jiný soubor je potřeba skutečný testovací režim.",
   transcription_unavailable: "Služba přepisu je dočasně nedostupná. Zkuste zpracování znovu.",

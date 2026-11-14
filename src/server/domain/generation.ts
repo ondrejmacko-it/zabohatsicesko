@@ -76,7 +76,7 @@ export function czechHolidays(year: number): Set<string> {
 /**
  * Návrh měsíce ze šablony. Vrací jen sloty, které ještě nemají akci ani výjimku,
  * takže opakované generování doplní chybějící místa a ruční úpravy nechá být.
- * Střídání typů ve slotu se řídí lichým/sudým ISO týdnem, organizátor ho může kdykoli přepsat.
+ * Střídání typů ve slotu se řídí lichým/sudým ISO týdnem, správce ho může kdykoli přepsat.
  */
 export function planMonth(
   orgId: string,

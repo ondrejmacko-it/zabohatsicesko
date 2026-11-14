@@ -74,7 +74,7 @@ function EventForm({ mode, id, revision, initial, published, people, topics, rep
   const [values, setValues] = useState(() => (replace ? replacementOf(initial) : initial));
   const [multiDay, setMultiDay] = useState(initial.endDate !== null);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
-  // Méně časté údaje jsou sbalené. Otevřené jsou, když je organizátor už vyplnil jinak než výchozím způsobem.
+  // Méně časté údaje jsou sbalené. Otevřené jsou, když je správce už vyplnil jinak než výchozím způsobem.
   const [moreOpen, setMoreOpen] = useState(initial.reviewerId !== "" || initial.label !== TYPE_LABELS[initial.type]);
   const [impact, setImpact] = useState<{ key: string; data: ChangeImpact } | null>(null);
   const [previewError, setPreviewError] = useState<ActionResult | null>(null);
@@ -99,7 +99,7 @@ function EventForm({ mode, id, revision, initial, published, people, topics, rep
   const significant = SIGNIFICANT.some(changed);
 
   // Formulář se neodesílá přes <form action>: React by po akci vrátil výběry (typ, publikum) na první
-  // možnost. Ruční odeslání nechá po chybě všechna pole tak, jak je organizátor vyplnil.
+  // možnost. Ruční odeslání nechá po chybě všechna pole tak, jak je správce vyplnil.
   const submit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget, (event.nativeEvent as SubmitEvent).submitter);
