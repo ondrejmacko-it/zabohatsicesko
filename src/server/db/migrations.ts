@@ -261,4 +261,11 @@ ALTER TABLE calendar_links ADD COLUMN managed_attendees text[];
 ALTER TABLE topics ADD COLUMN archived_at timestamptz;
 `,
   },
+  {
+    id: "0007_invite_hold",
+    sql: `
+-- Lhůta po prvním zveřejnění: do tohoto času pozvánka neodejde a zveřejnění jde vrátit na návrh.
+ALTER TABLE events ADD COLUMN invite_hold_until timestamptz;
+`,
+  },
 ];

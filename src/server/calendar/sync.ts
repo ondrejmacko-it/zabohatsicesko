@@ -114,6 +114,8 @@ export async function syncEvent(eventId: string, options: { force?: boolean } = 
       const revision = row?.publishedRevision ?? 0;
       const [current] = await db.select().from(calendarLinks).where(eq(calendarLinks.eventId, eventId)).limit(1);
       if (!row || !snapshot || !current) return;
+      // Lhůta po prvním zveřejnění: pozvánka počká, vazba zůstane ve frontě a odešle ji další běh.
+      if (row.inviteHoldUntil && row.inviteHoldUntil > new Date()) return;
       if (current.syncedRevision >= revision && current.syncStatus === "synced") return;
 
       const desired = desiredData(eventId, snapshot, await hasPublishedMinutes(db, eventId));

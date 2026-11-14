@@ -22,6 +22,7 @@ import {
   generateMonth,
   prepareMonth,
   publishDrafts,
+  unpublishEvents,
   updateEvent,
   updateTemplate,
   type EventInput,
@@ -164,6 +165,33 @@ export async function cancelEventAction(_prev: ActionResult | null, formData: Fo
   });
 }
 
+/**
+ * Vrátí právě zveřejněné akce mezi návrhy, dokud jejich pozvánka čeká ve lhůtě. Oprávnění a lhůtu
+ * ověřuje `unpublishEvents`. Co už odešlo, zůstane zveřejněné a zpráva to řekne.
+ */
+export async function unpublishAction(ids: string[]): Promise<ActionResult> {
+  return run(async (user) => {
+    const parsed = z.array(z.string().min(1).max(80)).min(1).max(100).parse(ids);
+    const { reverted, skipped } = await unpublishEvents(user, parsed);
+    if (!reverted.length) return { ok: false, error: "Vrátit už nejde, pozvánka mezitím odešla. Akci můžete upravit nebo zrušit." };
+    const count = reverted.length;
+    const what = count === 1 ? "Akce je zpět mezi návrhy." : `Zpět mezi návrhy: ${count} ${count < 5 ? "akce" : "akcí"}.`;
+    const rest = skipped
+      ? ` ${skipped === 1 ? "Jedna pozvánka už odešla, ta akce zůstala" : "Některé pozvánky už odešly, ty akce zůstaly"} zveřejněná.`
+      : " Nikomu nic neodešlo.";
+    return { ok: true, message: what + rest };
+  });
+}
+
+/** Po uplynutí lhůty odešle čekající pozvánky. Zálohou je otevření Plánu správcem a denní cron. */
+export async function sendHeldInvitesAction(): Promise<ActionResult> {
+  return run(async (user) => {
+    if (!isOrganizer(user)) throw new DomainError("forbidden");
+    after(() => syncPublished());
+    return { ok: true };
+  });
+}
+
 /** Koho se zrušení dotkne. Dialog zrušení to ukáže ještě před potvrzením. */
 export async function previewCancelAction(id: string): Promise<ActionResult & { impact?: CancelImpact }> {
   return run(async (user) => ({ ok: true, impact: await cancelImpact(user, z.string().max(80).parse(id)) }));
@@ -227,7 +255,7 @@ export async function publishMonthAction(_prev: ActionResult | null, formData: F
       : "";
     if (!published.length) return { ok: false, error: `Nic se nezveřejnilo.${skippedNote}` };
     const count = `${published.length} ${published.length === 1 ? "akce" : published.length < 5 ? "akce" : "akcí"}`;
-    return { ok: true, message: `Zveřejněno: ${count}. Pozvánky do Kalendáře se odesílají.${skippedNote}` };
+    return { ok: true, message: `Zveřejněno: ${count}.${skippedNote}` };
   });
 }
 

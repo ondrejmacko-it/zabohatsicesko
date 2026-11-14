@@ -83,6 +83,8 @@ export const events = pgTable("events", {
   revision: integer("revision").notNull(),
   publishedRevision: integer("published_revision"),
   published: jsonb("published").$type<EventSnapshot>(),
+  /** Jen po prvním zveřejnění: do tohoto času fronta pozvánku neodešle a zveřejnění jde vrátit. */
+  inviteHoldUntil: ts("invite_hold_until"),
   updatedBy: text("updated_by"),
   updatedAt: ts("updated_at").notNull().defaultNow(),
 });

@@ -4,16 +4,19 @@ import { listPersonas } from "@/server/auth/personas";
 import { requireUser } from "@/server/auth/session";
 import { getDb } from "@/server/db/client";
 import { canManageUsers } from "@/server/policy";
+import { PublishUndoBar } from "@/features/vzdelavani/components/PublishUndoBar";
+import { listUndoable } from "@/server/services/events";
 import { pendingTaskCount } from "@/server/services/overview";
 import { pendingRequestCount } from "@/server/services/users";
 
 export default async function WikiLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
   const db = await getDb();
-  const [personas, badge, pendingRequests] = await Promise.all([
+  const [personas, badge, pendingRequests, undoable] = await Promise.all([
     listPersonas(),
     pendingTaskCount(user),
     pendingRequestCount(db, user),
+    listUndoable(user),
   ]);
   return (
     <>
@@ -24,6 +27,7 @@ export default async function WikiLayout({ children }: { children: React.ReactNo
           {children}
         </main>
       </div>
+      <PublishUndoBar items={undoable} />
     </>
   );
 }

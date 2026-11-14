@@ -5,13 +5,14 @@ import { addDays, fromPragueLocal, isoWeekday, monthRange, toDateKey } from "@/l
 import type { EventType, Group, PlanStatus, SyncStatus } from "@/lib/types";
 import { audit } from "@/server/audit";
 import { targetCalendarId } from "@/server/calendar/target";
-import { config, now } from "@/server/config";
+import { config, now, publishUndoSeconds } from "@/server/config";
 import { getDb, type Executor } from "@/server/db/client";
 import {
   calendarLinks,
   eventRevisions,
   events,
   generationExclusions,
+  recordings,
   templateSlots,
   users,
 } from "@/server/db/schema";
@@ -219,12 +220,19 @@ export type SaveMode = "draft" | "publish";
  * Zveřejnění uloží snímek, revizi a požadavek na synchronizaci v jedné transakci.
  * Svátek se nesynchronizuje. Vazbu tu dostane akce založená ve Wiki. Importované akci bez vazby
  * ji dozaloží `linkPublishedWithoutInvite` (nejdřív ověří, že ve stejném čase neleží cizí pozvánka).
+ * První zveřejnění nastaví krátkou lhůtu, po kterou fronta pozvánku neodešle a krok jde vrátit
+ * (`unpublishEvents`). Každé další zveřejnění lhůtu ruší a odchází hned.
  */
 async function publishInTx(tx: Executor, row: EventRow, actorId: string, action: string) {
   const snapshot = snapshotOf(row);
+  const holdSec = action === "publish" && row.publishedRevision === null && row.type !== "holiday" ? publishUndoSeconds() : 0;
   await tx
     .update(events)
-    .set({ published: snapshot, publishedRevision: row.revision })
+    .set({
+      published: snapshot,
+      publishedRevision: row.revision,
+      inviteHoldUntil: holdSec > 0 ? sql`now() + make_interval(secs => ${holdSec})` : null,
+    })
     .where(eq(events.id, row.id));
   await tx
     .insert(eventRevisions)
@@ -431,6 +439,103 @@ export async function deleteDraft(viewer: Viewer, id: string, expectedRevision: 
         .onConflictDoNothing();
     }
     await audit(tx, viewer.id, "event.delete_draft", "event", id);
+  });
+}
+
+// ——— Zpět po zveřejnění ———
+
+/** O kolik sekund smí vrácení dorazit po lhůtě (klik těsně před koncem odpočtu). */
+const UNDO_GRACE_SEC = 5;
+
+export type UndoablePublish = { id: string; label: string; topicTitle: string | null; remainingMs: number };
+
+/** Akce, které uživatel právě zveřejnil a jejich pozvánka ještě čeká ve lhůtě. */
+export async function listUndoable(viewer: Viewer): Promise<UndoablePublish[]> {
+  if (!isOrganizer(viewer)) return [];
+  const db = await getDb();
+  const rows = await db
+    .select({
+      id: events.id,
+      label: events.label,
+      topicTitle: events.topicTitle,
+      remainingMs: sql<number>`(extract(epoch from ${events.inviteHoldUntil} - now()) * 1000)::int`,
+    })
+    .from(events)
+    .where(
+      and(
+        eq(events.orgId, config.orgId),
+        eq(events.updatedBy, viewer.id),
+        eq(events.status, "published"),
+        sql`${events.revision} = ${events.publishedRevision}`,
+        gt(events.inviteHoldUntil, sql`now()`),
+      ),
+    )
+    .orderBy(asc(events.startsAt), asc(events.id));
+  return rows;
+}
+
+/**
+ * Vrátí právě zveřejněné akce mezi návrhy. Projde jen první zveřejnění ve lhůtě, jehož pozvánka
+ * ještě neodešla a ani se neodesílá. Vznikne nová revize „unpublish“, starší revize zůstávají.
+ * Čekající vazba se smaže, takže fronta nemá co odeslat. Ostatní akce se přeskočí beze změny.
+ */
+export async function unpublishEvents(viewer: Viewer, ids: string[]): Promise<{ reverted: string[]; skipped: number }> {
+  requireOrganizer(viewer);
+  const db = await getDb();
+  return db.transaction(async (tx) => {
+    const reverted: string[] = [];
+    for (const id of new Set(ids)) {
+      const [current] = await tx
+        .select()
+        .from(events)
+        .where(
+          and(
+            eq(events.id, id),
+            eq(events.orgId, config.orgId),
+            eq(events.status, "published"),
+            sql`${events.revision} = ${events.publishedRevision}`,
+            gt(events.inviteHoldUntil, sql`now() - make_interval(secs => ${UNDO_GRACE_SEC})`),
+          ),
+        )
+        .limit(1);
+      if (!current) continue;
+      const [recording] = await tx.select({ id: recordings.id }).from(recordings).where(eq(recordings.eventId, id)).limit(1);
+      if (recording) continue;
+      // Vazbu lze smazat jen netknutou: bez pozvánky, bez pokusu a bez zámku běžící synchronizace.
+      const [link] = await tx.select({ eventId: calendarLinks.eventId }).from(calendarLinks).where(eq(calendarLinks.eventId, id)).limit(1);
+      if (link) {
+        const removed = await tx
+          .delete(calendarLinks)
+          .where(
+            and(
+              eq(calendarLinks.eventId, id),
+              isNull(calendarLinks.externalEventId),
+              eq(calendarLinks.attempts, 0),
+              or(isNull(calendarLinks.leaseUntil), lt(calendarLinks.leaseUntil, sql`now()`)),
+            ),
+          )
+          .returning({ eventId: calendarLinks.eventId });
+        if (!removed.length) continue;
+      }
+      const [row] = await tx
+        .update(events)
+        .set({
+          status: "draft",
+          published: null,
+          publishedRevision: null,
+          inviteHoldUntil: null,
+          revision: sql`${events.revision} + 1`,
+          updatedBy: viewer.id,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(events.id, id), eq(events.revision, current.revision)))
+        .returning();
+      if (!row) continue;
+      await tx.insert(eventRevisions).values({ eventId: id, revision: row.revision, action: "unpublish", snapshot: snapshotOf(row), actorId: viewer.id });
+      await audit(tx, viewer.id, "event.unpublish", "event", id);
+      reverted.push(id);
+    }
+    return { reverted, skipped: new Set(ids).size - reverted.length };
   });
 }
 

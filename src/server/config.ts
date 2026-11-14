@@ -49,6 +49,15 @@ export function now(): Date {
   return config.useRealClock ? new Date() : config.referenceNow;
 }
 
+/**
+ * Kolik sekund po prvním zveřejnění čeká pozvánka na odeslání, aby šlo zveřejnění vrátit.
+ * `PUBLISH_UNDO_SEC=0` lhůtu vypne (pozvánka odchází hned).
+ */
+export function publishUndoSeconds(): number {
+  const value = Number(process.env.PUBLISH_UNDO_SEC ?? "10");
+  return Number.isFinite(value) ? Math.min(60, Math.max(0, Math.round(value))) : 10;
+}
+
 export type CalendarMode = "simulation" | "google-test";
 
 /**
