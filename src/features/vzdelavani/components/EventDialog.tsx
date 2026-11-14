@@ -9,13 +9,16 @@ import { EXTRAORDINARY_TYPES, GROUP_HINTS, GROUP_LABELS, TYPE_LABELS } from "@/l
 import { isoWeekday } from "@/lib/time";
 import { EVENT_TYPES, GROUPS } from "@/lib/types";
 import { defaultAudience } from "@/server/domain/generation";
-import { topicFitsAudience } from "@/server/domain/topics";
+import { interestedLabel, topicFitsAudience } from "@/server/domain/topics";
+import type { GroupRecipients, InviteMode } from "@/server/services/calendar-status";
 import type { EventFormValues } from "@/server/services/detail";
 import type { ChangeImpact } from "@/server/services/impact";
 import { previewImpactAction, saveEventAction, type ActionResult } from "../actions";
 
 export type Person = { id: string; name: string };
-export type TopicOption = { name: string; audience: string; reason: string };
+export type TopicOption = { name: string; audience: string; reason: string; interestCount?: number; history?: string };
+/** Komu půjde pozvánka podle publika. Bez údaje (mimo plánování) dialog ukáže jen obecnou nápovědu. */
+export type InvitePreview = { mode: InviteMode; recipients: GroupRecipients };
 
 type Props = {
   mode: "create" | "edit";
@@ -26,6 +29,7 @@ type Props = {
   published: EventFormValues | null;
   people: Person[];
   topics: TopicOption[];
+  invites?: InvitePreview;
   inviteeCount: number;
   /** Nahrazení pravidelného termínu jinou akcí na stejném místě v rozpisu. */
   replace?: boolean;
@@ -69,7 +73,7 @@ function replacementOf(initial: EventFormValues): EventFormValues {
   return { ...initial, type: "workshop", label: TYPE_LABELS.workshop, topicTitle: "" };
 }
 
-function EventForm({ mode, id, revision, initial, published, people, topics, replace, planDays, onClose }: Props & { onClose: () => void }) {
+function EventForm({ mode, id, revision, initial, published, people, topics, invites, replace, planDays, onClose }: Props & { onClose: () => void }) {
   const router = useRouter();
   const [values, setValues] = useState(() => (replace ? replacementOf(initial) : initial));
   const [multiDay, setMultiDay] = useState(initial.endDate !== null);
@@ -258,7 +262,14 @@ function EventForm({ mode, id, revision, initial, published, people, topics, rep
                     {suggestions.map((t) => (
                       <button key={t.name} type="button" className="suggestion" onClick={() => set("topicTitle", t.name)}>
                         <span className="suggestion-name">{t.name}</span>
-                        <span className="field-hint">{t.reason}</span>
+                        {t.interestCount !== undefined ? (
+                          <span className="suggestion-meta">
+                            <strong>{interestedLabel(t.interestCount)}</strong>
+                            {t.history && <span className="muted"> · {t.history}</span>}
+                          </span>
+                        ) : (
+                          <span className="field-hint">{t.reason}</span>
+                        )}
                       </button>
                     ))}
                   </div>
@@ -292,7 +303,8 @@ function EventForm({ mode, id, revision, initial, published, people, topics, rep
                   </option>
                 ))}
               </select>
-              <span className="field-hint">{GROUP_HINTS[values.audience]}</span>
+              {!invites && <span className="field-hint">{GROUP_HINTS[values.audience]}</span>}
+              {invites && <InviteHint invites={invites} audience={values.audience} />}
             </label>
           </div>
           {!isHoliday && <p className="field-hint">Návrh jde uložit i neúplný. Pro zveřejnění je potřeba téma a vedoucí.</p>}
@@ -376,4 +388,31 @@ function EventForm({ mode, id, revision, initial, published, people, topics, rep
       )}
     </Modal>
   );
+}
+
+const MAX_NAMES = 6;
+
+/** Kdo dostane pozvánku při zveřejnění, podle vybraného publika a režimu Kalendáře. */
+function InviteHint({ invites, audience }: { invites: InvitePreview; audience: EventFormValues["audience"] }) {
+  const list = invites.recipients[audience];
+  const abbreviation = audience === "vsichni" ? null : GROUP_HINTS[audience];
+  const names = list.slice(0, MAX_NAMES).map((r) => r.name || r.email).join(", ");
+  const rest = list.length - MAX_NAMES;
+  const who = list.length ? `${countPeople(list.length)}: ${names}${rest > 0 ? ` a ${rest} další` : ""}.` : null;
+  let text: string;
+  if (invites.mode === "disconnected") text = "Kalendář není propojený. Pozvánka odejde až po propojení.";
+  else if (invites.mode === "allowlist") text = `Pozvánka půjde jen na testovací adresu (${list.map((r) => r.email).join(", ") || "žádná"}), kolegům zatím ne.`;
+  else if (!who) text = "Ve skupině zatím není nikdo s aktivním účtem, pozvánka vznikne bez hostů.";
+  else if (invites.mode === "simulation") text = `Ukázka bez e-mailů. Pozvánku by dostal${list.length === 1 ? "" : "o"} ${who}`;
+  else text = `Pozvánku od Googlu dostane ${who}`;
+  return (
+    <span className="field-hint" aria-live="polite">
+      {abbreviation && `${abbreviation} `}
+      {text}
+    </span>
+  );
+}
+
+function countPeople(count: number): string {
+  return `${count} ${count === 1 ? "člověk" : count >= 2 && count <= 4 ? "lidé" : "lidí"}`;
 }

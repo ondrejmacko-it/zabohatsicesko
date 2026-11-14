@@ -24,7 +24,7 @@ import { now } from "@/server/config";
 import { defaultAudience } from "@/server/domain/generation";
 import { isOrganizer } from "@/server/policy";
 import { listMonth, listMonthDrafts, listPeople, loadTemplate, nextEventsFor } from "@/server/services/events";
-import { loadCalendarStatus } from "@/server/services/calendar-status";
+import { inviteModeOf, loadCalendarStatus } from "@/server/services/calendar-status";
 import { listTasks } from "@/server/services/journey";
 import { listPreviewOptions, resolvePreview } from "@/server/services/preview";
 import { listTopics } from "@/server/services/topics";
@@ -58,8 +58,8 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
 
   const calendar = managing ? await loadCalendarStatus(user) : null;
   const monthDrafts = managing ? await listMonthDrafts(user, monthKey) : null;
-  const inviteMode: InviteMode =
-    calendar?.mode !== "google" ? "simulation" : !calendar.connection ? "disconnected" : calendar.attendeeSource;
+  const inviteMode: InviteMode = calendar ? inviteModeOf(calendar) : "simulation";
+  const invites = calendar ? { mode: inviteMode, recipients: calendar.recipients } : undefined;
 
   const types = EVENT_TYPES.filter((t) => monthCards.some((c) => c.type === t && monthOf(toDateKey(new Date(c.startsAt))) === monthKey));
   const type = types.find((t) => t === params.typ);
@@ -236,6 +236,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
                 published={null}
                 people={people}
                 topics={topics}
+                invites={invites}
                 inviteeCount={0}
                 planDays={activeSlots.map((s) => s.isoWeekday)}
               />

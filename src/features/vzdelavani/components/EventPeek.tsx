@@ -9,6 +9,7 @@ import { isOrganizer } from "@/server/policy";
 import { getEventDetail } from "@/server/services/detail";
 import { listPeople, loadTemplate } from "@/server/services/events";
 import type { PlanPreview } from "@/server/services/preview";
+import { inviteModeOf, loadCalendarStatus } from "@/server/services/calendar-status";
 import { listTopics } from "@/server/services/topics";
 import { cardTone, primaryStatus, statusAdvice } from "../status";
 import { EventDialog } from "./EventDialog";
@@ -26,7 +27,9 @@ export async function EventPeek({ user, eventId, preview, previewKey, closeHref 
   const { card } = detail;
   const managing = isOrganizer(user) && !preview;
   const editable = managing && detail.form && card.planStatus !== "cancelled";
-  const [people, topics, template] = editable ? await Promise.all([listPeople(user), listTopics(user), loadTemplate()]) : [[], [], []];
+  const [people, topics, template, calendar] = editable
+    ? await Promise.all([listPeople(user), listTopics(user), loadTemplate(), loadCalendarStatus(user)])
+    : [[], [], [], null];
   const start = new Date(card.startsAt);
   const status = primaryStatus(card);
   const advice = managing ? statusAdvice(card) : null;
@@ -44,6 +47,7 @@ export async function EventPeek({ user, eventId, preview, previewKey, closeHref 
         published: detail.publishedForm,
         people,
         topics,
+        invites: calendar ? { mode: inviteModeOf(calendar), recipients: calendar.recipients } : undefined,
         inviteeCount: detail.sync?.inviteeCount ?? 0,
         planDays: template.filter((slot) => slot.active).map((slot) => slot.isoWeekday),
       }

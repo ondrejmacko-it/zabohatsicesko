@@ -26,6 +26,14 @@ export type CalendarStatus = {
   audienceRecipients: GroupRecipients;
 };
 
+/** Komu půjdou pozvánky: ukázka, nepropojený Kalendář, jen testovací adresa, nebo skutečné publikum. */
+export type InviteMode = "simulation" | "allowlist" | "audience" | "disconnected";
+
+export function inviteModeOf(status: CalendarStatus): InviteMode {
+  if (status.mode !== "google") return "simulation";
+  return status.connection ? status.attendeeSource : "disconnected";
+}
+
 const DAY_MS = 24 * 3600 * 1000;
 
 export async function loadCalendarStatus(viewer: Viewer): Promise<CalendarStatus> {

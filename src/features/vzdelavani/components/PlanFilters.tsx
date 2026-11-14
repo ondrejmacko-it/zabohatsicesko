@@ -31,7 +31,7 @@ export function PlanFilters({ keep, types, type, preview, states, resetHref }: P
         <label className="field">
           <span className="field-label">Zobrazit jako</span>
           <select className="select" name="jako" defaultValue={preview.value} onChange={submit}>
-            <option value="">Organizátor (vidím vše)</option>
+            <option value="">Správce (vidím vše)</option>
             <optgroup label="Co vidí skupina">
               {preview.groups.map((o) => (
                 <option key={o.key} value={o.key}>

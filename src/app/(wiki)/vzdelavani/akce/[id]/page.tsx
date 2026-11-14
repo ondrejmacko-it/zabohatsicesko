@@ -19,6 +19,7 @@ import { isOrganizer } from "@/server/policy";
 import { getEventDetail } from "@/server/services/detail";
 import { listPeople, loadTemplate } from "@/server/services/events";
 import { resolvePreview } from "@/server/services/preview";
+import { inviteModeOf, loadCalendarStatus } from "@/server/services/calendar-status";
 import { listTopics } from "@/server/services/topics";
 
 export const metadata: Metadata = { title: "Detail akce" };
@@ -48,12 +49,13 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
   const dayKey = toDateKey(start);
   const title = card.topicTitle ? `${card.label}: ${card.topicTitle}` : card.label;
   const status = primaryStatus(card);
-  const [people, topics] = organizer ? await Promise.all([listPeople(user), listTopics(user)]) : [[], []];
+  const [people, topics, calendar] = organizer ? await Promise.all([listPeople(user), listTopics(user), loadCalendarStatus(user)]) : [[], [], null];
+  const invites = calendar ? { mode: inviteModeOf(calendar), recipients: calendar.recipients } : undefined;
   const planDays = organizer ? (await loadTemplate()).filter((slot) => slot.active).map((slot) => slot.isoWeekday) : [];
   const editable = organizer && detail.form && card.planStatus !== "cancelled";
   const replaceable = editable && detail.fromTemplate && !EXTRAORDINARY_TYPES.has(card.type) && !card.past;
   const dialogProps = editable
-    ? { mode: "edit" as const, id: card.id, revision: detail.revision, initial: detail.form!, published: detail.publishedForm, people, topics, inviteeCount: detail.sync?.inviteeCount ?? 0, planDays }
+    ? { mode: "edit" as const, id: card.id, revision: detail.revision, initial: detail.form!, published: detail.publishedForm, people, topics, invites, inviteeCount: detail.sync?.inviteeCount ?? 0, planDays }
     : null;
   // Nástroje vedoucího (nahrání, úprava zápisu) by v náhledu běžely pod organizátorem, proto se nenabízejí.
   const handlerPreview = Boolean(preview) && detail.recording.access === "handler";
@@ -72,8 +74,8 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
 
       {preview && (
         <p className="notice" role="status">
-          Díváte se jako <strong>{preview.label}</strong>. Akci vidíte tak, jak ji vidí tento pohled, bez nástrojů organizátora.{" "}
-          <Link href={`/vzdelavani/akce/${encodeURIComponent(card.id)}`}>Otevřít v pohledu organizátora</Link>
+          Díváte se jako <strong>{preview.label}</strong>. Akci vidíte tak, jak ji vidí tento pohled, bez nástrojů správce.{" "}
+          <Link href={`/vzdelavani/akce/${encodeURIComponent(card.id)}`}>Otevřít v pohledu správce</Link>
         </p>
       )}
 

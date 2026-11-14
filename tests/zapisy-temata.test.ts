@@ -6,6 +6,13 @@ import { lead, organizer, outsider as memberRm, participant as memberFp, resetDe
 beforeEach(resetDemo);
 
 describe("zájemci o téma", () => {
+  it("doporučení nese počet zájemců zvlášť od historie tématu", async () => {
+    for (const topic of await listTopics(organizer)) {
+      expect(topic.reason.endsWith(topic.history)).toBe(true);
+      expect(topic.history).toMatch(/naposledy|zatím neproběhlo/);
+    }
+  });
+
   it("jména vidí jen organizátor, ostatní dostanou zamítnutí", async () => {
     const [topic] = await listTopics(memberFp);
     await setInterest(memberFp, topic!.id, true);

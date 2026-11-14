@@ -13,7 +13,8 @@ export type TopicStat = {
   nextPlanned: string | null;
 };
 
-export type RankedTopic = TopicStat & { reason: string };
+/** `reason` = počet zájemců a `history`, tedy kdy téma proběhlo nebo je naplánované. */
+export type RankedTopic = TopicStat & { reason: string; history: string };
 
 export function interestedLabel(count: number): string {
   if (count === 0) return "zatím bez zájemců";
@@ -38,16 +39,15 @@ export function rankTopics(stats: TopicStat[]): RankedTopic[] {
         collator.compare(a.name, b.name) ||
         a.id.localeCompare(b.id),
     )
-    .map((topic) => ({
-      ...topic,
-      reason: [
-        interestedLabel(topic.interestCount),
+    .map((topic) => {
+      const history = [
         topic.lastHeld ? `naposledy ${formatDayMonth(topic.lastHeld)}` : "zatím neproběhlo",
         topic.nextPlanned ? `naplánováno na ${formatDayMonth(topic.nextPlanned)}` : null,
       ]
         .filter(Boolean)
-        .join(" · "),
-    }));
+        .join(" · ");
+      return { ...topic, reason: `${interestedLabel(topic.interestCount)} · ${history}`, history };
+    });
 }
 
 /**

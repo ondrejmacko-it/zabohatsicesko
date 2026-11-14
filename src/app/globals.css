@@ -2080,3 +2080,13 @@ p.cal-status {
     grid-column: 1 / -1;
   }
 }
+
+.suggestion-meta {
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.suggestion-meta strong {
+  color: var(--ochre-dark);
+  font-weight: 600;
+}
