@@ -10,7 +10,7 @@ import { generateMonthAction } from "@/features/vzdelavani/actions";
 import { CalendarStatusLine } from "@/features/vzdelavani/components/CalendarStatusLine";
 import { EventDialog } from "@/features/vzdelavani/components/EventDialog";
 import { EventPeek } from "@/features/vzdelavani/components/EventPeek";
-import { PublishMonthDialog, type InviteMode } from "@/features/vzdelavani/components/PublishMonthDialog";
+import { PublishMonthDialog } from "@/features/vzdelavani/components/PublishMonthDialog";
 import { PlanFilters } from "@/features/vzdelavani/components/PlanFilters";
 import { Agenda, Legend, NextEventsList, ScheduleGrid } from "@/features/vzdelavani/components/Schedule";
 import { TemplateDialog } from "@/features/vzdelavani/components/TemplateDialog";
@@ -24,7 +24,7 @@ import { now } from "@/server/config";
 import { defaultAudience } from "@/server/domain/generation";
 import { isOrganizer } from "@/server/policy";
 import { listMonth, listMonthDrafts, listPeople, loadTemplate, nextEventsFor } from "@/server/services/events";
-import { loadCalendarStatus } from "@/server/services/calendar-status";
+import { inviteModeOf, loadCalendarStatus } from "@/server/services/calendar-status";
 import { listTasks } from "@/server/services/journey";
 import { listPreviewOptions, resolvePreview } from "@/server/services/preview";
 import { listTopics } from "@/server/services/topics";
@@ -58,8 +58,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
 
   const calendar = managing ? await loadCalendarStatus(user) : null;
   const monthDrafts = managing ? await listMonthDrafts(user, monthKey) : null;
-  const inviteMode: InviteMode =
-    calendar?.mode !== "google" ? "simulation" : !calendar.connection ? "disconnected" : calendar.attendeeSource;
+  const invite = calendar ? { mode: inviteModeOf(calendar), recipients: calendar.recipients } : null;
 
   const types = EVENT_TYPES.filter((t) => monthCards.some((c) => c.type === t && monthOf(toDateKey(new Date(c.startsAt))) === monthKey));
   const type = types.find((t) => t === params.typ);
@@ -206,7 +205,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
                 <ActionForm action={generateMonthAction} fields={{ month: monthKey }} label="Doplnit měsíc ze šablony" pendingLabel="Doplňuji…" />
                 <TemplateDialog slots={template} />
               </Menu>
-              {monthDrafts && calendar && monthDrafts.drafts.length > 0 && (
+              {monthDrafts && invite && monthDrafts.drafts.length > 0 && (
                 <PublishMonthDialog
                   key={monthDrafts.drafts.map((d) => `${d.id}:${d.revision}`).join("|")}
                   monthKey={monthKey}
@@ -215,8 +214,8 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
                   changeDrafts={monthDrafts.changeDrafts}
                   people={people}
                   topics={topics.map((t) => t.name)}
-                  recipients={calendar.recipients}
-                  inviteMode={inviteMode}
+                  recipients={invite.recipients}
+                  inviteMode={invite.mode}
                 />
               )}
               <EventDialog
@@ -236,7 +235,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
                 published={null}
                 people={people}
                 topics={topics}
-                inviteeCount={0}
+                invite={invite}
                 planDays={activeSlots.map((s) => s.isoWeekday)}
               />
             </div>

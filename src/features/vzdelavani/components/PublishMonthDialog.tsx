@@ -7,11 +7,10 @@ import { submitKeepingValues } from "@/features/shared/keep-values";
 import { GROUP_LABELS } from "@/lib/labels";
 import { formatDayMonth, formatEventTime, toDateKey, weekdayShort } from "@/lib/time";
 import type { Group } from "@/lib/types";
+import type { InviteMode } from "@/server/services/calendar-status";
 import type { MonthDraft } from "@/server/services/events";
 import { publishMonthAction, type ActionResult } from "../actions";
 
-/** Jak se zveřejnění propíše do Kalendáře. Určuje jen text přehledu dopadu. */
-export type InviteMode = "simulation" | "allowlist" | "audience" | "disconnected";
 
 type Props = {
   monthKey: string;

@@ -5,6 +5,7 @@ import { ActionMessage } from "@/components/ActionForm";
 import { submitKeepingValues } from "@/features/shared/keep-values";
 import { GROUP_LABELS, ROLE_LABELS } from "@/lib/labels";
 import { GROUPS, type Group, type Role } from "@/lib/types";
+import type { ActionResult } from "@/features/shared/run-action";
 import { inviteUserAction, updateAccessAction } from "../actions";
 
 /** Výběr role a skupin. Nabízí jen role, které smí přihlášený uživatel přidělit (hlídá i server). */
@@ -72,31 +73,39 @@ type AccessProps = {
   groups: Group[];
   /** approve = čekající žádost, edit = aktivní účet, restore = účet s odebraným přístupem. */
   mode: "approve" | "edit" | "restore";
+  /** Zavolá se po úspěšném uložení (zavření okna). */
+  onDone?: () => void;
+  onCancel?: () => void;
 };
 
 /** Schválení žádosti, úprava přístupu, nebo jeho odebrání a vrácení. Stav posílá stisknuté tlačítko. */
-export function AccessForm({ userId, roles, role, groups, mode }: AccessProps) {
-  const [state, action, pending] = useActionState(updateAccessAction, null);
+export function AccessForm({ userId, roles, role, groups, mode, onDone, onCancel }: AccessProps) {
+  const [state, action, pending] = useActionState(async (prev: ActionResult | null, formData: FormData) => {
+    const result = await updateAccessAction(prev, formData);
+    if (result.ok) onDone?.();
+    return result;
+  }, null);
   return (
     <form action={action} onSubmit={submitKeepingValues(action)} className="stack">
       <input type="hidden" name="userId" value={userId} />
+      <input type="hidden" name="status" value="active" />
       <AccessFields roles={roles} role={role} groups={mode === "approve" && groups.length === 0 ? ["vsichni"] : groups} />
-      <div className="row">
-        <button type="submit" name="status" value="active" className="btn btn-primary btn-small" disabled={pending}>
-          {mode === "approve" ? "Schválit přístup" : mode === "restore" ? "Vrátit přístup" : "Uložit změny"}
+      <ActionMessage state={state} />
+      <div className="dialog-actions">
+        <button type="submit" className="btn btn-primary" disabled={pending}>
+          {pending ? "Ukládám…" : mode === "approve" ? "Schválit přístup" : mode === "restore" ? "Vrátit přístup" : "Uložit změny"}
         </button>
-        {mode === "edit" && (
-          <button type="submit" name="status" value="disabled" className="btn btn-danger btn-small" disabled={pending}>
-            Odebrat přístup
+        {onCancel && (
+          <button type="button" className="btn" onClick={onCancel}>
+            Zrušit
           </button>
         )}
       </div>
-      <ActionMessage state={state} />
     </form>
   );
 }
 
-export function InviteForm({ roles, appUrl }: { roles: Role[]; appUrl: string }) {
+export function InviteForm({ roles, appUrl, onCancel }: { roles: Role[]; appUrl: string; onCancel?: () => void }) {
   const [state, action, pending] = useActionState(inviteUserAction, null);
   return (
     <form action={action} onSubmit={submitKeepingValues(action)} className="stack" key={state?.ok ? state.message : undefined}>
@@ -114,12 +123,17 @@ export function InviteForm({ roles, appUrl }: { roles: Role[]; appUrl: string })
       <p className="field-hint">
         Wiki zatím e-mail s pozvánkou neposílá. Pošlete kolegovi odkaz {appUrl} a ať se přihlásí touto adresou.
       </p>
-      <div>
+      <ActionMessage state={state} />
+      <div className="dialog-actions">
         <button type="submit" className="btn btn-primary" disabled={pending}>
           {pending ? "Ukládám…" : "Pozvat"}
         </button>
+        {onCancel && (
+          <button type="button" className="btn" onClick={onCancel}>
+            Zavřít
+          </button>
+        )}
       </div>
-      <ActionMessage state={state} />
     </form>
   );
 }
