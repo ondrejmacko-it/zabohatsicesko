@@ -3,8 +3,9 @@ import { AutoRefresh } from "@/components/AutoRefresh";
 import { ERROR_LABELS, RECORDING_STATE_LABELS, TEMPLATE_LABELS } from "@/lib/labels";
 import type { MinutesContent, RecordingState } from "@/lib/types";
 import type { RecordingPanel } from "@/server/services/recordings";
-import { retryTranscriptionAction, withdrawMinutesAction } from "../actions";
+import { retryTranscriptionAction } from "../actions";
 import { MinutesEditor } from "./MinutesEditor";
+import { RecordingMenu } from "./RecordingMenu";
 import { UploadForm } from "./UploadForm";
 
 const STATE_BADGE: Record<RecordingState, string> = {
@@ -61,28 +62,19 @@ export function RecordingSection({ eventId, eventLabel, panel }: { eventId: stri
   }
 
   const { state, recording, minutes, errorCode } = panel;
-  const withdraw = (
-    <ActionForm
-      action={withdrawMinutesAction}
-      fields={{ id: eventId }}
-      label="Stáhnout zveřejněný zápis"
-      pendingLabel="Stahuji…"
-      confirm={{
-        title: "Stáhnout zveřejněný zápis",
-        text: "Kolegové zápis přestanou vidět a z pozvánky v Kalendáři zmizí odkaz na něj. Zápis zůstane u vás jako návrh, který můžete opravit a zveřejnit znovu.",
-        confirmLabel: "Stáhnout zápis",
-      }}
-      small
-    />
-  );
   return (
     <section className="section" id="nahravka" aria-labelledby="nahravka-title">
       <AutoRefresh active={state === "processing"} />
       <div className="spread">
         <h2 id="nahravka-title">Nahrávka a zápis</h2>
-        <span className={STATE_BADGE[state]} role="status">
-          {RECORDING_STATE_LABELS[state]}
-        </span>
+        <div className="row recording-head">
+          <span className={STATE_BADGE[state]} role="status">
+            {RECORDING_STATE_LABELS[state]}
+          </span>
+          {recording && state !== "processing" && (
+            <RecordingMenu eventId={eventId} eventLabel={eventLabel} canWithdraw={Boolean(panel.publicMinutes) || minutes?.status === "published"} />
+          )}
+        </div>
       </div>
       <p className="small muted">
         Nahrávku a pracovní přepis vidí jen vedoucí akce a pověřený kontrolor. Kolegové uvidí až zveřejněný zápis.
@@ -117,10 +109,9 @@ export function RecordingSection({ eventId, eventLabel, panel }: { eventId: stri
           {minutes.status === "draft" ? (
             <>
               {panel.publicMinutes && (
-                <div className="notice spread">
-                  <p>Kolegové zatím vidí zápis z původní nahrávky, dokud nezveřejníte tento.</p>
-                  {withdraw}
-                </div>
+                <p className="notice">
+                  Kolegové zatím vidí zápis z původní nahrávky, dokud nezveřejníte tento. Stáhnout ho můžete v nabídce u nadpisu.
+                </p>
               )}
               <p className="notice">
                 Návrh zápisu vytvořený z přepisu. Doporučená šablona: {TEMPLATE_LABELS[minutes.detectedTemplate]}.
@@ -130,10 +121,7 @@ export function RecordingSection({ eventId, eventLabel, panel }: { eventId: stri
             </>
           ) : (
             <>
-              <div className="notice notice-ok spread">
-                <p>Zápis je zveřejněný pro publikum akce.</p>
-                {withdraw}
-              </div>
+              <p className="notice notice-ok">Zápis je zveřejněný pro publikum akce.</p>
               <MinutesView content={minutes.content} />
             </>
           )}
@@ -144,7 +132,7 @@ export function RecordingSection({ eventId, eventLabel, panel }: { eventId: stri
         </div>
       )}
 
-      {state !== "processing" && <UploadForm eventId={eventId} eventLabel={eventLabel} replacing={recording !== null} />}
+      {state !== "processing" && !recording && <UploadForm eventId={eventId} eventLabel={eventLabel} replacing={false} />}
     </section>
   );
 }

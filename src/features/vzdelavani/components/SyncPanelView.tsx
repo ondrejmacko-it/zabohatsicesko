@@ -1,4 +1,5 @@
 import { ActionForm } from "@/components/ActionForm";
+import { Menu } from "@/components/Menu";
 import { ERROR_LABELS, SYNC_STATUS_LABELS } from "@/lib/labels";
 import { formatDayMonth, formatEventTime, toDateKey } from "@/lib/time";
 import type { SyncPanel } from "@/server/services/detail";
@@ -85,8 +86,9 @@ export function SyncPanelView({ eventId, sync }: { eventId: string; sync: SyncPa
       {sync.status === "unlinked" && (
         <div className="stack">
           <p className="small">
-            Akce ve Wiki zatím není spárovaná s žádnou pozvánkou. Spárujte ji s existující pozvánkou, nebo výslovně
-            založte novou. Wiki sama novou pozvánku nevytvoří, aby nevznikl duplikát.
+            {sync.candidates.length
+              ? "Ve stejném čase je v Kalendáři pozvánka, kterou Wiki nezaložila. Aby nevznikl duplikát, Wiki čeká na vás: spárujte akci s ní, nebo založte novou."
+              : "Akce zatím nemá pozvánku. Wiki ji založí sama při příštím otevření Plánu, pokud je Kalendář propojený. Založit ji můžete i hned."}
           </p>
           {sync.candidates.map((c) => (
             <div key={c.id} className="spread candidate">
@@ -138,17 +140,9 @@ export function SyncPanelView({ eventId, sync }: { eventId: string; sync: SyncPa
             </dd>
           </dl>
           {sync.mode === "simulation" && sync.status === "synced" && sync.externalId && (
-            <details className="small">
-              <summary>Nástroje ukázky</summary>
-              <div className="section-actions">
-                <ActionForm
-                  action={simulateManualEditAction}
-                  fields={{ externalId: sync.externalId }}
-                  label="Simulovat ruční úpravu v Kalendáři"
-                  small
-                />
-              </div>
-            </details>
+            <Menu label="Nástroje ukázky" small>
+              <ActionForm action={simulateManualEditAction} fields={{ externalId: sync.externalId }} label="Simulovat ruční úpravu v Kalendáři" />
+            </Menu>
           )}
         </div>
         </details>
