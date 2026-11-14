@@ -15,7 +15,7 @@ export async function TopicsSection({ user }: { user: Viewer }) {
   const [topics, archived, interested] = await Promise.all([
     listTopics(user),
     listArchivedTopics(user),
-    // Jména zájemců smí vidět jen správci, ostatním server pošle jen počet.
+    // Jména zájemců smí vidět jen správce, ostatním server pošle jen počet.
     organizer ? listTopicInterested(user) : null,
   ]);
   const recommended = new Set(topics.filter((t) => t.nextPlanned === null).slice(0, RECOMMENDED_COUNT).map((t) => t.id));

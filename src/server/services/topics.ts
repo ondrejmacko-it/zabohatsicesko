@@ -49,7 +49,7 @@ export async function listTopics(viewer: Viewer): Promise<RankedTopic[]> {
 }
 
 /**
- * Jména zájemců podle tématu. Vidí je jen správci (kvůli plánování), ostatní znají jen počet:
+ * Jména zájemců podle tématu. Vidí je jen správce (kvůli plánování), ostatní znají jen počet:
  * kolega tak nevidí, kdo z jiných si o téma řekl. Jen aktivní účty, abecedně.
  */
 export async function listTopicInterested(viewer: Viewer): Promise<Map<string, string[]>> {
