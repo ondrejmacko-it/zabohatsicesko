@@ -1,8 +1,8 @@
 # Živý test na preview s pomocí ChatGPT (agent v prohlížeči)
 
 Scénář dělí práci na dvě části. Kroky, které potřebují Google účet, souhlas u Googlu nebo tajemství, dělá
-uživatel. Kroky ve Wiki dělá ChatGPT v interním prohlížeči. ChatGPT se přihlašuje jen jednorázovým kódem
-fiktivní role. Heslo ke Googlu ani přístupový kód Wiki nikdy nedostane. Kódy a sdílecí odkaz se do repa nezapisují.
+uživatel. Kroky ve Wiki dělá ChatGPT v interním prohlížeči. ChatGPT se přihlašuje jen osobním odkazem
+a jednorázovým kódem fiktivní role. Heslo ke Googlu ani přístupový kód Wiki nikdy nedostane. Kódy a sdílecí odkaz se do repa nezapisují.
 
 Preview: `https://zbc-vzdelavani-demo-git-claude-adoring-ramanujan-rot348-maci.vercel.app`
 (proměnné jen pro tuto větev: `APP_URL`, `CALENDAR_ATTENDEES=audience`, `GATE_MODE=invite`).
@@ -11,11 +11,15 @@ Preview: `https://zbc-vzdelavani-demo-git-claude-adoring-ramanujan-rot348-maci.v
 
 1. Google Cloud konzole, OAuth klient, Authorized redirect URIs: přidat
    `<preview>/api/google/prihlaseni/callback` a `<preview>/api/google/kalendar/callback`.
-2. Vercel dashboard, deployment této větve, Share: zkopírovat sdílecí odkaz (platí 23 h). Ten dostane ChatGPT.
-3. Ve vlastním prohlížeči se na preview přihlásit Googlem jako správce. Při druhém přihlášení má stačit jedna
+2. Vercel dashboard, deployment této větve, Share: zkopírovat sdílecí odkaz (platí 23 h) pro adresu větve
+   výše, ne pro adresu jednoho deploymentu (`…-<hash>-maci.vercel.app`). Osobní odkazy, kódy i přesměrování
+   z Googlu vedou na adresu větve. Ten odkaz dostane ChatGPT.
+3. Ve vlastním prohlížeči otevřít osobní odkaz správce (`/pozvanka/…`, s `GATE_MODE=invite` se bez něj
+   přihlášení vůbec nenabídne) a přihlásit se Googlem. Při druhém přihlášení má stačit jedna
    obrazovka se souhlasem včetně Kalendáře. Na Plánu ověřit řádek „Kalendář · Propojeno“.
-4. Ve Správě u fiktivních účtů (Vedoucí ukázky, Účastník FP, Účastník RM, Druhý správce ukázky) zvolit v menu
-   „Jednorázový kód (bez účtu Google)“ a kódy předat ChatGPT v chatu (ne do repa).
+4. Ve Správě u fiktivních účtů (Vedoucí ukázky, Účastník FP, Účastník RM a případně druhý správce) zvolit
+   v menu „Jednorázový kód (bez účtu Google)“. Okno ukáže osobní odkaz a kód. Kód platí jen v prohlížeči,
+   který předtím otevřel odkaz téhož člověka. Obojí předat ChatGPT v chatu (ne do repa).
 5. Hromadné zveřejnění posílá skutečné e-maily. Spouští se jen po výslovném souhlasu uživatele.
 
 ## B. Prompt pro ChatGPT
@@ -23,13 +27,14 @@ Preview: `https://zbc-vzdelavani-demo-git-claude-adoring-ramanujan-rot348-maci.v
 Zkopíruj do ChatGPT (režim agenta) a doplň odkaz a kódy:
 
 > Testuješ ukázkovou firemní Wiki, modul Vzdělávání. Otevři sdílecí odkaz `<SDÍLECÍ ODKAZ>`. Na stránce
-> `/vstup` se přihlas jednorázovým kódem. Kódy: Druhý správce `<KÓD>`, Vedoucí `<KÓD>`, Účastník FP `<KÓD>`,
-> Účastník RM `<KÓD>`. Každý kód platí jednou. Pro další roli se odhlas a použij další kód. Nezadávej žádná
+> Pro každou roli máš osobní odkaz a kód: Vedoucí `<ODKAZ>` `<KÓD>`, Účastník FP `<ODKAZ>` `<KÓD>`,
+> Účastník RM `<ODKAZ>` `<KÓD>`, správce `<ODKAZ>` `<KÓD>`. Otevři odkaz role a na přihlašovací stránce zadej
+> její kód. Odkaz i kód platí jednou. Pro další roli se odhlas a otevři odkaz další role. Nezadávej žádná
 > hesla a nepřihlašuj se přes Google. Nic nemaž a nezveřejňuj hromadně. U každého kroku zapiš: co jsi udělal,
 > co jsi čekal, co se stalo, a pořiď snímek. Každý krok zkontroluj i v šířce okna kolem 390 px. Hlídej
 > vodorovný posun, texty mimo osu a chybové hlášky.
 >
-> 1. Jako Druhý správce: Vzdělávání › Plán. Je nahoře řádek „Kalendář“ a co v něm stojí? Otevři budoucí
+> 1. Jako správce: Vzdělávání › Plán. Je nahoře řádek „Kalendář“ a co v něm stojí? Otevři budoucí
 >    zveřejněnou akci. Ukazuje dialog stav pozvánky a seznam hostů podle skupiny (Publikum)?
 > 2. Přidej akci na nejbližší volný den (Typ, téma z doporučených, vedoucí, publikum FP) a zveřejni ji. Pod
 >    Publikem má být počet a jména hostů. Po zveřejnění má akce stav pozvánky „synchronizováno“ nebo „čeká“.
