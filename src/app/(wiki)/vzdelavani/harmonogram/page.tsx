@@ -84,7 +84,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   const newDate = monthOf(todayKey) === monthKey ? todayKey : `${monthKey}-01`;
   const emptyText = filtering ? "Filtru v tomto měsíci neodpovídá žádná akce." : undefined;
 
-  // Stav měsíce patří organizátorovi mezi úkoly: odkaz zúží harmonogram na termíny, kterých se týká.
+  // Stav měsíce patří správci mezi úkoly: odkaz zúží harmonogram na termíny, kterých se týká.
   // Počty ve filtru Stav jsou za celý měsíc, úkoly měsíce respektují vybraný typ akce.
   const summary = managing && monthKey >= monthOf(todayKey) ? monthSummary(monthCards, monthKey) : null;
   const taskSummary = summary && type ? monthSummary(filterCards(monthCards, monthKey, { type }), monthKey) : summary;

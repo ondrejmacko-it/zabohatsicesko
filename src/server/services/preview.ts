@@ -7,7 +7,7 @@ import { users } from "@/server/db/schema";
 import { isOrganizer, type Viewer } from "@/server/policy";
 import { DomainError } from "@/server/services/errors";
 
-// Náhled harmonogramu očima někoho jiného. Organizátor si vybere skupinu nebo kolegu a seznam akcí
+// Náhled harmonogramu očima někoho jiného. Správce si vybere skupinu nebo kolegu a seznam akcí
 // se spočítá stejnými pravidly (policy.ts) jako pro skutečného uživatele. Náhled je jen ke čtení.
 
 /** Skupiny, za které jde náhled zapnout. Každý účastník je zároveň ve skupině Všichni. */
@@ -35,7 +35,7 @@ export async function listPreviewOptions(viewer: Viewer): Promise<{ groups: Prev
 }
 
 /**
- * Uživatel, jehož očima se má harmonogram ukázat. Smí jen organizátor, jinak (a pro neznámý klíč)
+ * Uživatel, jehož očima se má harmonogram ukázat. Smí jen správce, jinak (a pro neznámý klíč)
  * vrací null a stránka ukáže běžný pohled přihlášeného.
  */
 export async function resolvePreview(viewer: Viewer, key: string | undefined): Promise<PlanPreview | null> {

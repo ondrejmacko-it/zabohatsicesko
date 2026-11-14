@@ -195,7 +195,7 @@ export class GoogleCalendar implements CalendarProvider {
     if (!current) throw new CalendarError("calendar_missing", false);
     // Hlavní událost série nese pravidlo opakování. Zápis do ní by změnil všechny termíny.
     if (current.recurrence?.length) throw new CalendarError("calendar_series_master", false);
-    // Změna kopie u pozvaného by se nepropsala ostatním. Wiki upravuje jen originál organizátora.
+    // Změna kopie u pozvaného by se nepropsala ostatním. Wiki upravuje jen originál správce.
     if (current.organizer && current.organizer.self !== true) throw new CalendarError("calendar_not_organizer", false);
 
     const { status, body } = await this.request("PATCH", calendarId, `/${encodeURIComponent(eventId)}`, {
@@ -237,7 +237,7 @@ export class GoogleCalendar implements CalendarProvider {
     if (status !== 200) throw new CalendarError("calendar_missing", false);
     const items = (body as { items?: GoogleEvent[] }).items ?? [];
     return items
-      // Celodenní události a kopie cizích pozvánek nejsou kandidáty: Wiki mění jen originál organizátora.
+      // Celodenní události a kopie cizích pozvánek nejsou kandidáty: Wiki mění jen originál správce.
       .filter((event) => event.start?.dateTime && (!event.organizer || event.organizer.self === true))
       .map(toExternal)
       .filter((event): event is ExternalEvent => event !== null);

@@ -64,7 +64,7 @@ export function topicFitsAudience(topicAudience: string, eventAudience: string):
 /**
  * Návrh témat pro nové termíny ze šablony. Každému termínu (v pořadí, jak jdou za sebou) přiřadí
  * nejvýše doporučené téma jeho publika, o které má někdo zájem a které ještě není naplánované.
- * Jedno téma se v jednom běhu použije nejvýš jednou. Je to jen předvyplnění návrhu, rozhoduje organizátor.
+ * Jedno téma se v jednom běhu použije nejvýš jednou. Je to jen předvyplnění návrhu, rozhoduje správce.
  */
 export function suggestTopics(
   slots: ReadonlyArray<{ generationKey: string; type: EventType; audience: string }>,

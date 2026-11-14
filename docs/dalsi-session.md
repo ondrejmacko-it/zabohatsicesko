@@ -9,40 +9,49 @@ Kontext máš v `docs/dalsi-session.md`, `README.md`, `docs/google-prihlaseni.md
 pravidla v `CLAUDE.md`. Tykej mi, piš přátelsky. Úpravy níže jsou odsouhlasené, rovnou je udělej. Ptej se jen
 na věci označené „zeptej se“.
 
-Stav: práce pokračuje na větvi `claude/tender-fermat-oepq6p` (vychází z `claude/blissful-mendel-ejkw5s`, draft PR #16
-do `main`). Zeptej se, jestli ji mám přidat do PR #16, nebo otevřít vlastní PR. Pokud je PR sloučený, vyjdi z `main`.
-Můj osobní účet je z Wiki smazaný, nezakládej ho znovu a nikam ho nezvi.
+Stav: větev `claude/tender-fermat-oepq6p` má draft PR do `main` a nahrazuje PR #16 (obsahuje ho celý).
+Pokud je PR sloučený, vyjdi z `main`. Můj osobní účet je z Wiki smazaný, nezakládej ho znovu a nikam ho nezvi.
+Odsouhlaseno 14. 11.: ostré zveřejňování a skutečné pozvánky na preview smíš spouštět bez dalšího ptaní.
 
 Zásada pro celé UI: hlavní údaje a hlavní akce musí vyniknout, vedlejší texty jsou menší a tlumené, nic není
 ani o pixel mimo osu, vše je jasné na první pohled.
 
-1. Živý test se mnou krok za krokem. Skutečné pozvánky (`CALENDAR_ATTENDEES=audience`), vlastní `APP_URL`
-   a přesměrovací adresy v Google konzoli má jen preview větve `claude/blissful-mendel-ejkw5s`. Zeptej se, kde
-   testovat (nová větev potřebuje totéž). Postup: přihlášení správce (při druhém přihlášení jedna obrazovka
-   Googlu s Kalendářem), řádek „Kalendář“ na Plánu, všech 6 zveřejněných budoucích akcí má vazbu a hosty podle
-   skupin, nový účet a žádost, schválení ve Správě a pozvánky, které mu samy dojdou, změna, zrušení, odkaz na zápis.
-   Hromadné zveřejnění („Zveřejnit návrhy“ na Plánu) před prvním ostrým použitím na preview potvrď se mnou,
-   posílá e-maily. Po sloučení PR přenes proměnnou na všechny preview (zeptej se).
+1. Živý test se mnou krok za krokem na `https://zbc-vzdelavani-demo-git-claude-tender-fermat-oepq6p-maci.vercel.app`
+   (`APP_URL` a `CALENDAR_ATTENDEES=audience` jsou pro větev nastavené). Zeptej se, jestli jsem v Google konzoli
+   přidal `<adresa>/api/google/prihlaseni/callback` a `<adresa>/api/google/kalendar/callback`. Postup: přihlášení
+   správce (při druhém přihlášení jedna obrazovka Googlu s Kalendářem), řádek „Kalendář“ na Plánu, všech 6
+   zveřejněných budoucích akcí má vazbu a hosty podle skupin (v Neonu tabulka `calendar_links`), „Zveřejnit
+   návrhy“ pro další měsíc, nový účet a žádost, schválení ve Správě a pozvánky, které mu samy dojdou, změna,
+   zrušení, odkaz na zápis. Po sloučení PR přenes `CALENDAR_ATTENDEES` na všechny preview (zeptej se).
 2. Dialog akce: ukaž skutečné hosty podle vybrané skupiny (`loadCalendarStatus().recipients`) místo testovací
    adresy a nabídni doporučená témata s počtem zájemců.
-3. Dokonči sloučení rolí v textech: hledej „organizátor“ v `src/` (Integrace, `SyncPanelView`, `EventPeek`,
-   detail akce, `status.ts`, legenda, nápovědy, výběr „Zobrazit jako: Organizátor (vidím vše)“) a nahraď
-   „správce“. Persona „Organizátor ukázky“ na `/vstup` a v seedu: přejmenuj nebo sluč (zeptej se, mění seed).
-4. Okno „Přidat zápis“ a detail akce za správce u cizí akce: ověř v prohlížeči „Nahrát záznam“, úpravu,
+3. Okno „Přidat zápis“ a detail akce za správce u cizí akce: ověř v prohlížeči „Nahrát záznam“, úpravu,
    zveřejnění i stažení zápisu.
-5. Správa: úpravy uživatele v okně (`Modal`), řádkové akce v menu (`Menu`). Menu místo řady tlačítek v detailu
+4. Správa: úpravy uživatele v okně (`Modal`), řádkové akce v menu (`Menu`). Menu místo řady tlačítek v detailu
    akce pro vedoucího, na Integraci a v `SyncPanelView`. Doověř okna (zápis za čtenáře, nahrání záznamu
-   a `AutoRefresh`, „Přidat zápis“ na 1280 px, Plán za účastníka na 390 px). Varování o hydrataci na Plánu
-   trvá (viděno 13. 11., příčina nehledána). Po každém bloku 1280 a 390 px.
-6. Dokumentace: `README.md`, `docs/predani.md`, `docs/google-prihlaseni.md`, `docs/google-kalendar.md` podle
+   a `AutoRefresh`, „Přidat zápis“ na 1280 px, Plán za účastníka na 390 px). Najdi příčinu varování o hydrataci
+   na Plánu. Projdi v prohlížeči texty po hromadné náhradě „organizátor“ za „správce“ (13. 11. jen testy,
+   okem neověřeno). Po každém bloku 1280 a 390 px.
+5. Dokumentace: `README.md`, `docs/predani.md`, `docs/google-prihlaseni.md`, `docs/google-kalendar.md` podle
    stavu (jedna role Správce, souhlas ke Kalendáři při přihlášení, `GOOGLE_OAUTH_PUBLISHED`, příjemci pozvánek,
-   řádek stavu Kalendáře, automatické vazby a fronta z Plánu, hromadné zveřejnění měsíce).
-7. Snímky každého okna a stavu za každou roli na 1280 a 390 px jako ZIP se seznamem. Do repa je nedávej.
+   řádek stavu Kalendáře, automatické vazby a fronta z Plánu, hromadné zveřejnění měsíce, jedna persona správce).
+6. Snímky každého okna a stavu za každou roli na 1280 a 390 px jako ZIP se seznamem. Do repa je nedávej.
 
 Production na Vercelu nemá proměnné prostředí a buildy z `main` se přeskakují, vše běží na preview.
 Na `main` nepushuj, merge dělám já. Respektuj limit kontextu.
 
 ---
+
+## Stav 14. 11. 2026 (větev `claude/tender-fermat-oepq6p`)
+
+- **Texty:** „organizátor“ je v celém `src/` nahrazený slovem „správce“ (UI i komentáře, názvy v kódu zůstaly).
+  Ověřeno jen lintem, typy a testy (134 ze 134), v prohlížeči ne.
+- **Persony:** správce a organizátor měli stejná práva, lišili se jen jménem. Na `/vstup` zůstala jedna persona
+  správce (`listPersonas` druhou skrývá). Účet `demo-organizator` v seedu zůstává jako „Druhý správce ukázky“,
+  protože je na něj svázaný testovací účet Google a propojení Kalendáře. Nové jméno se projeví po obnově dat.
+- **Preview větve:** `APP_URL` a `CALENDAR_ATTENDEES=audience` nastavené přes API jen pro tuto větev. Přesměrovací
+  adresy v Google konzoli musí přidat uživatel. Po prvním otevření Plánu správcem odejdou pozvánky na 4 akce
+  ze seedu hostům podle skupin (uživatel to 14. 11. odsouhlasil).
 
 ## Stav 13. 11. 2026 pozdě v noci (větev `claude/tender-fermat-oepq6p`)
 
