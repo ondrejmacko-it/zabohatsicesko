@@ -7,7 +7,7 @@ import { submitKeepingValues } from "@/features/shared/keep-values";
 import type { Role } from "@/lib/types";
 import type { BulkInviteRow } from "@/server/services/users";
 import { bulkInviteAction } from "../actions";
-import { AccessFields, CopyMessage, inviteMessage } from "./AccessForms";
+import { AccessFields } from "./AccessForms";
 
 const PROBLEM: Record<Exclude<BulkInviteRow["status"], "ok">, string> = {
   invalid: "není platná adresa",
@@ -17,7 +17,7 @@ const PROBLEM: Record<Exclude<BulkInviteRow["status"], "ok">, string> = {
 
 const people = (n: number) => (n === 1 ? "1 člověka" : `${n} lidí`);
 
-function BulkInviteForm({ roles, appUrl, onClose }: { roles: Role[]; appUrl: string; onClose: () => void }) {
+function BulkInviteForm({ roles, onClose }: { roles: Role[]; onClose: () => void }) {
   const [state, action, pending] = useActionState(bulkInviteAction, null);
   // Přehled platí jen pro seznam, ze kterého vznikl. Po úpravě textu se musí zkontrolovat znovu.
   const [checkedText, setCheckedText] = useState<string | null>(null);
@@ -31,10 +31,9 @@ function BulkInviteForm({ roles, appUrl, onClose }: { roles: Role[]; appUrl: str
     return (
       <div className="stack">
         <p className="notice notice-ok" role="status">
-          <strong>Přístup má {people(ok.length)}.</strong> Teď jim pošlete odkaz na Wiki.
+          <strong>Přístup má {people(ok.length)}.</strong> Každý potřebuje svůj osobní odkaz: v seznamu účtů u něj zvolte „Nový odkaz k přihlášení“ a zprávu mu pošlete.
         </p>
         {problems.length > 0 && <ProblemList rows={problems} title="Přeskočené řádky" />}
-        {ok.length > 0 && <CopyMessage text={inviteMessage(appUrl)} />}
         <div className="dialog-actions">
           <button type="button" className="btn" onClick={onClose}>
             Hotovo
@@ -122,7 +121,7 @@ function ProblemList({ rows, title }: { rows: BulkInviteRow[]; title: string }) 
 }
 
 /** Pozvání více lidí najednou: vložený seznam, jedna role a skupiny, přehled před uložením. */
-export function BulkInviteDialog({ roles, appUrl }: { roles: Role[]; appUrl: string }) {
+export function BulkInviteDialog({ roles }: { roles: Role[] }) {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -130,7 +129,7 @@ export function BulkInviteDialog({ roles, appUrl }: { roles: Role[]; appUrl: str
         Pozvat víc lidí najednou
       </button>
       <Modal open={open} title="Pozvat víc lidí najednou" onRequestClose={() => setOpen(false)}>
-        {open && <BulkInviteForm roles={roles} appUrl={appUrl} onClose={() => setOpen(false)} />}
+        {open && <BulkInviteForm roles={roles} onClose={() => setOpen(false)} />}
       </Modal>
     </>
   );

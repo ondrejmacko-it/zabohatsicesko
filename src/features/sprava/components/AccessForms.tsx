@@ -6,7 +6,7 @@ import { submitKeepingValues } from "@/features/shared/keep-values";
 import { GROUP_LABELS, ROLE_LABELS } from "@/lib/labels";
 import { GROUPS, type Group, type Role } from "@/lib/types";
 import type { ActionResult } from "@/features/shared/run-action";
-import { inviteUserAction, updateAccessAction } from "../actions";
+import { inviteUserAction, updateAccessAction, type AccessMessage, type AccessResult } from "../actions";
 
 /** Výběr role a skupin. Nabízí jen role, které smí přihlášený uživatel přidělit (hlídá i server). */
 const PRESETS: Array<{ label: string; role: Role; groups: Group[] }> = [
@@ -106,8 +106,13 @@ export function AccessForm({ userId, roles, role, groups, mode, onDone, onCancel
 }
 
 /** Hotová zpráva pro pozvaného kolegu. Wiki sama e-mail neposílá, správce ji vloží do e-mailu nebo chatu. */
-export const inviteMessage = (appUrl: string, email?: string) =>
-  `Ahoj, zvu tě do firemní Wiki Za bohatší Česko. Najdeš tam plán vzdělávání, témata a zápisy z akcí.\n\nOtevři ${appUrl} a přihlas se účtem Google${email ? ` ${email}` : ", na který ti přišla tato zpráva"}.`;
+export function inviteMessage(access: AccessMessage): string {
+  const until = new Intl.DateTimeFormat("cs-CZ", { day: "numeric", month: "numeric", timeZone: "Europe/Prague" }).format(new Date(access.expires));
+  const how = access.code
+    ? `Otevři svůj osobní odkaz a zadej jednorázový kód ${access.code}.`
+    : `Otevři svůj osobní odkaz a přihlas se účtem Google ${access.email}.`;
+  return `Ahoj, zvu tě do firemní Wiki Za bohatší Česko. Najdeš tam plán vzdělávání, témata a zápisy z akcí.\n\n${how}\n${access.link}\n\nOdkaz je jen pro tebe, nepřeposílej ho. Platí do ${until} a jen na první přihlášení, tvoje zařízení si pak Wiki zapamatuje.`;
+}
 
 /** Zkopíruje zprávu do schránky. Když to prohlížeč nedovolí, ukáže text k ručnímu označení. */
 export function CopyMessage({ text }: { text: string }) {
@@ -133,20 +138,15 @@ export function CopyMessage({ text }: { text: string }) {
   );
 }
 
-type InviteState = ActionResult & { invited?: { name: string; email: string } };
-
-export function InviteForm({ roles, appUrl, onCancel }: { roles: Role[]; appUrl: string; onCancel?: () => void }) {
-  const [state, action, pending] = useActionState(async (prev: InviteState | null, formData: FormData): Promise<InviteState> => {
-    const result = await inviteUserAction(prev, formData);
-    return result.ok ? { ...result, invited: { name: String(formData.get("name")).trim(), email: String(formData.get("email")).trim().toLowerCase() } } : result;
-  }, null);
-  if (state?.ok && state.invited) {
+export function InviteForm({ roles, onCancel }: { roles: Role[]; onCancel?: () => void }) {
+  const [state, action, pending] = useActionState<AccessResult | null, FormData>(inviteUserAction, null);
+  if (state?.ok && state.access) {
     return (
       <div className="stack">
         <p className="notice notice-ok" role="status">
-          <strong>{state.invited.name} má přístup.</strong> Teď mu pošlete odkaz, přihlásí se adresou {state.invited.email}.
+          <strong>{state.access.name} má přístup.</strong> Teď mu pošlete jeho osobní odkaz, přihlásí se adresou {state.access.email}.
         </p>
-        <CopyMessage text={inviteMessage(appUrl, state.invited.email)} />
+        <CopyMessage text={inviteMessage(state.access)} />
         <div className="dialog-actions">
           {onCancel && (
             <button type="button" className="btn" onClick={onCancel}>

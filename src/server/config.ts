@@ -12,10 +12,23 @@ function sessionSecret(): string {
   return DEV_SESSION_SECRET;
 }
 
+export type GateMode = "invite" | "open";
+
+/**
+ * Jak se člověk dostane k přihlášení. `invite`: jen osobním odkazem od správce, fiktivní role se nenabízí.
+ * `open`: ukázka s fiktivními rolemi za společným přístupovým kódem. Produkce na Vercelu je vždy na pozvánku,
+ * jinde rozhoduje `GATE_MODE`.
+ */
+export function gateMode(): GateMode {
+  if (process.env.VERCEL_ENV === "production") return "invite";
+  return process.env.GATE_MODE?.trim() === "invite" ? "invite" : "open";
+}
+
 function accessCode(): string | null {
   const value = process.env.DEMO_ACCESS_CODE;
   if (value && value.length >= 12) return value;
-  if (isProduction) throw new Error("DEMO_ACCESS_CODE musí být nastavený a mít aspoň 12 znaků.");
+  // Společný kód chrání jen ukázku s fiktivními rolemi. Vstup na pozvánku ho nepotřebuje.
+  if (isProduction && gateMode() === "open") throw new Error("DEMO_ACCESS_CODE musí být nastavený a mít aspoň 12 znaků.");
   return null;
 }
 

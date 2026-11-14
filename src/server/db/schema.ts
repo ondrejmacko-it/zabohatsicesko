@@ -158,6 +158,19 @@ export const integrationCredentials = pgTable(
 );
 
 /** Účet u poskytovatele identity svázaný s uživatelem Wiki přes stabilní `sub`. E-mail je jen informativní. */
+/** Osobní odkaz k přihlášení (`link`) nebo jednorázový kód (`code`). V databázi je jen otisk hodnoty. */
+export const accessLinks = pgTable("access_links", {
+  id: text("id").primaryKey(),
+  orgId: text("org_id").notNull(),
+  userId: text("user_id").notNull(),
+  kind: text("kind").$type<"link" | "code">().notNull(),
+  tokenHash: text("token_hash").notNull(),
+  createdBy: text("created_by").notNull(),
+  createdAt: ts("created_at").notNull().defaultNow(),
+  expiresAt: ts("expires_at").notNull(),
+  usedAt: ts("used_at"),
+});
+
 export const userIdentities = pgTable(
   "user_identities",
   {

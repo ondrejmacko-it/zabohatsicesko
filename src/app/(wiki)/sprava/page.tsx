@@ -9,7 +9,7 @@ import type { Role } from "@/lib/types";
 import { CalendarStatusLine, InviteRecipients } from "@/features/vzdelavani/components/CalendarStatusLine";
 import { loadCalendarStatus } from "@/server/services/calendar-status";
 import { requireUser } from "@/server/auth/session";
-import { config, now } from "@/server/config";
+import { now } from "@/server/config";
 import { canManageUsers } from "@/server/policy";
 import { listAccounts, type Account } from "@/server/services/users";
 
@@ -35,8 +35,8 @@ export default async function AdminPage() {
           </p>
         </div>
         <div className="row page-head-actions">
-          <BulkInviteDialog roles={roles} appUrl={config.appUrl} />
-          <InviteDialog roles={roles} appUrl={config.appUrl} />
+          <BulkInviteDialog roles={roles} />
+          <InviteDialog roles={roles} />
         </div>
       </div>
 

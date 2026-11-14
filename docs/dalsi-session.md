@@ -6,8 +6,11 @@ push a přepsání tohoto souboru (jen aktuální stav, historie je v gitu).
 
 ## Stav 14. 11. 2026 (větev `claude/vzdelavani-b8-e-ybvvgg`, draft PR #21 do `main`)
 
-Ověřeno: lint, typy, build, 170 ze 170 testů, B9 v Chromiu nad PGlite na 1280 a 390 px. Naživo proti Googlu
-neověřeno nic. Hotové jsou bloky A a B3 až B10. Production na Vercelu nemá proměnné prostředí a buildy z `main` se přeskakují.
+Ověřeno: lint, typy, build, 175 ze 175 testů. V Chromiu nad PGlite na 1280 a 390 px: B9 a brána na pozvánku
+(`GATE_MODE=invite`: bez odkazu žádný formulář, špatný a použitý odkaz, přihlášení kódem, upozornění po kódu).
+**Neověřeno v prohlížeči:** okna „Nový odkaz k přihlášení“ a „Jednorázový kód“ v menu účtu ve Správě (skript
+se zasekl na kliknutí v menu, příčina nehledána) a zpráva po pozvání kolegy. Naživo proti Googlu neověřeno nic.
+Hotové jsou bloky A a B3 až B10 a vstup na pozvánku. Production na Vercelu nemá proměnné prostředí a buildy z `main` se přeskakují.
 
 Pravidla: tykej, piš přátelsky. Na `main` nepushuj, merge dělá uživatel přes PR. Produkci sám nenasazuj,
 jen ji připrav a nastav, co jde přes API. Osobní účet uživatele je z Wiki smazaný, nezakládej ho a nikam
@@ -17,12 +20,34 @@ Zásada UI: hlavní údaje a akce vyniknou, vedlejší texty jsou menší a tlum
 pochopí člověk, který Wiki vidí poprvé: jedna věta, žádné technické pojmy. Po každém kroku ověř v prohlížeči
 na 1280 a 390 px (konzole bez chyb, žádný vodorovný posun).
 
+## Zadání uživatele ze 14. 11. večer (odsouhlasené, rozplánované do kroků níže)
+
+Vstup jen osobním odkazem, jednorázové kódy od správce pro lidi bez Gmailu, produkce z `main` jen s přihlášením,
+co nejlepší zabezpečení a optimalizace, vlastní bot pro přepis, plná automatizace, Apple zařízení podle norem,
+kompletní příprava produkce a krátký seznam toho, co musí doplnit uživatel (jen nezbytné).
+
+Rozhodnuto: odkaz platí do prvního přihlášení, zařízení si Wiki pamatuje 180 dní. Kód platí jednou, zařízení pak
+zůstane přihlášené 30 dní. Fiktivní role jen na preview a lokálně. Přepis: vlastní bot, logiku zpracování záznamu
+do zápisu programujeme my, model běží přes API uživatele (například OpenAI), klíč dodá uživatel.
+
 ## Kroky v pořadí (jeden na relaci)
+
+0. **Doověřit vstup na pozvánku.** V prohlížeči okna ve Správě (viz Neověřeno výše) na 1280 a 390 px. Hromadné
+   pozvání: vrátit každému řádku jeho osobní odkaz (teď jen pokyn vytvořit odkaz v menu účtu). Cizí účet Google
+   na zařízení s odkazem dnes založí čekající žádost (`completeLogin`), v režimu na pozvánku to vypnout.
+   Na preview nastav přes API `GATE_MODE=invite` až po dohodě (uživatel pak potřebuje první odkaz, viz níže).
 
 1. **B11 a drobnosti.** `Consequences` do zrušení akce (`EventMenu`), stažení zápisu (`RecordingMenu`,
    rozšířit `confirm` v `ActionForm` o body) a odebrání přístupu (`AccountActions`). Zpráva po pozvání
    kolegy (`inviteMessage` v `AccessForms.tsx`): tykání zůstává, text doladit (kdo zve, k čemu Wiki je,
    odkaz, jedna věta jak se přihlásit). Při zapnuté lhůtě má detail akce psát „Pozvánka odejde za chvíli“.
+   **Bot pro přepis** (vlastní krok po kroku 3): rozhraní poskytovatele v `src/server/recordings`, přepis přes
+   API uživatele (`request_credential` pro hostitele API, klíč nikdy do repa ani do proměnné v chatu), vlastní
+   logika: dělení dlouhého záznamu, přepis po částech, sestavení zápisu (shrnutí, klíčové body, rozhodnutí,
+   další kroky) a kontrola vedoucím před zveřejněním. Zeptej se na poskytovatele a zpracování v EU.
+   **Apple zařízení** (vlastní krok): WCAG 2.2 AA a zásady Applu (cíle dotyku 44 px, `env(safe-area-inset-*)`,
+   pole 16 px proti přiblížení, `100dvh`, `dialog` v Safari). V prostředí je jen Chromium, skutečné Safari
+   projde uživatel podle krátkého seznamu.
 2. **Úklid a optimalizace.** Mrtvý kód a nepoužívané exporty, alias `isOrganizer`/`isAdmin` nahradit
    `canPlan`, sloučit role `admin` a `organizer` v databázi (migrace, zeptej se před ní), zápisy filtrovat
    v databázi, krátká mezipaměť odpovědí z Kalendáře na Plánu, velikost balíčku a rychlost stránek změřit
@@ -41,7 +66,7 @@ na 1280 a 390 px (konzole bez chyb, žádný vodorovný posun).
    průvodce měsícem, Správa v oknech, hromadné pozvání, odpovědi, zpět po zveřejnění, `PUBLISH_UNDO_SEC`, zájem o téma z pozvánky).
 6. **Production z `main`** (až uživatel sloučí PR). Přes API nastav nesecretní proměnné pro Production
    (`CALENDAR_MODE`, `LOGIN_MODE`, `CALENDAR_ATTENDEES=audience`, `APP_URL`, `GOOGLE_LOGIN_ACCOUNTS` podle
-   preview). Uživatel doplní tajemství (`SESSION_SECRET`, `DEMO_ACCESS_CODE`, `TOKEN_ENCRYPTION_KEY`,
+   preview). Uživatel doplní tajemství (`SESSION_SECRET`, `TOKEN_ENCRYPTION_KEY`,
    `CRON_SECRET`, OAuth klient, `DATABASE_URL`), produkční přesměrovací adresy v Google konzoli a povolí
    buildy z `main` (ignored build step). Doporučení: samostatná větev databáze v Neonu pro produkci
    a zveřejnění OAuth aplikace (v režimu Testing souhlas vyprší po 7 dnech). Potom ověření v produkci.
@@ -61,6 +86,18 @@ na 1280 a 390 px (konzole bez chyb, žádný vodorovný posun).
   střídání typů ve slotu šablony, kam trvale uložit zadání (do tohoto repa ne).
 
 ## Co je dobré vědět
+
+- **Vstup na pozvánku:** `gateMode()` v `config.ts` (`invite` vždy při `VERCEL_ENV=production`, jinak podle
+  `GATE_MODE`, výchozí `open`). Tabulka `access_links` (migrace `0008`, jen otisky), služba
+  `src/server/auth/access-links.ts`, odkaz `/pozvanka/<token>` dá prohlížeči cookie zařízení `zbc_zarizeni`
+  a přesměruje na `/vstup`. Bez platné cookie `/vstup` ukáže jen „Přístup jen na pozvánku“ a začátek přihlášení
+  Googlem vrací 404. Callback Googlu pustí jen účet, kterému odkaz patří. Kód: `enterWithCode`, session `code`
+  na 30 dní, v layoutu upozornění na e-mail pro pozvánky. V režimu `invite` není potřeba `DEMO_ACCESS_CODE`
+  a session fiktivní role neplatí. Správa: menu účtu „Nový odkaz k přihlášení“ a „Jednorázový kód“, pozvání
+  kolegy vrací osobní odkaz ve zprávě. Test `tests/vstup-na-pozvanku.test.ts`.
+- **První správce v produkci** nemá jak dostat odkaz z Wiki. Postup: po nasazení vlož přes Neon konektor řádek
+  do `access_links` (otisk SHA-256 náhodného tokenu, `kind='link'`, uživatel podle `GOOGLE_LOGIN_ACCOUNTS`)
+  a odkaz `<APP_URL>/pozvanka/<token>` pošli uživateli v chatu. Je to zápis do databáze, potvrď ho s uživatelem.
 
 - **B9 Zájem o téma z pozvánky:** `desiredData` (`sync.ts`) přidá budoucí nezrušené akci s `topicId` řádek
   s odkazem `/vzdelavani/temata?tema=<id>`. Jen do nových pozvánek a do těch, které se stejně mění

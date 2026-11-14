@@ -4,6 +4,7 @@ import { after } from "next/server";
 import { z } from "zod";
 import { GROUPS, ROLES } from "@/lib/types";
 import { runAction, type ActionResult } from "@/features/shared/run-action";
+import { createAccess } from "@/server/auth/access-links";
 import { syncPending } from "@/server/calendar/sync";
 import { BULK_INVITE_MAX, inviteUser, inviteUsers, previewBulkInvite, rejectRequest, updateAccess, type BulkInviteRow } from "@/server/services/users";
 
@@ -21,14 +22,35 @@ const accessOf = (formData: FormData) => ({
   groups: [...new Set(formData.getAll("groups"))],
 });
 
-export async function inviteUserAction(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
+export async function inviteUserAction(_prev: ActionResult | null, formData: FormData): Promise<AccessResult> {
   return runAction(async (user) => {
     const data = z
       .object({ ...access, email: z.string().trim().toLowerCase().email().max(254), name: z.string().trim().min(2).max(80) })
       .parse({ ...accessOf(formData), email: formData.get("email"), name: formData.get("name") });
-    await inviteUser(user, data);
+    const id = await inviteUser(user, data);
+    // Pozvaný rovnou dostane osobní odkaz, správce ho pošle ve zprávě.
+    const created = await createAccess(user, id, false);
     after(() => syncPending());
-    return { ok: true, message: `Pozvánka je uložená: ${data.name}. Pošlete kolegovi odkaz na Wiki.` };
+    return { ok: true, message: `Pozvánka je uložená: ${data.name}. Pošlete kolegovi jeho osobní odkaz.`, access: accessOfCreated(created) };
+  });
+}
+
+export type AccessMessage = { link: string; code: string | null; expires: string; name: string; email: string };
+export type AccessResult = ActionResult & { access?: AccessMessage };
+
+const accessOfCreated = (created: Awaited<ReturnType<typeof createAccess>>): AccessMessage => ({
+  link: created.link,
+  code: created.code,
+  expires: created.expiresAt.toISOString(),
+  name: created.name,
+  email: created.email,
+});
+
+/** Nový osobní odkaz k přihlášení, volitelně s jednorázovým kódem. Starší nepoužité přestanou platit. */
+export async function createAccessAction(_prev: AccessResult | null, formData: FormData): Promise<AccessResult> {
+  return runAction(async (user) => {
+    const created = await createAccess(user, userId.parse(formData.get("userId")), formData.get("withCode") === "1");
+    return { ok: true, access: accessOfCreated(created) } as AccessResult;
   });
 }
 

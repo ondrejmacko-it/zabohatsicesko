@@ -15,7 +15,7 @@ export function Topbar({ user, personas }: { user: CurrentUser; personas: Person
         <span className="demo-badge" title="Fiktivní data a ukázkové režimy integrací">
           Ukázka<span className="demo-badge-detail"> · fiktivní data</span>
         </span>
-        {user.signedInWith === "google" ? (
+        {user.signedInWith !== "demo" ? (
           <span className="small muted" title={user.email}>
             Přihlášení účtem Google
           </span>
@@ -38,7 +38,7 @@ export function Topbar({ user, personas }: { user: CurrentUser; personas: Person
         )}
         {/* U ukázkové role už jméno ukazuje přepínač, proto se neopakuje. */}
         <span className="account-name">
-          {user.signedInWith === "google" ? `${user.name} · ${ROLE_LABELS[user.role]}` : ROLE_LABELS[user.role]}
+          {user.signedInWith !== "demo" ? `${user.name} · ${ROLE_LABELS[user.role]}` : ROLE_LABELS[user.role]}
         </span>
         <form action={signOut}>
           <button className="btn btn-small" type="submit">

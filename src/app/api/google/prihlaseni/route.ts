@@ -2,9 +2,10 @@ import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
 import { hashKey, withinRateLimit } from "@/server/audit";
+import { DEVICE_COOKIE, trustedDevice } from "@/server/auth/access-links";
 import { beginLogin, type LoginOptions } from "@/server/auth/google-login";
 import { needsCalendarConnection } from "@/server/calendar/google-auth";
-import { config, googleLoginConfig } from "@/server/config";
+import { config, gateMode, googleLoginConfig } from "@/server/config";
 import { getDb, type Executor } from "@/server/db/client";
 import { userIdentities, users } from "@/server/db/schema";
 import { canPlan } from "@/server/policy";
@@ -32,6 +33,10 @@ export async function GET(request: NextRequest) {
   const cfg = googleLoginConfig();
   if (!cfg) return new Response(null, { status: 404 });
   const db = await getDb();
+  // Vstup na pozvánku: bez osobního odkazu v tomto prohlížeči přihlášení vůbec nezačne.
+  if (gateMode() === "invite" && !(await trustedDevice(db, request.cookies.get(DEVICE_COOKIE)?.value))) {
+    return new Response(null, { status: 404 });
+  }
   const ip = (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
   if (!(await withinRateLimit(db, `google-login:${hashKey(ip)}`, 20, 600))) return new Response(null, { status: 429 });
 

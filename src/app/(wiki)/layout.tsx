@@ -24,6 +24,12 @@ export default async function WikiLayout({ children }: { children: React.ReactNo
       <div className="shell">
         <Sidebar badge={badge} canManageUsers={canManageUsers(user)} pendingRequests={pendingRequests} />
         <main className="panel" id="obsah">
+          {user.signedInWith === "code" && (
+            <p className="notice" role="status">
+              Jste přihlášeni jednorázovým kódem. Pozvánky na akce chodí na adresu {user.email}. Pokud tam nechodí, dejte
+              správci vědět správný e-mail. S účtem Google se příště přihlásíte bez kódu.
+            </p>
+          )}
           {children}
         </main>
       </div>
