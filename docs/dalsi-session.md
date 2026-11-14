@@ -17,6 +17,32 @@ proti Googlu připravený pro ChatGPT agenta: `docs/zivy-test-chatgpt.md` (uživ
 adresy, propojí Kalendář a předá jednorázové kódy). Další krok: živý test, pak „Nové zadání“ níže.
 Persona „Organizátor ukázky“ se v seedu z #19 jmenuje „Druhý správce ukázky“ (účet zůstává), zeptat se znovu po živém testu. Varování o hydrataci na Plánu sledovat.
 
+## Živý test 14. 11. v noci (preview `claude/adoring-ramanujan-rot348`), zjištění k opravě
+
+Uživatel je přihlášený osobním odkazem (vytvořen ručně v Neonu pro `demo-organizator`, platí do 21. 11.) a Googlem,
+Kalendář propojený (souhlas do 19. 11.). Všechny zveřejněné budoucí akce mají vazbu `synced`, hosté odpovídají
+skupinám (v DB: FP a Všichni 2, RM a Tým A 1). Kalendář testovacího účtu FP ukazuje akce FP správně, RM a Tým A ne.
+Uživatel chce tyto drobnosti opravit (navrhnout, pak udělat):
+
+1. **Wiki ukazuje „dnes“ 12. 11., skutečně je 14. 11.** (Plán, Nejbližší akce). Zjistit zdroj času ukázky
+   (`src/lib/time.ts`, `settings.ts`). S propojeným Googlem musí platit skutečný čas, jinak se synchronizují
+   proběhlé akce (13. 11. dostal pozvánku).
+2. **26. 11. Trénink RM je v kalendáři účtu FP** a Wiki ukazuje „Přijalo 0 z 2“, přestože vazba má jen
+   1 spravovaného hosta. V pozvánce zůstal starý host z doby `GOOGLE_ALLOWED_ATTENDEES` (Wiki mazala jen hosty
+   ze `managed_attendees`). Totéž u proběhlých 11. a 12. 11. Navrhnout úklid: při synchronizaci odebrat adresy
+   ze seznamu povolených testovacích příjemců, které do publika nepatří. Ručně přidané hosty nechat.
+3. **Okno akce: hosté jako e-mail** („Účastník FP, zbc.test.spravce@…“). Adresu Google spárovat s účtem
+   (`user_identities`) a ukázat jméno, e-mail jen vedlejší. Zvážit, jestli správce sám patří do „Čeká“.
+4. **Řádek Kalendář na Plánu je technický**: dlouhé ID kalendáře `…@group.calendar.google.com`, „pozvánky
+   dostává: účty podle skupin (2)“, „Obnovte ho jedním potvrzením“ bez tlačítka. Zkrátit na jednu větu, ID schovat,
+   akci obnovení dát jako tlačítko. Souvisí s bodem 1 a 4 nového zadání níže (blok dolů, bez duplicit).
+5. **Detail akce, Google Kalendář: štítek „test Google · publikum akce“** je žargon. Přepsat srozumitelně.
+6. Ověřit: proč 19. 11. Trénink RM bez tématu a vedoucího je zveřejněný (seed, nebo záměr) a pozvánka má jen
+   obecný název. Opakovaná „Test série“ (pá 16:30) a „Něco“ v kalendáři testovacího účtu nejsou z Wiki.
+
+Pokračování živého testu potom: nový účet a žádost (třetí Google účet, osobní účet uživatele ne), schválení
+ve Správě do FP a ověření hostů v DB, změna času, zrušení, odkaz na zápis. Pro ChatGPT: `docs/zivy-test-chatgpt.md`.
+
 ## Stav 14. 11. 2026 večer (větev `claude/vzdelavani-b8-e-ybvvgg`, draft PR #21 do `main`)
 
 Ověřeno: lint, typy, build, 176 ze 176 testů. V Chromiu nad PGlite na 1280 a 390 px (konzole bez chyb, bez
