@@ -623,6 +623,36 @@ export async function generateMonth(viewer: Viewer, monthKey: string): Promise<{
   });
 }
 
+export type MonthPreparation = {
+  created: number;
+  withTopic: number;
+  drafts: MonthDraft[];
+  changeDrafts: number;
+  /** Doporučené téma pro návrh, který zatím žádné nemá. Klíč je ID návrhu. */
+  suggestions: Record<string, { name: string; interestCount: number }>;
+};
+
+/**
+ * První krok průvodce „Připravit další měsíc“: doplní chybějící termíny ze šablony a vrátí návrhy měsíce
+ * s doporučeným tématem tam, kde chybí. Nic nezveřejňuje. Opakované volání nic nezdvojí.
+ */
+export async function prepareMonth(viewer: Viewer, monthKey: string): Promise<MonthPreparation> {
+  requireOrganizer(viewer);
+  // Uplynulý měsíc se nepřipravuje: jeho termíny by stejně nešly zveřejnit.
+  if (monthKey < toDateKey(now()).slice(0, 7)) throw new DomainError("invalid_state");
+  const { created, withTopic } = await generateMonth(viewer, monthKey);
+  const { drafts, changeDrafts } = await listMonthDrafts(viewer, monthKey);
+  const db = await getDb();
+  const planned = await plannedTopicIds(db);
+  const suggested = suggestTopics(
+    drafts.filter((d) => !d.topicTitle).map((d) => ({ generationKey: d.id, type: d.type, audience: d.audience })),
+    await listTopics(viewer),
+    planned,
+  );
+  const suggestions = Object.fromEntries([...suggested].map(([id, topic]) => [id, { name: topic.name, interestCount: topic.interestCount }]));
+  return { created, withTopic, drafts, changeDrafts, suggestions };
+}
+
 export type TemplateSlotInput = { isoWeekday: number; startTime: string; endTime: string; types: EventType[]; active: boolean };
 
 export async function updateTemplate(viewer: Viewer, slots: TemplateSlotInput[]): Promise<void> {

@@ -10,6 +10,7 @@ import { generateMonthAction } from "@/features/vzdelavani/actions";
 import { CalendarStatusLine } from "@/features/vzdelavani/components/CalendarStatusLine";
 import { EventDialog } from "@/features/vzdelavani/components/EventDialog";
 import { EventPeek } from "@/features/vzdelavani/components/EventPeek";
+import { PrepareMonthDialog } from "@/features/vzdelavani/components/PrepareMonthDialog";
 import { PublishMonthDialog } from "@/features/vzdelavani/components/PublishMonthDialog";
 import { PlanFilters } from "@/features/vzdelavani/components/PlanFilters";
 import { Agenda, Legend, NextEventsList, ScheduleGrid } from "@/features/vzdelavani/components/Schedule";
@@ -80,6 +81,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   // Klik na akci otevře náhled v okně nad Plánem. Měsíc, pohled i filtry zůstávají v adrese.
   const peekHref = (card: EventCard) => link({ akce: card.id });
   const peekId = (params.akce ?? "").slice(0, 120);
+  const nextMonthKey = shiftMonth(monthOf(todayKey), 1);
   const newDate = monthOf(todayKey) === monthKey ? todayKey : `${monthKey}-01`;
   const emptyText = filtering ? "Filtru v tomto měsíci neodpovídá žádná akce." : undefined;
 
@@ -205,6 +207,16 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
                 <ActionForm action={generateMonthAction} fields={{ month: monthKey }} label="Doplnit měsíc ze šablony" pendingLabel="Doplňuji…" />
                 <TemplateDialog slots={template} />
               </Menu>
+              {invite && (
+                <PrepareMonthDialog
+                  monthKey={nextMonthKey}
+                  monthName={formatMonth(nextMonthKey)}
+                  people={people}
+                  topics={topics.map((t) => ({ name: t.name, interestCount: t.interestCount }))}
+                  recipients={invite.recipients}
+                  inviteMode={invite.mode}
+                />
+              )}
               {monthDrafts && invite && monthDrafts.drafts.length > 0 && (
                 <PublishMonthDialog
                   key={monthDrafts.drafts.map((d) => `${d.id}:${d.revision}`).join("|")}

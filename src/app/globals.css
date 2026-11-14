@@ -1077,6 +1077,79 @@ body > .dialog[open]:has(~ .dialog[open]) {
   margin: 0;
 }
 
+[hidden] {
+  display: none !important;
+}
+
+/* Kroky průvodce: aktuální krok vynikne, hotové a budoucí jsou tlumené. */
+.steps {
+  display: flex;
+  gap: 6px 18px;
+  flex-wrap: wrap;
+  margin: 0 0 14px;
+  padding: 0 0 12px;
+  border-bottom: 1px solid var(--line);
+  list-style: none;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.step-number {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.step[data-state="current"] {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.step[data-state="current"] .step-number {
+  border-color: var(--ochre);
+  background: var(--ochre);
+  color: #fff;
+}
+
+.step[data-state="done"] .step-number {
+  border-color: var(--ok);
+  color: var(--ok);
+}
+
+.step-lead {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.publish-interest {
+  color: var(--ochre-dark);
+  font-weight: 600;
+}
+
+.consequence-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding-left: 42px;
+  color: var(--ink-soft, inherit);
+  font-size: 13px;
+  line-height: 20px;
+}
+
 .slot {
   display: flex;
   flex-direction: column;

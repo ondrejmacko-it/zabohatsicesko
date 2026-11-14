@@ -20,10 +20,12 @@ import {
   deleteDraft,
   discardDraftChanges,
   generateMonth,
+  prepareMonth,
   publishDrafts,
   updateEvent,
   updateTemplate,
   type EventInput,
+  type MonthPreparation,
 } from "@/server/services/events";
 import { ImpactNotConfirmed, assertImpactConfirmed, cancelImpact, changeImpact, type CancelImpact, type ChangeImpact } from "@/server/services/impact";
 import {
@@ -194,6 +196,16 @@ export async function generateMonthAction(_prev: ActionResult | null, formData: 
       : "";
     return { ok: true, message: `Doplněno ${places} ze šablony. Stávající akce zůstaly beze změny.${topicNote}` };
   });
+}
+
+/** První krok průvodce měsícem: doplní termíny ze šablony a vrátí návrhy k doplnění témat a zveřejnění. */
+export async function prepareMonthAction(month: string): Promise<ActionResult & { preparation?: MonthPreparation }> {
+  let preparation: MonthPreparation | undefined;
+  const result = await run(async (user) => {
+    preparation = await prepareMonth(user, z.string().refine(isValidMonthKey).parse(month));
+    return { ok: true };
+  });
+  return result.ok ? { ...result, preparation } : result;
 }
 
 /** Zveřejní vybrané návrhy měsíce najednou. Pole formuláře: `pick` (ID), `rev-<id>`, `topic-<id>`, `lead-<id>`. */
