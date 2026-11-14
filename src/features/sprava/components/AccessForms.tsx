@@ -16,7 +16,7 @@ const PRESETS: Array<{ label: string; role: Role; groups: Group[] }> = [
   { label: "Správce", role: "admin", groups: [...GROUPS] },
 ];
 
-function AccessFields({ roles, role: initialRole, groups: initialGroups }: { roles: Role[]; role: Role; groups: Group[] }) {
+export function AccessFields({ roles, role: initialRole, groups: initialGroups }: { roles: Role[]; role: Role; groups: Group[] }) {
   const [role, setRole] = useState(initialRole);
   const [groups, setGroups] = useState(initialGroups);
   const toggle = (group: Group, on: boolean) => setGroups((current) => (on ? [...current, group] : current.filter((g) => g !== group)));
@@ -105,10 +105,60 @@ export function AccessForm({ userId, roles, role, groups, mode, onDone, onCancel
   );
 }
 
-export function InviteForm({ roles, appUrl, onCancel }: { roles: Role[]; appUrl: string; onCancel?: () => void }) {
-  const [state, action, pending] = useActionState(inviteUserAction, null);
+/** Hotová zpráva pro pozvaného kolegu. Wiki sama e-mail neposílá, správce ji vloží do e-mailu nebo chatu. */
+export const inviteMessage = (appUrl: string, email?: string) =>
+  `Ahoj, zvu tě do firemní Wiki Za bohatší Česko. Najdeš tam plán vzdělávání, témata a zápisy z akcí.\n\nOtevři ${appUrl} a přihlas se účtem Google${email ? ` ${email}` : ", na který ti přišla tato zpráva"}.`;
+
+/** Zkopíruje zprávu do schránky. Když to prohlížeč nedovolí, ukáže text k ručnímu označení. */
+export function CopyMessage({ text }: { text: string }) {
+  const [copied, setCopied] = useState<"yes" | "manual" | null>(null);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied("yes");
+    } catch {
+      setCopied("manual");
+    }
+  };
   return (
-    <form action={action} onSubmit={submitKeepingValues(action)} className="stack" key={state?.ok ? state.message : undefined}>
+    <div className="copy-message">
+      <button type="button" className="btn btn-primary" onClick={copy}>
+        Kopírovat zprávu s odkazem
+      </button>
+      <span className="field-hint" role="status">
+        {copied === "yes" ? "Zkopírováno. Vložte zprávu do e-mailu nebo chatu." : "Wiki e-mail neposílá. Zprávu vložíte do e-mailu nebo chatu sami."}
+      </span>
+      {copied === "manual" && <textarea className="textarea" readOnly rows={4} value={text} onFocus={(e) => e.currentTarget.select()} />}
+    </div>
+  );
+}
+
+type InviteState = ActionResult & { invited?: { name: string; email: string } };
+
+export function InviteForm({ roles, appUrl, onCancel }: { roles: Role[]; appUrl: string; onCancel?: () => void }) {
+  const [state, action, pending] = useActionState(async (prev: InviteState | null, formData: FormData): Promise<InviteState> => {
+    const result = await inviteUserAction(prev, formData);
+    return result.ok ? { ...result, invited: { name: String(formData.get("name")).trim(), email: String(formData.get("email")).trim().toLowerCase() } } : result;
+  }, null);
+  if (state?.ok && state.invited) {
+    return (
+      <div className="stack">
+        <p className="notice notice-ok" role="status">
+          <strong>{state.invited.name} má přístup.</strong> Teď mu pošlete odkaz, přihlásí se adresou {state.invited.email}.
+        </p>
+        <CopyMessage text={inviteMessage(appUrl, state.invited.email)} />
+        <div className="dialog-actions">
+          {onCancel && (
+            <button type="button" className="btn" onClick={onCancel}>
+              Hotovo
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+  return (
+    <form action={action} onSubmit={submitKeepingValues(action)} className="stack">
       <div className="form-grid">
         <label className="field">
           <span className="field-label">Jméno</span>
@@ -121,7 +171,7 @@ export function InviteForm({ roles, appUrl, onCancel }: { roles: Role[]; appUrl:
       </div>
       <AccessFields roles={roles} role="member" groups={["vsichni"]} />
       <p className="field-hint">
-        Wiki zatím e-mail s pozvánkou neposílá. Pošlete kolegovi odkaz {appUrl} a ať se přihlásí touto adresou.
+        Po uložení dostanete hotovou zprávu s odkazem, kterou kolegovi pošlete. Wiki sama e-mail neposílá.
       </p>
       <ActionMessage state={state} />
       <div className="dialog-actions">

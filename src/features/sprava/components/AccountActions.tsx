@@ -131,7 +131,8 @@ export function InviteDialog({ roles, appUrl }: { roles: Role[]; appUrl: string 
         Pozvat kolegu
       </button>
       <Modal open={open} title="Pozvat kolegu" onRequestClose={() => setOpen(false)}>
-        <InviteForm roles={roles} appUrl={appUrl} onCancel={() => setOpen(false)} />
+        {/* Nové otevření okna začíná prázdným formulářem, ne potvrzením minulého pozvání. */}
+        {open && <InviteForm roles={roles} appUrl={appUrl} onCancel={() => setOpen(false)} />}
       </Modal>
     </>
   );

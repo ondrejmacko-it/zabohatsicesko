@@ -7,6 +7,7 @@ import { config } from "@/server/config";
 import { getDb, type Executor } from "@/server/db/client";
 import { userIdentities, users } from "@/server/db/schema";
 import { canManageAccount, canManageUsers, type Viewer } from "@/server/policy";
+import { z } from "zod";
 import { DomainError } from "@/server/services/errors";
 
 // Správa uživatelů Wiki: pozvání adresy, schválení žádosti, změna role a skupin, odebrání přístupu.
@@ -144,4 +145,105 @@ export async function pendingRequestCount(db: Executor, viewer: Viewer): Promise
     .from(users)
     .where(and(eq(users.orgId, config.orgId), eq(users.status, "pending")));
   return row?.n ?? 0;
+}
+
+// ——— Hromadné pozvání ———
+
+export const BULK_INVITE_MAX = 50;
+
+/** Řádek vloženého seznamu: co se s ním stane a proč. */
+export type BulkInviteRow = {
+  line: number;
+  raw: string;
+  email: string | null;
+  name: string;
+  /** ok = pozve se, invalid = není adresa, duplicate = adresa je v seznamu dvakrát, existing = už ve Wiki je. */
+  status: "ok" | "invalid" | "duplicate" | "existing";
+};
+
+const emailShape = z.string().email().max(254);
+
+/** Jméno z adresy, když ho seznam neuvádí: „jan.novak@…“ → „Jan Novak“. Správce ho může později upravit. */
+function nameFromEmail(email: string): string {
+  const words = email.split("@")[0]!.split(/[._\-+\d]+/).filter(Boolean);
+  const name = words.map((w) => w[0]!.toUpperCase() + w.slice(1)).join(" ");
+  return name.length >= 2 ? name.slice(0, 80) : email.slice(0, 80);
+}
+
+/**
+ * Rozebere vložený seznam. Položky dělí nový řádek, čárka nebo středník, tvar je „adresa“ nebo
+ * „Jméno <adresa>“. Nic nezahazuje: neplatné a zdvojené položky vrací s důvodem a číslem řádku.
+ */
+export function parseInviteList(text: string): BulkInviteRow[] {
+  const seen = new Set<string>();
+  const rows: BulkInviteRow[] = [];
+  text.split(/\r?\n/).forEach((lineText, index) => {
+    for (const part of lineText.split(/[;,]/)) {
+      const raw = part.trim();
+      if (!raw) continue;
+      const bracket = raw.match(/^(.*)<([^<>]+)>$/);
+      const candidate = (bracket ? bracket[2]! : raw).trim().toLowerCase();
+      const email = emailShape.safeParse(candidate).success ? candidate : null;
+      const given = bracket ? bracket[1]!.trim().replace(/^["']|["']$/g, "").trim() : "";
+      const name = given.length >= 2 ? given.slice(0, 80) : email ? nameFromEmail(email) : "";
+      const status = !email ? "invalid" : seen.has(email) ? "duplicate" : "ok";
+      if (email) seen.add(email);
+      rows.push({ line: index + 1, raw: raw.slice(0, 200), email, name, status });
+    }
+  });
+  return rows;
+}
+
+async function markExisting(db: Executor, rows: BulkInviteRow[]): Promise<BulkInviteRow[]> {
+  const emails = rows.filter((r) => r.status === "ok").map((r) => r.email!);
+  if (!emails.length) return rows;
+  const taken = await db.select({ email: users.email }).from(users).where(and(eq(users.orgId, config.orgId), inArray(sql<string>`lower(${users.email})`, emails)));
+  const existing = new Set(taken.map((t) => t.email.toLowerCase()));
+  return rows.map((r) => (r.status === "ok" && existing.has(r.email!) ? { ...r, status: "existing" } : r));
+}
+
+function assertBulkInvite(viewer: Viewer, role: Role, rows: BulkInviteRow[]): void {
+  if (!canManageAccount(viewer, { id: "", role: "member" }, role)) throw new DomainError("forbidden");
+  if (rows.length > BULK_INVITE_MAX) throw new DomainError("invalid_input");
+}
+
+/** Přehled před uložením: stejná pravidla jako uložení, do databáze nic nezapisuje. */
+export async function previewBulkInvite(viewer: Viewer, text: string, role: Role): Promise<BulkInviteRow[]> {
+  const rows = parseInviteList(text);
+  assertBulkInvite(viewer, role, rows);
+  return markExisting(await getDb(), rows);
+}
+
+/**
+ * Pozve všechny platné adresy ze seznamu se stejnou rolí a skupinami, v jedné transakci. Stejná oprávnění
+ * a stejný výsledek jako `inviteUser` u každé adresy. Adresa, která mezitím ve Wiki vznikla, se přeskočí.
+ */
+export async function inviteUsers(viewer: Viewer, input: AccessInput & { text: string }): Promise<BulkInviteRow[]> {
+  const parsed = parseInviteList(input.text);
+  assertBulkInvite(viewer, input.role, parsed);
+  const db = await getDb();
+  return db.transaction(async (tx) => {
+    const rows = await markExisting(tx, parsed);
+    const result: BulkInviteRow[] = [];
+    let invited = 0;
+    for (const row of rows) {
+      if (row.status !== "ok") {
+        result.push(row);
+        continue;
+      }
+      const id = `u-${randomUUID()}`;
+      const inserted = await tx
+        .insert(users)
+        .values({ id, orgId: config.orgId, name: row.name, email: row.email!, role: input.role, groups: input.groups, status: "active", origin: "invite" })
+        .onConflictDoNothing()
+        .returning({ id: users.id });
+      if (inserted.length) {
+        invited += 1;
+        await audit(tx, viewer.id, "user.invited", "user", id);
+      }
+      result.push(inserted.length ? row : { ...row, status: "existing" });
+    }
+    if (invited) await requeueAttendeeSync(tx, input.groups);
+    return result;
+  });
 }

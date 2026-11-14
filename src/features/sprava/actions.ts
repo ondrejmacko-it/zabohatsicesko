@@ -5,7 +5,7 @@ import { z } from "zod";
 import { GROUPS, ROLES } from "@/lib/types";
 import { runAction, type ActionResult } from "@/features/shared/run-action";
 import { syncPending } from "@/server/calendar/sync";
-import { inviteUser, rejectRequest, updateAccess } from "@/server/services/users";
+import { BULK_INVITE_MAX, inviteUser, inviteUsers, previewBulkInvite, rejectRequest, updateAccess, type BulkInviteRow } from "@/server/services/users";
 
 // Každá akce znovu ověří session a oprávnění na serveru (services/users.ts) a validuje vstup.
 
@@ -48,4 +48,19 @@ export async function rejectRequestAction(_prev: ActionResult | null, formData: 
     await rejectRequest(user, userId.parse(formData.get("userId")));
     return { ok: true, message: "Žádost je zamítnutá." };
   });
+}
+
+export type BulkInviteResult = { ok: true; rows: BulkInviteRow[]; saved: boolean } | { ok: false; error: string };
+
+/** Hromadné pozvání ve dvou krocích jedním formulářem: „preview“ jen vyhodnotí seznam, „save“ pozve. */
+export async function bulkInviteAction(_prev: BulkInviteResult | null, formData: FormData): Promise<BulkInviteResult> {
+  let rows: BulkInviteRow[] = [];
+  const saved = formData.get("step") === "save";
+  const result = await runAction(async (user) => {
+    const data = z.object({ ...access, text: z.string().max(BULK_INVITE_MAX * 300) }).parse({ ...accessOf(formData), text: formData.get("text") });
+    rows = saved ? await inviteUsers(user, data) : await previewBulkInvite(user, data.text, data.role);
+    if (saved) after(() => syncPending());
+    return { ok: true };
+  });
+  return result.ok ? { ok: true, rows, saved } : result;
 }

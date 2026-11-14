@@ -10,9 +10,10 @@ pravidla v `CLAUDE.md`. Tykej mi, piš přátelsky. Vše níže je odsouhlasené
 na věci označené „zeptej se“. Rozsah je velký: jdi po blocích v uvedeném pořadí, po každém bloku commit a push,
 a když dojde limit kontextu, zapiš stav sem a skonči.
 
-Stav: draft PR z větve `ccr-7b6bed1b-1ejvib` do `main` (obsahuje i PR #19 a práci z `ccr-5d4e285a-rvyp3j`,
-PR #19 jde zavřít). Pokračuj na té větvi, nebo z `main`, pokud je sloučeno. Hotové jsou bloky A, B3, B4
-a sdílená komponenta z B11. Zbývá B5 až B11, potom C, D, E. Můj osobní účet je z Wiki smazaný, nezakládej ho
+Stav: práce je na větvi `claude/vzdelavani-b5-e-wfpwgh` (vychází z `ccr-7b6bed1b-1ejvib`, obsahuje ji celou,
+PR zatím nemá: založ draft PR do `main`, starý draft z `ccr-7b6bed1b-1ejvib` a PR #19 jdou zavřít). Pokračuj
+na té větvi, nebo z `main`, pokud je sloučeno. Hotové jsou bloky A a B3 až B7 a sdílená komponenta z B11.
+Zbývá B8 až B11, potom C, D, E. Můj osobní účet je z Wiki smazaný, nezakládej ho
 znovu a nikam ho nezvi. Ostré zveřejňování a skutečné pozvánky na preview smíš spouštět bez ptaní.
 Přesměrovací adresy v Google konzoli přidám, až bude vše hotové (řekni si o ně před blokem C).
 Až bude vše hotové, chci připravit kompletní Production z `main` (proměnné prostředí, `CRON_SECRET`, vlastní
@@ -22,7 +23,7 @@ Zásada pro celé UI: hlavní údaje a hlavní akce musí vyniknout, vedlejší 
 ani o pixel mimo osu, vše je jasné na první pohled. Každou novinku má pochopit i člověk, který Wiki vidí
 poprvé: jedna věta, co se stane, žádné technické pojmy. Po každém bloku ověř v prohlížeči 1280 a 390 px.
 
-B. Nové funkce (každá s testem pravidel a oprávnění na serveru). Body 3 a 4 jsou hotové.
+B. Nové funkce (každá s testem pravidel a oprávnění na serveru). Body 3 až 7 jsou hotové, nedělej je znovu.
 5. Odpovědi z Kalendáře v Plánu: u zveřejněné akce „přijalo 3 z 5“, v okně akce jména podle odpovědi.
    Jen pro správce a vedoucího akce. Data už vrací panel synchronizace (`external.attendees`).
 6. Správa: po pozvání kolegy tlačítko „Kopírovat zprávu s odkazem“ (hotový text s adresou Wiki).
@@ -49,7 +50,8 @@ C. Živý test se mnou krok za krokem na preview větve, která obsahuje vše v�
 D. Dokumentace podle stavu: `README.md`, `docs/predani.md`, `docs/google-prihlaseni.md`,
    `docs/google-kalendar.md` (jedna role Správce, souhlas ke Kalendáři při přihlášení, `GOOGLE_OAUTH_PUBLISHED`,
    příjemci pozvánek, řádek stavu Kalendáře, automatické vazby, fronta a cron, hromadné zveřejnění, průvodce
-   měsícem, hosté v dialogu akce, Správa v oknech, hromadné pozvání, odpovědi, zpět po zveřejnění).
+   měsícem, hosté v dialogu akce, Správa v oknech, hromadné pozvání, zpráva ke zkopírování, odpovědi
+   z Kalendáře, zpět po zveřejnění).
 
 E. Snímky každého okna a stavu za každou roli na 1280 a 390 px jako ZIP se seznamem. Do repa je nedávej.
 
@@ -57,6 +59,33 @@ Production na Vercelu nemá proměnné prostředí a buildy z `main` se přeskak
 Na `main` nepushuj, merge dělám já. Respektuj limit kontextu.
 
 ---
+
+## Stav 14. 11. 2026 noc (větev `claude/vzdelavani-b5-e-wfpwgh`, zatím bez PR)
+
+Ověřeno: lint, typy, 157 ze 157 testů, build. V Chromiu nad PGlite na 1280 a 390 px bez chyb v konzoli a bez
+vodorovného posunu: Plán, okno akce a detail (správce, vedoucí, člen mimo skupinu), Správa s oběma okny pozvání.
+**Naživo proti Googlu neověřeno nic.**
+
+- **B5 Odpovědi z Kalendáře** (`services/responses.ts`, `ResponsesBlock.tsx`, pravidlo `canSeeResponses`
+  v `policy.ts`): karta nadcházející zveřejněné akce v Plánu má řádek „Přijalo 3 z 5“, okno akce a detail
+  (sekce „Kdo přijde“) jména podle odpovědi (Přijalo, Možná, Odmítlo, Čeká). Vidí správce a vedoucí akce,
+  kontrolor ani publikum ne. Plán se ptá Kalendáře jednou za měsíc (`listBetween`), výpadek nic neshodí.
+  `listBetween` v simulaci už nemá umělé zpoždění. V simulaci je u synchronizované akce v panelu Kalendáře
+  ukázková volba „hosté odpoví na pozvánku“. Test `tests/odpovedi.test.ts`.
+  **K živému testu:** Google `listBetween` vrací nejvýš 50 událostí a jen ty, které vlastní propojený účet.
+- **B6 Zpráva po pozvání** (`AccessForms.tsx`: `CopyMessage`, `inviteMessage`): po uložení pozvání okno ukáže
+  potvrzení a tlačítko „Kopírovat zprávu s odkazem“ (text s adresou Wiki a adresou účtu). Když prohlížeč
+  schránku nepovolí, ukáže text k označení. Zpráva kolegovi tyká („Ahoj, zvu tě…“), **zeptej se, jestli to tak chce.**
+- **B7 Hromadné pozvání** (`BulkInvite.tsx`, `bulkInviteAction`, `parseInviteList`, `previewBulkInvite`,
+  `inviteUsers`): tlačítko „Pozvat víc lidí najednou“ vedle „Pozvat kolegu“. Seznam adres (i „Jméno <adresa>“,
+  oddělovač řádek, čárka, středník, nejvýš 50), jedna role a skupiny, „Zkontrolovat seznam“ ukáže přehled
+  a řádky s chybou (neplatná adresa, duplicita, už ve Wiki), teprve potom „Pozvat N lidí“. Jedna transakce,
+  stejné oprávnění jako `inviteUser`. Test `tests/hromadne-pozvani.test.ts`.
+- **Neuděláno:** B8 (návrh níže platí, před prací potvrdit), B9, B10, B11 (doplnit `Consequences` do
+  `EventMenu`, `RecordingMenu` a `AccountActions`), C, D, E. Preview této větve nemá vlastní `APP_URL`
+  ani `CALENDAR_ATTENDEES` (nastavit přes API před blokem C).
+- Poznámka k prostředí: pomocný skript pro Playwright (přihlášení rolí, snímek, kontrola konzole a posunu)
+  si nová relace musí napsat znovu, scratchpad se nepřenáší. Server pouštěj se `SIM_LATENCY_MS=0`.
 
 ## Stav 14. 11. 2026 večer (větev `ccr-7b6bed1b-1ejvib`, draft PR do `main`)
 

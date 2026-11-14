@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { BulkInviteDialog } from "@/features/sprava/components/BulkInvite";
 import { AccountActions, InviteDialog } from "@/features/sprava/components/AccountActions";
 import { GROUP_LABELS, ROLE_LABELS, USER_STATUS_LABELS } from "@/lib/labels";
 import { formatDate, toDateKey } from "@/lib/time";
@@ -33,7 +34,10 @@ export default async function AdminPage() {
             Kdo smí do Wiki a co uvidí. Google jen ověří, kdo se přihlašuje. Roli a skupiny přidělujete tady.
           </p>
         </div>
-        <InviteDialog roles={roles} appUrl={config.appUrl} />
+        <div className="row page-head-actions">
+          <BulkInviteDialog roles={roles} appUrl={config.appUrl} />
+          <InviteDialog roles={roles} appUrl={config.appUrl} />
+        </div>
       </div>
 
       <section className="section" aria-labelledby="jak-to-funguje">

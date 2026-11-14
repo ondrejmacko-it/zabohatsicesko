@@ -2342,3 +2342,58 @@ p.cal-status {
 .responses-accepted dd {
   font-weight: 600;
 }
+
+/* ——— Pozvání: zpráva ke zkopírování a přehled hromadného pozvání ——— */
+.copy-message {
+  display: grid;
+  justify-items: start;
+  gap: 6px;
+}
+
+.copy-message .textarea {
+  width: 100%;
+}
+
+.page-head-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.bulk-rows {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  list-style: none;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.bulk-rows li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2px 12px;
+  padding: 8px 14px;
+  font-size: 14px;
+}
+
+.bulk-rows li + li {
+  border-top: 1px solid var(--line);
+}
+
+.bulk-rows span {
+  color: var(--muted);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.bulk-problems ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  color: var(--ochre-dark);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
