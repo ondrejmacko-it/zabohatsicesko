@@ -36,9 +36,9 @@ export type EventCard = {
   unpublishedChanges: boolean;
   extraordinary: boolean;
   past: boolean;
-  /** Jen pro organizátora. „unlinked“ = zveřejněná akce zatím bez vazby na pozvánku. */
+  /** Jen pro správce. „unlinked“ = zveřejněná akce zatím bez vazby na pozvánku. */
   syncStatus: SyncStatus | "unlinked" | null;
-  /** Jen pro organizátora: zveřejněný termín, pokud ho rozpracovaný návrh přesouvá jinam. */
+  /** Jen pro správce: zveřejněný termín, pokud ho rozpracovaný návrh přesouvá jinam. */
   movedFrom: { startsAt: string; endsAt: string; allDay: boolean } | null;
 };
 
@@ -116,7 +116,7 @@ export async function listEvents(viewer: Viewer, from: Date, to: Date): Promise<
     : [];
   const linkByEvent = new Map(links.map((l) => [l.eventId, l]));
   const [names, slotDays] = await Promise.all([userNames(db), templateWeekdays(db)]);
-  // Rozsah a pořadí se řídí verzí, kterou uživatel opravdu vidí (organizátor pracovní, ostatní zveřejněnou).
+  // Rozsah a pořadí se řídí verzí, kterou uživatel opravdu vidí (správce pracovní, ostatní zveřejněnou).
   return rows
     .map((row) => toCard(viewer, row, linkByEvent.get(row.id), names, slotDays))
     .filter((card): card is EventCard => card !== null && new Date(card.startsAt) < to && new Date(card.endsAt) >= from)
@@ -143,7 +143,7 @@ export async function listMonth(viewer: Viewer, monthKey: string): Promise<Event
 /** Nejbližší zveřejněná akce pro uživatele (bez svátků a zrušených). */
 /** Nejbližší zveřejněné akce, které uživatel uvidí, od nejbližší. */
 /**
- * Nejbližší akce uživatele. Běžně jen zveřejněné. Filtr Plánu (`match`) může výběr zúžit a organizátorovi
+ * Nejbližší akce uživatele. Běžně jen zveřejněné. Filtr Plánu (`match`) může výběr zúžit a správci
  * při filtru podle stavu ukázat i návrhy (`includeDrafts`): viditelnost dál určuje `listEvents`.
  */
 export async function nextEventsFor(viewer: Viewer, limit: number, match?: (card: EventCard) => boolean, includeDrafts = false): Promise<EventCard[]> {
@@ -167,7 +167,7 @@ export async function loadEventRow(db: Executor, id: string): Promise<EventRow |
   return row ?? null;
 }
 
-// ——— Zápisy organizátora ———
+// ——— Zápisy správce ———
 
 export type EventInput = {
   type: EventType;
@@ -288,7 +288,7 @@ export async function createEvent(viewer: Viewer, input: EventInput, mode: SaveM
   return id;
 }
 
-/** Optimistická kontrola souběhu: změna projde jen nad revizí, kterou organizátor viděl. */
+/** Optimistická kontrola souběhu: změna projde jen nad revizí, kterou správce viděl. */
 export async function updateEvent(
   viewer: Viewer,
   id: string,
@@ -561,7 +561,7 @@ async function plannedTopicIds(db: Executor): Promise<Set<string>> {
 
 /**
  * Doplní chybějící sloty měsíce podle šablony. Budoucím termínům firemního vzdělávání předvyplní
- * doporučené téma podle zájmu a historie. Vše vzniká jako návrh, který organizátor upraví a zveřejní.
+ * doporučené téma podle zájmu a historie. Vše vzniká jako návrh, který správce upraví a zveřejní.
  */
 export async function generateMonth(viewer: Viewer, monthKey: string): Promise<{ created: number; withTopic: number }> {
   requireOrganizer(viewer);
@@ -621,6 +621,36 @@ export async function generateMonth(viewer: Viewer, monthKey: string): Promise<{
     if (created) await audit(tx, viewer.id, "plan.generate", "month", monthKey);
     return { created, withTopic };
   });
+}
+
+export type MonthPreparation = {
+  created: number;
+  withTopic: number;
+  drafts: MonthDraft[];
+  changeDrafts: number;
+  /** Doporučené téma pro návrh, který zatím žádné nemá. Klíč je ID návrhu. */
+  suggestions: Record<string, { name: string; interestCount: number }>;
+};
+
+/**
+ * První krok průvodce „Připravit další měsíc“: doplní chybějící termíny ze šablony a vrátí návrhy měsíce
+ * s doporučeným tématem tam, kde chybí. Nic nezveřejňuje. Opakované volání nic nezdvojí.
+ */
+export async function prepareMonth(viewer: Viewer, monthKey: string): Promise<MonthPreparation> {
+  requireOrganizer(viewer);
+  // Uplynulý měsíc se nepřipravuje: jeho termíny by stejně nešly zveřejnit.
+  if (monthKey < toDateKey(now()).slice(0, 7)) throw new DomainError("invalid_state");
+  const { created, withTopic } = await generateMonth(viewer, monthKey);
+  const { drafts, changeDrafts } = await listMonthDrafts(viewer, monthKey);
+  const db = await getDb();
+  const planned = await plannedTopicIds(db);
+  const suggested = suggestTopics(
+    drafts.filter((d) => !d.topicTitle).map((d) => ({ generationKey: d.id, type: d.type, audience: d.audience })),
+    await listTopics(viewer),
+    planned,
+  );
+  const suggestions = Object.fromEntries([...suggested].map(([id, topic]) => [id, { name: topic.name, interestCount: topic.interestCount }]));
+  return { created, withTopic, drafts, changeDrafts, suggestions };
 }
 
 export type TemplateSlotInput = { isoWeekday: number; startTime: string; endTime: string; types: EventType[]; active: boolean };

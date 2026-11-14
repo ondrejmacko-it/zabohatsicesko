@@ -3,7 +3,7 @@ import { config } from "@/server/config";
 import type { Executor } from "@/server/db/client";
 import { integrationSettings } from "@/server/db/schema";
 
-/** Přepínače simulace pro předvedení chyb. Mění je jen organizátor v přehledu integrací. */
+/** Přepínače simulace pro předvedení chyb. Mění je jen správce v přehledu integrací. */
 export const SIMULATION_SWITCHES = ["calendar.outage", "calendar.revoked", "transcription.outage"] as const;
 export type SimulationSwitch = (typeof SIMULATION_SWITCHES)[number];
 

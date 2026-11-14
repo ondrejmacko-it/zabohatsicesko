@@ -88,7 +88,7 @@ function ProposeForm({ groups, onClose }: { groups: Group[]; onClose: () => void
   );
 }
 
-/** Správa tématu pro organizátora: úprava názvu a skupiny, archivace. */
+/** Správa tématu pro správce: úprava názvu a skupiny, archivace. */
 /** Správa tématu v jedné nabídce: úprava názvu a skupiny, archivace s potvrzením. */
 export function TopicManage({ topic, groups }: { topic: { id: string; name: string; audience: string }; groups: Group[] }) {
   const [open, setOpen] = useState(false);
@@ -119,7 +119,7 @@ function EditTopicForm({ topic, groups, onClose }: { topic: { id: string; name: 
   const [audience, setAudience] = useState(topic.audience);
   const [state, setState] = useState<ActionResult | null>(null);
   const [pending, start] = useTransition();
-  // Ruční odeslání: po chybě (například duplicitní název) zůstanou hodnoty tak, jak je organizátor vyplnil.
+  // Ruční odeslání: po chybě (například duplicitní název) zůstanou hodnoty tak, jak je správce vyplnil.
   const submit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ActionForm } from "@/components/ActionForm";
+import { Menu } from "@/components/Menu";
 import { disconnectCalendarAction, resetDemoAction, setSimulationAction } from "@/features/vzdelavani/actions";
 import { ModeStrip } from "@/features/vzdelavani/components/ModeStrip";
 import { requireUser } from "@/server/auth/session";
@@ -136,7 +137,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                 </dd>
               </dl>
               <p className="small muted">
-                Organizátora nebo správce, který se přihlásí účtem Google, pošle Wiki na souhlas sama a vrátí ho na Plán. Tato
+                Správce, který se přihlásí účtem Google, pošle Wiki na souhlas sama a vrátí ho na Plán. Tato
                 stránka slouží ke kontrole, ručnímu připojení jiným účtem a odpojení. Jedno připojení platí pro celou Wiki.
               </p>
               <p className="small muted">
@@ -144,20 +145,27 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                 se nezobrazuje. Komu pozvánky jdou, určuje nastavení serveru a ověřuje se před každým zápisem. Wiki přidává a odebírá jen své hosty.
               </p>
               <div className="section-actions row">
-                <a className="btn btn-primary" href="/api/google/kalendar/pripojit">
-                  {connection ? "Připojit znovu" : "Připojit Google Kalendář"}
-                </a>
-                {connection && (
-                  <ActionForm
-                    action={disconnectCalendarAction}
-                    label="Odpojit"
-                    variant="danger"
-                    confirm={{
-                      title: "Odpojit Google Kalendář",
-                      text: "Přístup se u Googlu zneplatní a uložený token se smaže. Změny akcí zůstanou ve Wiki a po novém připojení se dají odeslat.",
-                      confirmLabel: "Odpojit",
-                    }}
-                  />
+                {connection ? (
+                  <Menu label="Správa propojení">
+                    <a className="btn" href="/api/google/kalendar/pripojit">
+                      Připojit znovu nebo jiným účtem
+                    </a>
+                    <hr className="menu-divider" />
+                    <ActionForm
+                      action={disconnectCalendarAction}
+                      label="Odpojit…"
+                      variant="danger"
+                      confirm={{
+                        title: "Odpojit Google Kalendář",
+                        text: "Přístup se u Googlu zneplatní a uložený token se smaže. Změny akcí zůstanou ve Wiki a po novém připojení se dají odeslat.",
+                        confirmLabel: "Odpojit",
+                      }}
+                    />
+                  </Menu>
+                ) : (
+                  <a className="btn btn-primary" href="/api/google/kalendar/pripojit">
+                    Připojit Google Kalendář
+                  </a>
                 )}
               </div>
             </>

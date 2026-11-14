@@ -49,7 +49,7 @@ export async function listTopics(viewer: Viewer): Promise<RankedTopic[]> {
 }
 
 /**
- * Jména zájemců podle tématu. Vidí je jen organizátor a správce (kvůli plánování), ostatní znají jen počet:
+ * Jména zájemců podle tématu. Vidí je jen správce (kvůli plánování), ostatní znají jen počet:
  * kolega tak nevidí, kdo z jiných si o téma řekl. Jen aktivní účty, abecedně.
  */
 export async function listTopicInterested(viewer: Viewer): Promise<Map<string, string[]>> {
@@ -139,7 +139,7 @@ export async function updateTopic(viewer: Viewer, topicId: string, name: string,
 
 /**
  * Archivace téma vyřadí z nabídky a doporučení. Řádek zůstává, takže minulé akce na téma dál odkazují
- * a organizátor ho může vrátit.
+ * a správce ho může vrátit.
  */
 export async function setTopicArchived(viewer: Viewer, topicId: string, archived: boolean): Promise<void> {
   if (!isOrganizer(viewer)) throw new DomainError("forbidden");

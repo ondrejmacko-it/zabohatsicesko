@@ -6,6 +6,7 @@ import { EXTRAORDINARY_TYPES, GROUP_LABELS, PLAN_STATUS_LABELS } from "@/lib/lab
 import { formatDate, formatEventTime, toDateKey } from "@/lib/time";
 import type { Viewer } from "@/server/policy";
 import { isOrganizer } from "@/server/policy";
+import { loadInvitePreview } from "@/server/services/calendar-status";
 import { getEventDetail } from "@/server/services/detail";
 import { listPeople, loadTemplate } from "@/server/services/events";
 import type { PlanPreview } from "@/server/services/preview";
@@ -44,7 +45,7 @@ export async function EventPeek({ user, eventId, preview, previewKey, closeHref 
         published: detail.publishedForm,
         people,
         topics,
-        inviteeCount: detail.sync?.inviteeCount ?? 0,
+        invite: await loadInvitePreview(user),
         planDays: template.filter((slot) => slot.active).map((slot) => slot.isoWeekday),
       }
     : null;

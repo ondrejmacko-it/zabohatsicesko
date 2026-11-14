@@ -10,7 +10,8 @@ import { generateMonthAction } from "@/features/vzdelavani/actions";
 import { CalendarStatusLine } from "@/features/vzdelavani/components/CalendarStatusLine";
 import { EventDialog } from "@/features/vzdelavani/components/EventDialog";
 import { EventPeek } from "@/features/vzdelavani/components/EventPeek";
-import { PublishMonthDialog, type InviteMode } from "@/features/vzdelavani/components/PublishMonthDialog";
+import { PrepareMonthDialog } from "@/features/vzdelavani/components/PrepareMonthDialog";
+import { PublishMonthDialog } from "@/features/vzdelavani/components/PublishMonthDialog";
 import { PlanFilters } from "@/features/vzdelavani/components/PlanFilters";
 import { Agenda, Legend, NextEventsList, ScheduleGrid } from "@/features/vzdelavani/components/Schedule";
 import { TemplateDialog } from "@/features/vzdelavani/components/TemplateDialog";
@@ -24,7 +25,7 @@ import { now } from "@/server/config";
 import { defaultAudience } from "@/server/domain/generation";
 import { isOrganizer } from "@/server/policy";
 import { listMonth, listMonthDrafts, listPeople, loadTemplate, nextEventsFor } from "@/server/services/events";
-import { loadCalendarStatus } from "@/server/services/calendar-status";
+import { inviteModeOf, loadCalendarStatus } from "@/server/services/calendar-status";
 import { listTasks } from "@/server/services/journey";
 import { listPreviewOptions, resolvePreview } from "@/server/services/preview";
 import { listTopics } from "@/server/services/topics";
@@ -58,8 +59,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
 
   const calendar = managing ? await loadCalendarStatus(user) : null;
   const monthDrafts = managing ? await listMonthDrafts(user, monthKey) : null;
-  const inviteMode: InviteMode =
-    calendar?.mode !== "google" ? "simulation" : !calendar.connection ? "disconnected" : calendar.attendeeSource;
+  const invite = calendar ? { mode: inviteModeOf(calendar), recipients: calendar.recipients } : null;
 
   const types = EVENT_TYPES.filter((t) => monthCards.some((c) => c.type === t && monthOf(toDateKey(new Date(c.startsAt))) === monthKey));
   const type = types.find((t) => t === params.typ);
@@ -81,10 +81,11 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   // Klik na akci otevře náhled v okně nad Plánem. Měsíc, pohled i filtry zůstávají v adrese.
   const peekHref = (card: EventCard) => link({ akce: card.id });
   const peekId = (params.akce ?? "").slice(0, 120);
+  const nextMonthKey = shiftMonth(monthOf(todayKey), 1);
   const newDate = monthOf(todayKey) === monthKey ? todayKey : `${monthKey}-01`;
   const emptyText = filtering ? "Filtru v tomto měsíci neodpovídá žádná akce." : undefined;
 
-  // Stav měsíce patří organizátorovi mezi úkoly: odkaz zúží harmonogram na termíny, kterých se týká.
+  // Stav měsíce patří správci mezi úkoly: odkaz zúží harmonogram na termíny, kterých se týká.
   // Počty ve filtru Stav jsou za celý měsíc, úkoly měsíce respektují vybraný typ akce.
   const summary = managing && monthKey >= monthOf(todayKey) ? monthSummary(monthCards, monthKey) : null;
   const taskSummary = summary && type ? monthSummary(filterCards(monthCards, monthKey, { type }), monthKey) : summary;
@@ -206,7 +207,17 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
                 <ActionForm action={generateMonthAction} fields={{ month: monthKey }} label="Doplnit měsíc ze šablony" pendingLabel="Doplňuji…" />
                 <TemplateDialog slots={template} />
               </Menu>
-              {monthDrafts && calendar && monthDrafts.drafts.length > 0 && (
+              {invite && (
+                <PrepareMonthDialog
+                  monthKey={nextMonthKey}
+                  monthName={formatMonth(nextMonthKey)}
+                  people={people}
+                  topics={topics.map((t) => ({ name: t.name, interestCount: t.interestCount }))}
+                  recipients={invite.recipients}
+                  inviteMode={invite.mode}
+                />
+              )}
+              {monthDrafts && invite && monthDrafts.drafts.length > 0 && (
                 <PublishMonthDialog
                   key={monthDrafts.drafts.map((d) => `${d.id}:${d.revision}`).join("|")}
                   monthKey={monthKey}
@@ -215,8 +226,8 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
                   changeDrafts={monthDrafts.changeDrafts}
                   people={people}
                   topics={topics.map((t) => t.name)}
-                  recipients={calendar.recipients}
-                  inviteMode={inviteMode}
+                  recipients={invite.recipients}
+                  inviteMode={invite.mode}
                 />
               )}
               <EventDialog
@@ -236,7 +247,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
                 published={null}
                 people={people}
                 topics={topics}
-                inviteeCount={0}
+                invite={invite}
                 planDays={activeSlots.map((s) => s.isoWeekday)}
               />
             </div>

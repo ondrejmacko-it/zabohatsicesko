@@ -18,7 +18,7 @@ export function primaryStatus(card: EventCard): { label: string; tone: Tone } | 
 }
 
 /**
- * Co má organizátor u daného stavu udělat. Účastník a vedoucí mají své úkoly v Přehledu,
+ * Co má správce u daného stavu udělat. Účastník a vedoucí mají své úkoly v Přehledu,
  * proto pro ně (syncStatus je null a návrhy nevidí) vrací null.
  */
 export function statusAdvice(card: EventCard): string | null {
@@ -56,7 +56,7 @@ export const awaitsPublishing = (card: EventCard) =>
 
 export type MonthSummary = { planned: number; toPublish: number; toComplete: number };
 
-/** Stav měsíce pro organizátora: kolik je v plánu, co čeká na zveřejnění a co na doplnění. */
+/** Stav měsíce pro správce: kolik je v plánu, co čeká na zveřejnění a co na doplnění. */
 export function monthSummary(cards: EventCard[], monthKey: string): MonthSummary {
   const mine = cards.filter((c) => inPlan(c, monthKey));
   return {
@@ -72,7 +72,7 @@ const plural = (count: number, one: string, few: string, many: string) => `${cou
 export type MonthTask = { state: PlanState; title: string; detail: string; action: string };
 
 /**
- * Stav měsíce převedený na úkoly organizátora v bloku „Čeká na vás“. Každý úkol vede na harmonogram
+ * Stav měsíce převedený na úkoly správce v bloku „Čeká na vás“. Každý úkol vede na harmonogram
  * zúžený na příslušné termíny (stejný filtr jako výběr Stav).
  */
 export function monthTasks(summary: MonthSummary, monthName: string): MonthTask[] {
@@ -123,7 +123,7 @@ export function matchesPlanFilter(card: EventCard, filter: PlanFilter): boolean 
 export type PlanGap = { card: EventCard; reasons: string[] };
 
 /**
- * Termíny vybraného měsíce, které organizátor ještě musí dotáhnout: bez tématu, bez vedoucího
+ * Termíny vybraného měsíce, které správce ještě musí dotáhnout: bez tématu, bez vedoucího
  * nebo s problémem synchronizace. Svátky a zrušené akce se nepočítají.
  */
 export function planGaps(cards: EventCard[], monthKey: string): PlanGap[] {

@@ -1,4 +1,5 @@
 import { ActionForm } from "@/components/ActionForm";
+import { Menu } from "@/components/Menu";
 import { ERROR_LABELS, SYNC_STATUS_LABELS } from "@/lib/labels";
 import { formatDayMonth, formatEventTime, toDateKey } from "@/lib/time";
 import type { SyncPanel } from "@/server/services/detail";
@@ -11,7 +12,7 @@ const NOTIFICATION: Record<string, string> = { created: "pozvánka odeslána", u
 const describe = (f: ManagedFields) =>
   `${f.summary} · ${formatDayMonth(toDateKey(new Date(f.startsAt)))} ${formatEventTime(new Date(f.startsAt), new Date(f.endsAt), false)}${f.cancelled ? " · zrušeno" : ""}`;
 
-/** Stav vazby na Google Kalendář pro organizátora. Simulace i testovací režim Googlu mají stejné rozhraní. */
+/** Stav vazby na Google Kalendář pro správce. Simulace i testovací režim Googlu mají stejné rozhraní. */
 export function SyncPanelView({ eventId, sync }: { eventId: string; sync: SyncPanel }) {
   const statusBadge =
     sync.status === "synced"
@@ -28,6 +29,14 @@ export function SyncPanelView({ eventId, sync }: { eventId: string; sync: SyncPa
         ? "Návrh se do Kalendáře neposílá"
         : SYNC_STATUS_LABELS[sync.status];
 
+  const inviteNote =
+    sync.attendeeSource === "allowlist"
+      ? `Testovací režim: nová pozvánka půjde jen povoleným testovacím příjemcům (${sync.inviteeCount}), ne publiku akce.`
+      : `Nová pozvánka půjde publiku akce (${sync.inviteeCount}). Hosty, které přidáte ručně v Kalendáři, Wiki nemění.`;
+  // Když existuje pozvánka ke spárování, je hlavní krok Spárovat a založení nové je vedlejší volba v menu.
+  const createInMenu = sync.status === "unlinked" && sync.candidates.length > 0;
+  const demoEdit = sync.mode === "simulation" && sync.status === "synced" && sync.externalId ? sync.externalId : null;
+
   return (
     <section className="section" aria-labelledby="kalendar">
       <div className="spread">
@@ -37,6 +46,12 @@ export function SyncPanelView({ eventId, sync }: { eventId: string; sync: SyncPa
           <span className={statusBadge} role="status">
             {statusLabel}
           </span>
+          {(createInMenu || demoEdit) && (
+            <Menu label="Další možnosti" small>
+              {createInMenu && <ActionForm action={createInviteAction} fields={{ id: eventId }} label="Vytvořit novou pozvánku" pendingLabel="Zakládám…" />}
+              {demoEdit && <ActionForm action={simulateManualEditAction} fields={{ externalId: demoEdit }} label="Ukázka: simulovat ruční úpravu v Kalendáři" />}
+            </Menu>
+          )}
         </span>
       </div>
 
@@ -85,23 +100,20 @@ export function SyncPanelView({ eventId, sync }: { eventId: string; sync: SyncPa
       {sync.status === "unlinked" && (
         <div className="stack">
           <p className="small">
-            Akce ve Wiki zatím není spárovaná s žádnou pozvánkou. Spárujte ji s existující pozvánkou, nebo výslovně
-            založte novou. Wiki sama novou pozvánku nevytvoří, aby nevznikl duplikát.
+            {createInMenu
+              ? "Ve stejném čase už v Kalendáři leží pozvánka, kterou Wiki nezaložila. Spárujte ji s akcí, ať nevznikne duplikát. Novou pozvánku založíte v Dalších možnostech."
+              : "Akce zatím nemá pozvánku v Kalendáři. Wiki ji zakládá sama po otevření Plánu, tady ji můžete založit hned."}
           </p>
           {sync.candidates.map((c) => (
             <div key={c.id} className="spread candidate">
               <span>
                 {c.summary} · {formatEventTime(new Date(c.startsAt), new Date(c.endsAt), false)}
               </span>
-              <ActionForm action={pairInviteAction} fields={{ id: eventId, externalId: c.id }} label="Spárovat" small />
+              <ActionForm action={pairInviteAction} fields={{ id: eventId, externalId: c.id }} label="Spárovat" variant="primary" small />
             </div>
           ))}
-          <p className="small muted">
-            {sync.attendeeSource === "allowlist"
-              ? `Testovací režim: nová pozvánka půjde jen povoleným testovacím příjemcům (${sync.inviteeCount}), ne publiku akce.`
-              : `Nová pozvánka půjde publiku akce (${sync.inviteeCount}). Hosty, které přidáte ručně v Kalendáři, Wiki nemění.`}
-          </p>
-          <ActionForm action={createInviteAction} fields={{ id: eventId }} label="Vytvořit novou pozvánku" />
+          <p className="small muted">{inviteNote}</p>
+          {!createInMenu && <ActionForm action={createInviteAction} fields={{ id: eventId }} label="Vytvořit novou pozvánku" pendingLabel="Zakládám…" variant="primary" />}
         </div>
       )}
 
@@ -137,19 +149,6 @@ export function SyncPanelView({ eventId, sync }: { eventId: string; sync: SyncPa
                   : "zatím žádné"}
             </dd>
           </dl>
-          {sync.mode === "simulation" && sync.status === "synced" && sync.externalId && (
-            <details className="small">
-              <summary>Nástroje ukázky</summary>
-              <div className="section-actions">
-                <ActionForm
-                  action={simulateManualEditAction}
-                  fields={{ externalId: sync.externalId }}
-                  label="Simulovat ruční úpravu v Kalendáři"
-                  small
-                />
-              </div>
-            </details>
-          )}
         </div>
         </details>
       )}
