@@ -29,7 +29,7 @@ na 1280 a 390 px (konzole bez chyb, žádný vodorovný posun).
 2. **B11 a drobnosti.** `Consequences` do zrušení akce (`EventMenu`), stažení zápisu (`RecordingMenu`,
    rozšířit `confirm` v `ActionForm` o body) a odebrání přístupu (`AccountActions`). Zpráva po pozvání
    kolegy (`inviteMessage` v `AccessForms.tsx`): tykání zůstává, text doladit (kdo zve, k čemu Wiki je,
-   odkaz, jedna věta jak se přihlásit). Detail akce během lhůty má psát „Pozvánka odejde za chvíli“.
+   odkaz, jedna věta jak se přihlásit). Při zapnuté lhůtě má detail akce psát „Pozvánka odejde za chvíli“.
 3. **Úklid a optimalizace.** Mrtvý kód a nepoužívané exporty, alias `isOrganizer`/`isAdmin` nahradit
    `canPlan`, sloučit role `admin` a `organizer` v databázi (migrace, zeptej se před ní), zápisy filtrovat
    v databázi, krátká mezipaměť odpovědí z Kalendáře na Plánu, velikost balíčku a rychlost stránek změřit
@@ -56,18 +56,19 @@ na 1280 a 390 px (konzole bez chyb, žádný vodorovný posun).
 
 ## Otevřené otázky
 
-- „Pozvánky ať se posílají hned“ (14. 11.): bráno jako ostré pozvánky kolegům v produkci hned
-  (`CALENDAR_ATTENDEES=audience`). Pokud tím uživatel myslel zrušit desetisekundovou lhůtu po zveřejnění,
-  stačí `PUBLISH_UNDO_SEC=0`. Ověř si to hned na začátku.
-- Vlastní doména pro produkční `APP_URL`? Samostatná produkční databáze?
+- Rozhodnuto 14. 11.: pozvánky odchází hned po zveřejnění. Lhůta „zpět po zveřejnění“ je vypnutá
+  (výchozí `PUBLISH_UNDO_SEC=0`), kód zůstává a jde zapnout proměnnou. V dokumentaci ji popiš jako volitelnou.
+- Rozhodnuto 14. 11.: produkce dostane samostatnou větev databáze v Neonu (založ ji přes konektor
+  a řekni uživateli, kam vložit `DATABASE_URL`) a zatím výchozí produkční adresu Vercelu jako `APP_URL`
+  (vlastní doménu jde přidat později). V kroku 7 napiš uživateli přesný seznam: co, kam a jak doplnit.
 - Zavřít starý draft z `ccr-7b6bed1b-1ejvib` a PR #19, smazat větev `claude/vzdelavani-vercel-preview-52jflw`?
 - Odloženo, rozhoduje firma: poskytovatel přepisu a úložiště (`docs/nahravky-moznosti.md`), pravidlo
   střídání typů ve slotu šablony, kam trvale uložit zadání (do tohoto repa ne).
 
 ## Co je dobré vědět
 
-- **B8 Zpět po zveřejnění:** `unpublishEvents`, `listUndoable` (`services/events.ts`), `PublishUndoBar.tsx`
-  v layoutu Wiki, sloupec `events.invite_hold_until` (migrace `0007`). Testy běží s `PUBLISH_UNDO_SEC=0`.
+- **B8 Zpět po zveřejnění (ve výchozím stavu vypnuté):** `unpublishEvents`, `listUndoable` (`services/events.ts`), `PublishUndoBar.tsx`
+  v layoutu Wiki, sloupec `events.invite_hold_until` (migrace `0007`). Test `tests/zpet-po-zverejneni.test.ts` si lhůtu zapíná sám.
 - **Vercel:** tým `maci`, projekt `zbc-vzdelavani-demo`, plán Hobby. Preview vzniká pushem větve.
   `POST /v13/deployments` nepoužívat (vytvoří produkční deploy). Cron běží jen v produkci, jednou denně.
   Preview chrání Vercel Authentication, runtime logy přes konektor vrací 403. Všechny preview sdílí jednu
