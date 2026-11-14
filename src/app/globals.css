@@ -2117,3 +2117,16 @@ p.cal-status {
   align-items: center;
   gap: 8px;
 }
+
+/* Správa: stav účtu a akce vpravo v jedné ose s názvem účtu. */
+.account-side {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.account-actions {
+  flex-wrap: nowrap;
+  gap: 6px;
+}

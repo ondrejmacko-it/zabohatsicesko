@@ -1,11 +1,13 @@
 "use client";
 
-import { useActionState, useState } from "react";
-import { ActionMessage } from "@/components/ActionForm";
+import { useActionState, useEffect, useState } from "react";
+import { ActionForm, ActionMessage } from "@/components/ActionForm";
+import { Menu } from "@/components/Menu";
+import { Modal } from "@/components/Modal";
 import { submitKeepingValues } from "@/features/shared/keep-values";
 import { GROUP_LABELS, ROLE_LABELS } from "@/lib/labels";
 import { GROUPS, type Group, type Role } from "@/lib/types";
-import { inviteUserAction, updateAccessAction } from "../actions";
+import { inviteUserAction, rejectRequestAction, updateAccessAction } from "../actions";
 
 /** Výběr role a skupin. Nabízí jen role, které smí přihlášený uživatel přidělit (hlídá i server). */
 const PRESETS: Array<{ label: string; role: Role; groups: Group[] }> = [
@@ -72,27 +74,126 @@ type AccessProps = {
   groups: Group[];
   /** approve = čekající žádost, edit = aktivní účet, restore = účet s odebraným přístupem. */
   mode: "approve" | "edit" | "restore";
+  onDone: () => void;
 };
 
-/** Schválení žádosti, úprava přístupu, nebo jeho odebrání a vrácení. Stav posílá stisknuté tlačítko. */
-export function AccessForm({ userId, roles, role, groups, mode }: AccessProps) {
+/** Schválení žádosti, úprava přístupu, nebo jeho vrácení. Po úspěšném uložení se okno zavře. */
+function AccessForm({ userId, roles, role, groups, mode, onDone }: AccessProps) {
   const [state, action, pending] = useActionState(updateAccessAction, null);
+  useEffect(() => {
+    if (state?.ok) onDone();
+  }, [state, onDone]);
   return (
     <form action={action} onSubmit={submitKeepingValues(action)} className="stack">
       <input type="hidden" name="userId" value={userId} />
       <AccessFields roles={roles} role={role} groups={mode === "approve" && groups.length === 0 ? ["vsichni"] : groups} />
+      <ActionMessage state={state} />
       <div className="row">
-        <button type="submit" name="status" value="active" className="btn btn-primary btn-small" disabled={pending}>
-          {mode === "approve" ? "Schválit přístup" : mode === "restore" ? "Vrátit přístup" : "Uložit změny"}
+        <button type="submit" name="status" value="active" className="btn btn-primary" disabled={pending}>
+          {pending ? "Ukládám…" : mode === "approve" ? "Schválit přístup" : mode === "restore" ? "Vrátit přístup" : "Uložit změny"}
         </button>
-        {mode === "edit" && (
-          <button type="submit" name="status" value="disabled" className="btn btn-danger btn-small" disabled={pending}>
-            Odebrat přístup
+        <button type="button" className="btn" onClick={onDone}>
+          Zrušit
+        </button>
+      </div>
+    </form>
+  );
+}
+
+type AccountActionsProps = {
+  account: { id: string; name: string; email: string; role: Role; groups: Group[]; status: "pending" | "active" | "disabled" };
+  roles: Role[];
+};
+
+const MODAL_TITLES = { approve: "Schválit přístup", edit: "Role a skupiny", restore: "Vrátit přístup" } as const;
+
+/**
+ * Akce nad účtem ve Správě. Hlavní krok (schválení žádosti) je vidět, ostatní jsou v menu.
+ * Úpravy role a skupin běží v okně, odebrání přístupu se potvrzuje.
+ */
+export function AccountActions({ account: a, roles }: AccountActionsProps) {
+  const [mode, setMode] = useState<AccessProps["mode"] | null>(null);
+  const [revoking, setRevoking] = useState(false);
+  const close = () => setMode(null);
+  return (
+    <div className="row account-actions">
+      {a.status === "pending" && (
+        <button type="button" className="btn btn-primary btn-small" onClick={() => setMode("approve")}>
+          Schválit…
+        </button>
+      )}
+      <Menu label={`Možnosti účtu ${a.name}`} small iconOnly>
+        {a.status === "pending" && (
+          <ActionForm
+            action={rejectRequestAction}
+            fields={{ userId: a.id }}
+            label="Zamítnout žádost…"
+            variant="danger"
+            confirm={{
+              title: "Zamítnout žádost",
+              text: `Žádost účtu ${a.email} zmizí. Pokud se přihlásí znovu, vznikne nová žádost.`,
+              confirmLabel: "Zamítnout",
+            }}
+          />
+        )}
+        {a.status === "active" && (
+          <>
+            <button type="button" className="btn" onClick={() => setMode("edit")}>
+              Upravit roli a skupiny
+            </button>
+            <button type="button" className="btn btn-danger" onClick={() => setRevoking(true)}>
+              Odebrat přístup…
+            </button>
+          </>
+        )}
+        {a.status === "disabled" && (
+          <button type="button" className="btn" onClick={() => setMode("restore")}>
+            Vrátit přístup…
           </button>
         )}
-      </div>
-      <ActionMessage state={state} />
-    </form>
+      </Menu>
+      {mode && (
+        <Modal open title={MODAL_TITLES[mode]} onRequestClose={close}>
+          <p className="small muted">
+            {a.name} · {a.email}
+          </p>
+          <AccessForm userId={a.id} roles={roles} role={a.role} groups={a.groups} mode={mode} onDone={close} />
+        </Modal>
+      )}
+      {revoking && <RevokeAccess account={a} onClose={() => setRevoking(false)} />}
+    </div>
+  );
+}
+
+/** Odebrání přístupu s potvrzením. Role a skupiny zůstávají, aby šel přístup později vrátit beze změn. */
+function RevokeAccess({ account: a, onClose }: { account: AccountActionsProps["account"]; onClose: () => void }) {
+  const [state, action, pending] = useActionState(updateAccessAction, null);
+  useEffect(() => {
+    if (state?.ok) onClose();
+  }, [state, onClose]);
+  return (
+    <Modal open title="Odebrat přístup" onRequestClose={onClose}>
+      <form action={action} className="stack">
+        <input type="hidden" name="userId" value={a.id} />
+        <input type="hidden" name="role" value={a.role} />
+        {a.groups.map((g) => (
+          <input key={g} type="hidden" name="groups" value={g} />
+        ))}
+        <p>
+          {a.name} ({a.email}) se do Wiki nepřihlásí a nedostane další pozvánky. Role a skupiny zůstanou uložené, přístup jde
+          kdykoli vrátit.
+        </p>
+        <ActionMessage state={state} />
+        <div className="row">
+          <button type="submit" name="status" value="disabled" className="btn btn-danger" disabled={pending}>
+            {pending ? "Odebírám…" : "Odebrat přístup"}
+          </button>
+          <button type="button" className="btn" onClick={onClose}>
+            Zrušit
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 
