@@ -1,12 +1,12 @@
 import { createSign, generateKeyPairSync } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
-import { claimInvite, findDevice } from "@/server/auth/devices";
+import { DEVICE_NEVER_EXPIRES, claimInvite, findDevice } from "@/server/auth/devices";
 import { clearSigningKeyCache, completeLogin, type LoginScope } from "@/server/auth/google-login";
 import { resolveSessionUser } from "@/server/auth/session";
 import { googleLoginConfig } from "@/server/config";
 import { getDb } from "@/server/db/client";
-import { userIdentities, users } from "@/server/db/schema";
+import { trustedDevices, userIdentities, users } from "@/server/db/schema";
 import { createLoginLink, inviteUser, listAccounts, revokeLoginLink, revokeUserDevice, updateAccess } from "@/server/services/users";
 import { admin, participant, resetDemo } from "./helpers";
 
@@ -139,5 +139,31 @@ describe("pozvánka na jedno zařízení", () => {
     expect(await login(KOLEGA, "sub-kolegyne", { kind: "bootstrap" })).toEqual({ ok: false, reason: "not_allowed" });
     const result = await login(BOOT, "sub-boot", { kind: "bootstrap" });
     expect(result.ok).toBe(true);
+  });
+
+  test("zařízení samo nevyprší: platí i po roce, dokud ho správce nezruší", async () => {
+    const { device, cookie } = await invitedWithDevice();
+    const [row] = await (await getDb()).select().from(trustedDevices).where(eq(trustedDevices.id, device.id));
+    expect(row!.expiresAt.getTime()).toBe(DEVICE_NEVER_EXPIRES.getTime());
+    const yearLater = new Date(Date.now() + 400 * 24 * 60 * 60 * 1000);
+    expect(await findDevice(await getDb(), cookie, yearLater)).not.toBeNull();
+  });
+
+  test("hlavního správce nikdo neodebere, nezruší mu zařízení ani mu nevytvoří odkaz, ani on sám", async () => {
+    const result = await login(BOOT, "sub-boot", { kind: "bootstrap" });
+    if (!result.ok) throw new Error("hlavní správce se měl přihlásit");
+    const primaryId = result.userId;
+    const primary = (await listAccounts(admin)).find((a) => a.id === primaryId)!;
+    expect(primary).toMatchObject({ primary: true, editable: false });
+    const [self] = await (await getDb()).select().from(users).where(eq(users.id, primaryId));
+    const primaryViewer = { id: primaryId, role: self!.role, groups: self!.groups };
+    for (const viewer of [admin, primaryViewer]) {
+      await expect(createLoginLink(viewer, primaryId)).rejects.toMatchObject({ code: "forbidden" });
+      await expect(revokeLoginLink(viewer, primaryId)).rejects.toMatchObject({ code: "forbidden" });
+      await expect(revokeUserDevice(viewer, primaryId, "d-cokoli")).rejects.toMatchObject({ code: "forbidden" });
+    }
+    await expect(updateAccess(admin, primaryId, { role: "member", groups: [], status: "disabled" })).rejects.toMatchObject({ code: "forbidden" });
+    const [after] = await (await getDb()).select().from(users).where(eq(users.id, primaryId));
+    expect(after).toMatchObject({ status: "active", role: "admin" });
   });
 });

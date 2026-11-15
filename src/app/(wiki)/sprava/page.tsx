@@ -6,7 +6,7 @@ import {
   InviteButton,
 } from "@/features/sprava/components/AccessForms";
 import { GROUP_LABELS, ROLE_LABELS, USER_STATUS_LABELS } from "@/lib/labels";
-import { formatDate, toDateKey } from "@/lib/time";
+import { formatDate, formatDayMonth, toDateKey } from "@/lib/time";
 import type { Role } from "@/lib/types";
 import {
   CalendarStatusLine,
@@ -73,7 +73,7 @@ export default async function AdminPage() {
               account={a}
               live={live}
               actions={
-                a.editable || live ? (
+                !a.primary && (a.editable || live) ? (
                   <AccountActions
                     account={a}
                     roles={roles}
@@ -133,12 +133,12 @@ function accessLine(a: Account): string {
       devices
         .map(
           (d) =>
-            `${d.label} (naposledy ${formatDate(toDateKey(d.lastSeenAt))})`,
+            `${d.label} (naposledy ${formatDayMonth(toDateKey(d.lastSeenAt))})`,
         )
         .join(", "),
     );
   if (invite.kind === "waiting")
-    parts.push(`odkaz čeká do ${formatDate(toDateKey(invite.expiresAt))}`);
+    parts.push(`odkaz čeká do ${formatDayMonth(toDateKey(invite.expiresAt))}`);
   if (invite.kind === "expired") parts.push("odkaz vypršel");
   return parts.length ? parts.join(" · ") : "Bez zařízení. Pošlete nový odkaz.";
 }
@@ -157,8 +157,10 @@ function AccountHead({
       <div>
         <p className="item-title">
           {a.name}
-          {!a.editable && a.status === "active" && (
-            <span className="small muted"> · váš účet</span>
+          {a.primary ? (
+            <span className="small muted"> · hlavní správce</span>
+          ) : (
+            !a.editable && a.status === "active" && <span className="small muted"> · váš účet</span>
           )}
         </p>
         <p className="item-meta">

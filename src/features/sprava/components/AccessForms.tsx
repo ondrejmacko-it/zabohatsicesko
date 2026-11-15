@@ -133,7 +133,8 @@ export function InviteLink({ link }: { link: string }) {
 function NewLink({ account: a, onClose }: { account: AccountActionsProps["account"]; onClose: () => void }) {
   const [state, action, pending] = useActionState(createLoginLinkAction, null);
   return (
-    <Modal open title="Nový odkaz" onRequestClose={onClose}>
+    // Hotový odkaz už není rozepsaná změna: zavření se na nic neptá.
+    <Modal open title="Nový odkaz" onRequestClose={onClose} selfGuarded={Boolean(state?.ok && state.link)}>
       <p className="small muted">
         {a.name} · {a.email}
       </p>
@@ -206,12 +207,12 @@ export function AccountActions({ account: a, roles, live, editable = true }: Acc
                 key={d.id}
                 action={revokeDeviceAction}
                 fields={{ userId: a.id, deviceId: d.id }}
-                label={`Odhlásit ${d.label}…`}
+                label={`Zrušit toto zařízení (${d.label})…`}
                 variant="danger"
                 confirm={{
-                  title: "Odhlásit zařízení",
-                  text: `${a.name} se z tohoto zařízení (${d.label}) přestane přihlašovat hned. Další přístup jen přes nový odkaz.`,
-                  confirmLabel: "Odhlásit",
+                  title: "Zrušit toto zařízení",
+                  text: `${a.name} se z tohoto zařízení (${d.label}) už nepřihlásí, přístup do Wiki ale zůstává a na jiné zařízení stačí nový odkaz.`,
+                  confirmLabel: "Zrušit zařízení",
                 }}
               />
             ))}
@@ -283,8 +284,10 @@ function RevokeAccess({ account: a, onClose }: { account: AccountActionsProps["a
 export function InviteButton({ roles }: { roles: Role[] }) {
   const [open, setOpen] = useState(false);
   const [round, setRound] = useState(0);
+  const [created, setCreated] = useState(false);
   const close = () => {
     setOpen(false);
+    setCreated(false);
     setRound((n) => n + 1);
   };
   return (
@@ -293,16 +296,20 @@ export function InviteButton({ roles }: { roles: Role[] }) {
         Pozvat člověka
       </button>
       {open && (
-        <Modal open title="Pozvat člověka" onRequestClose={close}>
-          <InviteForm key={round} roles={roles} />
+        <Modal open title="Pozvat člověka" onRequestClose={close} selfGuarded={created}>
+          <InviteForm key={round} roles={roles} onCreated={() => setCreated(true)} />
         </Modal>
       )}
     </>
   );
 }
 
-function InviteForm({ roles }: { roles: Role[] }) {
+function InviteForm({ roles, onCreated }: { roles: Role[]; onCreated: () => void }) {
   const [state, action, pending] = useActionState(inviteUserAction, null);
+  const done = Boolean(state?.ok && state.link);
+  useEffect(() => {
+    if (done) onCreated();
+  }, [done, onCreated]);
   if (state?.ok && state.link) {
     return (
       <div className="stack">

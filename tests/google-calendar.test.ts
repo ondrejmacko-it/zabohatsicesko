@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { eq, ne } from "drizzle-orm";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 import { GoogleCalendar, eventIdForKey } from "@/server/calendar/google";
 import {
@@ -14,7 +14,7 @@ import {
   type AccessTokenSource,
 } from "@/server/calendar/google-auth";
 import { CalendarError, type ManagedEventData } from "@/server/calendar/provider";
-import { linkPublishedWithoutInvite, looksLikeSameInvite, mergeDescription, pairWithExisting, pairingCandidates, requestNewInvite, resumeAfterReconnect, syncEvent, syncPending, syncPublished } from "@/server/calendar/sync";
+import { linkPublishedWithoutInvite, looksLikeSameInvite, mergeDescription, pairWithExisting, pairingCandidates, requestNewInvite, probeTargetCalendar, resumeAfterReconnect, syncAfterReconnect, syncEvent, syncPending, syncPublished } from "@/server/calendar/sync";
 import { googleCalendarConfig, googleCalendarConfigProblems } from "@/server/config";
 import { getDb } from "@/server/db/client";
 import { calendarLinks, integrationCredentials, users } from "@/server/db/schema";
@@ -428,6 +428,52 @@ describe("testovací režim Google Kalendáře ve Wiki (napodobené HTTP)", () =
     await syncEvent(PUBLISHED_RM);
     expect(await link(PUBLISHED_RM)).toMatchObject({ syncStatus: "synced", errorCode: null });
     expect(google.events.size).toBe(1);
+  });
+
+  test("přístup odebraný u Googlu se pozná při přihlášení: záznam zmizí a Wiki znovu požádá o Kalendář", async () => {
+    await connect();
+    const db = await getDb();
+    expect(await needsCalendarConnection(db, true)).toBe(false);
+    google.refreshTokens.clear(); // uživatel smazal oprávnění v účtu Google, záznam ve Wiki zůstal
+    expect(await connectionStatus(db)).not.toBeNull();
+    expect(await needsCalendarConnection(db, true)).toBe(true);
+    expect(await connectionStatus(db)).toBeNull();
+  });
+
+  test("nové propojení přepíše staré a datum připojení se posune", async () => {
+    await connect();
+    const db = await getDb();
+    const first = (await connectionStatus(db))!.connectedAt;
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    await connect();
+    expect((await db.select().from(integrationCredentials)).length).toBe(1);
+    expect((await connectionStatus(db))!.connectedAt.getTime()).toBeGreaterThan(first.getTime());
+  });
+
+  test("účet bez přístupu ke kalendáři se pozná hned a po opravě se odešle celá fronta", async () => {
+    const OTHER = "cizi-kalendar@group.calendar.google.com";
+    vi.stubEnv("GOOGLE_CALENDAR_ID", OTHER);
+    vi.stubEnv("GOOGLE_ALLOWED_CALENDAR_IDS", OTHER);
+    await connect();
+    const db = await getDb();
+    expect(await probeTargetCalendar(db)).toBe("no_access");
+    await requestNewInvite(organizer, PUBLISHED_RM);
+    await syncEvent(PUBLISHED_RM);
+    // Dřív to vypadalo jako „Kalendář je dočasně nedostupný“, ve skutečnosti účet kalendář nevidí.
+    expect(await link(PUBLISHED_RM)).toMatchObject({ syncStatus: "attention", errorCode: "calendar_no_access", calendarId: OTHER });
+    await db.update(calendarLinks).set({ syncStatus: "attention", errorCode: "calendar_unavailable" }).where(ne(calendarLinks.eventId, PUBLISHED_RM));
+
+    // Oprava nastavení (hlavní kalendář účtu) a nové připojení: vše se převede a odešle bez ručního opakování.
+    vi.stubEnv("GOOGLE_CALENDAR_ID", CALENDAR);
+    vi.stubEnv("GOOGLE_ALLOWED_CALENDAR_IDS", CALENDAR);
+    await connect();
+    expect(await probeTargetCalendar(db)).toBe("ok");
+    const resumed = await syncAfterReconnect(db);
+    expect(resumed).toContain(PUBLISHED_RM);
+    expect(await link(PUBLISHED_RM)).toMatchObject({ syncStatus: "synced", errorCode: null, calendarId: CALENDAR });
+    const left = await db.select().from(calendarLinks).where(ne(calendarLinks.syncStatus, "synced"));
+    expect(left.filter((l) => l.errorCode !== "external_change")).toEqual([]);
+    expect(google.events.size).toBeGreaterThan(0);
   });
 
   test("po novém připojení se neobnoví akce zastavené jinou chybou než odvoláním přístupu", async () => {

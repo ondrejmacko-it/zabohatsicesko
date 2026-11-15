@@ -203,6 +203,19 @@ export function googleLoginConfigProblems(): string[] {
   return problems;
 }
 
+/**
+ * Hlavní správce: první adresa z `BOOTSTRAP_ADMIN_EMAILS`. Dovnitř se dostane vždy (`/vstup?spravce=1`),
+ * jeho přihlášení platí dlouhodobě a jeho účet, odkazy ani zařízení nikdo ve Wiki nemění, ani on sám.
+ */
+export function primaryAdminEmail(): string | null {
+  return list(process.env.BOOTSTRAP_ADMIN_EMAILS)[0]?.toLowerCase() ?? null;
+}
+
+export const isPrimaryAdmin = (account: { email: string }): boolean => {
+  const primary = primaryAdminEmail();
+  return primary !== null && account.email.trim().toLowerCase() === primary;
+};
+
 /** Úplná konfigurace přihlášení Google identitou, nebo null. Neúplná konfigurace přihlášení nezapne. */
 export function googleLoginConfig(): GoogleLoginConfig | null {
   if (loginMode() !== "google-test" || googleLoginConfigProblems().length) return null;

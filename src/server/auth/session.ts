@@ -14,6 +14,8 @@ import type { Viewer } from "@/server/policy";
 // Role a skupiny se při každém požadavku čtou z databáze, takže odebrání práv platí okamžitě.
 
 const SESSION_TTL_SEC = 12 * 60 * 60;
+/** Hlavní správce: přihlášení na jeho zařízení platí, kolik prohlížeče dovolí (400 dní). */
+export const PRIMARY_ADMIN_SESSION_TTL_SEC = 400 * 24 * 60 * 60;
 export const SESSION_COOKIE = config.isProduction ? "__Host-zbc_session" : "zbc_session";
 
 /** Jak session vznikla: výběrem fiktivní role, nebo přihlášením Google identitou. */
@@ -28,10 +30,11 @@ export function encodeSession(
   nowSec = Math.floor(Date.now() / 1000),
   method: SignInMethod = "demo",
   deviceId?: string,
+  ttlSec = SESSION_TTL_SEC,
 ): string {
   const payload: Payload = {
     uid: userId,
-    exp: nowSec + SESSION_TTL_SEC,
+    exp: nowSec + ttlSec,
     ...(method === "google" ? { via: "google" } : {}),
     ...(deviceId ? { d: deviceId } : {}),
   };

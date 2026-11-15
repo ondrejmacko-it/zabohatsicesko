@@ -25,6 +25,8 @@ export type GuestChange = { add: SimAttendee[]; remove: readonly string[] };
 export type CalendarErrorCode =
   | "calendar_unavailable"
   | "calendar_revoked"
+  /** Připojený účet nemá přístup ke kalendáři, do kterého Wiki zapisuje (Google vrací 404). */
+  | "calendar_no_access"
   | "calendar_missing"
   | "attendee_not_allowed"
   /** Kalendář není na serverovém seznamu povolených. */
