@@ -18,7 +18,7 @@ Hotovo v kódu: A03 (`progressOf`, `recordingProgressByEvent` v `journey.ts`, š
 ## Testy desktop a macOS · draft #35, větev `claude/testy-desktop-macos` (stojí na #34)
 `npm run e2e` (Playwright, 750 testů, 7 projektů). Opraveno: CSP bez nonce na `/soukromi` a 404, menu na telefonu se hned zavíralo, návrat fokusu z okna otevřeného z menu (část U07), Integrace 320 px.
 
-## PR 6: přístupnost a přehlednost (U02–U08) · U02 sloučené v #36, zbytek draft z větve `claude/pristupnost-u03-u08`
+## PR 6: přístupnost a přehlednost (U02–U08) · sloučené (#36, #38)
 Hotovo: **U02** (#36). **U03** tlačítko zájmu má stále text „Mám zájem“ bez vlastního `aria-label`, stav nese `aria-pressed` a fajfka, téma se čte přes `aria-describedby` z nadpisu karty. **U04** pořadí (žádosti první) a „Nastavit a schválit“ už byly, nově úkol „Projít žádosti“ vede na `/sprava#zadosti`. **U05** účastník bez úkolů má na telefonu nahoře „Nejbližší akce“ (z načteného měsíce, jinak jeden dotaz), krok měsíce správce je vždy mezi třemi viditelnými úkoly, prázdný panel se nezobrazuje. **U06** (#34/#35). **U07** menu je disclosure: bez `aria-haspopup`, položky běžným Tab, odchod fokusu menu zavře, návrat fokusu z okna (#35). **U08** dialog akce skládá pole podle šířky formuláře (container query, ne okna), souhrn chyb nahoře, fokus na první chybné pole (i ve sbalených Dalších údajích), ověřeno 320×256. Testy: `e2e/pristupnost.spec.ts`, `tests/journey.test.ts`.
 
 * **U02** Kontrast: hlavička mřížky 2,5:1 (`schedule.module.css` 19–28) → tmavá na zelenošedé 6,28:1. Drobný okrový text 4,44:1 → tmavší okr. Ověřit axe.
@@ -29,11 +29,11 @@ Hotovo: **U02** (#36). **U03** tlačítko zájmu má stále text „Mám zájem�
 * **U07** `Menu.tsx` 63–93: buď disclosure s běžným Tab (bez `aria-haspopup`), nebo skutečné menu s klávesnicí. Návrat fokusu po zavření vnořeného okna.
 * **U08** Mobilní dialog akce: pole vedle sebe jen při dostatku místa, souhrn chyb, fokus na první chybu, ověřit 320×256.
 
-## PR 7: Připravit měsíc (G6) · rozpracováno na větvi `claude/pripravit-mesic` (jen server, viz `docs/dalsi-session.md`)
+## PR 7: Připravit měsíc (G6) · draft #39, větev `claude/pripravit-mesic` (popis stavu je v té větvi)
 Jedno okno: návrhy měsíce, mezery (bez tématu/vedoucího), publikum, stav párování. Přidání návrhu nic neodešle. Šablona zůstává v nastavení. Datum a skupiny ručně měnitelné.
 
-## PR 8: bezpečnost a rychlost
-`npm audit` (v auditu 0 zranitelností), hlavičky (CSP, Referrer-Policy), limity serverových akcí, počet dotazů na Plánu a Úvodu, logy bez citlivých údajů.
+## PR 8: bezpečnost a rychlost · draft, větev `claude/bezpecnost-rychlost`
+Hotovo: `npm audit` 0 zranitelností (15. 11.). CSP s nonce a Referrer-Policy `same-origin` už nastavoval `src/proxy.ts`; nově `next.config.ts` přidává nosniff, Referrer-Policy, X-Frame-Options a HSTS (jen produkční build) i statickým souborům a prefetchům, které proxy vynechává. Limit serverových akcí 120 za minutu na uživatele v `runAction` (nahrávky mají dál vlastní 10 za hodinu). Plán načítá data v jedné paralelní vlně místo pěti postupných, počet dotazů (správce 14, účastník 5, Úvod 4) hlídá rozpočet v `tests/pocet-dotazu.test.ts` včetně kontroly, že neroste s počtem akcí. Logy: `logError` pustí jen kód z bezpečných znaků (část kódů pochází z odpovědi Googlu). Testy: `tests/limity-a-logy.test.ts`, `e2e/stranky.spec.ts` (hlavičky).
 
 ## Mimo rozsah teď
 A07 (přepis, rozhodne firma), vlastní doména, logo a ověření aplikace u Googlu (firma Wiki zatím nemá).

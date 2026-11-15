@@ -56,15 +56,19 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   const managing = organizer && !preview;
   // Celá stránka, tedy i úkoly, se počítá pro stejného diváka jako harmonogram.
   const viewer = preview?.viewer ?? user;
-  const [monthCards, template, viewerTasks] = await Promise.all([listMonth(viewer, monthKey), loadTemplate(), listTasks(viewer)]);
+  // Všechna data stránky v jedné vlně: dotazy na sobě nezávisí, takže se čeká jen na nejpomalejší z nich.
+  const [monthCards, template, viewerTasks, people, topics, previewOptions, calendar, monthDrafts] = await Promise.all([
+    listMonth(viewer, monthKey),
+    loadTemplate(),
+    listTasks(viewer),
+    organizer ? listPeople(user) : [],
+    organizer ? listTopics(user) : [],
+    organizer ? listPreviewOptions(user) : null,
+    managing ? loadCalendarStatus(user) : null,
+    managing ? listMonthDrafts(user, monthKey) : null,
+  ]);
   const activeSlots = template.filter((s) => s.active);
   const slotTimes = Object.fromEntries(activeSlots.map((s) => [s.isoWeekday, `${s.startTime}–${s.endTime}`]));
-  const [people, topics, previewOptions] = organizer
-    ? await Promise.all([listPeople(user), listTopics(user), listPreviewOptions(user)])
-    : [[], [], null];
-
-  const calendar = managing ? await loadCalendarStatus(user) : null;
-  const monthDrafts = managing ? await listMonthDrafts(user, monthKey) : null;
   const inviteMode: InviteMode =
     calendar?.mode !== "google" ? "simulation" : !calendar.connection ? "disconnected" : calendar.attendeeSource;
 
