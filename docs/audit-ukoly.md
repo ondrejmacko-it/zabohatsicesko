@@ -29,7 +29,7 @@ Hotovo: **U02** (#36). **U03** tlačítko zájmu má stále text „Mám zájem�
 * **U07** `Menu.tsx` 63–93: buď disclosure s běžným Tab (bez `aria-haspopup`), nebo skutečné menu s klávesnicí. Návrat fokusu po zavření vnořeného okna.
 * **U08** Mobilní dialog akce: pole vedle sebe jen při dostatku místa, souhrn chyb, fokus na první chybu, ověřit 320×256.
 
-## PR 7: Připravit měsíc (G6) · draft, větev `claude/pripravit-mesic`
+## PR 7: Připravit měsíc (G6) · draft #39, větev `claude/pripravit-mesic`
 Hotovo: tlačítko „Připravit měsíc“ vidí správce vždy (i bez návrhů, s počtem návrhů). Okno: „Doplnit chybějící termíny“ (`generateMonthAction`, nic neodešle), přehled párování nadcházejících zveřejněných akcí (`monthCards[].syncStatus`), živý přehled mezer (bez tématu nebo vedoucího), řádky návrhů se sloupci datum, skupina, téma a vedoucí, dole „Zveřejnit“, „Uložit změny“ (uloží bez zveřejnění, nic neodešle, nezměněné návrhy nechá) a „Zrušit“. Ruční datum jen v témže měsíci a v budoucnu (server: `outside_month`), čas a délka zůstanou. Šablona zůstala v menu Nástroje správce, doplnění termínů se z menu přesunulo do okna (prázdný měsíc má tlačítko dál). Testy: `tests/hromadne-zverejneni.test.ts` (datum mimo měsíc, minulost, uložení bez zveřejnění), `e2e/okna.spec.ts` (okno, kroky, sloupce, mezery, uložení bez změn).
 
 ## PR 8: bezpečnost a rychlost
