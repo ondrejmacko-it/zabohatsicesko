@@ -10,9 +10,9 @@ Kontext máš v `docs/dalsi-session.md` a `README.md`, pravidla v `CLAUDE.md`, a
 kroky pro mě piš úplně, pod sebe, s přesnými kliky (Windows, PowerShell).
 
 **Stav:** PR 4b část 2 (úvod s kartami modulů, záložky Plán | Zápisy | Témata, Plán bez řádku Kalendáře, Správa
-na 320 px) je draft z větve `claude/vibrant-ritchie-d100a3`. Google: postup v `docs/google-overeni.md`. Až uživatel
-pošle doménu, nastav Production `APP_URL=https://<domena>`. Až potvrdí Publish app, nastav `GOOGLE_OAUTH_PUBLISHED=1`
-(obojí přes API, Redeploy dělá uživatel). Po změně domény se všichni přihlásí znovu (cookie `__Host-` na hostu).
+na 320 px) je draft z větve `claude/vibrant-ritchie-d100a3`. Google: jen Publish app bez domény (`docs/google-overeni.md`).
+Vlastní doménu, logo a ověření aplikace **neřešit**, firma Wiki zatím nemá (rozhodnutí uživatele). Až uživatel potvrdí
+Publish app a obnovení propojení, nastav Production `GOOGLE_OAUTH_PUBLISHED=1` přes API (Redeploy dělá uživatel).
 
 **Další:** PR 5–8 (A03 + texty T01–T04, přístupnost U02–U08, Připravit měsíc G6, bezpečnost a rychlost).
 
