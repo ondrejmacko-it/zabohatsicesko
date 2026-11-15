@@ -170,7 +170,15 @@ export class ImpactNotConfirmed extends Error {
   }
 }
 
-export type CancelImpact = { audience: string; guests: string[]; notes: string[] };
+export type CancelImpact = {
+  audience: string;
+  guests: string[];
+  notes: string[];
+  /** Akce má pozvánku v Kalendáři, zrušení tedy odešle storno. */
+  hasInvite: boolean;
+  /** Hosté pozvánky jsou ověření u Kalendáře (nebo pozvánka není). Jinak dopad na pozvané neznáme. */
+  verified: boolean;
+};
 
 /** Koho se zrušení dotkne: skupina, která akci vidí ve Wiki, a hosté pozvánky, kterým Kalendář pošle storno. */
 export async function cancelImpact(viewer: Viewer, eventId: string): Promise<CancelImpact> {
@@ -181,7 +189,7 @@ export async function cancelImpact(viewer: Viewer, eventId: string): Promise<Can
   const published = row.published;
   if (!published || published.status === "cancelled") throw new DomainError("invalid_state");
 
-  const impact: CancelImpact = { audience: GROUP_LABELS[published.audience], guests: [], notes: [] };
+  const impact: CancelImpact = { audience: GROUP_LABELS[published.audience], guests: [], notes: [], hasInvite: false, verified: true };
   if (row.revision !== row.publishedRevision) {
     impact.notes.push("Rozpracovaný návrh změny se zahodí. Zruší se zveřejněná verze akce.");
   }
@@ -190,6 +198,7 @@ export async function cancelImpact(viewer: Viewer, eventId: string): Promise<Can
     impact.notes.push("Akce nemá pozvánku v Kalendáři, nikomu proto nepřijde zpráva. Zrušení se projeví jen ve Wiki.");
     return impact;
   }
+  impact.hasInvite = true;
   if (new Date(published.endsAt) <= now()) impact.notes.push("Akce už proběhla. Zrušení se přesto zapíše do Wiki i do Kalendáře.");
   if (calendarMode() === "simulation") impact.notes.push("Kalendář běží v simulaci: hosté jsou fiktivní role a žádná skutečná zpráva neodejde.");
   try {
@@ -199,7 +208,10 @@ export async function cancelImpact(viewer: Viewer, eventId: string): Promise<Can
     if (!impact.guests.length) impact.notes.push("Pozvánka nemá žádné hosty, zpráva o zrušení nikomu nepřijde.");
   } catch (error) {
     if (!(error instanceof CalendarError)) throw error;
-    impact.notes.push("Hosty se z Kalendáře nepodařilo načíst. Zprávu o zrušení dostanou všichni, kdo jsou v pozvánce.");
+    impact.verified = false;
+    impact.notes.push(
+      "Hosty se z Kalendáře nepodařilo načíst, komu přijde zpráva o zrušení, teď nejde ověřit. Ve Wiki se akce zruší hned, do Kalendáře se storno propíše, až bude dostupný.",
+    );
   }
   return impact;
 }

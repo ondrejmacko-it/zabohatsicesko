@@ -160,11 +160,22 @@ export async function saveEventAction(_prev: ActionResult | null, formData: Form
 export async function cancelEventAction(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
   return run(async (user) => {
     const data = z
-      .object({ id: z.string().max(80), revision: z.coerce.number().int().positive(), reason: z.string().trim().min(3).max(300) })
+      .object({
+        id: z.string().max(80),
+        revision: z.coerce.number().int().positive(),
+        reason: z.string().trim().min(3).max(300),
+        cancelUnverified: z.literal("on").optional(),
+      })
       .parse(formObject(formData));
+    // Dopad se ověří znovu na serveru. Bez ověřených příjemců jde zrušit jen vědomě (audit A06).
+    const impact = await cancelImpact(user, data.id);
+    if (!impact.verified && !data.cancelUnverified) {
+      return { ok: false, error: "Komu přijde zpráva o zrušení, teď nejde ověřit. Zkuste to znovu, nebo potvrďte zrušení bez ověření. Nic se nezměnilo." };
+    }
     await cancelEvent(user, data.id, data.revision, data.reason);
+    if (!impact.hasInvite) return { ok: true, message: "Akce je zrušená. Pozvánku v Kalendáři neměla, žádná zpráva neodejde." };
     after(() => syncEvent(data.id));
-    return { ok: true, message: "Akce je zrušená." };
+    return { ok: true, message: "Akce je zrušená ve Wiki. Storno pozvánky se propisuje do Kalendáře, stav uvidíte v detailu akce." };
   });
 }
 

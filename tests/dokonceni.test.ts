@@ -6,6 +6,7 @@ import { formValuesOf } from "@/server/services/detail";
 import { DomainError } from "@/server/services/errors";
 import { listMonth, loadEventRow, updateEvent, type EventInput } from "@/server/services/events";
 import { cancelImpact } from "@/server/services/impact";
+import { writeSwitch } from "@/server/settings";
 import { processTranscriptionJob, publishMinutes, recordingPanel, uploadRecording, withdrawMinutes } from "@/server/services/recordings";
 import { PAST_FP, PUBLISHED_RM, asFile, fixtureWav, lead, organizer, outsider, participant, resetDemo } from "./helpers";
 
@@ -71,6 +72,15 @@ describe("dopad zrušení", () => {
     expect(impact.guests.length).toBeGreaterThan(0);
     expect(await code(cancelImpact(participant, PUBLISHED_RM))).toBe("forbidden");
     expect(await code(cancelImpact(organizer, "neexistuje"))).toBe("not_found");
+  });
+
+  test("výpadek Kalendáře: dopad je neověřený a nic neslibuje (A06)", async () => {
+    expect(await cancelImpact(organizer, PUBLISHED_RM)).toMatchObject({ hasInvite: true, verified: true });
+    await writeSwitch(await getDb(), "calendar.outage", true);
+    const impact = await cancelImpact(organizer, PUBLISHED_RM);
+    expect(impact).toMatchObject({ hasInvite: true, verified: false, guests: [] });
+    expect(impact.notes.join(" ")).toContain("teď nejde ověřit");
+    expect(impact.notes.join(" ")).not.toMatch(/dostanou všichni/);
   });
 
   test("upozorní, že se zahodí rozpracovaný návrh změny", async () => {
