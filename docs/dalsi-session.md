@@ -15,6 +15,11 @@ Kalendář, prázdná DB) od preview (ukázka, fiktivní role, zvací odkaz). PR
   (`WIKI_MODE=demo`, Kalendář na simulaci, odebrat `LOGIN_MODE`, `CALENDAR_ATTENDEES` a 16 starých `APP_URL`
   na větvích) a založ Neon projekt `zbc-wiki-produkce` (EU). Tajemství, `BOOTSTRAP_ADMIN_EMAILS`, ochranu Vercelu,
   ignored build step a Google konzoli dělám já, kroky jsou v `docs/nasazeni.md`.
+* Rozhodnuto 15. 11. večer: Hobby plán neřešit (nasazení bude u firmy). Vercel Authentication: doporučeno
+  „Standard Protection“ (chrání jen preview, Production chrání přihlášení Googlem), přepíná uživatel.
+  OAuth: doporučeno přepnout souhlasovou obrazovku na „In production“ bez ověření (varování „neověřená
+  aplikace“, ale propojení nevyprší po 7 dnech), pak Claude nastaví `GOOGLE_OAUTH_PUBLISHED=1`. U firmy
+  vlastní OAuth klient typu Internal v jejich Google Workspace.
 * Pak **PR 3** bezpečné pozvánky a dopad (A01, A02, A04, A05, A06, A08), na nové větvi z `main`.
 
 Další PR po jednom na relaci: 4 stavy nahrávek a 69 textů z `textove-upravy.csv` (A03, T01–T04),
@@ -36,7 +41,7 @@ Na `main` nepushuj, merge dělám já. Respektuj limit kontextu.
   `LOGIN_MODE` na Preview).
 * Ověřeno: lint, typy, 147/147 testů, build, Chromium nad `next start` (ukázka i production s falešnými
   hodnotami Google). Naživo proti Googlu ne.
-* Otevřené: Vercel Authentication a ignored build step pro Production, Hobby plán, OAuth Testing (vyprší ~19. 11.).
+* Otevřené: přepnutí Vercel Authentication a OAuth (viz rozhodnutí výše), ignored build step pro Production.
 
 ## Stav 15. 11. 2026 (větev `claude/relaxed-edison-tb8rqz`, draft PR 1 do `main`)
 * **Odhlášení (S02):** `endSession` maže cookie se stejnými atributy jako uložení (`Secure`, `maxAge: 0`).
