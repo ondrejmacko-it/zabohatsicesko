@@ -19,7 +19,15 @@ kroky pro mě piš úplně, pod sebe, s přesnými kliky (Windows, PowerShell).
 3. Z Plánu pryč řádek Kalendáře s dlouhým ID, jen krátké upozornění správci, když propojení nefunguje.
 4. „Nejbližší akce“ jen na úvodu.
 5. Správa bez vodorovného posunu na 320 a 360 px přihlášený jako správce (U01, v prohlížeči zatím neověřeno).
-6. Pak PR 5–8 (A03 + texty T01–T04, přístupnost U02–U08, Připravit měsíc G6, bezpečnost a rychlost).
+6. Google Cloud (uživatel kliká, ty píšeš kroky): souhlasová obrazovka v režimu Testing dává obnovovacím tokenům
+   platnost 7 dní, Kalendář se pak každý týden odpojí. Navrhni přechod na „In production“ (Publish app), název
+   a logo aplikace, vlastní doménu (Vercel → Domains, DNS) ověřenou v Google Search Console (`*.vercel.app`
+   ověřit nejde) a ověření aplikace pro rozsah `calendar.events`. Pak `GOOGLE_OAUTH_PUBLISHED=1` a nová `APP_URL`.
+7. Pak PR 5–8 (A03 + texty T01–T04, přístupnost U02–U08, Připravit měsíc G6, bezpečnost a rychlost).
+
+Nouzové zrušení zařízení hlavního správce (UI ho záměrně nenabízí) jde bez změny kódu a deploye přes Neon SQL:
+`UPDATE trusted_devices SET revoked_at = now() WHERE id = '<id>'` (ID z dotazu na `trusted_devices` podle e-mailu).
+Platí od dalšího požadavku. Můžeš ho provést i ty přes Neon MCP, ale jen na výslovný pokyn uživatele.
 
 ---
 
