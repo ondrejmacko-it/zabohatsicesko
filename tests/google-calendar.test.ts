@@ -14,11 +14,11 @@ import {
   type AccessTokenSource,
 } from "@/server/calendar/google-auth";
 import { CalendarError, type ManagedEventData } from "@/server/calendar/provider";
-import { linkPublishedWithoutInvite, pairWithExisting, pairingCandidates, requestNewInvite, resumeAfterReconnect, syncEvent, syncPending, syncPublished } from "@/server/calendar/sync";
+import { linkPublishedWithoutInvite, looksLikeSameInvite, mergeDescription, pairWithExisting, pairingCandidates, requestNewInvite, resumeAfterReconnect, syncEvent, syncPending, syncPublished } from "@/server/calendar/sync";
 import { googleCalendarConfig, googleCalendarConfigProblems } from "@/server/config";
 import { getDb } from "@/server/db/client";
 import { calendarLinks, integrationCredentials, users } from "@/server/db/schema";
-import { snapshotOf } from "@/server/domain/snapshot";
+import { calendarSummary, snapshotOf } from "@/server/domain/snapshot";
 import { openSecret, sealSecret } from "@/server/integrations/secret-box";
 import { formValuesOf } from "@/server/services/detail";
 import { loadEventRow, updateEvent, type EventInput } from "@/server/services/events";
@@ -484,9 +484,54 @@ describe("testovací režim Google Kalendáře ve Wiki (napodobené HTTP)", () =
     expect((await pairingCandidates(organizer, "ev-11-26")).map((c) => c.id)).toEqual(["cizi1"]);
   });
 
+  test("cizí pozvánka posunutá o 15 minut nebo se stejným názvem automatiku zastaví, vzdálená jiná ne", async () => {
+    await connect();
+    const db = await getDb();
+    const shifted = (await loadEventRow(db, "ev-11-26"))!;
+    const plus15 = (d: Date) => new Date(d.getTime() + 15 * 60_000);
+    google.put({ id: "posunuta", summary: "Úplně jiný název", start: { dateTime: plus15(shifted.startsAt).toISOString() }, end: { dateTime: plus15(shifted.endsAt).toISOString() } });
+    const titled = (await loadEventRow(db, "ev-11-24"))!;
+    const evening = (d: Date) => new Date(d.getTime() + 8 * 3_600_000);
+    google.put({ id: "stejny-nazev", summary: ` ${calendarSummary(titled.published!).toUpperCase()} `, start: { dateTime: evening(titled.startsAt).toISOString() }, end: { dateTime: evening(titled.endsAt).toISOString() } });
+
+    await syncPublished();
+    await syncPublished();
+    expect(await link("ev-11-26")).toBeUndefined();
+    expect(await link("ev-11-24")).toBeUndefined();
+    expect((await pairingCandidates(organizer, "ev-11-26")).map((c) => c.id)).toContain("posunuta");
+    // Ostatní akce pozvánku dostaly a vlastní pozvánky Wiki se navzájem neblokují.
+    const synced = (await db.select().from(calendarLinks)).filter((l) => l.syncStatus === "synced");
+    expect(synced.length).toBeGreaterThan(0);
+    expect(google.calls("POST")).toHaveLength(synced.length);
+  });
+
+  test("popis pozvánky: Wiki vymění jen svůj řádek, ruční text zůstane", () => {
+    const url = "https://wiki.example.invalid/vzdelavani/akce/ev-1";
+    const before = `Podrobnosti a zápis ve firemní Wiki: ${url}`;
+    const after = `Zápis z akce je zveřejněný: ${url}#zapis\nPodrobnosti ve firemní Wiki: ${url}`;
+    expect(mergeDescription("", before, url)).toBe(before);
+    expect(mergeDescription(`Agenda\n- úvod\n\n${before}`, after, url)).toBe(`Agenda\n- úvod\n\n${after}`);
+    expect(mergeDescription(`Agenda<br>${before}<br>`, after, url)).toBe(`Agenda<br><br>${after.replace("\n", "<br>")}`);
+    // Opakované propsání je stabilní, nic se nezdvojí.
+    const once = mergeDescription("Agenda", after, url);
+    expect(mergeDescription(once, after, url)).toBe(once);
+  });
+
+  test("podobnost pozvánek: blízký začátek nebo stejný název, zrušená se nepočítá", () => {
+    const target = { startsAt: new Date("2026-11-26T09:00:00Z"), endsAt: new Date("2026-11-26T10:00:00Z"), summary: "Trénink RM" };
+    const at = (iso: string, summary = "Jiná porada", cancelled = false) => ({ startsAt: new Date(iso), summary, cancelled });
+    expect(looksLikeSameInvite(at("2026-11-26T09:15:00Z"), target)).toBe(true);
+    expect(looksLikeSameInvite(at("2026-11-26T12:00:00Z"), target)).toBe(true);
+    expect(looksLikeSameInvite(at("2026-11-26T12:01:00Z"), target)).toBe(false);
+    expect(looksLikeSameInvite(at("2026-11-26T17:00:00Z", "trénink  rm"), target)).toBe(true);
+    expect(looksLikeSameInvite(at("2026-11-26T09:00:00Z", "Trénink RM", true), target)).toBe(false);
+  });
+
   test("spárování s výskytem série: změna tématu upraví jen tento termín, opakování nic nezdvojí", async () => {
     await connect();
     putSeries(google);
+    // Ruční agenda v HTML, jak ji uloží Google po úpravě v Kalendáři. Wiki ji nesmí přepsat (A05).
+    google.events.get("serie1_20261112T080000Z")!.description = "<b>Agenda</b><br>1. Úvod<br>Materiály: https://docs.example.invalid/x";
     expect(await link(PUBLISHED_RM)).toBeUndefined(); // ukázkové pozvánky patří simulaci
 
     const candidates = await pairingCandidates(organizer, PUBLISHED_RM);
@@ -510,6 +555,8 @@ describe("testovací režim Google Kalendáře ve Wiki (napodobené HTTP)", () =
     expect(instance.attendees).toEqual([{ email: RECIPIENT, displayName: "Testovací příjemce", responseStatus: "accepted" }]);
     expect(instance.hangoutLink).toBe("https://meet.example.invalid/abc");
     expect(String(instance.description)).toContain("https://wiki-test.example.invalid/vzdelavani/akce/");
+    expect(String(instance.description)).toMatch(/^<b>Agenda<\/b><br>1\. Úvod<br>Materiály: https:\/\/docs\.example\.invalid\/x<br><br>Podrobnosti/);
+    expect(String(instance.description).split("/vzdelavani/akce/")).toHaveLength(2);
     expect(google.events.get("serie1_20261119T080000Z")!.summary).toBe("Trénink RM");
     expect(google.events.get("serie1")!.summary).toBe("Trénink RM");
     expect(await link(PUBLISHED_RM)).toMatchObject({ syncStatus: "synced" });

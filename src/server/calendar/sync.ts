@@ -47,8 +47,23 @@ async function hasPublishedMinutes(db: Db, eventId: string): Promise<boolean> {
   return Boolean(row);
 }
 
+const eventUrl = (eventId: string) => `${config.appUrl}/vzdelavani/akce/${eventId}`;
+
+/**
+ * Popis pozvánky po propsání: ruční text (agenda, odkazy, poznámky) zůstane, Wiki nahradí jen své řádky
+ * s odkazem na akci a připojí je na konec (audit A05). Google po ruční úpravě ukládá popis jako HTML,
+ * řádky se proto dělí i podle `<br>`. Řádek Wiki se pozná podle adresy akce.
+ */
+export function mergeDescription(current: string, wikiBlock: string, url: string): string {
+  const html = /<br\s*\/?>/i.test(current);
+  const kept = current.split(html ? /<br\s*\/?>/i : "\n").filter((line) => !line.includes(url));
+  while (kept.length && !kept[kept.length - 1]!.replace(/<[^>]*>|&nbsp;/g, "").trim()) kept.pop();
+  const block = wikiBlock.split("\n");
+  return (kept.length ? [...kept, "", ...block] : block).join(html ? "<br>" : "\n");
+}
+
 function desiredData(eventId: string, snapshot: EventSnapshot, minutesPublished: boolean): ManagedEventData {
-  const url = `${config.appUrl}/vzdelavani/akce/${eventId}`;
+  const url = eventUrl(eventId);
   return {
     summary: calendarSummary(snapshot),
     // Do pozvánky jde jen odkaz. Wiki u něj znovu ověří přístup, citlivý obsah v Kalendáři není.
@@ -214,10 +229,11 @@ async function pushToCalendar(
     const plan = upcoming
       ? planGuests(guests, external.attendees, previouslyManaged)
       : { add: [], remove: [], managed: previouslyManaged };
-    if (sameManaged(managed(external), managed(desired)) && external.description === desired.description && samePlan(plan)) {
+    const data = { ...desired, description: mergeDescription(external.description, desired.description, eventUrl(link.eventId)) };
+    if (sameManaged(managed(external), managed(data)) && external.description === data.description && samePlan(plan)) {
       return { external, managedAttendees: plan.managed };
     }
-    return { external: await provider.patch(link.calendarId, external.id, desired, plan), managedAttendees: plan.managed };
+    return { external: await provider.patch(link.calendarId, external.id, data, plan), managedAttendees: plan.managed };
   };
 
   if (!link.externalEventId) {
@@ -248,11 +264,29 @@ export async function syncPending(): Promise<void> {
   for (const { eventId } of pending) await syncEvent(eventId);
 }
 
+/** Jak daleko od začátku akce se cizí pozvánka ještě považuje za možný posunutý originál. */
+const NEARBY_INVITE_MS = 3 * 60 * 60 * 1000;
+
+const normalizeTitle = (title: string) => title.trim().toLocaleLowerCase("cs").replace(/\s+/g, " ");
+
+/**
+ * Může cizí pozvánka být tatáž akce? Stačí začátek do 3 hodin od akce nebo stejný název.
+ * Raději zastaví automatiku zbytečně, než aby pozvaní dostali dvojí pozvánku (audit A01).
+ */
+export function looksLikeSameInvite(
+  candidate: Pick<ExternalEvent, "startsAt" | "summary" | "cancelled">,
+  target: { startsAt: Date; endsAt: Date; summary: string },
+): boolean {
+  if (candidate.cancelled) return false;
+  if (Math.abs(candidate.startsAt.getTime() - target.startsAt.getTime()) <= NEARBY_INVITE_MS) return true;
+  return normalizeTitle(candidate.summary) === normalizeTitle(target.summary);
+}
+
 /**
  * Založí vazbu každé zveřejněné budoucí akci, která ji nemá (typicky akce ze seedu nebo importu).
- * Pozvánku pak vytvoří běžná fronta. Výjimka: když ve stejném čase už v Kalendáři leží cizí
+ * Pozvánku pak vytvoří běžná fronta. Výjimka: když v Kalendáři blízko termínu (nebo se stejným názvem) leží cizí
  * nespárovaná pozvánka, akce počká na rozhodnutí správce (spárovat, nebo založit novou),
- * aby pozvaným nepřišla dvojí pozvánka. Proběhlé a zrušené akce se nezakládají.
+ * aby pozvaným nepřišla dvojí pozvánka (`looksLikeSameInvite`). Proběhlé a zrušené akce se nezakládají.
  * @returns ID akcí, které dostaly vazbu
  */
 export async function linkPublishedWithoutInvite(): Promise<string[]> {
@@ -289,12 +323,14 @@ export async function linkPublishedWithoutInvite(): Promise<string[]> {
     const endsAt = new Date(snapshot.endsAt);
     try {
       // Pozvánka, kterou Wiki založila dřív (například před obnovou ukázkových dat), se pozná podle klíče
-      // a fronta ji převezme. Jiná pozvánka ve stejném čase je důvod počkat na člověka.
+      // a fronta ji převezme. Cizí pozvánka, která vypadá jako tatáž akce (blízký čas nebo stejný název
+      // ve stejném dni), je důvod počkat na člověka: správce ji spáruje, nebo založí novou.
       const own = await provider.findByKey(calendarId, `${config.orgId}:${id}`);
-      const sameSlot = (await provider.listBetween(calendarId, startsAt, endsAt)).filter(
-        (c) => c.id !== own?.id && !taken.has(c.id) && !c.cancelled && c.startsAt.getTime() === startsAt.getTime() && c.endsAt.getTime() === endsAt.getTime(),
-      );
-      if (sameSlot.length) continue;
+      const day = toDateKey(startsAt);
+      const lookalikes = (
+        await provider.listBetween(calendarId, fromPragueLocal(day, "00:00"), fromPragueLocal(addDays(day, 1), "00:00"))
+      ).filter((c) => c.id !== own?.id && !taken.has(c.id) && !c.createdByWiki && looksLikeSameInvite(c, { startsAt, endsAt, summary: calendarSummary(snapshot) }));
+      if (lookalikes.length) continue;
     } catch (error) {
       if (!(error instanceof CalendarError)) throw error;
       logError("calendar.auto_link", error.code);
