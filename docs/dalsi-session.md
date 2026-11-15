@@ -20,7 +20,7 @@ kroky pro mě piš úplně, pod sebe, s přesnými kliky (Windows, PowerShell).
 `claude/vibrant-ritchie-d100a3` (úvod s kartami, záložky Plán | Zápisy | Témata, Plán bez řádku Kalendáře,
 Správa na 320/360 px). Uživatel ho mergne sám.
 
-**Stav 15. 11. večer:** PR 5 je draft z větve `claude/audit-texty-a03` (stojí na #33): A03, T01–T04, přepisy textů
+**Stav 15. 11. večer:** PR 5 je draft [#34](https://github.com/ondrejmacko-it/zabohatsicesko/pull/34) z větve `claude/audit-texty-a03` (stojí na #33): A03, T01–T04, přepisy textů
 z auditu, okna „Akce/Zápis není dostupný“. Lint, typy, 173/173 testů a build prošly. **Průchod v Chromiu neproběhl:**
 `next start` na http blokuje skripty přes CSP (přihlášení do ukázky neprojde); ověřit přes `npx next dev -p 3100`
 (nebo zjistit, proč CSP lokálně blokuje i vlastní skripty, to by byla chyba k opravě v PR 8).
