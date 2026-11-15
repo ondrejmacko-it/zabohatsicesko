@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "@fontsource-variable/inter";
 import "@fontsource-variable/newsreader/opsz.css";
 import "./globals.css";
+import { connection } from "next/server";
 import { isLiveWiki } from "@/server/config";
 
 // Funkce, ne konstanta: popis se řídí režimem za běhu, ne při buildu.
@@ -20,7 +21,11 @@ export function generateMetadata(): Metadata {
 // viewport-fit=cover: obsah na iPhonu sahá až k okrajům a odsazení řeší env(safe-area-inset-*) v CSS.
 export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover", themeColor: "#f7f6f4" };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+// CSP v proxy povoluje jen skripty s nonce z daného požadavku. Staticky předgenerovaná stránka
+// (dříve /soukromi a 404) nonce nemá a prohlížeč jí zablokuje všechny skripty, proto se vše
+// vykresluje na požadavek.
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  await connection();
   return (
     <html lang="cs">
       <body>{children}</body>
