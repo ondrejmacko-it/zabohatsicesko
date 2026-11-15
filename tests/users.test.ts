@@ -86,7 +86,7 @@ describe("žádost po prvním přihlášení", () => {
 
 describe("pozvánka a odebrání přístupu", () => {
   test("pozvaná adresa se při prvním přihlášení sváže a vstoupí rovnou", async () => {
-    const id = await inviteUser(organizer, { email: "Pozvany@Gmail.test", name: "Pozvaný kolega", role: "member", groups: ["vsichni", "rm"] });
+    const { id } = await inviteUser(organizer, { email: "Pozvany@Gmail.test", name: "Pozvaný kolega", role: "member", groups: ["vsichni", "rm"] });
     expect(await login("pozvany@gmail.test", "sub-pozvany")).toEqual({ ok: true, userId: id });
     await expect(inviteUser(admin, { email: "pozvany@gmail.test", name: "Znovu", role: "member", groups: [] })).rejects.toMatchObject({
       code: "email_taken",
@@ -94,7 +94,7 @@ describe("pozvánka a odebrání přístupu", () => {
   });
 
   test("odebraný přístup ukončí běžící session i další přihlášení, vrácení ho obnoví", async () => {
-    const id = await inviteUser(admin, { email: KOLEGA, name: "Kolegyně", role: "member", groups: ["vsichni"] });
+    const { id } = await inviteUser(admin, { email: KOLEGA, name: "Kolegyně", role: "member", groups: ["vsichni"] });
     await login(KOLEGA, "sub-kolegyne");
     expect(await session(id)).not.toBeNull();
     await updateAccess(admin, id, { role: "member", groups: ["vsichni"], status: "disabled" });
@@ -141,14 +141,14 @@ describe("kdo smí co měnit", () => {
 
 describe("skutečné účty a ukázka", () => {
   test("výběr fiktivní role skutečné účty nenabízí a session ukázky je neotevře", async () => {
-    const id = await inviteUser(admin, { email: KOLEGA, name: "Kolegyně", role: "organizer", groups: ["vsichni"] });
+    const { id } = await inviteUser(admin, { email: KOLEGA, name: "Kolegyně", role: "organizer", groups: ["vsichni"] });
     expect((await listPersonas()).map((p) => p.id)).not.toContain(id);
     expect((await listPersonas()).map((p) => p.id)).toContain("demo-spravce");
     expect(await session(id, "demo")).toBeNull();
   });
 
   test("obnova ukázkových dat skutečné účty, jejich role i vazby zachová", async () => {
-    const id = await inviteUser(admin, { email: KOLEGA, name: "Kolegyně", role: "organizer", groups: ["vsichni", "fp"] });
+    const { id } = await inviteUser(admin, { email: KOLEGA, name: "Kolegyně", role: "organizer", groups: ["vsichni", "fp"] });
     await login(KOLEGA, "sub-kolegyne");
     const db = await getDb();
     await db.transaction((tx) => resetDatabase(tx));

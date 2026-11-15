@@ -261,4 +261,37 @@ ALTER TABLE calendar_links ADD COLUMN managed_attendees text[];
 ALTER TABLE topics ADD COLUMN archived_at timestamptz;
 `,
   },
+  {
+    id: "0007_login_invites",
+    sql: `
+-- Ostrá Wiki pouští k přihlášení jen přes jednorázový odkaz od správce. Odkaz se po použití
+-- změní na důvěryhodné zařízení (cookie). V databázi jsou jen otisky tokenů, nikdy tokeny samotné.
+CREATE TABLE trusted_devices (
+  id text PRIMARY KEY,
+  org_id text NOT NULL,
+  user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  secret_hash text NOT NULL,
+  label text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  last_seen_at timestamptz NOT NULL DEFAULT now(),
+  expires_at timestamptz NOT NULL,
+  revoked_at timestamptz
+);
+CREATE INDEX trusted_devices_user_idx ON trusted_devices (user_id);
+
+CREATE TABLE login_invites (
+  id text PRIMARY KEY,
+  org_id text NOT NULL,
+  user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token_hash text NOT NULL UNIQUE,
+  created_by text REFERENCES users(id) ON DELETE SET NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  expires_at timestamptz NOT NULL,
+  used_at timestamptz,
+  revoked_at timestamptz,
+  device_id text REFERENCES trusted_devices(id) ON DELETE SET NULL
+);
+CREATE INDEX login_invites_user_idx ON login_invites (user_id);
+`,
+  },
 ];

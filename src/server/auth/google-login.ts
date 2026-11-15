@@ -1,7 +1,7 @@
 import { createHash, createHmac, createPublicKey, randomBytes, randomUUID, timingSafeEqual, verify, type JsonWebKey } from "node:crypto";
 import { and, count, eq, sql } from "drizzle-orm";
 import { audit, logError } from "@/server/audit";
-import { config, googleLoginConfig, type GoogleLoginConfig } from "@/server/config";
+import { config, googleLoginConfig, isLiveWiki, type GoogleLoginConfig } from "@/server/config";
 import type { Executor } from "@/server/db/client";
 import { userIdentities, users } from "@/server/db/schema";
 
@@ -43,7 +43,12 @@ export type LoginStart = { url: string; cookieValue: string };
  * – `skip`: jen přihlásit (uživatel souhlas ke Kalendáři odmítl a chce dovnitř bez něj).
  */
 export type CalendarIntent = "ask" | "later" | "skip";
-export type LoginOptions = { calendar?: CalendarIntent; loginHint?: string };
+/**
+ * Komu smí přihlášení patřit (ostrá Wiki). `device`: jen účtu, kterému patří důvěryhodné zařízení
+ * z cookie. `bootstrap`: jen adrese ze zaváděcího seznamu správců (pojistka proti zamčení).
+ */
+export type LoginScope = { kind: "device"; deviceId: string; userId: string } | { kind: "bootstrap" };
+export type LoginOptions = { calendar?: CalendarIntent; loginHint?: string; scope?: LoginScope };
 
 /**
  * Připraví přesměrování na Google. Stav, nonce a PKCE ověřovač zůstávají v podepsané HttpOnly cookie
@@ -54,7 +59,7 @@ export function beginLogin(cfg: GoogleLoginConfig, nowSec = Math.floor(Date.now(
   const state = randomBytes(24).toString("base64url");
   const nonce = randomBytes(24).toString("base64url");
   const verifier = randomBytes(48).toString("base64url");
-  const data = Buffer.from(JSON.stringify({ state, nonce, verifier, calendar, exp: nowSec + STATE_TTL_SEC })).toString("base64url");
+  const data = Buffer.from(JSON.stringify({ state, nonce, verifier, calendar, scope: options.scope, exp: nowSec + STATE_TTL_SEC })).toString("base64url");
   const withCalendar = calendar === "ask";
   const url = new URL(AUTH_URL);
   url.search = new URLSearchParams({
@@ -66,7 +71,8 @@ export function beginLogin(cfg: GoogleLoginConfig, nowSec = Math.floor(Date.now(
     // Se žádostí o Kalendář je účet známý: stačí souhlas, který je nutný pro obnovovací token.
     prompt: withCalendar ? "consent" : "select_account",
     ...(withCalendar ? { access_type: "offline", include_granted_scopes: "false" } : {}),
-    ...(withCalendar && options.loginHint ? { login_hint: options.loginHint } : {}),
+    // Nápověda účtu jen tam, kde je účet jistý: souhlas správce s Kalendářem, nebo zařízení z pozvánky.
+    ...(options.loginHint && (withCalendar || options.scope?.kind === "device") ? { login_hint: options.loginHint } : {}),
     state,
     nonce,
     code_challenge: createHash("sha256").update(verifier).digest("base64url"),
@@ -80,7 +86,7 @@ export function verifyLoginState(
   cookieValue: string | undefined,
   state: string | null,
   nowSec = Math.floor(Date.now() / 1000),
-): { nonce: string; verifier: string; calendar: CalendarIntent } | null {
+): { nonce: string; verifier: string; calendar: CalendarIntent; scope?: LoginScope } | null {
   if (!cookieValue || !state) return null;
   const [data, signature] = cookieValue.split(".");
   if (!data || !signature || !safeEqual(signState(data), signature)) return null;
@@ -89,10 +95,21 @@ export function verifyLoginState(
     if (typeof payload.state !== "string" || typeof payload.nonce !== "string" || typeof payload.verifier !== "string") return null;
     if (typeof payload.exp !== "number" || payload.exp <= nowSec) return null;
     const calendar: CalendarIntent = payload.calendar === "ask" || payload.calendar === "skip" ? payload.calendar : "later";
-    return safeEqual(payload.state, state) ? { nonce: payload.nonce, verifier: payload.verifier, calendar } : null;
+    const scope = parseScope(payload.scope);
+    return safeEqual(payload.state, state) ? { nonce: payload.nonce, verifier: payload.verifier, calendar, ...(scope ? { scope } : {}) } : null;
   } catch {
     return null;
   }
+}
+
+function parseScope(value: unknown): LoginScope | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const scope = value as Record<string, unknown>;
+  if (scope.kind === "bootstrap") return { kind: "bootstrap" };
+  if (scope.kind === "device" && typeof scope.deviceId === "string" && typeof scope.userId === "string") {
+    return { kind: "device", deviceId: scope.deviceId, userId: scope.userId };
+  }
+  return undefined;
 }
 
 // ——— Veřejné klíče Googlu ———
@@ -191,7 +208,7 @@ export async function verifyIdToken(
 
 // ——— Dokončení přihlášení ———
 
-export type LoginFailure = "exchange_failed" | "invalid_token" | "not_allowed" | "account_conflict" | "requests_full";
+export type LoginFailure = "exchange_failed" | "invalid_token" | "not_allowed" | "account_conflict" | "requests_full" | "wrong_account";
 /**
  * Oprávnění ke Kalendáři, které Google vrátil spolu s přihlášením. Callback ho buď uloží (přihlásil se
  * správce), nebo hned zneplatní. `refreshToken` nikdy neopouští server a nezapisuje se do logu.
@@ -219,7 +236,7 @@ export const MAX_PENDING_REQUESTS = 20;
 export async function completeLogin(
   db: Executor,
   cfg: GoogleLoginConfig,
-  input: { code: string; verifier: string; nonce: string },
+  input: { code: string; verifier: string; nonce: string; scope?: LoginScope },
   fetchImpl: FetchLike = fetch,
   nowSec = Math.floor(Date.now() / 1000),
 ): Promise<LoginResult> {
@@ -271,7 +288,17 @@ export async function completeLogin(
   const [existing] = await db.select({ userId: userIdentities.userId }).from(userIdentities).where(identityWhere).limit(1);
 
   let userId = existing?.userId;
-  if (!userId) {
+  if (isLiveWiki() || input.scope) {
+    // Ostrá Wiki: žádné žádosti cizích lidí. Jen účet z pozvánky, nebo zaváděcí správce.
+    const scoped = await scopedAccount(db, cfg, input.scope, existing?.userId, email, name);
+    if (typeof scoped !== "string") return fail(scoped.failure, scoped.code);
+    userId = scoped;
+    if (!existing) {
+      await db.insert(userIdentities).values({ provider: PROVIDER, subject: sub, userId, email }).onConflictDoNothing();
+      const [bound] = await db.select().from(userIdentities).where(identityWhere).limit(1);
+      if (!bound || bound.userId !== userId) return fail("account_conflict");
+    }
+  } else if (!userId) {
     const target = await accountFor(db, cfg, email);
     if (target === "conflict") return fail("account_conflict");
     if (target) {
@@ -300,6 +327,42 @@ export async function completeLogin(
   await db.update(userIdentities).set({ email, lastLoginAt: new Date() }).where(identityWhere);
   if (user.status === "pending") return { ok: false, reason: "pending", userId, created: !existing, grant };
   return { ok: true, userId, grant };
+}
+
+/**
+ * Účet pro přihlášení v ostré Wiki. Se zařízením jen jeho vlastník: už svázaný účet Google musí patřit
+ * jemu, nový musí mít přesně adresu z pozvánky. Bez zařízení jen adresa ze zaváděcího seznamu.
+ */
+async function scopedAccount(
+  db: Executor,
+  cfg: GoogleLoginConfig,
+  scope: LoginScope | undefined,
+  existingUserId: string | undefined,
+  email: string,
+  name: string | null,
+): Promise<string | { failure: LoginFailure; code: string }> {
+  if (!scope) return { failure: "not_allowed", code: "no_device" };
+  if (scope.kind === "device") {
+    if (existingUserId) return existingUserId === scope.userId ? existingUserId : { failure: "wrong_account", code: "wrong_account" };
+    const [target] = await db
+      .select({ id: users.id, email: users.email })
+      .from(users)
+      .where(and(eq(users.orgId, config.orgId), eq(users.id, scope.userId)))
+      .limit(1);
+    if (!target) return { failure: "not_allowed", code: "device_user_missing" };
+    if (target.email.toLowerCase() !== email) return { failure: "wrong_account", code: "wrong_account" };
+    const [bound] = await db
+      .select({ subject: userIdentities.subject })
+      .from(userIdentities)
+      .where(and(eq(userIdentities.provider, PROVIDER), eq(userIdentities.userId, target.id)))
+      .limit(1);
+    return bound ? { failure: "account_conflict", code: "account_conflict" } : target.id;
+  }
+  if (!cfg.bootstrapAdmins?.has(email)) return { failure: "not_allowed", code: "not_bootstrap" };
+  if (existingUserId) return existingUserId;
+  const target = await accountFor(db, cfg, email);
+  if (target === "conflict") return { failure: "account_conflict", code: "account_conflict" };
+  return target ?? (await createBootstrapAdmin(db, email, name)) ?? { failure: "account_conflict", code: "bootstrap_conflict" };
 }
 
 /**

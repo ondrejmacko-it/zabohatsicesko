@@ -2,7 +2,8 @@ import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
 import { hashKey, withinRateLimit } from "@/server/audit";
-import { beginLogin, type LoginOptions } from "@/server/auth/google-login";
+import { DEVICE_COOKIE, findDevice, inviteOnlyLogin } from "@/server/auth/devices";
+import { beginLogin, type LoginOptions, type LoginScope } from "@/server/auth/google-login";
 import { needsCalendarConnection } from "@/server/calendar/google-auth";
 import { config, googleLoginConfig } from "@/server/config";
 import { getDb, type Executor } from "@/server/db/client";
@@ -28,6 +29,8 @@ async function calendarRequestFor(db: Executor, hintedUserId: string | null): Pr
 
 // Začátek přihlášení Google identitou. Jen v nakonfigurovaném testovacím režimu.
 // `?jiny=1` nabídne výběr účtu bez ohledu na minulé přihlášení, `?kalendar=ne` přihlásí bez žádosti o Kalendář.
+// Ostrá Wiki pustí na Google jen prohlížeč s důvěryhodným zařízením (z pozvánky), nebo `?spravce=1`
+// pro adresy ze zaváděcího seznamu správců. Přímé volání bez zařízení skončí na neutrální stránce vstupu.
 export async function GET(request: NextRequest) {
   const cfg = googleLoginConfig();
   if (!cfg) return new Response(null, { status: 404 });
@@ -36,13 +39,26 @@ export async function GET(request: NextRequest) {
   if (!(await withinRateLimit(db, `google-login:${hashKey(ip)}`, 20, 600))) return new Response(null, { status: 429 });
 
   const params = request.nextUrl.searchParams;
-  const options: LoginOptions =
-    params.get("kalendar") === "ne"
-      ? { calendar: "skip" }
-      : params.get("jiny") === "1"
-        ? {}
-        : await calendarRequestFor(db, decodeHint(request.cookies.get(HINT_COOKIE)?.value));
-  const { url, cookieValue } = beginLogin(cfg, undefined, options);
+  let scope: LoginScope | undefined;
+  let loginHint: string | undefined;
+  let hintedUserId = decodeHint(request.cookies.get(HINT_COOKIE)?.value);
+  if (inviteOnlyLogin()) {
+    const device = await findDevice(db, request.cookies.get(DEVICE_COOKIE)?.value);
+    if (device) {
+      scope = { kind: "device", deviceId: device.id, userId: device.userId };
+      loginHint = device.email;
+      hintedUserId = device.userId;
+    } else if (params.get("spravce") === "1" && cfg.bootstrapAdmins?.size) {
+      scope = { kind: "bootstrap" };
+    } else {
+      const back = NextResponse.redirect(new URL("/vstup", request.nextUrl), 303);
+      back.headers.set("Cache-Control", "no-store");
+      return back;
+    }
+  }
+  const calendar: LoginOptions =
+    params.get("kalendar") === "ne" ? { calendar: "skip" } : params.get("jiny") === "1" ? {} : await calendarRequestFor(db, hintedUserId);
+  const { url, cookieValue } = beginLogin(cfg, undefined, { ...calendar, ...(loginHint ? { loginHint } : {}), ...(scope ? { scope } : {}) });
   const response = NextResponse.redirect(url);
   response.cookies.set(LOGIN_COOKIE, cookieValue, loginCookieOptions);
   response.headers.set("Cache-Control", "no-store");

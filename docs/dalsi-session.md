@@ -7,59 +7,44 @@ a přilož audit ZIP `ZBC_Audit_balicek_2026-11-15.zip` (do repa nepatří).
 
 Pokračuj na modulu Vzdělávání (repo `ondrejmacko-it/zabohatsicesko`). Nečti znovu celé zadání ani celý kód.
 Kontext máš v `docs/dalsi-session.md` a `README.md`, pravidla v `CLAUDE.md`, audit v přiloženém ZIPu
-(`ZBC_Kompletni_audit_2026-11-15.md`, `textove-upravy.csv`, `navrh-*.png`). Tykej mi, piš přátelsky,
-dávej mi přesné kroky pod sebou (mám Windows).
+`ZBC_Audit_balicek_2026-11-15.zip` (do repa nepatří). Tykej mi, piš přátelsky, kroky pro mě piš úplně, pod sebe,
+s přesnými kliky (Windows, PowerShell).
 
-**Stav:** PR 1–3 sloučené (#27, #28, #29). Ostrá Wiki běží na `https://zbc-vzdelavani-demo.vercel.app`
-(Production, vlastní DB Neon, Google přihlášení, správce `BOOTSTRAP_ADMIN_EMAILS` vznikl, Kalendář propojený,
-souhlas v režimu Testing do 22. 11.). Z auditu zbývá A03, A07 (čeká na firmu), U01–U09, T01–T04 (69 textů)
-a G6 Připravit měsíc.
+**Stav:** PR 4a (pozvánka na jedno zařízení, větev `claude/pozvanky-na-zarizeni`) je hotový jako draft, viz níže.
+Kalendář v ostré Wiki vznikl 15. 11. v režimu Testing a **vyprší 22. 11. kolem 12:31**, pokud ho uživatel
+nepřipojí znovu (`/vzdelavani/integrace` → „Připojit znovu nebo jiným účtem“). Ověř v Neonu
+(`zbc-wiki-produkce`, `SELECT connected_at FROM integration_credentials`), že je datum novější než 15. 11.
 
-**Cíl:** Wiki připravená k ostrému nasazení: maximální bezpečnost, přehlednost, stručnost, rychlost.
-Jeden PR na relaci, z `main`, draft, merge dělám já.
-
-**PR 4 (tato relace): přihlášení jen přes pozvánku + úklid ostrého UI podle mých screenshotů**
-
-1. *Pozvánka (nejdřív se mě zeptej na otevřené body níže, pak navrhni řešení a teprve potom implementuj):*
-   - Na `/vstup` (a vůbec k přihlášení Googlem) se dostane jen ten, kdo má unikátní odkaz vytvořený
-     přihlášeným uživatelem, např. `https://zbc-vzdelavani-demo.vercel.app/vstup#NDSHjindW32dhiuHU234G`.
-   - Odkaz je náhodný (aspoň 128 bitů), v DB jen jeho hash, jednorázový, s vypršením. Po použití se
-     váže na jedno zařízení (podepsaná HttpOnly `__Host-` cookie s otiskem), přes které se dotyčný
-     přihlašuje X dní. Na jiném zařízení odkaz nefunguje.
-   - Fragment `#…` se na server neposílá: klient ho přečte, pošle POSTem a hned ho z adresy smaže.
-   - Bez platné pozvánky ani zařízení: neutrální stránka bez tlačítka Google, OAuth trasy odmítnou
-     přímé volání na serveru. Limit pokusů, audit log bez tokenů.
-   - Správa: „Vytvořit pozvánku“ (jméno, e-mail Google, role, skupiny) vrátí odkaz ke zkopírování,
-     seznam aktivních pozvánek a zařízení, zneplatnění. Nahradí dnešní „Pozvat kolegu“.
-   - Výjimka, aby se nikdo nezamkl: `BOOTSTRAP_ADMIN_EMAILS` a už přihlášená zařízení dnešního správce.
-   - Testy oprávnění: bez pozvánky, prošlá, použitá, jiné zařízení, zneplatněná, cizí e-mail v Googlu.
-   - Preview (ukázka) si nechá dnešní zvací odkaz s přístupovým kódem.
-   Otevřené body pro mě: kolik dní platí nepoužitý odkaz a kolik dní zařízení (návrh 7 a 30), zda
-   pozvánky smí tvořit každý přihlášený nebo jen správce, zda musí e-mail Googlu souhlasit s pozvánkou
-   (návrh ano), co po vypršení zařízení (návrh: nový odkaz od správce), počet zařízení na osobu (návrh 1).
-2. *Úvodní stránka (screen 1):* nedává smysl, chybí karty. Udělat karty modulů (Vzdělávání, pro správce
-   Správa systému) a pod tím nejbližší akce, ať je jasné, kam kliknout.
-3. *Vzdělávání (screen 2):* rozdělit záložky na **Plán | Zápisy | Témata** (U09, staré adresy a kotvy
-   přesměrovat). Z Plánu odstranit řádek Kalendáře a propojení (jen krátké upozornění pro správce, když
-   je propojení rozbité nebo do 2 dnů vyprší). Zvážit odstranění duplicity „Nejbližší akce“ s úvodem.
-4. *Správa (screen 3, 4):* stručně a jednoznačně. Čekající žádosti první (U04). Pryč box „Jak to funguje“
-   (max. jedna věta), dlouhé ID kalendáře, text „Wiki zatím e-mail s pozvánkou neposílá…“ a v ostré Wiki
-   odkaz „Technické nastavení ukázky“. Kalendář jako jeden řádek stavu, tabulka příjemců v rozbalení.
-   Správa bez vodorovného posunu na 320 a 360 px (U01).
-
-**Další PR po jednom na relaci** (pořadí můžu změnit):
-- PR 5: stavy nahrávek (A03) a 69 textů z `textove-upravy.csv` (T01–T04), jednotné datum (T03).
-- PR 6: přístupnost a layout (U02 kontrast, U03, U05, U06, U07, U08), barvy podle palety Wiki, axe a měření
-  320–1920 px.
-- PR 7: Připravit měsíc (G6, `navrh-spravce-mesic.png`).
-- PR 8: bezpečnost a rychlost: bezpečnostní hlavičky (CSP, HSTS, frame-ancestors, Referrer-Policy),
-  revize cookie a limitů, Lighthouse a velikost bundlu na Production, `npm audit`.
-
-Já dělám: Google konzoli (Test users, později „Publish app“, pak nastav `GOOGLE_OAUTH_PUBLISHED=1`),
-produkční nasazení (Vercel → Deployments → ⋯ → Create Deployment → `main`) a merge PR.
-Na `main` nepushuj. Před předáním lint, typy, testy, build a průchod v Chromiu. Respektuj limit kontextu.
+**PR 4b (tato relace): úklid ostrého UI** (rozhodnuto 15. 11., zvát smí jen správce):
+1. Úvod: karty modulů (Vzdělávání s „Čeká na vás N“ nebo nejbližším termínem, pro správce Správa systému
+   s počtem čekajících odkazů), pod nimi Nejbližší akce (3).
+2. Vzdělávání: záložky Plán | Zápisy | Témata (U09, `/vzdelavani/temata` je dnes přesměrování, kotva `#temata`
+   klientsky přesměrovat). Z Plánu pryč řádek Kalendáře (screenshot: dlouhé ID kalendáře), jen upozornění pro
+   správce, když je propojení rozbité. „Nejbližší akce“ jen na úvodu, Plán má „Čeká na vás“ a harmonogram.
+3. Správa: přeměřit 320 a 360 px přihlášený jako správce (U01, v PR 4a neověřeno, ostrá Wiki se lokálně bez Googlu
+   nepřihlásí: použij ukázku, Správa je stejná komponenta). Kalendář jako jeden řádek stavu s menu.
+4. Pak PR 5–8 podle původního pořadí (A03 + texty T01–T04, přístupnost U02–U08, Připravit měsíc G6,
+   bezpečnost a rychlost včetně HSTS, Lighthouse, `npm audit`, ověření brandingu v Google konzoli).
 
 ---
+
+## Stav 15. 11. 2026 noc (větev `claude/pozvanky-na-zarizeni`, draft PR 4a do `main`)
+* **Pozvánka na jedno zařízení** (`src/server/auth/devices.ts`, migrace `0007_login_invites`): odkaz `/vstup#<43 znaků>`
+  (256 bitů, v DB HMAC otisk), 7 dní, jednorázový (podmíněný UPDATE), po použití cookie `__Host-zbc_device`
+  (`<id>.<tajemství>`, v DB otisk), zařízení platí 30 dní od posledního použití (zápis nejvýš 1× za hodinu).
+  Session nese `d` (ID zařízení), `resolveSessionUser` ho v ostré Wiki vyžaduje: starší session bez zařízení neplatí.
+  `InviteClaim` čte fragment, maže ho z adresy a posílá POSTem na `/api/pozvanka` (Origin, JSON, limit 10/15 min).
+  OAuth start bez zařízení přesměruje na `/vstup`, callback zařízení ověří znovu. `completeLogin` v ostré Wiki
+  přes `scopedAccount`: e-mail Googlu musí přesně odpovídat pozvánce, žádné žádosti cizích lidí.
+  Pojistka: `/vstup?spravce=1` jen pro `BOOTSTRAP_ADMIN_EMAILS`, po přihlášení zaregistruje zařízení.
+* **Správa:** tlačítko „Pozvat člověka“ (okno, výsledek odkaz + Kopírovat), seznam Lidé se stavem zařízení a odkazu,
+  menu Nový odkaz / Zneplatnit odkaz / Odhlásit zařízení. Odebrání přístupu zneplatní zařízení i odkaz. Pryč box
+  „Jak to funguje“, text o e-mailu, v ostré Wiki „Technické nastavení ukázky“ (místo něj odkaz na nové připojení
+  Kalendáře). Čekající žádosti jen když nějaké jsou. Tabulka příjemců v rozbalení. Výběr role Správce ukáže dopad.
+* Ověřeno: lint, typy, 164/164 testů (nové `tests/pozvanky.test.ts`), build, Chromium nad `next start` v režimu
+  production s falešnými Google hodnotami (neutrální vstup bez tlačítka, neplatný odkaz smazán z adresy a ohlášen,
+  přímé OAuth 303 na `/vstup`, cizí Origin 403, `?spravce=1` s tlačítkem, 320 px bez posunu). Naživo proti Googlu ne.
+* Po merge: dnešní session správce přestane platit. Přihlášení: `https://zbc-vzdelavani-demo.vercel.app/vstup?spravce=1`.
 
 ## Stav 15. 11. 2026 odpoledne (po PR 3, větev `claude/zen-feynman-jcmjd3`, jen tento soubor)
 * **Production nasazená** uživatelem (Create Deployment z `main` po #29). Ignored build step je prázdný
