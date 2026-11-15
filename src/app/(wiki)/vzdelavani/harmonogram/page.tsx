@@ -10,7 +10,7 @@ import { generateMonthAction } from "@/features/vzdelavani/actions";
 import { CalendarAlert } from "@/features/vzdelavani/components/CalendarStatusLine";
 import { EventDialog } from "@/features/vzdelavani/components/EventDialog";
 import { EventPeek } from "@/features/vzdelavani/components/EventPeek";
-import { PublishMonthDialog, type InviteMode } from "@/features/vzdelavani/components/PublishMonthDialog";
+import { PrepareMonthDialog, type InviteMode, type PairingItem } from "@/features/vzdelavani/components/PrepareMonthDialog";
 import { PlanFilters } from "@/features/vzdelavani/components/PlanFilters";
 import { Agenda, Legend, NextEventsList, ScheduleGrid } from "@/features/vzdelavani/components/Schedule";
 import { TemplateDialog } from "@/features/vzdelavani/components/TemplateDialog";
@@ -74,6 +74,15 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   const cards = filterCards(monthCards, monthKey, { type, state });
   const filtering = Boolean(type || state);
   const syncing = monthCards.some((c) => c.syncStatus === "pending");
+  // Stav párování nadcházejících zveřejněných akcí měsíce pro okno Připravit měsíc (z už načtených karet,
+  // bez dalšího dotazu). Proběhlé akce se do Kalendáře neposílají, proto v přehledu nejsou.
+  const pairing: PairingItem[] = managing
+    ? monthCards.flatMap((c) =>
+        c.syncStatus && c.type !== "holiday" && new Date(c.endsAt) > now() && monthOf(toDateKey(new Date(c.startsAt))) === monthKey
+          ? [{ id: c.id, label: c.label, startsAt: c.startsAt, syncStatus: c.syncStatus }]
+          : [],
+      )
+    : [];
   // Čekající pozvánky (nový host ve skupině, obnovené propojení) i zveřejněné akce bez vazby se odešlou
   // samy, jakmile správce otevře Plán. Souběh hlídá zámek u každé vazby v `syncPending`.
   if (managing) after(() => syncPublished());
@@ -209,16 +218,16 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
           {managing && (
             <div className="row">
               <Menu label="Nástroje správce" className="organizer-tools">
-                <ActionForm action={generateMonthAction} fields={{ month: monthKey }} label="Přidat chybějící termíny jako návrhy" pendingLabel="Přidávám…" />
                 <TemplateDialog slots={template} />
               </Menu>
-              {monthDrafts && calendar && monthDrafts.drafts.length > 0 && (
-                <PublishMonthDialog
-                  key={monthDrafts.drafts.map((d) => `${d.id}:${d.revision}`).join("|")}
+              {monthDrafts && calendar && (
+                <PrepareMonthDialog
                   monthKey={monthKey}
                   monthName={formatMonth(monthKey)}
+                  todayKey={todayKey}
                   drafts={monthDrafts.drafts}
                   changeDrafts={monthDrafts.changeDrafts}
+                  pairing={pairing}
                   people={people}
                   topics={topics.map((t) => t.name)}
                   recipients={calendar.recipients}
