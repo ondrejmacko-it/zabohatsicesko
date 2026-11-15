@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { listPersonas } from "@/server/auth/personas";
-import { calendarMode, config, googleLoginConfig } from "@/server/config";
+import { calendarMode, config, googleLoginConfig, isLiveWiki } from "@/server/config";
 import { GateForm } from "./GateForm";
 
 export const metadata: Metadata = { title: "Vstup do ukázky" };
@@ -66,10 +66,10 @@ export default async function GatePage({ searchParams }: { searchParams: Promise
                   </a>
                 )}
               </div>
-              <h2>Nebo projít ukázku s fiktivní rolí</h2>
+              {!isLiveWiki() && <h2>Nebo projít ukázku s fiktivní rolí</h2>}
             </section>
           )}
-          <GateForm personas={personas} needsCode={config.accessCode !== null} />
+          {!isLiveWiki() && <GateForm personas={personas} needsCode={config.accessCode !== null} />}
         </div>
       </main>
     </>

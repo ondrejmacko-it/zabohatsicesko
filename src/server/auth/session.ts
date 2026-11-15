@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 import { googleSessionAllowed } from "@/server/auth/google-login";
-import { config } from "@/server/config";
+import { config, isLiveWiki } from "@/server/config";
 import { getDb, type Executor } from "@/server/db/client";
 import { users } from "@/server/db/schema";
 import type { Viewer } from "@/server/policy";
@@ -62,8 +62,12 @@ export async function startSession(userId: string, method: SignInMethod = "demo"
   (await cookies()).set(SESSION_COOKIE, encodeSession(userId, undefined, method), sessionCookieOptions);
 }
 
+// Mazání musí nést stejné atributy jako uložení. Prohlížeč jinak cookie s prefixem __Host- (vyžaduje
+// Secure) nepřepíše a odhlášený uživatel zůstane přihlášený. `cookies().delete()` Secure neposílá.
+export const expiredSessionCookieOptions = { ...sessionCookieOptions, maxAge: 0, expires: new Date(0) };
+
 export async function endSession(): Promise<void> {
-  (await cookies()).delete(SESSION_COOKIE);
+  (await cookies()).set(SESSION_COOKIE, "", expiredSessionCookieOptions);
 }
 
 export type CurrentUser = Viewer & { name: string; email: string; signedInWith: SignInMethod };
@@ -86,6 +90,8 @@ export async function resolveSessionUser(
   if (!user || user.orgId !== config.orgId || user.status !== "active") return null;
   // Session z výběru fiktivní role nikdy neotevře skutečný účet z pozvánky nebo žádosti.
   if (session.method === "demo" && user.origin !== "demo") return null;
+  // Ostrá Wiki fiktivní role nezná, ani kdyby v databázi zůstaly nebo cookie vznikla jinde.
+  if (isLiveWiki() && (session.method === "demo" || user.origin === "demo")) return null;
   return { id: user.id, name: user.name, email: user.email, role: user.role, groups: user.groups, signedInWith: session.method };
 }
 

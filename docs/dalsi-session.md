@@ -5,35 +5,45 @@ Zkopíruj text níže jako první zprávu nové relace Claude Code (repo `ondrej
 ---
 
 Pokračuj na demu modulu Vzdělávání (repo `ondrejmacko-it/zabohatsicesko`). Nečti znovu celé zadání ani celý kód.
-Kontext máš v `docs/dalsi-session.md`, `README.md`, `docs/google-prihlaseni.md` a `docs/google-kalendar.md`,
-pravidla v `CLAUDE.md`. Tykej mi, piš přátelsky. Úpravy níže jsou odsouhlasené, rovnou je udělej. Ptej se jen
-na věci označené „zeptej se“.
+Kontext máš v `docs/dalsi-session.md` a `README.md`, pravidla v `CLAUDE.md`. Tykej mi, piš přátelsky.
 
-Stav: `main` obsahuje vše do PR #25 včetně. Pro změny založ větev z `main`. Můj osobní účet je z Wiki smazaný,
-nezakládej ho znovu a nikam ho nezvi.
+Schválený plán (15. 11.) je série PR podle auditu z 15. 11. a oddělení production (firma, skutečné účty Google,
+Kalendář, prázdná DB se skupinami a pravidelným týdnem) od preview (ukázka, fiktivní role, vstup zvacím odkazem
+bez účtů). Nahrávky v production zůstávají jako v demu. PR 1 je hotový (viz stav níže). Udělej **PR 2** na nové
+větvi `claude/produkce-a-zvaci-odkaz` z `main` (pokud PR 1 ještě není sloučený, z větve PR 1):
 
-Zásada pro celé UI: hlavní údaje a hlavní akce musí vyniknout, vedlejší texty jsou menší a tlumené, nic není
-ani o pixel mimo osu, vše je jasné na první pohled.
+* `src/server/db/client.ts`: v `WIKI_MODE=production` do prázdné DB nenahrávat fiktivní seed, jen skupiny
+  a pravidelný týden (nová `seedProductionBase` v `src/server/seed.ts` z dat seedu).
+* `BOOTSTRAP_ADMIN_EMAILS` (nastaví uživatel): první přihlášení Googlem s touto adresou založí aktivního správce
+  (`origin: invite`). V production nepoužívat `GOOGLE_LOGIN_ACCOUNTS`.
+* Production UI bez ukázkových textů (vstup jen Google, bez odznaků ukázky, skrýt neaktivní hledání a Knihovnu).
+* Preview: `/vstup?pozvanka=<kód>` (kód = `DEMO_ACCESS_CODE`, stejný limit pokusů) ověří a uloží podepsanou
+  cookie brány, výběr role bez psaní kódu, ruční kód zůstane jako záloha. V demu nenabízet Google přihlášení.
+* `docs/nasazeni.md` s kroky pro uživatele, úprava `README.md` a `docs/predani.md` (T04).
+* Po mergi PR 2 a s potvrzením uživatele: Vercel env Production (nesecretní `WIKI_MODE=production`, `LOGIN_MODE`,
+  `CALENDAR_MODE=google-test`, `CALENDAR_ATTENDEES=audience`, `APP_URL`), Preview (`WIKI_MODE=demo`, Kalendář
+  na simulaci, odebrat `LOGIN_MODE`, `CALENDAR_ATTENDEES` a 16 starých `APP_URL` na větvích), nový Neon projekt
+  `zbc-wiki-produkce` (EU). Tajemství, ochranu Vercelu, ignored build step a Google konzoli dělá uživatel.
 
-1. Menu místo řady tlačítek v detailu akce pro vedoucího, na Integraci a v `SyncPanelView` (komponenta `Menu`).
-2. Doověř v prohlížeči: okno „Přidat zápis“ a detail cizí akce za správce („Nahrát záznam“, úprava, zveřejnění
-   i stažení zápisu), zápis za čtenáře, nahrání záznamu a `AutoRefresh`, „Přidat zápis“ na 1280 px, Plán za
-   účastníka na 390 px, ve Správě schválení a zamítnutí čekající žádosti (seed žádnou nemá, založ ji přihlášením
-   neznámého účtu nebo v testu). Varování o hydrataci na Plánu (viděno 13. 11., příčina nehledána).
-   Po každém bloku 1280 a 390 px.
-3. Živý test se mnou krok za krokem, až řeknu (14. 11. jsem ho odložil). Zeptej se, kde testovat: nová větev
-   potřebuje vlastní `APP_URL` (nastav přes API) a dvě přesměrovací adresy v Google konzoli (přidám já).
-   Postup: přihlášení správce (při druhém přihlášení jedna obrazovka Googlu s Kalendářem), řádek „Kalendář“ na
-   Plánu, zveřejněné budoucí akce mají vazbu a hosty podle skupin, hosté v dialogu akce sedí s pozvánkou, nový
-   účet a žádost, schválení ve Správě a pozvánky, které mu samy dojdou, změna, zrušení, odkaz na zápis.
-   Hromadné zveřejnění („Zveřejnit návrhy“) před prvním ostrým použitím potvrď se mnou, posílá e-maily.
-   Propojení v režimu Testing vyprší kolem 19. 11.
-4. Snímky každého okna a stavu za každou roli na 1280 a 390 px jako ZIP se seznamem. Do repa je nedávej.
-
-Production na Vercelu nemá proměnné prostředí a buildy z `main` se přeskakují, vše běží na preview.
+Další PR po jednom na relaci: 3 bezpečné pozvánky a dopad (A01, A02, A04, A05, A06, A08), 4 stavy nahrávek
+a 69 textů z `textove-upravy.csv` (A03, T01–T04), 5 Plán, Správa a přístupnost (U01–U09), 6 Připravit měsíc.
+Audit (ZIP `ZBC_Audit_balicek_2026-11-15.zip`) není v repu, pro PR 4 a 5 si ho vyžádej znovu.
 Na `main` nepushuj, merge dělám já. Respektuj limit kontextu.
 
 ---
+
+## Stav 15. 11. 2026 (větev `claude/relaxed-edison-tb8rqz`, draft PR 1 do `main`)
+* **Odhlášení (S02):** `endSession` maže cookie se stejnými atributy jako uložení (`Secure`, `maxAge: 0`).
+  Ověřeno v produkčním buildu v Chromiu: cookie zmizí, Plán přesměruje na `/vstup`, audio vrátí 401.
+* **`WIKI_MODE=production` (S01):** odmítá demo session (`resolveSessionUser`), výběr i přepnutí role, obnovu dat
+  (`resetDemoAction` i `resetDatabase`, tedy i `npm run db:reset`), přepínače simulace; skutečný čas; skryté
+  ukázkové prvky na vstupu, v liště a na Integraci. `src/instrumentation.ts` nespustí ostrou Wiki bez Google
+  přihlášení a Kalendáře (`liveWikiConfigProblems`). Testy `tests/produkce.test.ts`. 141 ze 141 testů, lint,
+  typy, build. Production na Vercelu zatím nemá env ani DB, nic se nenasazovalo.
+* Vercel: projekt přes Vercel MCP konektor není vidět (jiný token), přes `api.vercel.com` s proxy ano
+  (tým `team_PtkXmFd9hI7UeUYovGkbwZQG`). Vercel Authentication chrání všechna nasazení včetně production.
+* Rizika k řešení s uživatelem: Hobby plán je nekomerční, OAuth v režimu Testing (7 dní, 100 uživatelů),
+  nahrávky v production přepis neumí (návrh: ruční zápis bez audia), úklid skutečných účtů z DB preview.
 
 ## Stav 15. 11. 2026 (větev `claude/pensive-ramanujan-lk23o9`, kód beze změn proti `main`)
 * Snímky předány znovu: 368 snímků (4 role a vstupní brána, 1280 a 390 px, 2×) ve 4 ZIPech do 30 MB, v 1. části `SEZNAM.md` a zdrojový kód. Vznikly automatickým průchodem lokálního buildu (`next start` nad PGlite, každé tlačítko, menu a okno z menu, nic se neodesílá) a scénářem zápisu (správce nahrál nahrávku k ev-11-10, zveřejnil, ostatní role čtou). Vodorovný posun nikde, chyby v konzoli žádné. Skripty jsou mimo repo.

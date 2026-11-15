@@ -37,9 +37,9 @@ export const config = {
   get appUrl() {
     return (process.env.APP_URL?.trim() || "https://wiki.example.invalid").replace(/\/+$/, "");
   },
-  /** Demo běží v referenčním čase ze seedu, aby scénář seděl na listopadová data. */
+  /** Demo běží v referenčním čase ze seedu, aby scénář seděl na listopadová data. Ostrá Wiki vždy ve skutečném. */
   get useRealClock() {
-    return process.env.DEMO_CLOCK === "real";
+    return isLiveWiki() || process.env.DEMO_CLOCK === "real";
   },
   referenceNow: new Date(seed.referenceNow),
   isProduction,
@@ -48,6 +48,19 @@ export const config = {
 export function now(): Date {
   return config.useRealClock ? new Date() : config.referenceNow;
 }
+
+export type WikiMode = "demo" | "production";
+
+/**
+ * Ostrá Wiki pro firmu (`WIKI_MODE=production`), nebo ukázka s fiktivními rolemi (výchozí). Ostrá Wiki
+ * na serveru odmítá fiktivní role, obnovu ukázkových dat i přepínače simulace. Zapíná se výslovně,
+ * aby chybějící proměnná nikdy nevypnula ochrany ukázky, a naopak.
+ */
+export function wikiMode(): WikiMode {
+  return process.env.WIKI_MODE?.trim() === "production" ? "production" : "demo";
+}
+
+export const isLiveWiki = () => wikiMode() === "production";
 
 export type CalendarMode = "simulation" | "google-test";
 
@@ -192,6 +205,20 @@ export function googleLoginConfig(): GoogleLoginConfig | null {
       }),
     ),
   };
+}
+
+/**
+ * Co ostré Wiki chybí ke spuštění. Bez přihlášení Googlem by se do ní nikdo nedostal a bez Kalendáře
+ * by plán tiše běžel nad simulací. Hodnoty se nevypisují, jen názvy.
+ */
+export function liveWikiConfigProblems(): string[] {
+  if (!isLiveWiki()) return [];
+  const problems: string[] = [];
+  if (loginMode() !== "google-test") problems.push("LOGIN_MODE");
+  else problems.push(...googleLoginConfigProblems());
+  if (calendarMode() !== "google-test") problems.push("CALENDAR_MODE");
+  else problems.push(...googleCalendarConfigProblems());
+  return [...new Set(problems)];
 }
 
 /** Klíč pro šifrování tokenů v databázi. Jen na serveru, nikdy v logu. */

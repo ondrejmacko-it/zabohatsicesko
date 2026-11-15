@@ -14,6 +14,7 @@ import {
   googleLoginConfig,
   googleLoginConfigProblems,
   integrationModes,
+  isLiveWiki,
   loginMode,
   attendeeSource,
 } from "@/server/config";
@@ -47,7 +48,11 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
   const googleConfig = googleCalendarConfig();
   const connection = googleTest ? await connectionStatus(db) : null;
   const connectResult = CONNECT_RESULTS[(await searchParams).google ?? ""];
-  const switchKeys = (Object.keys(SWITCH_LABELS) as SimulationSwitch[]).filter((key) => !googleTest || !key.startsWith("calendar."));
+  const live = isLiveWiki();
+  // Ostrá Wiki ukázkové přepínače ani obnovu dat nenabízí, server je stejně odmítne.
+  const switchKeys = live
+    ? []
+    : (Object.keys(SWITCH_LABELS) as SimulationSwitch[]).filter((key) => !googleTest || !key.startsWith("calendar."));
 
   return (
     <>
@@ -173,43 +178,47 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
         </section>
       )}
 
-      <section className="section">
-        <h2>Ukázka chyb</h2>
-        <p className="small muted">Přepínače slouží k předvedení chybových stavů a opakování. V produkci neexistují.</p>
-        <div className="stack section-actions">
-          {switchKeys.map((key) => (
-            <div key={key} className="spread candidate">
-              <span>
-                <strong>{SWITCH_LABELS[key].title}</strong>
-                <span className="small muted"> · {switches[key] ? SWITCH_LABELS[key].on : SWITCH_LABELS[key].off}</span>
-              </span>
-              <ActionForm
-                action={setSimulationAction}
-                fields={{ key, value: String(!switches[key]) }}
-                label={switches[key] ? "Vypnout" : "Zapnout"}
-                small
-              />
-            </div>
-          ))}
-        </div>
-      </section>
+      {switchKeys.length > 0 && (
+        <section className="section">
+          <h2>Ukázka chyb</h2>
+          <p className="small muted">Přepínače slouží k předvedení chybových stavů a opakování. V produkci neexistují.</p>
+          <div className="stack section-actions">
+            {switchKeys.map((key) => (
+              <div key={key} className="spread candidate">
+                <span>
+                  <strong>{SWITCH_LABELS[key].title}</strong>
+                  <span className="small muted"> · {switches[key] ? SWITCH_LABELS[key].on : SWITCH_LABELS[key].off}</span>
+                </span>
+                <ActionForm
+                  action={setSimulationAction}
+                  fields={{ key, value: String(!switches[key]) }}
+                  label={switches[key] ? "Vypnout" : "Zapnout"}
+                  small
+                />
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
-      <section className="section">
-        <h2>Ukázková data</h2>
-        <p className="small muted">Obnoví všechna fiktivní data do výchozího stavu ze seedu. Akce se zapíše do auditu.</p>
-        <div className="section-actions row">
-          <ActionForm
-            action={resetDemoAction}
-            label="Obnovit ukázková data"
-            variant="danger"
-            confirm={{
-              title: "Obnovit ukázková data",
-              text: "Všechny změny v ukázce, nahrávky i zápisy se smažou a data se vrátí do výchozího stavu.",
-              confirmLabel: "Obnovit",
-            }}
-          />
-        </div>
-      </section>
+      {!live && (
+        <section className="section">
+          <h2>Ukázková data</h2>
+          <p className="small muted">Obnoví všechna fiktivní data do výchozího stavu ze seedu. Akce se zapíše do auditu.</p>
+          <div className="section-actions row">
+            <ActionForm
+              action={resetDemoAction}
+              label="Obnovit ukázková data"
+              variant="danger"
+              confirm={{
+                title: "Obnovit ukázková data",
+                text: "Všechny změny v ukázce, nahrávky i zápisy se smažou a data se vrátí do výchozího stavu.",
+                confirmLabel: "Obnovit",
+              }}
+            />
+          </div>
+        </section>
+      )}
     </>
   );
 }

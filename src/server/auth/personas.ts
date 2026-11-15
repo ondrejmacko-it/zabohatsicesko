@@ -1,5 +1,5 @@
 import { and, asc, eq } from "drizzle-orm";
-import { config } from "@/server/config";
+import { config, isLiveWiki } from "@/server/config";
 import { getDb } from "@/server/db/client";
 import { users } from "@/server/db/schema";
 
@@ -15,6 +15,7 @@ export type Persona = { id: string; name: string; description: string };
 
 /** Jen fiktivní role ukázky. Skutečné účty z pozvánek a žádostí se za ně nikdy nedají vydávat. */
 export async function listPersonas(): Promise<Persona[]> {
+  if (isLiveWiki()) return [];
   const db = await getDb();
   const rows = await db
     .select({ id: users.id, name: users.name })

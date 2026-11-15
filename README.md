@@ -67,6 +67,7 @@ Vzor je v `.env.example`. Hodnoty tajemství patří do správce tajemství host
 | `SESSION_SECRET` | na hostingu | Klíč pro podpis session, min. 32 znaků. |
 | `DEMO_ACCESS_CODE` | na hostingu | Přístupový kód do dema, min. 12 znaků. |
 | `APP_URL` | ne | Adresa Wiki pro odkaz v pozvánce. |
+| `WIKI_MODE` | ne | `production` = ostrá Wiki pro firmu: odmítne fiktivní role, obnovu ukázkových dat a přepínače simulace, běží ve skutečném čase a bez přihlášení Googlem a Kalendáře se nespustí. Jinak ukázka. |
 | `DEMO_CLOCK` | ne | `real` = skutečný čas místo ukázkového. |
 | `SIM_LATENCY_MS` | ne | Zpoždění simulací v ms (výchozí 1200). |
 | `CALENDAR_MODE` | ne | `google-test` zapne testovací režim Google Kalendáře. Jinak simulace. |
