@@ -3,7 +3,7 @@ import Link from "next/link";
 import { GROUP_LABELS, TYPE_LABELS } from "@/lib/labels";
 import { Icon } from "@/components/Icon";
 import { AddMinutesPicker, MinutesPeek } from "@/features/vzdelavani/components/MinutesPeek";
-import { TopicsSection } from "@/features/vzdelavani/components/TopicsSection";
+import { TopicsAnchorRedirect } from "@/features/vzdelavani/components/TopicsAnchorRedirect";
 import { groupByMonth } from "@/features/vzdelavani/minutes";
 import { formatDate, formatMonth, toDateKey } from "@/lib/time";
 import { GROUPS, type Group } from "@/lib/types";
@@ -11,7 +11,7 @@ import { requireUser } from "@/server/auth/session";
 import { isOrganizer } from "@/server/policy";
 import { listMissingMinutes, listPublishedMinutes } from "@/server/services/journey";
 
-export const metadata: Metadata = { title: "Zápisy a témata" };
+export const metadata: Metadata = { title: "Zápisy" };
 
 type SearchParams = Promise<{ q?: string; typ?: string; skupina?: string; zapis?: string; pridat?: string }>;
 
@@ -41,6 +41,7 @@ export default async function MinutesPage({ searchParams }: { searchParams: Sear
 
   return (
     <>
+    <TopicsAnchorRedirect />
     {peekId ? (
       <MinutesPeek key={peekId} user={user} eventId={peekId} closeHref={link()} />
     ) : (
@@ -141,7 +142,6 @@ export default async function MinutesPage({ searchParams }: { searchParams: Sear
         ))
       )}
     </section>
-    <TopicsSection user={user} />
     </>
   );
 }

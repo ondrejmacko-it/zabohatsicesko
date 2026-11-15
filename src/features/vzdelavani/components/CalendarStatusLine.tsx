@@ -78,6 +78,54 @@ export function CalendarStatusLine({ status, now, detailed }: { status: Calendar
   );
 }
 
+/**
+ * Krátké upozornění pro Plán. Ukáže se jen, když propojení nefunguje nebo brzy vyprší.
+ * Podrobný stav (účet, kalendář, příjemci) je ve Správě.
+ */
+export function CalendarAlert({ status, now }: { status: CalendarStatus; now: Date }) {
+  if (status.mode === "simulation") return null;
+  const { connection, problem } = status;
+  const fixable = problem !== "not_configured";
+  if (!connection) {
+    return (
+      <div className="cal-status cal-status-alert" role="alert">
+        <span className="cal-status-main">
+          <strong>{PROBLEMS[problem ?? "not_connected"]}</strong>
+        </span>
+        {fixable ? (
+          <a className="btn btn-primary btn-small" href={CONNECT_HREF}>
+            Propojit Kalendář
+          </a>
+        ) : (
+          <Link className="btn btn-small" href="/sprava#pozvanky">
+            Otevřít Správu
+          </Link>
+        )}
+      </div>
+    );
+  }
+  if (problem === "unreachable") {
+    return (
+      <p className="cal-status cal-status-warn" role="status">
+        <span className="cal-status-main">{PROBLEMS.unreachable}</span>
+      </p>
+    );
+  }
+  const daysLeft = connection.expiresAt ? Math.ceil((new Date(connection.expiresAt).getTime() - now.getTime()) / DAY_MS) : null;
+  if (daysLeft === null || daysLeft > 2) return null;
+  return (
+    <div className="cal-status cal-status-warn" role="status">
+      <span className="cal-status-main">
+        <strong>Propojení Kalendáře vyprší {formatDayMonth(toDateKey(new Date(connection.expiresAt!)))}.</strong>
+        <span className="cal-status-rest">Obnovíte ho jedním potvrzením u Googlu.</span>
+      </span>
+      <a className="btn btn-primary btn-small" href={CONNECT_HREF}>
+        Obnovit propojení
+      </a>
+    </div>
+  );
+}
+
 /** Komu Wiki pošle pozvánku podle skupiny akce. Na Správě, ať je před zapnutím skutečných pozvánek jasno. */
 export function InviteRecipients({ status }: { status: CalendarStatus }) {
   const real = status.mode === "google";

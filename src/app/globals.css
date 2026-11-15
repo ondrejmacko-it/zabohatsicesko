@@ -1484,18 +1484,9 @@ details > summary {
   }
 }
 
-/* Plán: úkoly a nejbližší akce vedle sebe a stejně vysoké, harmonogram pod nimi. */
+/* Plán: úkoly nad harmonogramem. */
 .plan-top {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0 20px;
-  align-items: stretch;
-}
-
-@media (max-width: 900px) {
-  .plan-top {
-    grid-template-columns: 1fr;
-  }
+  display: block;
 }
 
 .count-badge {
@@ -2004,6 +1995,30 @@ p.cal-status {
   }
 }
 
+/* E-mailové adresy jsou dlouhé slovo bez mezer. Na úzkém displeji se zalomí a skupina jde nad seznam. */
+.recipients-table td {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 480px) {
+  .recipients-table,
+  .recipients-table tbody,
+  .recipients-table tr,
+  .recipients-table th[scope="row"],
+  .recipients-table td {
+    display: block;
+    width: auto;
+  }
+
+  .recipients-table thead {
+    display: none;
+  }
+
+  .recipients-table td {
+    padding-top: 0;
+  }
+}
+
 /* Hromadné zveřejnění návrhů měsíce: řádek = výběr, téma, vedoucí. */
 .publish-group {
   margin: 0;
@@ -2134,4 +2149,32 @@ p.cal-status {
 .account-actions {
   flex-wrap: nowrap;
   gap: 6px;
+}
+
+/* Úvod: karty modulů vedle sebe, na úzkém displeji pod sebou. */
+.module-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.module-card {
+  display: flex;
+  height: 100%;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.module-card > svg {
+  flex: none;
+  margin-top: 3px;
+  color: var(--ochre-dark);
+}
+
+.module-card .item-title,
+.module-card .item-meta {
+  display: block;
 }

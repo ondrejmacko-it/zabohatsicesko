@@ -7,14 +7,14 @@ import { AutoRefresh } from "@/components/AutoRefresh";
 import { Icon } from "@/components/Icon";
 import { Menu } from "@/components/Menu";
 import { generateMonthAction } from "@/features/vzdelavani/actions";
-import { CalendarStatusLine } from "@/features/vzdelavani/components/CalendarStatusLine";
+import { CalendarAlert } from "@/features/vzdelavani/components/CalendarStatusLine";
 import { EventDialog } from "@/features/vzdelavani/components/EventDialog";
 import { EventPeek } from "@/features/vzdelavani/components/EventPeek";
 import { PublishMonthDialog, type InviteMode } from "@/features/vzdelavani/components/PublishMonthDialog";
 import { PlanFilters } from "@/features/vzdelavani/components/PlanFilters";
-import { Agenda, Legend, NextEventsList, ScheduleGrid } from "@/features/vzdelavani/components/Schedule";
+import { Agenda, Legend, ScheduleGrid } from "@/features/vzdelavani/components/Schedule";
 import { TemplateDialog } from "@/features/vzdelavani/components/TemplateDialog";
-import { PLAN_STATES, filterCards, matchesPlanFilter, monthSummary, monthTasks } from "@/features/vzdelavani/status";
+import { PLAN_STATES, filterCards, monthSummary, monthTasks } from "@/features/vzdelavani/status";
 import styles from "@/features/vzdelavani/components/schedule.module.css";
 import { formatMonth, isValidMonthKey, monthOf, shiftMonth, toDateKey } from "@/lib/time";
 import { EVENT_TYPES } from "@/lib/types";
@@ -23,7 +23,7 @@ import { requireUser } from "@/server/auth/session";
 import { now } from "@/server/config";
 import { defaultAudience } from "@/server/domain/generation";
 import { isOrganizer } from "@/server/policy";
-import { listMonth, listMonthDrafts, listPeople, loadTemplate, nextEventsFor } from "@/server/services/events";
+import { listMonth, listMonthDrafts, listPeople, loadTemplate } from "@/server/services/events";
 import { loadCalendarStatus } from "@/server/services/calendar-status";
 import { listTasks } from "@/server/services/journey";
 import { listPreviewOptions, resolvePreview } from "@/server/services/preview";
@@ -33,7 +33,7 @@ export const metadata: Metadata = { title: "Plán vzdělávání" };
 
 type SearchParams = Promise<{ mesic?: string; pohled?: string; jako?: string; typ?: string; stav?: string; akce?: string }>;
 
-/** Kolik řádků se v horních blocích vejde bez rozbalení. Oba bloky tak zůstávají podobně vysoké. */
+/** Kolik úkolů se vejde bez rozbalení. */
 const TOP_ROWS = 3;
 
 export default async function PlanPage({ searchParams }: { searchParams: SearchParams }) {
@@ -47,7 +47,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   // Náhled očima skupiny nebo kolegy počítá server stejnými pravidly jako pro skutečného uživatele.
   const preview = await resolvePreview(user, params.jako);
   const managing = organizer && !preview;
-  // Celá stránka, tedy i oba horní bloky, se počítá pro stejného diváka jako harmonogram.
+  // Celá stránka, tedy i úkoly, se počítá pro stejného diváka jako harmonogram.
   const viewer = preview?.viewer ?? user;
   const [monthCards, template, viewerTasks] = await Promise.all([listMonth(viewer, monthKey), loadTemplate(), listTasks(viewer)]);
   const activeSlots = template.filter((s) => s.active);
@@ -66,7 +66,6 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   const state = managing ? PLAN_STATES.find((s) => s === params.stav) : undefined;
   const cards = filterCards(monthCards, monthKey, { type, state });
   const filtering = Boolean(type || state);
-  const upcoming = await nextEventsFor(viewer, TOP_ROWS, filtering ? (card) => matchesPlanFilter(card, { type, state }) : undefined, Boolean(state));
   const syncing = monthCards.some((c) => c.syncStatus === "pending");
   // Čekající pozvánky (nový host ve skupině, obnovené propojení) i zveřejněné akce bez vazby se odešlou
   // samy, jakmile správce otevře Plán. Souběh hlídá zámek u každé vazby v `syncPending`.
@@ -141,7 +140,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
       </p>
     )}
       </div>
-      {calendar && <CalendarStatusLine status={calendar} now={now()} />}
+      {calendar && <CalendarAlert status={calendar} now={now()} />}
       <div className="plan-top">
         <section className="section" aria-labelledby="ceka">
           <h2 id="ceka">
@@ -172,10 +171,6 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
               Filtr skrývá další úkoly ({hiddenTasks}). <Link href={link({ typ: undefined, stav: undefined })}>Zobrazit všechny</Link>
             </p>
           )}
-        </section>
-        <section className="section" aria-labelledby="nejblizsi">
-          <h2 id="nejblizsi">Nejbližší akce</h2>
-          <NextEventsList cards={upcoming} todayKey={todayKey} hrefFor={peekHref} emptyText={filtering ? "Filtru v nejbližších týdnech neodpovídá žádná akce." : preview ? "Tento pohled v nejbližších týdnech žádnou zveřejněnou akci nemá." : undefined} />
         </section>
       </div>
 

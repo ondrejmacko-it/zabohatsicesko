@@ -1,13 +1,29 @@
 import { isLiveWiki } from "@/server/config";
 import Link from "next/link";
-import { NextEventCard } from "@/features/vzdelavani/components/Schedule";
+import { Icon, type IconName } from "@/components/Icon";
+import { NextEventsList } from "@/features/vzdelavani/components/Schedule";
+import { toDateKey } from "@/lib/time";
 import { requireUser } from "@/server/auth/session";
-import { nextEventFor } from "@/server/services/events";
+import { now } from "@/server/config";
+import { canManageUsers } from "@/server/policy";
+import { nextEventsFor } from "@/server/services/events";
 import { ROLE_LABELS } from "@/lib/labels";
+
+/** Kolik nejbližších akcí úvod ukáže. Celý měsíc je v Plánu. */
+const NEXT_ROWS = 3;
+
+type ModuleCard = { href: string; icon: IconName; title: string; text: string };
 
 export default async function HomePage() {
   const user = await requireUser();
-  const next = await nextEventFor(user);
+  const upcoming = await nextEventsFor(user, NEXT_ROWS);
+  // Správa je jen pro toho, kdo smí spravovat lidi. Ostatním karta nic neříká, proto ji nevidí.
+  const modules: ModuleCard[] = [
+    { href: "/vzdelavani/harmonogram", icon: "education", title: "Vzdělávání", text: "Plán akcí, zápisy z proběhlých akcí a témata." },
+    ...(canManageUsers(user)
+      ? [{ href: "/sprava", icon: "settings" as const, title: "Správa systému", text: "Lidé, přístupy, zařízení a propojení Kalendáře." }]
+      : []),
+  ];
   return (
     <>
       <h1>Dobrý den</h1>
@@ -23,22 +39,28 @@ export default async function HomePage() {
           disabled
         />
       )}
-      <section className="section">
-        <h2>Co vás čeká</h2>
-        <div className="stack">
-          <NextEventCard card={next} />
-          <div>
-            {next ? (
-              <Link className="btn btn-primary" href={`/vzdelavani/akce/${encodeURIComponent(next.id)}`}>
-                Otevřít akci
+      <nav className="section" aria-labelledby="moduly">
+        <h2 id="moduly">Moduly</h2>
+        <ul className="module-cards">
+          {modules.map((m) => (
+            <li key={m.href}>
+              <Link className="item-card module-card" href={m.href}>
+                <Icon name={m.icon} />
+                <span>
+                  <span className="item-title">{m.title}</span>
+                  <span className="item-meta">{m.text}</span>
+                </span>
               </Link>
-            ) : (
-              <Link className="btn btn-primary" href="/vzdelavani/harmonogram">
-                Otevřít harmonogram
-              </Link>
-            )}
-          </div>
-        </div>
+            </li>
+          ))}
+        </ul>
+      </nav>
+      <section className="section" aria-labelledby="nejblizsi">
+        <h2 id="nejblizsi">Nejbližší akce</h2>
+        <NextEventsList cards={upcoming} todayKey={toDateKey(now())} />
+        <p className="hint">
+          <Link href="/vzdelavani/harmonogram">Celý plán</Link>
+        </p>
       </section>
     </>
   );
