@@ -17,6 +17,10 @@ tokenu, vazba účtu na stabilní `sub`, role dál z databáze). Také **neově�
 
 | | |
 |---|---|
+Stejný kód běží i jako **ostrá Wiki pro firmu** (`WIKI_MODE=production`): vstup jen účtem Google,
+vlastní prázdná databáze, skutečný čas a Google Kalendář. Rozdělení Production a Preview, proměnné
+a kroky nasazení jsou v [docs/nasazeni.md](docs/nasazeni.md).
+
 | ![Harmonogram](docs/screenshots/harmonogram.png) | ![Detail akce a Kalendář](docs/screenshots/detail-kalendar.png) |
 | ![Zápis z nahrávky](docs/screenshots/zapis.png) | ![Agenda na mobilu](docs/screenshots/agenda-mobil.png) |
 
@@ -65,17 +69,18 @@ Vzor je v `.env.example`. Hodnoty tajemství patří do správce tajemství host
 |---|---|---|
 | `DATABASE_URL` | na hostingu | Postgres (Neon). Bez ní běží lokální PGlite. |
 | `SESSION_SECRET` | na hostingu | Klíč pro podpis session, min. 32 znaků. |
-| `DEMO_ACCESS_CODE` | na hostingu | Přístupový kód do dema, min. 12 znaků. |
+| `DEMO_ACCESS_CODE` | na hostingu ukázky | Přístupový kód do dema, min. 12 znaků. Zvací odkaz `/vstup?pozvanka=<kód>` ho ověří a uloží cookie brány na 7 dní. Ostrá Wiki ho nepotřebuje. |
 | `APP_URL` | ne | Adresa Wiki pro odkaz v pozvánce. |
-| `WIKI_MODE` | ne | `production` = ostrá Wiki pro firmu: odmítne fiktivní role, obnovu ukázkových dat a přepínače simulace, běží ve skutečném čase a bez přihlášení Googlem a Kalendáře se nespustí. Jinak ukázka. |
+| `WIKI_MODE` | ne | `production` = ostrá Wiki pro firmu: odmítne fiktivní role, obnovu ukázkových dat a přepínače simulace, běží ve skutečném čase, prázdnou databázi naplní jen pravidelným týdnem a bez přihlášení Googlem a Kalendáře se nespustí. Jinak ukázka. |
 | `DEMO_CLOCK` | ne | `real` = skutečný čas místo ukázkového. |
 | `SIM_LATENCY_MS` | ne | Zpoždění simulací v ms (výchozí 1200). |
 | `CALENDAR_MODE` | ne | `google-test` zapne testovací režim Google Kalendáře. Jinak simulace. |
-| `CALENDAR_ATTENDEES` | ne | `audience` zve v režimu Googlu skutečné publikum akce (aktivní účty skupiny). Jinak jen `GOOGLE_ALLOWED_ATTENDEES`. |
+| `CALENDAR_ATTENDEES` | ne | `audience` zve v režimu Googlu skutečné publikum akce (aktivní účty skupiny). Jinak jen `GOOGLE_ALLOWED_ATTENDEES`, která je pak povinná. |
 | `GOOGLE_OAUTH_PUBLISHED` | ne | `1`, když je souhlasová obrazovka Googlu zveřejněná. Vypne upozornění na vypršení propojení po 7 dnech (režim Testing). |
 | `GOOGLE_*`, `TOKEN_ENCRYPTION_KEY` | v režimu `google-test` | Viz [docs/google-kalendar.md](docs/google-kalendar.md). |
 | `LOGIN_MODE` | ne | `google-test` přidá přihlášení účtem Google. Jinak jen fiktivní role. |
-| `GOOGLE_LOGIN_ACCOUNTS` | ne | Zaváděcí seznam účtů, ostatní zve a schvaluje Správa systému, viz [docs/google-prihlaseni.md](docs/google-prihlaseni.md). |
+| `GOOGLE_LOGIN_ACCOUNTS` | ne | Zaváděcí seznam účtů pro ukázku, ostatní zve a schvaluje Správa systému, viz [docs/google-prihlaseni.md](docs/google-prihlaseni.md). Ostrá Wiki ho ignoruje. |
+| `BOOTSTRAP_ADMIN_EMAILS` | ne | Adresy oddělené čárkou, jejichž první přihlášení Googlem založí aktivního správce. Slouží ke spuštění prázdné ostré Wiki. |
 
 ## Architektura
 
@@ -148,6 +153,7 @@ Hlavní rozhodnutí:
 
 ## Nasazení
 
-Hosting je Vercel + Neon (region EU). Nastavte `DATABASE_URL`, `SESSION_SECRET` a `DEMO_ACCESS_CODE`
-v nastavení projektu. Schéma a seed se vytvoří při prvním požadavku. Produkční nasazení a sdílení
+Hosting je Vercel + Neon (region EU). Preview běží jako ukázka (`DATABASE_URL`, `SESSION_SECRET`,
+`DEMO_ACCESS_CODE`), Production jako ostrá Wiki s vlastní databází. Schéma a seed (u ostré Wiki jen
+pravidelný týden) se vytvoří při prvním požadavku. Postup je v [docs/nasazeni.md](docs/nasazeni.md). Produkční nasazení a sdílení
 odkazu řídí vlastník repozitáře. Podmínky pro provoz s reálnými daty jsou v `docs/predani.md`.

@@ -22,8 +22,33 @@ import { generationKey } from "@/server/domain/generation";
 export const DEMO_CALENDAR_ID = "zbc-demo-test-calendar";
 export const demoEmail = (userId: string) => `${userId}@example.invalid`;
 
+/** Pravidelný týden ze seedu. Sdílí ho ukázka i ostrá Wiki. */
+async function insertWeeklyTemplate(tx: Executor): Promise<void> {
+  await tx.insert(templateSlots).values(
+    seed.weeklyTemplate.map((slot) => ({
+      orgId: seed.organization,
+      isoWeekday: slot.isoWeekday,
+      startTime: slot.start,
+      endTime: slot.end,
+      types: slot.types,
+      active: true,
+    })),
+  );
+}
+
+/**
+ * Základ ostré Wiki (`WIKI_MODE=production`) nad prázdnou databází: jen pravidelný týden. Skupiny jsou
+ * pevně v kódu (`GROUPS`), takže je zakládat netřeba. Žádné fiktivní osoby, akce ani témata.
+ * Prvního správce založí přihlášení Googlem s adresou z `BOOTSTRAP_ADMIN_EMAILS`.
+ */
+export async function seedProductionBase(tx: Executor): Promise<void> {
+  await insertWeeklyTemplate(tx);
+}
+
 /** Nahraje fiktivní data z demo/seed.json. Volá se jen nad prázdnou databází. */
 export async function seedDatabase(tx: Executor): Promise<void> {
+  // Druhá pojistka vedle `prepareDatabase`: ostrá Wiki fiktivní data nikdy nedostane.
+  if (isLiveWiki()) throw new Error("Fiktivní seed je v ostré Wiki (WIKI_MODE=production) zakázaný.");
   const orgId = seed.organization;
   const nameOf = (id: string) => seed.users.find((u) => u.id === id)?.name ?? id;
 
@@ -38,16 +63,7 @@ export async function seedDatabase(tx: Executor): Promise<void> {
     })),
   );
 
-  await tx.insert(templateSlots).values(
-    seed.weeklyTemplate.map((slot) => ({
-      orgId,
-      isoWeekday: slot.isoWeekday,
-      startTime: slot.start,
-      endTime: slot.end,
-      types: slot.types,
-      active: true,
-    })),
-  );
+  await insertWeeklyTemplate(tx);
 
   await tx.insert(topics).values(seed.topics.map((t) => ({ id: t.id, orgId, name: t.name, audience: t.audience })));
   const interests = seed.topics.flatMap((t) => t.interestedUserIds.map((userId) => ({ topicId: t.id, userId })));

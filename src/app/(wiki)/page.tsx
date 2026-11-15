@@ -1,3 +1,4 @@
+import { isLiveWiki } from "@/server/config";
 import Link from "next/link";
 import { NextEventCard } from "@/features/vzdelavani/components/Schedule";
 import { requireUser } from "@/server/auth/session";
@@ -13,12 +14,15 @@ export default async function HomePage() {
       <p className="page-sub">
         {user.name} · {ROLE_LABELS[user.role]}
       </p>
-      <input
-        className="search-field"
-        placeholder="Co dnes potřebujete vyřešit? Hledejte napříč znalostmi i postupy…"
-        aria-label="Vyhledávání (v ukázce není k dispozici)"
-        disabled
-      />
+      {/* Hledání je kulisa ukázky, ostrá Wiki neaktivní pole neukazuje. */}
+      {!isLiveWiki() && (
+        <input
+          className="search-field"
+          placeholder="Co dnes potřebujete vyřešit? Hledejte napříč znalostmi i postupy…"
+          aria-label="Vyhledávání (v ukázce není k dispozici)"
+          disabled
+        />
+      )}
       <section className="section">
         <h2>Co vás čeká</h2>
         <div className="stack">

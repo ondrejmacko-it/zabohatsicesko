@@ -6,9 +6,9 @@ testovací účty a OAuth klienta. Výchozí režim dema zůstává vstup kódem
 
 ## Jak to funguje
 
-- `LOGIN_MODE=google-test` přidá na vstupní stránku tlačítko „Přihlásit se účtem Google“. Je to
-  **druhý režim vedle fiktivních rolí**, vstup kódem zůstává. Neúplná konfigurace přihlášení nezapne
-  a trasy `/api/google/prihlaseni` vrací 404.
+- `LOGIN_MODE=google-test` zapne přihlášení účtem Google. Tlačítko je na vstupní stránce ostré Wiki
+  jako jediný vstup, ukázka ho nenabízí. Neúplná konfigurace přihlášení nezapne a trasy
+  `/api/google/prihlaseni` vrací 404.
 - Tok OpenID Connect s autorizačním kódem, PKCE, stavem a nonce. Wiki žádá jen `openid email profile` (jméno je jen popisek pro správce).
   Žádný token Googlu se neukládá, po ověření identity se zahodí.
 - ID token se ověřuje na serveru (část 02 zadání): podpis veřejným klíčem Googlu (pevně RS256),
@@ -17,7 +17,11 @@ testovací účty a OAuth klienta. Výchozí režim dema zůstává vstup kódem
 - Kdo smí dovnitř, určuje **Správa systému** ve Wiki (`/sprava`, jen správce):
   pozvánka na adresu Google, nebo schválení žádosti, která vznikne po prvním přihlášení neznámého účtu
   (nejvýš 20 čekajících). Roli správce přiděluje a správcům účty mění jen jiný správce, nikdo nemění sám sebe.
-- `GOOGLE_LOGIN_ACCOUNTS` je jen volitelný zaváděcí seznam (adresa → uživatel, například fiktivní role).
+- Od 15. 11. se přihlášení Googlem nabízí jen v ostré Wiki (`WIKI_MODE=production`). Ukázka pouští
+  dovnitř zvacím odkazem a fiktivními rolemi, viz [nasazeni.md](nasazeni.md).
+- `BOOTSTRAP_ADMIN_EMAILS`: první přihlášení adresy z tohoto seznamu založí aktivního správce
+  (`origin: invite`, skupina Všichni). Platí jen pro adresu, která ve Wiki ještě účet nemá.
+- `GOOGLE_LOGIN_ACCOUNTS` je jen volitelný zaváděcí seznam (adresa → uživatel, například fiktivní role). Ostrá Wiki ho ignoruje.
 - Při prvním přihlášení se účet sváže se stabilním `sub` (tabulka `user_identities`). Pak rozhoduje
   `sub`, ne adresa. Uživatel se svázaným účtem nedostane druhý účet Google.
 - Odebrání přístupu ve Správě, smazání vazby nebo vypnutí režimu ukončí i běžící session, ne až po

@@ -4,15 +4,23 @@ import { useActionState } from "react";
 import type { Persona } from "@/server/auth/personas";
 import { enterDemo, type GateState } from "./actions";
 
-export function GateForm({ personas, needsCode }: { personas: Persona[]; needsCode: boolean }) {
+/** `local` bez brány (vývoj), `invited` brána prošla zvacím odkazem, `code` čeká na ruční kód. */
+export type GateMode = "local" | "invited" | "code";
+
+export function GateForm({ personas, gate }: { personas: Persona[]; gate: GateMode }) {
   const [state, action, pending] = useActionState<GateState, FormData>(enterDemo, { error: null });
   return (
     <form action={action} className="stack gate-form">
-      {needsCode && (
+      {gate === "invited" && (
+        <p className="notice" role="status">
+          Pozvánka je ověřená. Vyberte roli, se kterou chcete ukázku projít.
+        </p>
+      )}
+      {gate === "code" && (
         <label className="field">
           <span className="field-label">Přístupový kód</span>
           <input className="input" name="code" type="password" autoComplete="off" required />
-          <span className="field-hint">Kód jste dostali spolu s odkazem na ukázku.</span>
+          <span className="field-hint">Kód jste dostali spolu s odkazem na ukázku. Zvací odkaz ho vyplní sám.</span>
         </label>
       )}
       <fieldset className="persona-list">
@@ -37,7 +45,7 @@ export function GateForm({ personas, needsCode }: { personas: Persona[]; needsCo
           {pending ? "Ověřuji…" : "Vstoupit do ukázky"}
         </button>
       </div>
-      {!needsCode && <p className="small muted">Lokální režim bez přístupové brány. Na hostingu je kód povinný.</p>}
+      {gate === "local" && <p className="small muted">Lokální režim bez přístupové brány. Na hostingu je kód povinný.</p>}
     </form>
   );
 }
