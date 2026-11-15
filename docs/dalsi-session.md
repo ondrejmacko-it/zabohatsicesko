@@ -39,7 +39,7 @@ Platí od dalšího požadavku. Můžeš ho provést i ty přes Neon MCP, ale je
 
 **Stav 15. 11. noc 4 (poslední):** PR 6 dokončený jako draft z větve `claude/pristupnost-u03-u08` (base `main`):
 U03, U04 (kotva `#zadosti`), U05, U07 (menu jako disclosure), U08 (souhrn chyb, fokus, pole podle šířky formuláře,
-320×256). Testy `e2e/pristupnost.spec.ts` a `tests/journey.test.ts`. Odkaz na PR je v popisu větve na GitHubu.
+320×256). Testy `e2e/pristupnost.spec.ts` a `tests/journey.test.ts`. Draft PR [#38](https://github.com/ondrejmacko-it/zabohatsicesko/pull/38).
 **PR 7 rozpracovaný** na větvi `claude/pripravit-mesic` (z `main`, bez PR, commit `b895da1`): hotová jen serverová
 část `publishDrafts` (ruční datum v témže měsíci a v budoucnu, publikum, `{ publish: false }` = uložit bez
 zveřejnění, chyba `outside_month`). Zbývá: `publishMonthAction` (pole `date-<id>`, `aud-<id>`, `intent=save`),
