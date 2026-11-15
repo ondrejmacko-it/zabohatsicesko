@@ -2,10 +2,11 @@ import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, test } from "vitest";
 import { syncEvent } from "@/server/calendar/sync";
 import { getDb } from "@/server/db/client";
-import { calendarLinks, minutes, simCalendarEvents } from "@/server/db/schema";
+import { calendarLinks, minutes, simCalendarEvents, users } from "@/server/db/schema";
+import { config } from "@/server/config";
 import { listPublishedMinutes, listTasks } from "@/server/services/journey";
 import { processTranscriptionJob, publishMinutes, uploadRecording } from "@/server/services/recordings";
-import { PAST_FP, asFile, fixtureWav, lead, organizer, outsider, participant, resetDemo } from "./helpers";
+import { PAST_FP, admin, asFile, fixtureWav, lead, organizer, outsider, participant, resetDemo } from "./helpers";
 
 beforeEach(resetDemo);
 
@@ -52,5 +53,14 @@ describe("Moje cesta a Zápisy", () => {
     await db.update(calendarLinks).set({ syncStatus: "attention", errorCode: "calendar_revoked" }).where(eq(calendarLinks.eventId, any!.eventId));
     expect((await listTasks(organizer)).map((t) => t.action)).toContain("Vyřešit pozvánku");
     expect((await listTasks(participant)).map((t) => t.action)).not.toContain("Vyřešit pozvánku");
+  });
+});
+
+describe("úkol žádostí o přístup (U04)", () => {
+  test("vede přímo na čekající žádosti ve Správě", async () => {
+    await (await getDb()).insert(users).values({ id: "zadost-1", orgId: config.orgId, name: "Nová Kolegyně", email: "nova@example.com", role: "member", groups: [], status: "pending", origin: "request" });
+    const task = (await listTasks(admin)).find((t) => t.key === "zadosti");
+    expect(task).toMatchObject({ href: "/sprava#zadosti", action: "Projít žádosti" });
+    expect((await listTasks(participant)).some((t) => t.key === "zadosti")).toBe(false);
   });
 });

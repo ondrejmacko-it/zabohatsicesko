@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { startTransition, useActionState, useEffect, useState } from "react";
+import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 import { ActionMessage } from "@/components/ActionForm";
 import { Icon } from "@/components/Icon";
 import { Modal } from "@/components/Modal";
@@ -14,6 +14,21 @@ import type { InviteRecipients } from "@/server/services/calendar-status";
 import type { EventFormValues } from "@/server/services/detail";
 import type { ChangeImpact } from "@/server/services/impact";
 import { previewImpactAction, saveEventAction, type ActionResult } from "../actions";
+
+type FormField = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
+
+function invalidFields(form: HTMLFormElement): FormField[] {
+  return Array.from(form.elements).filter(
+    (element): element is FormField =>
+      (element instanceof HTMLInputElement || element instanceof HTMLSelectElement || element instanceof HTMLTextAreaElement) && !element.validity.valid,
+  );
+}
+
+/** Název pole pro souhrn chyb: popisek pole, jinak jeho přístupný název. */
+function fieldName(field: FormField): string {
+  const label = field.closest(".field, .check")?.querySelector(".field-label, span")?.textContent;
+  return (label || field.getAttribute("aria-label") || field.name).trim();
+}
 
 export type Person = { id: string; name: string };
 export type TopicOption = { name: string; audience: string; reason: string; interestCount: number };
@@ -81,6 +96,9 @@ function EventForm({ mode, id, revision, initial, published, people, topics, inv
   const [impact, setImpact] = useState<{ key: string; data: ChangeImpact } | null>(null);
   const [previewError, setPreviewError] = useState<ActionResult | null>(null);
   const [checking, setChecking] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+  // Souhrn chyb z kontroly prohlížeče: názvy polí, která je potřeba opravit (U08).
+  const [invalid, setInvalid] = useState<string[]>([]);
   const [state, action, pending] = useActionState(async (prev: ActionResult | null, formData: FormData) => {
     const result = await saveEventAction(prev, formData);
     if (result.ok) {
@@ -106,6 +124,7 @@ function EventForm({ mode, id, revision, initial, published, people, topics, inv
     event.preventDefault();
     const formData = new FormData(event.currentTarget, (event.nativeEvent as SubmitEvent).submitter);
     setPreviewError(null);
+    setInvalid([]);
     if (formData.get("intent") === "publish" && significant && !confirmed) {
       setChecking(true);
       void previewImpactAction(formData)
@@ -147,6 +166,17 @@ function EventForm({ mode, id, revision, initial, published, people, topics, inv
     </label>
   );
 
+  // Neplatné pole může být ve sbalených „Dalších údajích“. Ty se otevřou, po vykreslení se ukáže souhrn
+  // a fokus skočí na první chybné pole (prohlížeč by na skryté pole fokus dát nemohl).
+  const onInvalid = () => {
+    setMoreOpen(true);
+    requestAnimationFrame(() => {
+      const fields = formRef.current ? invalidFields(formRef.current) : [];
+      setInvalid([...new Set(fields.map(fieldName))]);
+      fields[0]?.focus();
+    });
+  };
+
   const requestClose = () => (dirty && !pending ? setConfirmDiscard(true) : onClose());
 
   return (
@@ -164,7 +194,12 @@ function EventForm({ mode, id, revision, initial, published, people, topics, inv
           </div>
         </div>
       ) : (
-        <form onSubmit={submit} onInvalidCapture={() => setMoreOpen(true)} className="stack">
+        <form ref={formRef} onSubmit={submit} onInvalidCapture={onInvalid} className="stack event-form">
+          {invalid.length > 0 && (
+            <div className="notice notice-danger" role="alert">
+              <strong>Akci zatím nejde uložit.</strong> Doplňte nebo opravte: {invalid.join(", ")}.
+            </div>
+          )}
           {confirmed && <input type="hidden" name="confirmToken" value={confirmed.token} />}
           {id && <input type="hidden" name="id" value={id} />}
           {revision !== undefined && <input type="hidden" name="revision" value={revision} />}

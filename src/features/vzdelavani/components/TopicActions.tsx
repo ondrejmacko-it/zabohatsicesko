@@ -2,6 +2,7 @@
 
 import { useActionState, useState, useTransition } from "react";
 import { ActionForm, ActionMessage } from "@/components/ActionForm";
+import { Icon } from "@/components/Icon";
 import { Menu } from "@/components/Menu";
 import { Modal } from "@/components/Modal";
 import { submitKeepingValues } from "@/features/shared/keep-values";
@@ -9,8 +10,11 @@ import { GROUP_LABELS } from "@/lib/labels";
 import type { Group } from "@/lib/types";
 import { archiveTopicAction, proposeTopicAction, toggleInterestAction, updateTopicAction, type ActionResult } from "../actions";
 
-/** Přepínač zájmu. Jeden uživatel = nejvýš jeden zájem o téma (hlídá server). */
-export function InterestButton({ topicId, interested, topicName }: { topicId: string; interested: boolean; topicName: string }) {
+/**
+ * Přepínač zájmu. Jeden uživatel = nejvýš jeden zájem o téma (hlídá server). Viditelný text i přístupný název
+ * jsou stále „Mám zájem“, stav nese `aria-pressed` (a fajfka), název tématu se čte jako popis z nadpisu karty.
+ */
+export function InterestButton({ topicId, interested, titleId }: { topicId: string; interested: boolean; titleId: string }) {
   const [state, action, pending] = useActionState(toggleInterestAction, null);
   return (
     <form action={action}>
@@ -20,10 +24,11 @@ export function InterestButton({ topicId, interested, topicName }: { topicId: st
         type="submit"
         className={interested ? "btn btn-small interest-on" : "btn btn-small"}
         aria-pressed={interested}
-        aria-label={`${interested ? "Zájem přidán" : "Mám zájem"}: ${topicName}`}
+        aria-describedby={titleId}
         disabled={pending}
       >
-        {interested ? "Zájem přidán" : "Mám zájem"}
+        {interested && <Icon name="check" />}
+        Mám zájem
       </button>
       {state && !state.ok && <ActionMessage state={state} />}
     </form>

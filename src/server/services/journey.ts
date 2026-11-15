@@ -202,7 +202,7 @@ export async function listTasks(viewer: Viewer): Promise<JourneyTask[]> {
   if (canManageUsers(viewer)) {
     const requests = await pendingRequestCount(db, viewer);
     if (requests > 0) {
-      tasks.push({ key: "zadosti", title: `Žádosti o přístup: ${requests}`, detail: "Noví kolegové čekají na přidělení role a skupin.", href: "/sprava", action: "Otevřít Správu" });
+      tasks.push({ key: "zadosti", title: `Žádosti o přístup: ${requests}`, detail: "Noví kolegové čekají na přidělení role a skupin.", href: "/sprava#zadosti", action: "Projít žádosti" });
     }
   }
   return tasks;

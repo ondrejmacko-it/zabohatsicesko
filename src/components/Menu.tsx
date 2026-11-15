@@ -17,10 +17,12 @@ const GAP = 6;
 const EDGE = 8;
 
 /**
- * Rozbalovací menu. Seznam je ukotvený k oknu prohlížeče (position: fixed), takže ho neořízne rolovaná část
- * dialogu ani tabulka, a otevře se nahoru, když se dolů nevejde. Zavírá se klikem mimo, klávesou Esc,
- * posunem stránky (když tlačítko ujede) a volbou položky. Položky zůstávají v dokumentu i po zavření: okna otevřená z menu
- * (Upravit, Zrušit) si tak drží stav.
+ * Rozbalovací menu podle vzoru disclosure: tlačítko s `aria-expanded` a za ním obyčejný seznam odkazů a tlačítek,
+ * kterým se prochází běžným Tab (proto bez `aria-haspopup` a bez šipek). Odchod fokusu mimo menu ho zavře.
+ * Seznam je ukotvený k oknu prohlížeče (position: fixed), takže ho neořízne rolovaná část dialogu ani tabulka,
+ * a otevře se nahoru, když se dolů nevejde. Zavírá se klikem mimo, klávesou Esc, posunem stránky (když tlačítko
+ * ujede) a volbou položky. Položky zůstávají v dokumentu i po zavření: okna otevřená z menu (Upravit, Zrušit)
+ * si tak drží stav.
  */
 export function Menu({ label, children, small, iconOnly, className }: Props) {
   const [open, setOpen] = useState(false);
@@ -45,6 +47,7 @@ export function Menu({ label, children, small, iconOnly, className }: Props) {
     const close = () => setOpen(false);
     // Posun stránky menu zavře, jen když tlačítko opravdu ujelo. Událost scroll z posunu těsně před
     // klepnutím (telefon, posun k tlačítku) přijde až po otevření a menu by hned zase zavřela.
+    const element = root.current;
     const openedAt = trigger.current?.getBoundingClientRect().top ?? 0;
     const onPointer = (event: PointerEvent) => {
       if (!root.current?.contains(event.target as Node)) close();
@@ -57,6 +60,12 @@ export function Menu({ label, children, small, iconOnly, className }: Props) {
       close();
       trigger.current?.focus();
     };
+    // Tab z poslední položky (nebo Shift+Tab z tlačítka) menu zavře. Fokus do okna otevřeného z menu
+    // menu také zavře, okno si stav drží a po zavření vrátí fokus na tlačítko menu.
+    const onFocusOut = (event: FocusEvent) => {
+      const next = event.relatedTarget as Node | null;
+      if (next && !root.current?.contains(next)) close();
+    };
     const onScroll = (event: Event) => {
       if (list.current?.contains(event.target as Node)) return;
       const top = trigger.current?.getBoundingClientRect().top ?? openedAt;
@@ -64,11 +73,13 @@ export function Menu({ label, children, small, iconOnly, className }: Props) {
     };
     document.addEventListener("pointerdown", onPointer, true);
     document.addEventListener("keydown", onKey, true);
+    element?.addEventListener("focusout", onFocusOut);
     window.addEventListener("scroll", onScroll, true);
     window.addEventListener("resize", close);
     return () => {
       document.removeEventListener("pointerdown", onPointer, true);
       document.removeEventListener("keydown", onKey, true);
+      element?.removeEventListener("focusout", onFocusOut);
       window.removeEventListener("scroll", onScroll, true);
       window.removeEventListener("resize", close);
     };
@@ -80,7 +91,6 @@ export function Menu({ label, children, small, iconOnly, className }: Props) {
         ref={trigger}
         type="button"
         className={`btn${small ? " btn-small" : ""}${iconOnly ? " btn-icon" : ""}`}
-        aria-haspopup="true"
         aria-expanded={open}
         aria-controls={listId}
         aria-label={iconOnly ? label : undefined}

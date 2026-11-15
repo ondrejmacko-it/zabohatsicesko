@@ -8,6 +8,7 @@ const PATHS = {
   calendar: "M4 6.5A1.5 1.5 0 0 1 5.5 5h13A1.5 1.5 0 0 1 20 6.5v12a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5zM4 10h16M8 3v4M16 3v4",
   pencil: "M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17zM14.5 7.5l3 3",
   plus: "M12 5v14M5 12h14",
+  check: "M5 12.5l4.5 4.5L19 7.5",
   chevronLeft: "M15 6l-6 6 6 6",
   chevronRight: "M9 6l6 6-6 6",
   more: "M5 12h.01M12 12h.01M19 12h.01",
