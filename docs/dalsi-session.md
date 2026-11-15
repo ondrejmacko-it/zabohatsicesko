@@ -6,23 +6,36 @@ Zkopíruj text níže jako první zprávu nové relace Claude Code (repo `ondrej
 
 Pokračuj na demu modulu Vzdělávání (repo `ondrejmacko-it/zabohatsicesko`). Nečti znovu celé zadání ani celý kód.
 Kontext máš v `docs/dalsi-session.md` a `README.md`, pravidla v `CLAUDE.md`. Tykej mi, piš přátelsky.
-Schválený plán (15. 11.) je série PR podle auditu z 15. 11. a oddělení production (firma, skutečné účty Google,
-Kalendář, prázdná DB) od preview (ukázka, fiktivní role, zvací odkaz). PR 1 je sloučený, **PR 2** je draft
-[#28](https://github.com/ondrejmacko-it/zabohatsicesko/pull/28) (větev `claude/produkce-a-zvaci-odkaz`).
+Plán z 15. 11.: série PR podle auditu z 15. 11. PR 1 a 2 jsou sloučené, env Vercelu pro Production i Preview
+jsou nastavené. **PR 3** (A01, A02, A04, A05, A06, A08) je draft na větvi `claude/bezpecne-pozvanky-a-dopad`.
 
-* Pokud je PR 2 sloučený a potvrdím to: nastav přes API Vercelu env Production (nesecretní `WIKI_MODE=production`,
-  `LOGIN_MODE=google-test`, `CALENDAR_MODE=google-test`, `CALENDAR_ATTENDEES=audience`, `APP_URL`), Preview
-  (`WIKI_MODE=demo`, Kalendář na simulaci, odebrat `LOGIN_MODE`, `CALENDAR_ATTENDEES` a 16 starých `APP_URL`
-  na větvích) a založ Neon projekt `zbc-wiki-produkce` (EU). Tajemství, `BOOTSTRAP_ADMIN_EMAILS`, ochranu Vercelu,
-  ignored build step a Google konzoli dělám já, kroky jsou v `docs/nasazeni.md`.
-* Pak **PR 3** bezpečné pozvánky a dopad (A01, A02, A04, A05, A06, A08), na nové větvi z `main`.
+* Pokud je PR 3 sloučený a potvrdím to, založ z `main` větev pro **PR 4**: stavy nahrávek (A03) a 69 textů
+  z `textove-upravy.csv` (T01–T04). Audit ZIP `ZBC_Audit_balicek_2026-11-15.zip` si vyžádej znovu.
+* Pokud PR 3 ještě není sloučený, projdi se mnou připomínky k němu.
+* Já dělám: databázi Production ve Vercelu (Storage, Neon, jen Production), tajemství, `BOOTSTRAP_ADMIN_EMAILS`,
+  ochranu Vercelu, ignored build step, Google konzoli (kroky v `docs/nasazeni.md`). Až přepnu OAuth na
+  „In production“, nastav `GOOGLE_OAUTH_PUBLISHED=1`.
 
-Další PR po jednom na relaci: 4 stavy nahrávek a 69 textů z `textove-upravy.csv` (A03, T01–T04),
-5 Plán, Správa a přístupnost (U01–U09), 6 Připravit měsíc. Audit (ZIP `ZBC_Audit_balicek_2026-11-15.zip`)
-není v repu, pro PR 3 až 5 si ho vyžádej znovu.
+Další PR po jednom na relaci: 5 Plán, Správa a přístupnost (U01–U09), 6 Připravit měsíc.
 Na `main` nepushuj, merge dělám já. Respektuj limit kontextu.
 
 ---
+
+## Stav 15. 11. 2026 noc (větev `claude/bezpecne-pozvanky-a-dopad`, draft PR 3 do `main`)
+* **Vercel (API):** Production `WIKI_MODE=production`, `LOGIN_MODE`/`CALENDAR_MODE=google-test`,
+  `CALENDAR_ATTENDEES=audience`, `APP_URL=https://zbc-vzdelavani-demo.vercel.app`. Preview `WIKI_MODE=demo`,
+  `CALENDAR_MODE=simulation`, odebrané `LOGIN_MODE`, všechny `CALENDAR_ATTENDEES`, 9 `APP_URL` a 2 `GATE_MODE`
+  na větvích. Obecná `APP_URL` Preview zůstala.
+* **Neon:** založení `zbc-wiki-produkce` přes API odmítnuto (organizace spravovaná Vercelem). Udělá uživatel
+  ve Vercelu Storage, postup v `docs/nasazeni.md`.
+* **A01** `looksLikeSameInvite` (sync.ts): cizí pozvánka ten den do 3 h nebo se stejným názvem zastaví automatiku,
+  vlastní pozvánky Wiki (`createdByWiki`) ne. **A05** `mergeDescription`: Wiki mění jen své řádky s adresou akce
+  (i HTML s `<br>`). **A02** token dopadu obsahuje otisk adres publika, `ImpactNotConfirmed.stale`. Fronta dál
+  podle publika (rozhodnuto). **A04** `publishDrafts(..., confirmedIncomplete)` a zaškrtávátko s počtem v dialogu.
+  **A06** `CancelImpact.verified/hasInvite`, dialog „Zkusit znovu“ a vědomé zrušení, server ověří znovu.
+  **A08** `SyncPanel.unlinkedReason`, jednotný text v Plánu, vstup ukázky podle `attendeeSource`.
+* Ověřeno: lint, typy, 153/153 testů, build. V prohlížeči neprocházeno (dialogy zrušení a hromadného zveřejnění).
+  Naživo proti Googlu ne.
 
 ## Stav 15. 11. 2026 večer (větev `claude/produkce-a-zvaci-odkaz`, draft PR #28 do `main`)
 * **Ostrá Wiki:** prázdná DB dostane jen 4 sloty pravidelného týdne (`seedProductionBase`, `prepareDatabase`
