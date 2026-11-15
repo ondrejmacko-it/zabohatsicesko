@@ -41,7 +41,7 @@ Platí od dalšího požadavku. Můžeš ho provést i ty přes Neon MCP, ale je
 (Playwright 1.63.0 nad produkčním buildem, ukázka + ostrá Wiki s falešnými Google hodnotami, 750/750 na Windows 1280/1920,
 macOS 1440/1512 Retina s UA Safari/Chrome, telefony 390/360/320; WebKit v prostředí není, `E2E_WEBKIT=1` na Macu).
 Opraveno: CSP bez nonce na `/soukromi` a 404 (byla to skutečná chyba, ne http), menu na telefonu, fokus z okna z menu,
-Integrace 320 px. Ruční postup pro Mac: `docs/overeni-mac.md`. Draft PR 6 z `claude/audit-pristupnost-u02-u08` (na #35):
+Integrace 320 px. Ruční postup pro Mac: `docs/overeni-mac.md`. Draft PR 6 [#36](https://github.com/ondrejmacko-it/zabohatsicesko/pull/36) z `claude/audit-pristupnost-u02-u08` (na #35):
 zatím jen U02. Base #34 ukazuje na sloučenou #33, po merge přepnout base na `main`.
 
 **Další krok:** dokončit PR 6 (U03, U04, U05, zbytek U07, U08), pak PR 7 (G6) a PR 8 podle `docs/audit-ukoly.md`.
