@@ -15,7 +15,27 @@ Kalendář v ostré Wiki vznikl 15. 11. v režimu Testing a **vyprší 22. 11. k
 nepřipojí znovu (`/vzdelavani/integrace` → „Připojit znovu nebo jiným účtem“). Ověř v Neonu
 (`zbc-wiki-produkce`, `SELECT connected_at FROM integration_credentials`), že je datum novější než 15. 11.
 
-**PR 4b (tato relace): úklid ostrého UI** (rozhodnuto 15. 11., zvát smí jen správce):
+**PR 4b (tato relace): nejdřív opravy podle uživatele (15. 11. noc, PR #31 nasazený), pak úklid UI.**
+1. *Kalendář se musí připojit sám při přihlášení správce, hned plně funkční.* Uživatel u Googlu smazal
+   všechna oprávnění. Wiki dál drží zneplatněný obnovovací token, `needsCalendarConnection` kontroluje jen
+   existenci záznamu, takže přihlášení o souhlas nepožádá a synchronizace hlásí „dočasně nedostupný“ (akce
+   „Kalendář čeká na opravu“). Opravit: `invalid_grant` při obnově tokenu = odpojeno (smazat credential,
+   audit), ne nedostupnost. Přihlášení správce bez platného propojení vždy požádá o `calendar.events`
+   (ověřit platnost, ne jen existenci). Po uložení `resumeAfterReconnect` a odeslat frontu. Test na revokovaný token.
+2. *Zařízení nevyprší, dokud je člověk ve Wiki.* Zrušit 30denní vypršení (`DEVICE_IDLE_DAYS`), zařízení platí
+   do odebrání přístupu nebo ručního zrušení. Přihlášení Googlem na svém zařízení stačí, nový odkaz ne.
+3. *Jeden hlavní správce s trvalým přihlášením:* adresa z `BOOTSTRAP_ADMIN_EMAILS` (jen jedna) se přihlásí
+   vždy (`/vstup?spravce=1` na kterémkoli zařízení), jeho účet nejde odebrat ani mu zrušit zařízení, u
+   vlastního účtu žádné menu (dnes jde odhlásit sám sebe, zneplatnit a tvořit si odkaz, to nechce).
+   Doporučit uživateli 2FA / klíč na účtu Google (bezpečnost stojí na Google účtu).
+4. *Správa, texty:* „Odhlásit zařízení“ vedle „Odebrat přístup“ mate. Návrh: jen „Odebrat přístup…“
+   (zablokuje vše) a u zařízení „Zrušit toto zařízení…“ s jednou větou dopadu. Datum „ne 22. 11. 2026“ → „22. 11.“.
+   Okno Pozvat člověka po vytvoření odkazu hlásí „Máte rozepsané změny“: po úspěchu nehlídat rozepsání.
+5. Pak původní úklid: úvodní karty, záložky Plán | Zápisy | Témata, z Plánu pryč řádek Kalendáře s ID,
+   Správa 320/360 px (U01). Potom PR 5–8.
+
+**Původní PR 4b (posunuto do bodu 5):**
+
 1. Úvod: karty modulů (Vzdělávání s „Čeká na vás N“ nebo nejbližším termínem, pro správce Správa systému
    s počtem čekajících odkazů), pod nimi Nejbližší akce (3).
 2. Vzdělávání: záložky Plán | Zápisy | Témata (U09, `/vzdelavani/temata` je dnes přesměrování, kotva `#temata`
