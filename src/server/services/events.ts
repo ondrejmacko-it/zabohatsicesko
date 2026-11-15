@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { and, asc, eq, gt, gte, inArray, isNull, lt, ne, or, sql } from "drizzle-orm";
 import { EXTRAORDINARY_TYPES } from "@/lib/labels";
-import { addDays, fromPragueLocal, isoWeekday, monthRange, toDateKey } from "@/lib/time";
+import { addDays, fromPragueLocal, isoWeekday, monthOf, monthRange, toDateKey, toTimeKey } from "@/lib/time";
 import type { EventType, Group, PlanStatus, SyncStatus } from "@/lib/types";
 import { audit } from "@/server/audit";
 import { targetCalendarId } from "@/server/calendar/target";
@@ -495,7 +495,8 @@ export async function listMonthDrafts(viewer: Viewer, monthKey: string): Promise
   };
 }
 
-export type DraftPublish = { id: string; revision: number; topicTitle: string | null; leadId: string | null };
+/** Úprava návrhu v okně Připravit měsíc. Datum (místní, bez času) a publikum jsou volitelné. */
+export type DraftPublish = { id: string; revision: number; topicTitle: string | null; leadId: string | null; date?: string; audience?: Group };
 
 /** Hromadné zveřejnění obsahuje neúplné termíny, jejichž počet správce nepotvrdil. */
 export class IncompleteNotConfirmed extends Error {
@@ -505,15 +506,32 @@ export class IncompleteNotConfirmed extends Error {
 }
 
 /**
- * Zveřejní vybrané návrhy měsíce v jedné transakci, volitelně s doplněným tématem a vedoucím.
- * Projde jen budoucí, nikdy nezveřejněný návrh z daného měsíce ve verzi, kterou správce viděl.
- * Cokoli jiného (návrh změny, zrušená akce, mezitím upravený návrh) se přeskočí a nezmění.
+ * Nový začátek a konec návrhu po ručně změněném datu: stejné místní časy a stejný počet dní. Termín musí
+ * zůstat v budoucnu a v měsíci, který správce připravuje.
+ */
+function movedTimes(current: EventRow, date: string | undefined, monthKey: string): { startsAt: Date; endsAt: Date } | null {
+  const from = toDateKey(current.startsAt);
+  if (!date || date === from) return null;
+  if (monthOf(date) !== monthKey) throw new DomainError("outside_month");
+  const span = Math.round((Date.parse(toDateKey(current.endsAt)) - Date.parse(from)) / 86_400_000);
+  const startsAt = fromPragueLocal(date, toTimeKey(current.startsAt));
+  const endsAt = fromPragueLocal(addDays(date, span), toTimeKey(current.endsAt));
+  if (startsAt <= now()) throw new DomainError("outside_month");
+  return { startsAt, endsAt };
+}
+
+/**
+ * Uloží úpravy vybraných návrhů měsíce v jedné transakci (téma, vedoucí, datum, publikum) a s `publish`
+ * je rovnou zveřejní. Projde jen budoucí, nikdy nezveřejněný návrh z daného měsíce ve verzi, kterou správce
+ * viděl. Cokoli jiného (návrh změny, zrušená akce, mezitím upravený návrh) se přeskočí a nezmění. Uložení
+ * bez zveřejnění nic neodesílá.
  */
 export async function publishDrafts(
   viewer: Viewer,
   monthKey: string,
   items: DraftPublish[],
   confirmedIncomplete = 0,
+  { publish = true }: { publish?: boolean } = {},
 ): Promise<{ published: string[]; skipped: number }> {
   requireOrganizer(viewer);
   const db = await getDb();
@@ -528,11 +546,21 @@ export async function publishDrafts(
       ),
     );
     const incomplete = items.filter((item) => types.has(item.id) && types.get(item.id) !== "holiday" && (!item.topicTitle || !item.leadId)).length;
-    if (incomplete > 0 && incomplete !== confirmedIncomplete) throw new IncompleteNotConfirmed(incomplete);
+    if (publish && incomplete > 0 && incomplete !== confirmedIncomplete) throw new IncompleteNotConfirmed(incomplete);
     const published: string[] = [];
+    let skipped = 0;
     for (const item of items) {
       const [current] = await tx.select().from(events).where(and(monthDraftFilter(monthKey), eq(events.id, item.id))).limit(1);
-      if (!current || current.revision !== item.revision) continue;
+      if (!current || current.revision !== item.revision) {
+        skipped++;
+        continue;
+      }
+      const moved = movedTimes(current, item.date, monthKey);
+      const audience = item.audience ?? (current.audience as Group);
+      const edited =
+        moved !== null || audience !== current.audience || item.topicTitle !== current.topicTitle || item.leadId !== current.leadId;
+      // Uložení bez zveřejnění nezakládá novou verzi, když se nic nezměnilo.
+      if (!publish && !edited) continue;
       const topicId = item.topicTitle === current.topicTitle ? current.topicId : await topicIdByName(tx, item.topicTitle);
       const [row] = await tx
         .update(events)
@@ -540,21 +568,30 @@ export async function publishDrafts(
           topicTitle: item.topicTitle,
           topicId,
           leadId: item.leadId,
-          status: "published",
+          audience,
+          ...(moved ?? {}),
+          ...(publish ? { status: "published" as const } : {}),
           revision: sql`${events.revision} + 1`,
           updatedBy: viewer.id,
           updatedAt: new Date(),
         })
         .where(and(eq(events.id, item.id), eq(events.revision, item.revision)))
         .returning();
-      if (!row) continue;
+      if (!row) {
+        skipped++;
+        continue;
+      }
       await tx.insert(eventRevisions).values({ eventId: row.id, revision: row.revision, action: "save", snapshot: snapshotOf(row), actorId: viewer.id });
-      await publishInTx(tx, row, viewer.id, "publish");
-      await audit(tx, viewer.id, "event.publish", "event", row.id);
+      if (publish) {
+        await publishInTx(tx, row, viewer.id, "publish");
+        await audit(tx, viewer.id, "event.publish", "event", row.id);
+      } else {
+        await audit(tx, viewer.id, "event.save", "event", row.id);
+      }
       published.push(row.id);
     }
-    if (published.length) await audit(tx, viewer.id, "plan.publish_month", "month", monthKey);
-    return { published, skipped: items.length - published.length };
+    if (published.length && publish) await audit(tx, viewer.id, "plan.publish_month", "month", monthKey);
+    return { published, skipped };
   });
 }
 

@@ -21,7 +21,8 @@ export type DomainErrorCode =
   | "file_type"
   | "file_corrupt"
   | "file_too_long"
-  | "not_past";
+  | "not_past"
+  | "outside_month";
 
 export const DOMAIN_ERROR_MESSAGES: Record<DomainErrorCode, string> = {
   forbidden: "K této akci nemáte oprávnění.",
@@ -38,5 +39,6 @@ export const DOMAIN_ERROR_MESSAGES: Record<DomainErrorCode, string> = {
   file_type: "Nepodporovaný formát. Nahrajte WAV, MP3 nebo M4A.",
   file_corrupt: "Soubor se nepodařilo přečíst jako zvukovou nahrávku.",
   file_too_long: "Nahrávka je delší než 15 minut, což je limit ukázky.",
+  outside_month: "Datum návrhu musí být v budoucnu a ve stejném měsíci.",
   not_past: "Nahrávku lze přidat až po skončení zveřejněné akce.",
 };
