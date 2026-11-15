@@ -18,8 +18,8 @@ Hotovo v kódu: A03 (`progressOf`, `recordingProgressByEvent` v `journey.ts`, š
 ## Testy desktop a macOS · draft #35, větev `claude/testy-desktop-macos` (stojí na #34)
 `npm run e2e` (Playwright, 750 testů, 7 projektů). Opraveno: CSP bez nonce na `/soukromi` a 404, menu na telefonu se hned zavíralo, návrat fokusu z okna otevřeného z menu (část U07), Integrace 320 px.
 
-## PR 6: přístupnost a přehlednost (U02–U08) · draft, větev `claude/audit-pristupnost-u02-u08` (stojí na #35)
-Hotovo: **U02** (hlavička mřížky tmavým textem, drobný okrový text a klíče řádků tmavší, axe teď kontrast hlídá a prochází). Část U06 (neutrální okno, zachovaný měsíc a pohled, test v `e2e/okna.spec.ts`) a U07 (návrat fokusu) už v #34/#35. Zbývá U03, U04, U05, zbytek U07 (`aria-haspopup`), U08.
+## PR 6: přístupnost a přehlednost (U02–U08) · U02 sloučené v #36, zbytek draft z větve `claude/pristupnost-u03-u08`
+Hotovo: **U02** (#36). **U03** tlačítko zájmu má stále text „Mám zájem“ bez vlastního `aria-label`, stav nese `aria-pressed` a fajfka, téma se čte přes `aria-describedby` z nadpisu karty. **U04** pořadí (žádosti první) a „Nastavit a schválit“ už byly, nově úkol „Projít žádosti“ vede na `/sprava#zadosti`. **U05** účastník bez úkolů má na telefonu nahoře „Nejbližší akce“ (z načteného měsíce, jinak jeden dotaz), krok měsíce správce je vždy mezi třemi viditelnými úkoly, prázdný panel se nezobrazuje. **U06** (#34/#35). **U07** menu je disclosure: bez `aria-haspopup`, položky běžným Tab, odchod fokusu menu zavře, návrat fokusu z okna (#35). **U08** dialog akce skládá pole podle šířky formuláře (container query, ne okna), souhrn chyb nahoře, fokus na první chybné pole (i ve sbalených Dalších údajích), ověřeno 320×256. Testy: `e2e/pristupnost.spec.ts`, `tests/journey.test.ts`.
 
 * **U02** Kontrast: hlavička mřížky 2,5:1 (`schedule.module.css` 19–28) → tmavá na zelenošedé 6,28:1. Drobný okrový text 4,44:1 → tmavší okr. Ověřit axe.
 * **U03** Tlačítko zájmu: viditelný text a přístupný název se shodují, `aria-pressed` (`TopicActions.tsx` 23–26).
@@ -29,7 +29,7 @@ Hotovo: **U02** (hlavička mřížky tmavým textem, drobný okrový text a klí
 * **U07** `Menu.tsx` 63–93: buď disclosure s běžným Tab (bez `aria-haspopup`), nebo skutečné menu s klávesnicí. Návrat fokusu po zavření vnořeného okna.
 * **U08** Mobilní dialog akce: pole vedle sebe jen při dostatku místa, souhrn chyb, fokus na první chybu, ověřit 320×256.
 
-## PR 7: Připravit měsíc (G6)
+## PR 7: Připravit měsíc (G6) · rozpracováno na větvi `claude/pripravit-mesic` (jen server, viz `docs/dalsi-session.md`)
 Jedno okno: návrhy měsíce, mezery (bez tématu/vedoucího), publikum, stav párování. Přidání návrhu nic neodešle. Šablona zůstává v nastavení. Datum a skupiny ručně měnitelné.
 
 ## PR 8: bezpečnost a rychlost

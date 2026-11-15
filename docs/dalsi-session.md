@@ -37,6 +37,17 @@ Nouzové zrušení zařízení hlavního správce (UI ho záměrně nenabízí) 
 `UPDATE trusted_devices SET revoked_at = now() WHERE id = '<id>'` (ID z dotazu na `trusted_devices` podle e-mailu).
 Platí od dalšího požadavku. Můžeš ho provést i ty přes Neon MCP, ale jen na výslovný pokyn uživatele.
 
+**Stav 15. 11. noc 4 (poslední):** PR 6 dokončený jako draft z větve `claude/pristupnost-u03-u08` (base `main`):
+U03, U04 (kotva `#zadosti`), U05, U07 (menu jako disclosure), U08 (souhrn chyb, fokus, pole podle šířky formuláře,
+320×256). Testy `e2e/pristupnost.spec.ts` a `tests/journey.test.ts`. Odkaz na PR je v popisu větve na GitHubu.
+**PR 7 rozpracovaný** na větvi `claude/pripravit-mesic` (z `main`, bez PR, commit `b895da1`): hotová jen serverová
+část `publishDrafts` (ruční datum v témže měsíci a v budoucnu, publikum, `{ publish: false }` = uložit bez
+zveřejnění, chyba `outside_month`). Zbývá: `publishMonthAction` (pole `date-<id>`, `aud-<id>`, `intent=save`),
+přestavět `PublishMonthDialog` na okno „Připravit měsíc“ (tlačítko vždy pro správce, uvnitř „Doplnit chybějící
+termíny“ = `generateMonthAction`, přehled mezer a stavu párování z `monthCards[].syncStatus`, sloupce datum
+a skupina, „Uložit změny“ a „Zveřejnit“), vitest pro `publishDrafts` (datum mimo měsíc, minulost, uložení bez
+zveřejnění nic neodešle) a e2e okna. Pak PR 8 podle `docs/audit-ukoly.md`.
+
 **Stav 15. 11. noc 3:** #34, #35 a #36 se sloučily jen do svých základních větví, ne do `main`. Jejich obsah jde do
 `main` draft PR [#37](https://github.com/ondrejmacko-it/zabohatsicesko/pull/37) z `claude/testy-desktop-macos`. Další práci
 stavět z `main` až po sloučení #37. U dalších PR v řetězu dávat base `main` (ne předchozí větev) a mergovat postupně.
