@@ -4,7 +4,7 @@ import { GROUPS, type Group, type Role, type UserOrigin, type UserStatus } from 
 import { audit } from "@/server/audit";
 import { createInvite, inviteOnlyLogin, listUserAccess, pruneOldAccess, revokeDevice, revokeInvites, revokeUserDevices, type UserAccess } from "@/server/auth/devices";
 import { requeueAttendeeSync } from "@/server/calendar/attendees";
-import { config } from "@/server/config";
+import { config, isPrimaryAdmin } from "@/server/config";
 import { getDb, type Executor } from "@/server/db/client";
 import { userIdentities, users } from "@/server/db/schema";
 import { canManageAccount, canManageUsers, type Viewer } from "@/server/policy";
@@ -25,6 +25,8 @@ export type Account = {
   lastLoginAt: Date | null;
   /** Smí přihlášený uživatel tento účet měnit (ne sebe, správce jen jiný správce). */
   editable: boolean;
+  /** Hlavní správce (`BOOTSTRAP_ADMIN_EMAILS`): účet nikdo nemění, ani on sám. */
+  primary: boolean;
   /** Poslední zvací odkaz a platná zařízení (ostrá Wiki). */
   access: UserAccess;
 };
@@ -53,7 +55,8 @@ export async function listAccounts(viewer: Viewer): Promise<Account[]> {
       origin: user.origin,
       googleLinked: subject !== null,
       lastLoginAt,
-      editable: canManageAccount(viewer, user),
+      primary: isPrimaryAdmin(user),
+      editable: canManageAccount(viewer, user) && !isPrimaryAdmin(user),
       access: accessByUser.get(user.id) ?? { invite: { kind: "none" as const }, devices: [] },
     }))
     .sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status]);
@@ -93,11 +96,13 @@ export async function inviteUser(
 async function manageableUser(tx: Executor, viewer: Viewer, userId: string) {
   if (!canManageUsers(viewer)) throw new DomainError("forbidden");
   const [target] = await tx
-    .select({ id: users.id, status: users.status, origin: users.origin })
+    .select({ id: users.id, status: users.status, origin: users.origin, email: users.email })
     .from(users)
     .where(and(eq(users.id, userId), eq(users.orgId, config.orgId)))
     .limit(1);
   if (!target) throw new DomainError("not_found");
+  // Hlavnímu správci nikdo nevytvoří odkaz ani nezruší zařízení, aby se z Wiki nedal vyřadit.
+  if (isPrimaryAdmin(target)) throw new DomainError("forbidden");
   return target;
 }
 
@@ -146,7 +151,7 @@ export async function updateAccess(
   await db.transaction(async (tx) => {
     const ids = [viewer.id, userId].sort();
     const locked = await tx
-      .select({ id: users.id, role: users.role, status: users.status, orgId: users.orgId, groups: users.groups })
+      .select({ id: users.id, role: users.role, status: users.status, orgId: users.orgId, groups: users.groups, email: users.email })
       .from(users)
       .where(inArray(users.id, ids))
       .orderBy(asc(users.id))
@@ -157,7 +162,7 @@ export async function updateAccess(
     // Práva čtená na začátku požadavku mohla mezitím zmizet. Rozhoduje stav pod zámkem.
     if (!actor || actor.status !== "active") throw new DomainError("forbidden");
     const current = { ...viewer, role: actor.role };
-    if (!canManageAccount(current, target, input.role)) throw new DomainError("forbidden");
+    if (!canManageAccount(current, target, input.role) || isPrimaryAdmin(target)) throw new DomainError("forbidden");
 
     await tx
       .update(users)

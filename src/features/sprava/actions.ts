@@ -6,7 +6,7 @@ import { GROUPS, ROLES } from "@/lib/types";
 import { runAction, type ActionResult } from "@/features/shared/run-action";
 import { syncPending } from "@/server/calendar/sync";
 import { config } from "@/server/config";
-import { formatDate, toDateKey } from "@/lib/time";
+import { formatDayMonth, toDateKey } from "@/lib/time";
 import { createLoginLink, inviteUser, rejectRequest, revokeLoginLink, revokeUserDevice, updateAccess } from "@/server/services/users";
 
 /** Odkaz s tokenem ve fragmentu: prohlížeč ho na server sám nepošle ani při kliknutí. */
@@ -34,7 +34,7 @@ export async function inviteUserAction(_prev: ActionResult | null, formData: For
     const { link } = await inviteUser(user, data);
     after(() => syncPending());
     if (!link) return { ok: true, message: `Účet je založený: ${data.name}.` };
-    return { ok: true, message: `Odkaz pro ${data.name} platí do ${formatDate(toDateKey(link.expiresAt))}.`, link: linkFor(link.token) };
+    return { ok: true, message: `Odkaz pro ${data.name} platí do ${formatDayMonth(toDateKey(link.expiresAt))}.`, link: linkFor(link.token) };
   });
 }
 
@@ -59,7 +59,7 @@ export async function rejectRequestAction(_prev: ActionResult | null, formData: 
 export async function createLoginLinkAction(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
   return runAction(async (user) => {
     const link = await createLoginLink(user, userId.parse(formData.get("userId")));
-    return { ok: true, message: `Odkaz platí do ${formatDate(toDateKey(link.expiresAt))}. Starší nepoužitý odkaz už neplatí.`, link: linkFor(link.token) };
+    return { ok: true, message: `Odkaz platí do ${formatDayMonth(toDateKey(link.expiresAt))}. Starší nepoužitý odkaz už neplatí.`, link: linkFor(link.token) };
   });
 }
 

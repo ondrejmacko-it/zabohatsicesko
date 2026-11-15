@@ -294,4 +294,11 @@ CREATE TABLE login_invites (
 CREATE INDEX login_invites_user_idx ON login_invites (user_id);
 `,
   },
+  {
+    id: "0008_devices_never_expire",
+    sql: `
+-- Zařízení platí, dokud ho správce nezruší. Platná zařízení s 30denní lhůtou se převedou na trvalá.
+UPDATE trusted_devices SET expires_at = '9999-12-31T00:00:00Z' WHERE revoked_at IS NULL AND expires_at > now();
+`,
+  },
 ];

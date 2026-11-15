@@ -3,8 +3,8 @@ import { NextResponse, after, type NextRequest } from "next/server";
 import { audit, logError } from "@/server/audit";
 import { DEVICE_COOKIE, deviceCookieOptions, deviceLabel, findDevice, inviteOnlyLogin, registerBootstrapDevice, touchDevice } from "@/server/auth/devices";
 import { completeLogin, verifyLoginState, type LoginFailure } from "@/server/auth/google-login";
-import { SESSION_COOKIE, encodeSession, sessionCookieOptions } from "@/server/auth/session";
-import { config, googleLoginConfig } from "@/server/config";
+import { PRIMARY_ADMIN_SESSION_TTL_SEC, SESSION_COOKIE, encodeSession, sessionCookieOptions } from "@/server/auth/session";
+import { config, googleLoginConfig, isPrimaryAdmin } from "@/server/config";
 import { grantsCalendar, needsCalendarConnection, revokeToken, saveGrant } from "@/server/calendar/google-auth";
 import { syncAfterReconnect } from "@/server/calendar/sync";
 import { getDb } from "@/server/db/client";
@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
       return finish(gateUrl(FAILURES[result.reason]));
     }
     await audit(db, result.userId, "session.start.google", "user", result.userId);
-    const [account] = await db.select({ id: users.id, role: users.role, groups: users.groups }).from(users).where(and(eq(users.orgId, config.orgId), eq(users.id, result.userId))).limit(1);
+    const [account] = await db.select({ id: users.id, role: users.role, groups: users.groups, email: users.email }).from(users).where(and(eq(users.orgId, config.orgId), eq(users.id, result.userId))).limit(1);
     const plans = account ? canPlan(account) : false;
     const missing = await needsCalendarConnection(db, plans);
 
@@ -93,12 +93,21 @@ export async function GET(request: NextRequest) {
     if (scope?.kind === "device") {
       deviceId = scope.deviceId;
       await touchDevice(db, deviceId);
+      // Obnoví lhůtu cookie zařízení (prohlížeč drží nejvýš 400 dní), platnost dál rozhoduje databáze.
+      const deviceCookie = request.cookies.get(DEVICE_COOKIE)?.value;
+      if (deviceCookie) response.cookies.set(DEVICE_COOKIE, deviceCookie, deviceCookieOptions);
     } else if (scope?.kind === "bootstrap") {
       const device = await registerBootstrapDevice(db, result.userId, deviceLabel(request.headers.get("user-agent")));
       deviceId = device.id;
       response.cookies.set(DEVICE_COOKIE, device.cookieValue, deviceCookieOptions);
     }
-    response.cookies.set(SESSION_COOKIE, encodeSession(result.userId, undefined, "google", deviceId), sessionCookieOptions);
+    // Hlavní správce se na svém zařízení znovu nepřihlašuje. Ostatní jednou za 12 hodin jen tlačítkem Google.
+    const primary = account ? isPrimaryAdmin(account) : false;
+    const ttl = primary ? PRIMARY_ADMIN_SESSION_TTL_SEC : undefined;
+    response.cookies.set(SESSION_COOKIE, encodeSession(result.userId, undefined, "google", deviceId, ttl), {
+      ...sessionCookieOptions,
+      ...(ttl ? { maxAge: ttl } : {}),
+    });
     response.cookies.set(HINT_COOKIE, encodeHint(result.userId), hintCookieOptions);
     return response;
   } catch (error) {

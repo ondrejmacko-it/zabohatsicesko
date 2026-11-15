@@ -6,27 +6,40 @@ a přilož audit ZIP `ZBC_Audit_balicek_2026-11-15.zip` (do repa nepatří).
 ---
 
 Pokračuj na modulu Vzdělávání (repo `ondrejmacko-it/zabohatsicesko`). Nečti znovu celé zadání ani celý kód.
-Kontext máš v `docs/dalsi-session.md` a `README.md`, pravidla v `CLAUDE.md`, audit v přiloženém ZIPu
-`ZBC_Audit_balicek_2026-11-15.zip` (do repa nepatří). Tykej mi, piš přátelsky, kroky pro mě piš úplně, pod sebe,
-s přesnými kliky (Windows, PowerShell).
+Kontext máš v `docs/dalsi-session.md` a `README.md`, pravidla v `CLAUDE.md`, audit v přiloženém ZIPu. Tykej mi,
+kroky pro mě piš úplně, pod sebe, s přesnými kliky (Windows, PowerShell).
 
-**Stav:** PR 4a (pozvánka na jedno zařízení, větev `claude/pozvanky-na-zarizeni`) je hotový jako draft, viz níže.
-Kalendář v ostré Wiki vznikl 15. 11. v režimu Testing a **vyprší 22. 11. kolem 12:31**, pokud ho uživatel
-nepřipojí znovu (`/vzdelavani/integrace` → „Připojit znovu nebo jiným účtem“). Ověř v Neonu
-(`zbc-wiki-produkce`, `SELECT connected_at FROM integration_credentials`), že je datum novější než 15. 11.
+**Stav:** PR 4b část 1 (Kalendář, trvalá zařízení, hlavní správce, texty Správy, Integrace) je draft z větve
+`claude/brave-clarke-uyu0gb`. Nejdřív ověř v Neonu (`zbc-wiki-produkce`), že po merge a přihlášení správce
+`calendar_links` mají `sync_status = 'synced'` a `calendar_id = 'primary'`.
 
-**PR 4b (tato relace): úklid ostrého UI** (rozhodnuto 15. 11., zvát smí jen správce):
-1. Úvod: karty modulů (Vzdělávání s „Čeká na vás N“ nebo nejbližším termínem, pro správce Správa systému
-   s počtem čekajících odkazů), pod nimi Nejbližší akce (3).
-2. Vzdělávání: záložky Plán | Zápisy | Témata (U09, `/vzdelavani/temata` je dnes přesměrování, kotva `#temata`
-   klientsky přesměrovat). Z Plánu pryč řádek Kalendáře (screenshot: dlouhé ID kalendáře), jen upozornění pro
-   správce, když je propojení rozbité. „Nejbližší akce“ jen na úvodu, Plán má „Čeká na vás“ a harmonogram.
-3. Správa: přeměřit 320 a 360 px přihlášený jako správce (U01, v PR 4a neověřeno, ostrá Wiki se lokálně bez Googlu
-   nepřihlásí: použij ukázku, Správa je stejná komponenta). Kalendář jako jeden řádek stavu s menu.
-4. Pak PR 5–8 podle původního pořadí (A03 + texty T01–T04, přístupnost U02–U08, Připravit měsíc G6,
-   bezpečnost a rychlost včetně HSTS, Lighthouse, `npm audit`, ověření brandingu v Google konzoli).
+**PR 4b část 2 (tato relace), úklid UI:**
+1. Úvod: karty modulů (Vzdělávání, pro správce Správa systému) a pod nimi Nejbližší akce (3).
+2. Vzdělávání: záložky Plán | Zápisy | Témata (U09), staré adresy přesměrovat (`/vzdelavani/temata`, kotva `#temata`).
+3. Z Plánu pryč řádek Kalendáře s dlouhým ID, jen krátké upozornění správci, když propojení nefunguje.
+4. „Nejbližší akce“ jen na úvodu.
+5. Správa bez vodorovného posunu na 320 a 360 px přihlášený jako správce (U01, v prohlížeči zatím neověřeno).
+6. Pak PR 5–8 (A03 + texty T01–T04, přístupnost U02–U08, Připravit měsíc G6, bezpečnost a rychlost).
 
 ---
+
+## Stav 15. 11. 2026 pozdě večer (větev `claude/brave-clarke-uyu0gb`, draft PR 4b část 1)
+* **Diagnóza Kalendáře:** propojení se 15. 11. ve 14:01 uložilo (přepis fungoval, stránka ukazovala jen datum).
+  Všech 7 vazeb mělo `calendar_unavailable`: Google na zápis do vedlejšího kalendáře (`…@group.calendar.google.com`)
+  vracel 404 (účet k němu neměl přístup), adaptér to hlásil jako výpadek a nelogoval. `resumeAfterReconnect`
+  vracel do fronty jen `calendar_revoked`. Přihlašovací callback navíc zneplatňoval nový token u Googlu,
+  když propojení už existovalo, což u téhož účtu může shodit i uložené propojení. Logy Vercelu přes API nešly (403).
+* **Oprava:** `checkConnection` (vynucená obnova tokenu, odvolaný/nečitelný = smazat), `needsCalendarConnection`
+  žádá o souhlas vždy bez platného propojení. Souhlas při přihlášení vždy přepíše starý. 404 = `calendar_no_access`,
+  `probeTargetCalendar` po připojení (`?google=bez-pristupu`). `syncAfterReconnect`: převede vazby bez pozvánky na
+  nastavený kalendář, obnoví chyby přístupu a odešle celou frontu (`syncPublished`).
+* **Vercel (API):** Production `GOOGLE_CALENDAR_ID` a `GOOGLE_ALLOWED_CALENDAR_IDS` = `primary` (rozhodnutí uživatele).
+* **Zařízení:** `DEVICE_NEVER_EXPIRES`, migrace `0008_devices_never_expire`, přihlášení obnoví cookie zařízení.
+* **Hlavní správce:** `primaryAdminEmail()` = první adresa `BOOTSTRAP_ADMIN_EMAILS`. Session 400 dní, účet, odkazy
+  a zařízení nikdo nemění (server `forbidden`, UI bez menu, štítek „hlavní správce“).
+* **Správa:** „Zrušit toto zařízení…“ s větou o dopadu, data `22. 11.`, okna s hotovým odkazem se na změny neptají.
+* **Integrace v ostré Wiki:** bez tabulky režimů a technických textů, „Připojit znovu“, propojení s časem.
+* Ověřeno: lint, typy, 169/169 testů, build, Chromium (vstup 320/360 px). Správa přihlášená v prohlížeči ne, naživo proti Googlu ne.
 
 ## Stav 15. 11. 2026 noc (větev `claude/pozvanky-na-zarizeni`, draft PR 4a do `main`)
 * **Pozvánka na jedno zařízení** (`src/server/auth/devices.ts`, migrace `0007_login_invites`): odkaz `/vstup#<43 znaků>`

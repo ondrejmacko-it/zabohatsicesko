@@ -15,8 +15,11 @@ import { loginInvites, trustedDevices, users } from "@/server/db/schema";
 //    Session nese ID zařízení, takže zneplatnění zařízení odhlásí hned.
 
 export const INVITE_TTL_DAYS = 7;
-/** Zařízení vyprší po 30 dnech bez použití. Kdo Wiki používá, nový odkaz nepotřebuje. */
-export const DEVICE_IDLE_DAYS = 30;
+/**
+ * Zařízení samo nevyprší: platí, dokud ho správce nezruší nebo neodebere přístup. Sloupec `expires_at`
+ * zůstává kvůli dotazům a úklidu, nová zařízení v něm mají vzdálené datum.
+ */
+export const DEVICE_NEVER_EXPIRES = new Date("9999-12-31T00:00:00Z");
 const DAY_MS = 24 * 60 * 60 * 1000;
 /** Prodloužení platnosti zařízení se zapisuje nejvýš jednou za hodinu, ne při každém požadavku. */
 const TOUCH_AFTER_MS = 60 * 60 * 1000;
@@ -152,7 +155,7 @@ async function insertDevice(tx: Executor, userId: string, label: string, now: Da
     label: label.slice(0, 60),
     createdAt: now,
     lastSeenAt: now,
-    expiresAt: new Date(now.getTime() + DEVICE_IDLE_DAYS * DAY_MS),
+    expiresAt: DEVICE_NEVER_EXPIRES,
   });
   return { id, cookieValue: `${id}.${secret}` };
 }
@@ -218,7 +221,8 @@ export async function deviceAllowsSession(db: Executor, deviceId: string, userId
 export async function touchDevice(db: Executor, deviceId: string, now = new Date()): Promise<void> {
   await db
     .update(trustedDevices)
-    .set({ lastSeenAt: now, expiresAt: new Date(now.getTime() + DEVICE_IDLE_DAYS * DAY_MS) })
+    // Zařízení z doby, kdy platnost vypršela po 30 dnech, se při použití převedou na trvalá.
+    .set({ lastSeenAt: now, expiresAt: DEVICE_NEVER_EXPIRES })
     .where(and(eq(trustedDevices.id, deviceId), isNull(trustedDevices.revokedAt), gt(trustedDevices.expiresAt, now)));
 }
 
