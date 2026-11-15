@@ -59,8 +59,11 @@ function CancelDialog({ id, revision, onClose }: { id: string; revision: number;
     if (result.ok) onClose();
     return result;
   }, null);
-  // Dopad se načte při otevření dialogu. Když se nepovede, zrušení jde provést i bez něj.
+  // Dopad se načte při otevření dialogu. Když ho nejde ověřit, správce může zkusit znovu, nebo vědomě
+  // zrušit bez ověřených příjemců (audit A06). Server stejnou podmínku kontroluje znovu.
   const [impact, setImpact] = useState<CancelImpact | "failed" | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  const [acceptUnverified, setAcceptUnverified] = useState(false);
   useEffect(() => {
     let active = true;
     previewCancelAction(id)
@@ -69,7 +72,9 @@ function CancelDialog({ id, revision, onClose }: { id: string; revision: number;
     return () => {
       active = false;
     };
-  }, [id]);
+  }, [id, attempt]);
+  const unverified = impact === "failed" || (impact !== null && !impact.verified);
+  const informs = impact !== null && impact !== "failed" && impact.verified && impact.guests.length > 0;
   return (
     <Modal open title="Zrušit akci" onRequestClose={onClose}>
       <form action={action} onSubmit={submitKeepingValues(action)} className="stack">
@@ -81,7 +86,7 @@ function CancelDialog({ id, revision, onClose }: { id: string; revision: number;
             <strong>Koho se zrušení dotkne</strong>
           </p>
           {impact === null && <p className="small">Zjišťuji, kdo je v pozvánce…</p>}
-          {impact === "failed" && <p className="small">Dopad se nepodařilo načíst. Pozvaní dostanou z Kalendáře zprávu o zrušení.</p>}
+          {impact === "failed" && <p className="small">Dopad se nepodařilo načíst. Komu přijde zpráva o zrušení, teď nejde ověřit.</p>}
           {impact && impact !== "failed" && (
             <ul className="prose-list">
               <li>Ve Wiki uvidí stav Zrušeno a důvod skupina {impact.audience}.</li>
@@ -95,15 +100,29 @@ function CancelDialog({ id, revision, onClose }: { id: string; revision: number;
               ))}
             </ul>
           )}
+          {unverified && (
+            <button type="button" className="btn btn-small" onClick={() => {
+              setImpact(null);
+              setAttempt((n) => n + 1);
+            }}>
+              Zkusit znovu
+            </button>
+          )}
         </div>
+        {unverified && (
+          <label className="check">
+            <input type="checkbox" name="cancelUnverified" checked={acceptUnverified} onChange={(e) => setAcceptUnverified(e.target.checked)} />
+            <span>Zrušit i bez ověřených příjemců. Ve Wiki se akce zruší hned, storno v Kalendáři se propíše později.</span>
+          </label>
+        )}
         <label className="field">
           <span className="field-label">Důvod zrušení (uvidí ho kolegové ve Wiki)</span>
           <textarea className="textarea" name="reason" required minLength={3} maxLength={300} />
         </label>
         <ActionMessage state={state} />
         <div className="row">
-          <button type="submit" className="btn btn-danger" disabled={pending}>
-            Zrušit akci a informovat pozvané
+          <button type="submit" className="btn btn-danger" disabled={pending || impact === null || (unverified && !acceptUnverified)}>
+            {informs ? "Zrušit akci a informovat pozvané" : "Zrušit akci"}
           </button>
           <button type="button" className="btn" onClick={onClose}>
             Zpět

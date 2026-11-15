@@ -16,6 +16,8 @@ export type ExternalEvent = ManagedEventData & {
   /** Vyplněné u jednoho výskytu opakované události. Cílem změny je vždy tento výskyt, ne série. */
   recurringEventId?: string | null;
   originalStartTime?: Date | null;
+  /** Pozvánku založila tato Wiki (nese její klíč). Taková nikdy není „cizí“ kandidát na duplicitu. */
+  createdByWiki?: boolean;
 };
 
 export type GuestChange = { add: SimAttendee[]; remove: readonly string[] };

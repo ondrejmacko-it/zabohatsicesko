@@ -21,6 +21,7 @@ import {
   discardDraftChanges,
   generateMonth,
   publishDrafts,
+  IncompleteNotConfirmed,
   updateEvent,
   updateTemplate,
   type EventInput,
@@ -141,7 +142,12 @@ export async function saveEventAction(_prev: ActionResult | null, formData: Form
         await assertImpactConfirmed(id, input, confirmToken);
       } catch (error) {
         if (!(error instanceof ImpactNotConfirmed)) throw error;
-        return { ok: false, error: "Změna zasáhne pozvané. Zkontrolujte a potvrďte její dopad, potom ji zveřejněte." };
+        return {
+          ok: false,
+          error: error.stale
+            ? "Dopad se od kontroly změnil, například se změnily skupiny pozvaných. Zkontrolujte ho znovu a potvrďte. Nic se nezveřejnilo."
+            : "Změna zasáhne pozvané. Zkontrolujte a potvrďte její dopad, potom ji zveřejněte.",
+        };
       }
     }
     await updateEvent(user, id, revision, input, intent);
@@ -154,11 +160,22 @@ export async function saveEventAction(_prev: ActionResult | null, formData: Form
 export async function cancelEventAction(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
   return run(async (user) => {
     const data = z
-      .object({ id: z.string().max(80), revision: z.coerce.number().int().positive(), reason: z.string().trim().min(3).max(300) })
+      .object({
+        id: z.string().max(80),
+        revision: z.coerce.number().int().positive(),
+        reason: z.string().trim().min(3).max(300),
+        cancelUnverified: z.literal("on").optional(),
+      })
       .parse(formObject(formData));
+    // Dopad se ověří znovu na serveru. Bez ověřených příjemců jde zrušit jen vědomě (audit A06).
+    const impact = await cancelImpact(user, data.id);
+    if (!impact.verified && !data.cancelUnverified) {
+      return { ok: false, error: "Komu přijde zpráva o zrušení, teď nejde ověřit. Zkuste to znovu, nebo potvrďte zrušení bez ověření. Nic se nezměnilo." };
+    }
     await cancelEvent(user, data.id, data.revision, data.reason);
+    if (!impact.hasInvite) return { ok: true, message: "Akce je zrušená. Pozvánku v Kalendáři neměla, žádná zpráva neodejde." };
     after(() => syncEvent(data.id));
-    return { ok: true, message: "Akce je zrušená." };
+    return { ok: true, message: "Akce je zrušená ve Wiki. Storno pozvánky se propisuje do Kalendáře, stav uvidíte v detailu akce." };
   });
 }
 
@@ -208,7 +225,16 @@ export async function publishMonthAction(_prev: ActionResult | null, formData: F
       topicTitle: text(120).parse(formData.get(`topic-${id}`) ?? ""),
       leadId: optionalId.parse(formData.get(`lead-${id}`) ?? ""),
     }));
-    const { published, skipped } = await publishDrafts(user, month, items);
+    const confirmedIncomplete = z.coerce.number().int().min(0).max(100).catch(0).parse(formData.get("allowIncomplete") ?? 0);
+    let result;
+    try {
+      result = await publishDrafts(user, month, items, confirmedIncomplete);
+    } catch (error) {
+      if (!(error instanceof IncompleteNotConfirmed)) throw error;
+      const terms = `${error.count} ${error.count === 1 ? "termín nemá" : error.count < 5 ? "termíny nemají" : "termínů nemá"}`;
+      return { ok: false, error: `Nic se nezveřejnilo. ${terms} téma nebo vedoucího. Doplňte je, nebo dole potvrďte zveřejnění bez nich.` };
+    }
+    const { published, skipped } = result;
     if (published.length) after(() => syncPublished());
     const skippedNote = skipped
       ? ` ${skipped} ${skipped === 1 ? "návrh mezitím někdo změnil a zůstal" : "návrhy mezitím někdo změnil a zůstaly"} beze změny, zkontrolujte je.`

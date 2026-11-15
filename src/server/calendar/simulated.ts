@@ -17,6 +17,7 @@ const toExternal = (row: SimRow): ExternalEvent => ({
   cancelled: row.status === "cancelled",
   attendees: row.attendees,
   meetingUrl: row.meetingUrl,
+  createdByWiki: row.idempotencyKey !== null,
 });
 
 /**

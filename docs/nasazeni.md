@@ -53,8 +53,11 @@ V Production **nenastavovat** `GOOGLE_LOGIN_ACCOUNTS` (ostrá Wiki ho ignoruje),
 ## Postup pro vlastníka
 
 1. **Sloučit PR** s oddělením ostré Wiki a ukázky. Production se nasadí až po kroku 6.
-2. **Neon:** po potvrzení založí Claude projekt `zbc-wiki-produkce` v EU. Připojovací řetězec
-   (s heslem) zkopíruje vlastník do Vercelu jako `DATABASE_URL` jen pro Production.
+2. **Neon:** organizace Neon je spravovaná přes Vercel Marketplace, přímé založení projektu API odmítá
+   („organization is managed by Vercel“). Vlastník založí databázi ve Vercelu: projekt → Storage →
+   Create Database → Neon, název `zbc-wiki-produkce`, region Frankfurt (`aws-eu-central-1`), připojit
+   **jen k prostředí Production** (Preview dál používá stávající databázi ukázky). Vercel pak sám
+   doplní `DATABASE_URL` pro Production. Zkontrolovat, že se nepřepsaly proměnné Preview.
 3. **Tajemství Production** podle tabulky výše. Doporučeno nové `SESSION_SECRET` a `TOKEN_ENCRYPTION_KEY`,
    aby cookie ani tokeny z ukázky v ostré Wiki neplatily.
 4. **Google Cloud Console** (OAuth klient): přidat přesměrovací adresy

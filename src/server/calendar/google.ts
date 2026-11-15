@@ -29,6 +29,7 @@ type GoogleEvent = {
   /** Další pole hosta (komentář, počet doprovodu) se při úpravě hostů posílají zpět beze změny. */
   attendees?: Array<Record<string, unknown> & { email?: string; displayName?: string; responseStatus?: string; resource?: boolean }>;
   hangoutLink?: string;
+  extendedProperties?: { private?: Record<string, string> };
   conferenceData?: { entryPoints?: Array<{ entryPointType?: string; uri?: string }> };
 };
 
@@ -77,6 +78,7 @@ function toExternal(event: GoogleEvent): ExternalEvent | null {
     meetingUrl: event.hangoutLink ?? event.conferenceData?.entryPoints?.find((e) => e.entryPointType === "video")?.uri ?? null,
     recurringEventId: event.recurringEventId ?? null,
     originalStartTime: toDate(event.originalStartTime),
+    createdByWiki: Boolean(event.extendedProperties?.private?.[KEY_PROPERTY]),
   };
 }
 

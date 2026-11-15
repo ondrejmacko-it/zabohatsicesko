@@ -504,16 +504,38 @@ export async function listMonthDrafts(viewer: Viewer, monthKey: string): Promise
 
 export type DraftPublish = { id: string; revision: number; topicTitle: string | null; leadId: string | null };
 
+/** Hromadné zveřejnění obsahuje neúplné termíny, jejichž počet správce nepotvrdil. */
+export class IncompleteNotConfirmed extends Error {
+  constructor(readonly count: number) {
+    super("incomplete_not_confirmed");
+  }
+}
+
 /**
  * Zveřejní vybrané návrhy měsíce v jedné transakci, volitelně s doplněným tématem a vedoucím.
  * Projde jen budoucí, nikdy nezveřejněný návrh z daného měsíce ve verzi, kterou správce viděl.
  * Cokoli jiného (návrh změny, zrušená akce, mezitím upravený návrh) se přeskočí a nezmění.
  */
-export async function publishDrafts(viewer: Viewer, monthKey: string, items: DraftPublish[]): Promise<{ published: string[]; skipped: number }> {
+export async function publishDrafts(
+  viewer: Viewer,
+  monthKey: string,
+  items: DraftPublish[],
+  confirmedIncomplete = 0,
+): Promise<{ published: string[]; skipped: number }> {
   requireOrganizer(viewer);
   const db = await getDb();
   return db.transaction(async (tx) => {
     await assertUsers(tx, items.map((item) => item.leadId));
+    // Neúplné termíny (bez tématu nebo vedoucího) smí odejít jen se společným potvrzením právě tohoto
+    // počtu (audit A04). Kontrola je tady, aby ji nešlo obejít přímým voláním serverové akce.
+    const ids = items.map((item) => item.id);
+    const types = new Map(
+      (await tx.select({ id: events.id, type: events.type }).from(events).where(and(monthDraftFilter(monthKey), inArray(events.id, ids)))).map(
+        (r) => [r.id, r.type],
+      ),
+    );
+    const incomplete = items.filter((item) => types.has(item.id) && types.get(item.id) !== "holiday" && (!item.topicTitle || !item.leadId)).length;
+    if (incomplete > 0 && incomplete !== confirmedIncomplete) throw new IncompleteNotConfirmed(incomplete);
     const published: string[] = [];
     for (const item of items) {
       const [current] = await tx.select().from(events).where(and(monthDraftFilter(monthKey), eq(events.id, item.id))).limit(1);

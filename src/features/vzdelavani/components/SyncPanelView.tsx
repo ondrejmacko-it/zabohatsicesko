@@ -104,8 +104,12 @@ export function SyncPanelView({ eventId, sync }: { eventId: string; sync: SyncPa
       {sync.status === "unlinked" && (
         <div className="stack">
           <p className="small">
-            Akce ve Wiki zatím není spárovaná s žádnou pozvánkou. Spárujte ji s existující pozvánkou, nebo výslovně
-            založte novou. Wiki sama novou pozvánku nevytvoří, aby nevznikl duplikát.
+            {sync.unlinkedReason === "lookalike" &&
+              "V Kalendáři je ten den pozvánka, která může být touto akcí (blízký čas nebo stejný název). Wiki proto sama novou nezaloží, aby nevznikl duplikát. Spárujte ji, nebo výslovně založte novou. Rozhodnutí můžete i odložit."}
+            {sync.unlinkedReason === "automatic" &&
+              "Pozvánka zatím nevznikla. Wiki ji založí sama při příštím otevření Plánu správcem, nebo ji založte hned."}
+            {sync.unlinkedReason === "past" && "Akce už proběhla, Wiki k ní pozvánku sama nezakládá. Můžete ji spárovat s existující."}
+            {sync.unlinkedReason === "unavailable" && "Akce zatím nemá pozvánku. Kalendář teď neodpovídá, stav jde ověřit až po jeho obnovení."}
           </p>
           {sync.candidates.map((c, i) => (
             <div key={c.id} className="spread candidate">
