@@ -15,7 +15,8 @@ function sessionSecret(): string {
 function accessCode(): string | null {
   const value = process.env.DEMO_ACCESS_CODE;
   if (value && value.length >= 12) return value;
-  if (isProduction) throw new Error("DEMO_ACCESS_CODE musí být nastavený a mít aspoň 12 znaků.");
+  // Ostrá Wiki fiktivní role ani bránu ukázky nemá, kód nepotřebuje.
+  if (isProduction && !isLiveWiki()) throw new Error("DEMO_ACCESS_CODE musí být nastavený a mít aspoň 12 znaků.");
   return null;
 }
 
@@ -24,7 +25,7 @@ export const config = {
   get sessionSecret() {
     return sessionSecret();
   },
-  /** null = lokální vývoj bez přístupové brány. Na hostingu je brána povinná. */
+  /** null = lokální vývoj (nebo ostrá Wiki) bez přístupové brány. Na hostingu ukázky je brána povinná. */
   get accessCode() {
     return accessCode();
   },
@@ -119,7 +120,9 @@ export const GOOGLE_CALENDAR_ENV = [
 /** Názvy proměnných, které testovacímu režimu chybí nebo nedávají smysl. Hodnoty se nevypisují. */
 export function googleCalendarConfigProblems(): string[] {
   const env = process.env;
-  const problems: string[] = GOOGLE_CALENDAR_ENV.filter((name) => !env[name]?.trim());
+  // Testovací příjemci jsou povinní jen tehdy, když se pozvánky omezují na ně. Při `audience` se nečtou.
+  const required = GOOGLE_CALENDAR_ENV.filter((name) => name !== "GOOGLE_ALLOWED_ATTENDEES" || attendeeSource() === "allowlist");
+  const problems: string[] = required.filter((name) => !env[name]?.trim());
   const allowed = list(env.GOOGLE_ALLOWED_CALENDAR_IDS);
   if (env.GOOGLE_CALENDAR_ID && allowed.length && !allowed.includes(env.GOOGLE_CALENDAR_ID.trim())) {
     problems.push("GOOGLE_CALENDAR_ID není v GOOGLE_ALLOWED_CALENDAR_IDS");
@@ -166,17 +169,27 @@ export type GoogleLoginConfig = {
    * svázání účtu (například s fiktivní rolí). Další účty zve nebo schvaluje správce ve Wiki.
    */
   accounts: ReadonlyMap<string, string>;
+  /**
+   * Adresy malými písmeny, jejichž první přihlášení Googlem založí aktivního správce. Slouží ke spuštění
+   * prázdné ostré Wiki, kde ještě nikdo nemůže nikoho pozvat. Platí jen pro adresu bez účtu ve Wiki.
+   */
+  bootstrapAdmins?: ReadonlySet<string>;
 };
 
 export const GOOGLE_LOGIN_ENV = ["GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_OAUTH_CLIENT_SECRET", "APP_URL"] as const;
 
 const LOGIN_ACCOUNT = /^[^@\s=]+@[^@\s=]+=[a-z0-9-]+$/;
+const EMAIL = /^[^@\s=]+@[^@\s=]+$/;
 
 /** Názvy proměnných, které přihlášení chybí nebo nedávají smysl. Hodnoty se nevypisují. */
 export function googleLoginConfigProblems(): string[] {
   const env = process.env;
   const problems: string[] = GOOGLE_LOGIN_ENV.filter((name) => !env[name]?.trim());
-  const entries = list(env.GOOGLE_LOGIN_ACCOUNTS);
+  if (list(env.BOOTSTRAP_ADMIN_EMAILS).some((entry) => !EMAIL.test(entry))) {
+    problems.push("BOOTSTRAP_ADMIN_EMAILS má obsahovat jen e-mailové adresy oddělené čárkou");
+  }
+  // Ostrá Wiki fiktivní role nezná, zaváděcí seznam v ní nemá smysl a ignoruje se.
+  const entries = isLiveWiki() ? [] : list(env.GOOGLE_LOGIN_ACCOUNTS);
   if (entries.some((entry) => !LOGIN_ACCOUNT.test(entry))) {
     problems.push("GOOGLE_LOGIN_ACCOUNTS má mít tvar adresa=id-uzivatele, oddělené čárkou");
   } else {
@@ -199,11 +212,12 @@ export function googleLoginConfig(): GoogleLoginConfig | null {
     clientSecret: env.GOOGLE_OAUTH_CLIENT_SECRET!.trim(),
     redirectUri: `${config.appUrl}/api/google/prihlaseni/callback`,
     accounts: new Map(
-      list(env.GOOGLE_LOGIN_ACCOUNTS).map((entry) => {
+      (isLiveWiki() ? [] : list(env.GOOGLE_LOGIN_ACCOUNTS)).map((entry) => {
         const [email, userId] = entry.split("=");
         return [email!.toLowerCase(), userId!] as const;
       }),
     ),
+    bootstrapAdmins: new Set(list(env.BOOTSTRAP_ADMIN_EMAILS).map((entry) => entry.toLowerCase())),
   };
 }
 

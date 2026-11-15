@@ -1,6 +1,17 @@
 # Předání dema modulu Vzdělávání
 
-Stav k 12. 11. 2026. Spuštění, proměnné prostředí a architektura jsou v [README](../README.md).
+Stav k 15. 11. 2026. Spuštění, proměnné prostředí a architektura jsou v [README](../README.md),
+oddělení ostré Wiki od ukázky a kroky nasazení v [nasazeni.md](nasazeni.md).
+
+## Ostrá Wiki a ukázka
+
+- **Production** (`WIKI_MODE=production`): vstup jen účtem Google, vlastní databáze, která při prvním
+  spuštění dostane jen pravidelný týden, skutečný čas, Google Kalendář se skutečným publikem. Prvního
+  správce založí přihlášení s adresou z `BOOTSTRAP_ADMIN_EMAILS`, další lidi zve Správa systému.
+  Bez textů a prvků ukázky (odznak, fiktivní role, neaktivní hledání, Knihovna a další kulisy).
+  Nahrávky zatím jako v ukázce.
+- **Preview** (ukázka): fiktivní role, simulace Kalendáře, vstup zvacím odkazem `/vstup?pozvanka=<kód>`
+  nebo ručním kódem. Přihlášení Googlem se v ukázce nenabízí.
 
 ## Stav integrací
 
@@ -8,7 +19,7 @@ Stav k 12. 11. 2026. Spuštění, proměnné prostředí a architektura jsou v [
 |---|---|---|---|
 | Google Kalendář | **Simulace** se stejným rozhraním jako budoucí adaptér | Identita pozvánky, zachování hostů, RSVP a odkazu na schůzku, jedno oznámení na změnu, opakování bez duplicit, pořadí revizí, výpadek, odvolaný přístup, ruční změna mimo Wiki, zrušení jednoho termínu | Zápis do skutečného Google účtu. Simulovaný krok **nebyl** ověřen proti Google. |
 | Google Kalendář, testovací režim | **Připravený, vypnutý.** Adaptér Google Calendar API se zapíná `CALENDAR_MODE=google-test` | Proti napodobenému HTTP: vytvoření bez duplicit, úprava jen spravovaných polí, jeden výskyt série, odmítnutí zápisu do série a do cizí pozvánky, povolené kalendáře a příjemci, šifrování a obnova tokenu, odvolaný přístup, dělení chyb na přechodné a trvalé | **Neověřeno proti Googlu.** Živý test podle části 02 čeká na testovací účty, postup je v [google-kalendar.md](google-kalendar.md). |
-| Přihlášení Google identitou | **Připravené, vypnuté.** Druhý režim vedle fiktivních rolí, zapíná se `LOGIN_MODE=google-test` | Proti napodobenému Googlu: podpis, vydavatel, příjemce, platnost, nonce a ověřený e-mail v ID tokenu, vazba na stabilní `sub`, odmítnutí účtu mimo seznam a záměny účtu, okamžité ukončení session po odebrání, zákaz přepínání rolí | **Neověřeno proti Googlu.** Postup je v [google-prihlaseni.md](google-prihlaseni.md). Seznam účtů v proměnné prostředí je jen pro test. |
+| Přihlášení Google identitou | **Jediný vstup ostré Wiki** (`LOGIN_MODE=google-test`), v ukázce se nenabízí | Proti napodobenému Googlu: podpis, vydavatel, příjemce, platnost, nonce a ověřený e-mail v ID tokenu, vazba na stabilní `sub`, odmítnutí účtu mimo seznam a záměny účtu, okamžité ukončení session po odebrání, zákaz přepínání rolí | **Neověřeno proti Googlu.** Postup je v [google-prihlaseni.md](google-prihlaseni.md). Seznam účtů v proměnné prostředí je jen pro test, ostrá Wiki ho ignoruje. |
 | Přepis a zápis | **Ukázkový**: zná jen přiloženou syntetickou nahrávku (podle otisku SHA-256) | Celá cesta nahrání → zpracování → kontrola → oprava → zveřejnění, opakované doručení úlohy, nahrazení audia, výpadek a opakování | Skutečný přepis a shrnutí. Jiný soubor skončí čitelnou chybou „nepodporovaný soubor“. |
 | Úložiště nahrávek | Soukromé, v databázi, vydávání jen přes autorizovanou cestu | Přístup vedoucího, zamítnutí účastníka a kolegy mimo publikum, přístup správce, i přímým odkazem | Uchovávání a mazání podle pravidel firmy. |
 
@@ -19,7 +30,7 @@ Přepínače chybových stavů jsou v *Vzdělávání → Integrace* (jen správ
 Automaticky: `npm test` (49 testů nad skutečnou databází PGlite, z toho 15 pro adaptér Google Kalendáře proti napodobenému HTTP), lint, typová kontrola a produkční build.
 Ručně v prohlížeči (Chromium, desktop 1440 px a iPhone 13) celý průchod podle části 04:
 
-1. Špatný přístupový kód je odmítnut. Bez přihlášení vede stránka na vstup a API vrací 401.
+1. Špatný přístupový kód i zvací odkaz se špatným kódem jsou odmítnuty, platný odkaz pustí k výběru role bez psaní kódu. Bez přihlášení vede stránka na vstup a API vrací 401.
 2. Domov → „Co tě čeká“ → Harmonogram listopadu: dny út–pá, svátek 17. 11., zrušený trénink 4. 11.,
    mimořádné akce (Setkání týmu, dvoudenní školení 20.–21. 11., AI workshop v pondělí 30. 11. ve svém týdnu).
 3. Správce upraví téma Tréninku RM 12. 11.: uložený návrh změny přežije obnovení stránky a kolegové
@@ -50,10 +61,10 @@ Ručně v prohlížeči (Chromium, desktop 1440 px a iPhone 13) celý průchod p
 
 ## Před pilotem s lidmi (harmonogram)
 
-1. **Přístupy a hosting.** Přihlášení firemní Google identitou je připravené jako testovací režim
-   ([google-prihlaseni.md](google-prihlaseni.md)). Zbývá živý test, správa uživatelů ve Wiki místo
-   seznamu v prostředí a rozhodnutí o konci fiktivních rolí. Oddělená testovací a produkční databáze.
-   Zálohy a obnova.
+1. **Přístupy a hosting.** Ostrá Wiki je oddělená od ukázky (vlastní databáze, jen účty Google,
+   správa uživatelů ve Wiki), kroky jsou v [nasazeni.md](nasazeni.md). Zbývá živý test proti Googlu,
+   zveřejnění souhlasové obrazovky (režim Testing: 100 uživatelů, propojení na 7 dní), plán Vercelu
+   pro komerční provoz, zálohy a obnova.
 2. **Google Kalendář, živý test** podle části 02. Adaptér, připojení účtu a testovací režim jsou hotové,
    zbývá dodat testovací účty a OAuth klienta a projít kroky v [google-kalendar.md](google-kalendar.md).
    Produkce dostane vlastního OAuth klienta, vlastní klíč a vlastní seznam kalendářů.

@@ -16,12 +16,14 @@ const ITEMS: Item[] = [
 
 const ADMIN: Item = { label: "Správa systému", icon: "settings", href: "/sprava", match: (p) => p.startsWith("/sprava"), badgeKey: "admin" };
 
-type Props = { badge: number; canManageUsers: boolean; pendingRequests: number };
+/** `live`: ostrá Wiki. Neaktivní kulisy ukázky (Knihovna, další sekce, hledání) se v ní nezobrazují. */
+type Props = { badge: number; canManageUsers: boolean; pendingRequests: number; live: boolean };
 
-export function Sidebar({ badge, canManageUsers, pendingRequests }: Props) {
+export function Sidebar({ badge, canManageUsers, pendingRequests, live }: Props) {
   const pathname = usePathname();
   // Správa je jen pro toho, kdo ji smí používat. Ostatním zůstává jako neaktivní položka shellu.
-  const items = [...ITEMS, canManageUsers ? ADMIN : { label: ADMIN.label, icon: ADMIN.icon }];
+  const shell = [...ITEMS, canManageUsers ? ADMIN : { label: ADMIN.label, icon: ADMIN.icon }];
+  const items = live ? shell.filter((item) => item.href && item.label !== "Knihovna") : shell;
   const counts = { education: badge, admin: pendingRequests };
   return (
     <aside className="sidebar" aria-label="Hlavní navigace">
@@ -56,11 +58,13 @@ export function Sidebar({ badge, canManageUsers, pendingRequests }: Props) {
           })}
         </ul>
       </nav>
-      <div className="sidebar-section">
-        <p className="sidebar-label">Dokumenty</p>
-        <input className="sidebar-search" placeholder="Hledat v Knihovně…" disabled aria-label="Hledat v Knihovně (v ukázce není k dispozici)" />
-        <p className="sidebar-note">Knihovna dokumentů není součástí ukázky.</p>
-      </div>
+      {!live && (
+        <div className="sidebar-section">
+          <p className="sidebar-label">Dokumenty</p>
+          <input className="sidebar-search" placeholder="Hledat v Knihovně…" disabled aria-label="Hledat v Knihovně (v ukázce není k dispozici)" />
+          <p className="sidebar-note">Knihovna dokumentů není součástí ukázky.</p>
+        </div>
+      )}
     </aside>
   );
 }

@@ -155,3 +155,43 @@ describe("skutečné účty a ukázka", () => {
     expect(await session(id)).toMatchObject({ role: "organizer", groups: ["vsichni", "fp"] });
   });
 });
+
+describe("první správce ostré Wiki (BOOTSTRAP_ADMIN_EMAILS)", () => {
+  const ZAKLADATEL = "zakladatel@gmail.test";
+
+  test("první přihlášení adresy ze seznamu založí aktivního správce jako pozvaného", async () => {
+    vi.stubEnv("BOOTSTRAP_ADMIN_EMAILS", ` ${ZAKLADATEL.toUpperCase()} , jiny@gmail.test`);
+    const result = await login(ZAKLADATEL, "sub-zakladatel", "Zakladatel");
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const [user] = await (await getDb()).select().from(users).where(eq(users.id, result.userId));
+    expect(user).toMatchObject({ role: "admin", status: "active", origin: "invite", groups: ["vsichni"], email: ZAKLADATEL });
+    expect((await session(result.userId))?.role).toBe("admin");
+    // Druhé přihlášení najde stejný účet přes `sub`, nový správce nevznikne.
+    const again = await login(ZAKLADATEL, "sub-zakladatel");
+    expect(again).toMatchObject({ ok: true, userId: result.userId });
+    vi.stubEnv("BOOTSTRAP_ADMIN_EMAILS", "");
+  });
+
+  test("adresa mimo seznam dál jen požádá o přístup a odebraný správce se seznamem nevrátí", async () => {
+    vi.stubEnv("BOOTSTRAP_ADMIN_EMAILS", ZAKLADATEL);
+    expect(await login(KOLEGA, "sub-kolegyne")).toMatchObject({ ok: false, reason: "pending" });
+    const first = await login(ZAKLADATEL, "sub-zakladatel");
+    if (!first.ok) throw new Error("správce nevznikl");
+    await (await getDb()).update(users).set({ status: "disabled" }).where(eq(users.id, first.userId));
+    expect(await login(ZAKLADATEL, "sub-zakladatel")).toMatchObject({ ok: false, reason: "not_allowed" });
+    vi.stubEnv("BOOTSTRAP_ADMIN_EMAILS", "");
+  });
+
+  test("neplatný seznam vypne přihlášení a v ostré Wiki se zaváděcí seznam ignoruje", () => {
+    vi.stubEnv("BOOTSTRAP_ADMIN_EMAILS", "bez-zavinace");
+    expect(googleLoginConfig()).toBeNull();
+    vi.stubEnv("BOOTSTRAP_ADMIN_EMAILS", "");
+    vi.stubEnv("GOOGLE_LOGIN_ACCOUNTS", "kdokoli@gmail.test=demo-spravce");
+    expect(googleLoginConfig()?.accounts.get("kdokoli@gmail.test")).toBe("demo-spravce");
+    vi.stubEnv("WIKI_MODE", "production");
+    expect(googleLoginConfig()?.accounts.size).toBe(0);
+    vi.stubEnv("WIKI_MODE", "");
+    vi.stubEnv("GOOGLE_LOGIN_ACCOUNTS", "");
+  });
+});

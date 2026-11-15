@@ -1,6 +1,6 @@
 import { createHash, createHmac, createPublicKey, randomBytes, randomUUID, timingSafeEqual, verify, type JsonWebKey } from "node:crypto";
 import { and, count, eq, sql } from "drizzle-orm";
-import { logError } from "@/server/audit";
+import { audit, logError } from "@/server/audit";
 import { config, googleLoginConfig, type GoogleLoginConfig } from "@/server/config";
 import type { Executor } from "@/server/db/client";
 import { userIdentities, users } from "@/server/db/schema";
@@ -211,7 +211,8 @@ export const MAX_PENDING_REQUESTS = 20;
  * Vymění kód, ověří ID token a najde uživatele Wiki.
  *
  * Pořadí: (1) účet už svázaný přes stabilní `sub`, (2) pozvánka správce na ověřenou adresu nebo
- * zaváděcí seznam `GOOGLE_LOGIN_ACCOUNTS`, (3) jinak vznikne žádost, kterou schválí správce.
+ * zaváděcí seznam `GOOGLE_LOGIN_ACCOUNTS`, (3) adresa z `BOOTSTRAP_ADMIN_EMAILS` založí správce,
+ * (4) jinak vznikne žádost, kterou schválí správce.
  * Dovnitř pustí jen aktivní účet. Když stejnou adresu později získá jiný účet Google, nebo se účet
  * objeví u jiného uživatele, přihlášení se odmítne a vazbu musí vědomě změnit správce.
  */
@@ -275,6 +276,10 @@ export async function completeLogin(
     if (target === "conflict") return fail("account_conflict");
     if (target) {
       userId = target;
+    } else if (cfg.bootstrapAdmins?.has(email)) {
+      const admin = await createBootstrapAdmin(db, email, name);
+      if (!admin) return fail("account_conflict", "bootstrap_conflict");
+      userId = admin;
     } else {
       const request = await createRequest(db, email, name);
       if (!request) return fail("requests_full");
@@ -316,6 +321,22 @@ async function accountFor(db: Executor, cfg: GoogleLoginConfig, email: string): 
     .where(and(eq(userIdentities.provider, PROVIDER), eq(userIdentities.userId, userId)))
     .limit(1);
   return bound ? "conflict" : userId;
+}
+
+/**
+ * Založí prvního správce ostré Wiki pro adresu ze zaváděcího seznamu. Jako by ho pozval správce
+ * (`origin: invite`), aktivní, ve skupině Všichni. Kdo adresu už ve Wiki má, sem nedojde (`accountFor`).
+ */
+async function createBootstrapAdmin(db: Executor, email: string, name: string | null): Promise<string | null> {
+  const id = `u-${randomUUID()}`;
+  const inserted = await db
+    .insert(users)
+    .values({ id, orgId: config.orgId, name: name ?? email.split("@")[0]!, email, role: "admin", groups: ["vsichni"], status: "active", origin: "invite" })
+    .onConflictDoNothing()
+    .returning({ id: users.id });
+  if (!inserted[0]) return null;
+  await audit(db, id, "user.bootstrap_admin", "user", id);
+  return id;
 }
 
 /** Založí čekající žádost. Bez role v obsahu: člen bez skupin, dokud ho správce neschválí. */

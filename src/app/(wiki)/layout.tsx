@@ -1,3 +1,4 @@
+import { isLiveWiki } from "@/server/config";
 import { Sidebar } from "@/components/Sidebar";
 import { Topbar } from "@/components/Topbar";
 import { listPersonas } from "@/server/auth/personas";
@@ -19,7 +20,7 @@ export default async function WikiLayout({ children }: { children: React.ReactNo
     <>
       <Topbar user={user} personas={personas} />
       <div className="shell">
-        <Sidebar badge={badge} canManageUsers={canManageUsers(user)} pendingRequests={pendingRequests} />
+        <Sidebar badge={badge} canManageUsers={canManageUsers(user)} pendingRequests={pendingRequests} live={isLiveWiki()} />
         <main className="panel" id="obsah">
           {children}
         </main>
