@@ -46,6 +46,9 @@ function GateShell({ title, children }: { title: string; children: React.ReactNo
         <div className="panel gate-panel">
           <h1>{title}</h1>
           {children}
+          <p className="small">
+            <a href="/soukromi">Ochrana soukromí</a>
+          </p>
         </div>
       </main>
     </>
