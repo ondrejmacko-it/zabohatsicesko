@@ -9,12 +9,19 @@ Pokračuj na modulu Vzdělávání (repo `ondrejmacko-it/zabohatsicesko`). Nečt
 Kontext máš v `docs/dalsi-session.md` a `README.md`, pravidla v `CLAUDE.md`, audit v přiloženém ZIPu. Tykej mi,
 kroky pro mě piš úplně, pod sebe, s přesnými kliky (Windows, PowerShell).
 
-**Stav:** PR 4b část 2 (úvod s kartami modulů, záložky Plán | Zápisy | Témata, Plán bez řádku Kalendáře, Správa
-na 320 px) je draft z větve `claude/vibrant-ritchie-d100a3`. Google: jen Publish app bez domény (`docs/google-overeni.md`).
-Vlastní doménu, logo a ověření aplikace **neřešit**, firma Wiki zatím nemá (rozhodnutí uživatele). Až uživatel potvrdí
-Publish app a obnovení propojení, nastav Production `GOOGLE_OAUTH_PUBLISHED=1` přes API (Redeploy dělá uživatel).
+**Trvalá fakta (neptat se na ně znovu):**
+* Vlastní doménu **nemáme a neřešíme** (firma Wiki zatím nemá a nemusí ji používat). Žádné kroky s doménou, logem,
+  Search Console ani ověřením aplikace.
+* OAuth aplikace (projekt `zbc-vzdelavani-test`) je **In production**, External, 3/100 uživatelů. Production má
+  `GOOGLE_OAUTH_PUBLISHED=1` (nastaveno 15. 11., platí od dalšího nasazení Production).
+* Úkoly z auditu jsou v `docs/audit-ukoly.md`. Audit ZIP stačí přiložit, jen když je potřeba `textove-upravy.csv`.
 
-**Další:** PR 5–8 (A03 + texty T01–T04, přístupnost U02–U08, Připravit měsíc G6, bezpečnost a rychlost).
+**Stav:** PR 4b část 2 je draft [#33](https://github.com/ondrejmacko-it/zabohatsicesko/pull/33) z větve
+`claude/vibrant-ritchie-d100a3` (úvod s kartami, záložky Plán | Zápisy | Témata, Plán bez řádku Kalendáře,
+Správa na 320/360 px). Uživatel ho mergne sám.
+
+**Další krok:** PR 5 (A03 + T01–T04), PR 6 (U02–U08), PR 7 (Připravit měsíc, G6), PR 8 (bezpečnost a rychlost)
+podle `docs/audit-ukoly.md`. Každý jako draft PR z aktuálního `main`. Neptat se, rozhodnout nejméně invazivně.
 
 Nouzové zrušení zařízení hlavního správce (UI ho záměrně nenabízí) jde bez změny kódu a deploye přes Neon SQL:
 `UPDATE trusted_devices SET revoked_at = now() WHERE id = '<id>'` (ID z dotazu na `trusted_devices` podle e-mailu).
