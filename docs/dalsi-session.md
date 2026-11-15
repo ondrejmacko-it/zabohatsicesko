@@ -9,8 +9,7 @@ Kontext máš v `docs/dalsi-session.md`, `README.md`, `docs/google-prihlaseni.md
 pravidla v `CLAUDE.md`. Tykej mi, piš přátelsky. Úpravy níže jsou odsouhlasené, rovnou je udělej. Ptej se jen
 na věci označené „zeptej se“.
 
-Stav: práce je na větvi `claude/sharp-babbage-5nqoac` (z `main` po sloučení PR #16 až #18), bez PR. Zeptej se,
-jestli otevřít draft PR do `main`. Pokud je větev sloučená, vyjdi z `main`. Můj osobní účet je z Wiki smazaný,
+Stav: `main` obsahuje vše do PR #25 včetně. Pro změny založ větev z `main`. Můj osobní účet je z Wiki smazaný,
 nezakládej ho znovu a nikam ho nezvi.
 
 Zásada pro celé UI: hlavní údaje a hlavní akce musí vyniknout, vedlejší texty jsou menší a tlumené, nic není
@@ -35,6 +34,11 @@ Production na Vercelu nemá proměnné prostředí a buildy z `main` se přeskak
 Na `main` nepushuj, merge dělám já. Respektuj limit kontextu.
 
 ---
+
+## Stav 15. 11. 2026 (větev `claude/pensive-ramanujan-lk23o9`, kód beze změn proti `main`)
+* Snímky předány znovu: 368 snímků (4 role a vstupní brána, 1280 a 390 px, 2×) ve 4 ZIPech do 30 MB, v 1. části `SEZNAM.md` a zdrojový kód. Vznikly automatickým průchodem lokálního buildu (`next start` nad PGlite, každé tlačítko, menu a okno z menu, nic se neodesílá) a scénářem zápisu (správce nahrál nahrávku k ev-11-10, zveřejnil, ostatní role čtou). Vodorovný posun nikde, chyby v konzoli žádné. Skripty jsou mimo repo.
+* Poznámka pro lokální snímkování: brána má limit 10 pokusů za 15 minut na IP (v DB). Na lokálním serveru stačí každému kontextu prohlížeče dát jiné `x-forwarded-for`.
+* Další krok beze změny: živý test s uživatelem (bod 3), propojení Testing vyprší kolem 19. 11.
 
 ## Stav 14. 11. 2026 večer (větev `claude/youthful-brown-attvm9`, draft PR do `main`)
 Vychází z `claude/sharp-babbage-5nqoac` (ta zůstala bez PR, její práce je v této větvi). Ověřeno: lint, typy, testy, build (viz PR). Naživo proti Googlu neověřeno.
