@@ -16,6 +16,12 @@ nepřipojí znovu (`/vzdelavani/integrace` → „Připojit znovu nebo jiným ú
 (`zbc-wiki-produkce`, `SELECT connected_at FROM integration_credentials`), že je datum novější než 15. 11.
 
 **PR 4b (tato relace): nejdřív opravy podle uživatele (15. 11. noc, PR #31 nasazený), pak úklid UI.**
+0. *Nové zjištění 15. 11. noc:* uživatel prošel Integrace → „Připojit znovu nebo jiným účtem“, ale stránka
+   pořád ukazuje „připojeno 15. 11.“ a akce dál „Kalendář čeká na opravu“. Nové propojení se tedy neuložilo
+   (nebo se uložilo a fronta selhává dál). Nejdřív ověř v Neonu `zbc-wiki-produkce`:
+   `SELECT connected_at FROM integration_credentials` a stav `calendar_links` (sync_status, poslední chyba),
+   Vercel runtime logy `/api/google/kalendar/callback`. Projdi `kalendar/pripojit` + `callback` a `saveGrant`
+   (přepisuje existující záznam?) a callback přihlášení (token zahodí, když `needsCalendarConnection` je false).
 1. *Kalendář se musí připojit sám při přihlášení správce, hned plně funkční.* Uživatel u Googlu smazal
    všechna oprávnění. Wiki dál drží zneplatněný obnovovací token, `needsCalendarConnection` kontroluje jen
    existenci záznamu, takže přihlášení o souhlas nepožádá a synchronizace hlásí „dočasně nedostupný“ (akce
