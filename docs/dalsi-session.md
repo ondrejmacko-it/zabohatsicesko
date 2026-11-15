@@ -6,31 +6,37 @@ Zkopíruj text níže jako první zprávu nové relace Claude Code (repo `ondrej
 
 Pokračuj na demu modulu Vzdělávání (repo `ondrejmacko-it/zabohatsicesko`). Nečti znovu celé zadání ani celý kód.
 Kontext máš v `docs/dalsi-session.md` a `README.md`, pravidla v `CLAUDE.md`. Tykej mi, piš přátelsky.
-
 Schválený plán (15. 11.) je série PR podle auditu z 15. 11. a oddělení production (firma, skutečné účty Google,
-Kalendář, prázdná DB se skupinami a pravidelným týdnem) od preview (ukázka, fiktivní role, vstup zvacím odkazem
-bez účtů). Nahrávky v production zůstávají jako v demu. PR 1 je hotový (viz stav níže). Udělej **PR 2** na nové
-větvi `claude/produkce-a-zvaci-odkaz` z `main` (pokud PR 1 ještě není sloučený, z větve PR 1):
+Kalendář, prázdná DB) od preview (ukázka, fiktivní role, zvací odkaz). PR 1 je sloučený, **PR 2** je draft
+[#28](https://github.com/ondrejmacko-it/zabohatsicesko/pull/28) (větev `claude/produkce-a-zvaci-odkaz`).
 
-* `src/server/db/client.ts`: v `WIKI_MODE=production` do prázdné DB nenahrávat fiktivní seed, jen skupiny
-  a pravidelný týden (nová `seedProductionBase` v `src/server/seed.ts` z dat seedu).
-* `BOOTSTRAP_ADMIN_EMAILS` (nastaví uživatel): první přihlášení Googlem s touto adresou založí aktivního správce
-  (`origin: invite`). V production nepoužívat `GOOGLE_LOGIN_ACCOUNTS`.
-* Production UI bez ukázkových textů (vstup jen Google, bez odznaků ukázky, skrýt neaktivní hledání a Knihovnu).
-* Preview: `/vstup?pozvanka=<kód>` (kód = `DEMO_ACCESS_CODE`, stejný limit pokusů) ověří a uloží podepsanou
-  cookie brány, výběr role bez psaní kódu, ruční kód zůstane jako záloha. V demu nenabízet Google přihlášení.
-* `docs/nasazeni.md` s kroky pro uživatele, úprava `README.md` a `docs/predani.md` (T04).
-* Po mergi PR 2 a s potvrzením uživatele: Vercel env Production (nesecretní `WIKI_MODE=production`, `LOGIN_MODE`,
-  `CALENDAR_MODE=google-test`, `CALENDAR_ATTENDEES=audience`, `APP_URL`), Preview (`WIKI_MODE=demo`, Kalendář
-  na simulaci, odebrat `LOGIN_MODE`, `CALENDAR_ATTENDEES` a 16 starých `APP_URL` na větvích), nový Neon projekt
-  `zbc-wiki-produkce` (EU). Tajemství, ochranu Vercelu, ignored build step a Google konzoli dělá uživatel.
+* Pokud je PR 2 sloučený a potvrdím to: nastav přes API Vercelu env Production (nesecretní `WIKI_MODE=production`,
+  `LOGIN_MODE=google-test`, `CALENDAR_MODE=google-test`, `CALENDAR_ATTENDEES=audience`, `APP_URL`), Preview
+  (`WIKI_MODE=demo`, Kalendář na simulaci, odebrat `LOGIN_MODE`, `CALENDAR_ATTENDEES` a 16 starých `APP_URL`
+  na větvích) a založ Neon projekt `zbc-wiki-produkce` (EU). Tajemství, `BOOTSTRAP_ADMIN_EMAILS`, ochranu Vercelu,
+  ignored build step a Google konzoli dělám já, kroky jsou v `docs/nasazeni.md`.
+* Pak **PR 3** bezpečné pozvánky a dopad (A01, A02, A04, A05, A06, A08), na nové větvi z `main`.
 
-Další PR po jednom na relaci: 3 bezpečné pozvánky a dopad (A01, A02, A04, A05, A06, A08), 4 stavy nahrávek
-a 69 textů z `textove-upravy.csv` (A03, T01–T04), 5 Plán, Správa a přístupnost (U01–U09), 6 Připravit měsíc.
-Audit (ZIP `ZBC_Audit_balicek_2026-11-15.zip`) není v repu, pro PR 4 a 5 si ho vyžádej znovu.
+Další PR po jednom na relaci: 4 stavy nahrávek a 69 textů z `textove-upravy.csv` (A03, T01–T04),
+5 Plán, Správa a přístupnost (U01–U09), 6 Připravit měsíc. Audit (ZIP `ZBC_Audit_balicek_2026-11-15.zip`)
+není v repu, pro PR 3 až 5 si ho vyžádej znovu.
 Na `main` nepushuj, merge dělám já. Respektuj limit kontextu.
 
 ---
+
+## Stav 15. 11. 2026 večer (větev `claude/produkce-a-zvaci-odkaz`, draft PR #28 do `main`)
+* **Ostrá Wiki:** prázdná DB dostane jen 4 sloty pravidelného týdne (`seedProductionBase`, `prepareDatabase`
+  plní jen DB bez uživatelů i šablony), `seedDatabase` v production vyhodí chybu. `BOOTSTRAP_ADMIN_EMAILS`
+  v `completeLogin` (`createBootstrapAdmin`, audit `user.bootstrap_admin`), `GOOGLE_LOGIN_ACCOUNTS` ignorován,
+  `DEMO_ACCESS_CODE` nepotřeba, `GOOGLE_ALLOWED_ATTENDEES` povinná jen při `allowlist`.
+* **UI production:** `/vstup` jen Google (`LiveGate`), Sidebar bez neaktivních položek a hledání (`live`),
+  domov bez hledání, popis stránky podle režimu (`generateMetadata`).
+* **Zvací odkaz:** `/vstup?pozvanka=` → `src/app/vstup/pozvanka/route.ts` → cookie `zbc_gate` (src/server/auth/gate.ts,
+  7 dní, otisk kódu, sdílený limit `gate:<ip>`). Ukázka Google nenabízí (trasy dál existují, vypne je odebrání
+  `LOGIN_MODE` na Preview).
+* Ověřeno: lint, typy, 147/147 testů, build, Chromium nad `next start` (ukázka i production s falešnými
+  hodnotami Google). Naživo proti Googlu ne.
+* Otevřené: Vercel Authentication a ignored build step pro Production, Hobby plán, OAuth Testing (vyprší ~19. 11.).
 
 ## Stav 15. 11. 2026 (větev `claude/relaxed-edison-tb8rqz`, draft PR 1 do `main`)
 * **Odhlášení (S02):** `endSession` maže cookie se stejnými atributy jako uložení (`Secure`, `maxAge: 0`).
