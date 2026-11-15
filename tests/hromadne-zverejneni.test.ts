@@ -5,7 +5,7 @@ import { getDb } from "@/server/db/client";
 import { calendarLinks, simCalendarEvents } from "@/server/db/schema";
 import { snapshotOf } from "@/server/domain/snapshot";
 import { formValuesOf } from "@/server/services/detail";
-import { createEvent, generateMonth, listMonth, listMonthDrafts, loadEventRow, publishDrafts, updateEvent, type EventInput } from "@/server/services/events";
+import { createEvent, generateMonth, listMonth, listMonthDrafts, loadEventRow, publishDrafts, updateEvent, IncompleteNotConfirmed, type EventInput } from "@/server/services/events";
 import { PUBLISHED_RM, organizer, participant, resetDemo } from "./helpers";
 
 beforeEach(resetDemo);
@@ -35,10 +35,11 @@ describe("hromadné zveřejnění návrhů měsíce", () => {
     const extraId = await createEvent(organizer, extra, "draft");
     const base = (await listMonthDrafts(organizer, MONTH)).drafts.filter((d) => d.fromTemplate);
     const [first, ...rest] = base;
-    const result = await publishDrafts(organizer, MONTH, [
+    const items = [
       { id: first!.id, revision: first!.revision, topicTitle: "Doplněné téma", leadId: "demo-vedouci" },
       ...rest.map((d) => ({ id: d.id, revision: d.revision, topicTitle: d.topicTitle, leadId: d.leadId })),
-    ]);
+    ];
+    const result = await publishDrafts(organizer, MONTH, items, items.filter((i) => !i.topicTitle || !i.leadId).length);
     expect(result).toEqual({ published: base.map((d) => d.id), skipped: 0 });
 
     const row = (await loadEventRow(await getDb(), first!.id))!;
@@ -79,9 +80,26 @@ describe("hromadné zveřejnění návrhů měsíce", () => {
     const stale = await publishDrafts(organizer, MONTH, [
       { id: draft!.id, revision: draft!.revision + 5, topicTitle: null, leadId: null },
       { id: other!.id, revision: other!.revision, topicTitle: null, leadId: null },
-    ]);
+    ], 2);
     expect(stale).toEqual({ published: [other!.id], skipped: 1 });
     await expect(publishDrafts(participant, MONTH, [])).rejects.toMatchObject({ code: "forbidden" });
+  });
+
+  test("neúplné termíny odejdou jen s potvrzením přesného počtu, i při přímém volání serveru (A04)", async () => {
+    await generateMonth(organizer, MONTH);
+    const [a, b] = (await listMonthDrafts(organizer, MONTH)).drafts;
+    const items = [
+      { id: a!.id, revision: a!.revision, topicTitle: null, leadId: "demo-vedouci" },
+      { id: b!.id, revision: b!.revision, topicTitle: "Téma", leadId: null },
+    ];
+    await expect(publishDrafts(organizer, MONTH, items)).rejects.toMatchObject({ count: 2 });
+    await expect(publishDrafts(organizer, MONTH, items, 1)).rejects.toBeInstanceOf(IncompleteNotConfirmed);
+    expect((await loadEventRow(await getDb(), a!.id))!.published).toBeNull(); // nic se nezveřejnilo
+
+    // Úplné termíny potvrzení nepotřebují.
+    const complete = { id: a!.id, revision: a!.revision, topicTitle: "Téma", leadId: "demo-vedouci" };
+    expect((await publishDrafts(organizer, MONTH, [complete])).published).toEqual([a!.id]);
+    expect((await publishDrafts(organizer, MONTH, [items[1]!], 1)).published).toEqual([b!.id]);
   });
 
   test("v simulaci dostanou pozvánku i zveřejněné budoucí akce ze seedu bez vazby", async () => {

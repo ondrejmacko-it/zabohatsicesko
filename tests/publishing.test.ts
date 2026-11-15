@@ -9,7 +9,8 @@ import { cancelEvent, createEvent, listMonth, loadEventRow, nextEventFor, update
 import { ImpactNotConfirmed, assertImpactConfirmed, changeImpact } from "@/server/services/impact";
 import { listTopics } from "@/server/services/topics";
 import { writeSwitch } from "@/server/settings";
-import { PUBLISHED_RM, organizer, outsider, participant, resetDemo } from "./helpers";
+import { updateAccess } from "@/server/services/users";
+import { PUBLISHED_RM, admin, organizer, outsider, participant, resetDemo } from "./helpers";
 
 beforeEach(resetDemo);
 
@@ -123,6 +124,26 @@ describe("potvrzení dopadu změny", () => {
     expect(external.attendees[0]).toMatchObject({ email: "demo-mimo-skupinu@example.invalid", responseStatus: "accepted" });
     // Staré potvrzení po zveřejnění neplatí pro další změnu.
     await expect(assertImpactConfirmed(PUBLISHED_RM, { ...change, audience: "rm" }, impact.token)).rejects.toBeInstanceOf(ImpactNotConfirmed);
+  });
+
+  test("změna skupin pozvaných po kontrole dopadu potvrzení zneplatní (A02)", async () => {
+    const { revision, ...change } = await inputOf(PUBLISHED_RM, { audience: "fp" });
+    const impact = (await changeImpact(organizer, PUBLISHED_RM, change))!;
+    await assertImpactConfirmed(PUBLISHED_RM, change, impact.token);
+
+    // Kolega mimo FP se mezitím do skupiny dostane: dostal by e-mail, se kterým správce nepočítal.
+    await updateAccess(admin, outsider.id, { role: "member", groups: ["vsichni", "rm", "fp"], status: "active" });
+    const stale = await assertImpactConfirmed(PUBLISHED_RM, change, impact.token).catch((error: unknown) => error);
+    expect(stale).toBeInstanceOf(ImpactNotConfirmed);
+    expect((stale as ImpactNotConfirmed).stale).toBe(true);
+    const missing = await assertImpactConfirmed(PUBLISHED_RM, change, null).catch((error: unknown) => error);
+    expect((missing as ImpactNotConfirmed).stale).toBe(false);
+
+    // Nová kontrola ukáže nového příjemce a její potvrzení platí.
+    const fresh = (await changeImpact(organizer, PUBLISHED_RM, change))!;
+    expect(fresh.token).not.toBe(impact.token);
+    await assertImpactConfirmed(PUBLISHED_RM, change, fresh.token);
+    expect(revision).toBeGreaterThan(0);
   });
 
   test("změna, která se pozvaných nedotkne, potvrzení nevyžaduje; neověřený Kalendář dialog přizná", async () => {

@@ -7,7 +7,7 @@ import { audienceAttendees, planGuests } from "@/server/calendar/attendees";
 import { CalendarError } from "@/server/calendar/provider";
 import { calendarProvider } from "@/server/calendar/sync";
 import { attendeeSource, calendarMode, now } from "@/server/config";
-import { getDb } from "@/server/db/client";
+import { getDb, type Db } from "@/server/db/client";
 import { calendarLinks } from "@/server/db/schema";
 import { calendarSummary, type EventRow } from "@/server/domain/snapshot";
 import { isOrganizer, type Viewer } from "@/server/policy";
@@ -52,8 +52,23 @@ function changesOf(published: EventSnapshot, input: EventInput, next: Next): Cha
   return rows;
 }
 
-function tokenOf(row: EventRow, next: Next): string {
-  const payload = [row.id, row.publishedRevision, next.summary, next.startsAt.toISOString(), next.endsAt.toISOString(), next.audience];
+/**
+ * Otisk skutečných příjemců publika. Do potvrzení se tak promítne i změna skupin účtu mezi zobrazením
+ * dopadu a zveřejněním (audit A02). Adresy se jen hashují, nikam se neukládají ani nelogují.
+ */
+async function recipientsFingerprint(db: Db, audience: Group): Promise<string> {
+  try {
+    const emails = (await audienceAttendees(db, audience)).map((a) => a.email.toLowerCase()).sort();
+    return createHash("sha256").update(emails.join("\n")).digest("hex");
+  } catch {
+    // Seznam nejde sestavit (třeba chybí testovací příjemci). Potvrzení pak platí pro tento stav.
+    return "unavailable";
+  }
+}
+
+async function tokenOf(db: Db, row: EventRow, next: Next): Promise<string> {
+  const recipients = await recipientsFingerprint(db, next.audience);
+  const payload = [row.id, row.publishedRevision, next.summary, next.startsAt.toISOString(), next.endsAt.toISOString(), next.audience, recipients];
   return createHash("sha256").update(JSON.stringify(payload)).digest("hex");
 }
 
@@ -77,7 +92,7 @@ export async function changeImpact(viewer: Viewer, eventId: string, input: Event
   const next = nextOf(input);
   if (!published || published.status === "cancelled" || !isSignificant(published, next)) return null;
 
-  const impact: ChangeImpact = { token: tokenOf(row, next), changes: changesOf(published, input, next), guests: { add: [], remove: [], manual: [] }, notes: [] };
+  const impact: ChangeImpact = { token: await tokenOf(db, row, next), changes: changesOf(published, input, next), guests: { add: [], remove: [], manual: [] }, notes: [] };
   const audienceChanged = published.audience !== next.audience;
   if (audienceChanged) {
     impact.notes.push(
@@ -139,13 +154,21 @@ export async function changeImpact(viewer: Viewer, eventId: string, input: Event
 
 /** Serverová kontrola před zveřejněním: významná změna zveřejněné akce musí mít potvrzený právě tento dopad. */
 export async function assertImpactConfirmed(eventId: string, input: EventInput, token: string | null): Promise<void> {
-  const row = await loadEventRow(await getDb(), eventId);
+  const db = await getDb();
+  const row = await loadEventRow(db, eventId);
   if (!row?.published || row.published.status === "cancelled") return;
   const next = nextOf(input);
-  if (isSignificant(row.published, next) && token !== tokenOf(row, next)) throw new ImpactNotConfirmed();
+  if (!isSignificant(row.published, next)) return;
+  if (!token) throw new ImpactNotConfirmed(false);
+  if (token !== (await tokenOf(db, row, next))) throw new ImpactNotConfirmed(true);
 }
 
-export class ImpactNotConfirmed extends Error {}
+export class ImpactNotConfirmed extends Error {
+  /** Potvrzení přišlo, ale dopad se od té doby změnil (jiná verze akce nebo jiní příjemci). */
+  constructor(readonly stale: boolean) {
+    super("impact_not_confirmed");
+  }
+}
 
 export type CancelImpact = { audience: string; guests: string[]; notes: string[] };
 

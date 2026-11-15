@@ -55,7 +55,25 @@ export function PublishMonthDialog({ monthKey, monthName, drafts, changeDrafts, 
       return next;
     });
 
+  // Doplněné téma a vedoucí žijí ve formuláři (neřízená pole), počet neúplných se proto čte z něj.
+  const [filled, setFilled] = useState<Record<string, { topic: boolean; lead: boolean }>>({});
+  const readFilled = (form: HTMLFormElement) => {
+    const data = new FormData(form);
+    setFilled(
+      Object.fromEntries(
+        drafts.map((d) => [d.id, { topic: Boolean(String(data.get(`topic-${d.id}`) ?? "").trim()), lead: Boolean(data.get(`lead-${d.id}`)) }]),
+      ),
+    );
+  };
+  const isIncomplete = (d: MonthDraft) => {
+    if (d.type === "holiday") return false;
+    const f = filled[d.id] ?? { topic: Boolean(d.topicTitle), lead: Boolean(d.leadId) };
+    return !f.topic || !f.lead;
+  };
+
   const chosen = drafts.filter((d) => picked.has(d.id));
+  const incomplete = chosen.filter(isIncomplete).length;
+  const [allowIncomplete, setAllowIncomplete] = useState(false);
   const audiences = [...new Set(chosen.map((d) => d.audience))];
   const invited = new Set(audiences.flatMap((g) => recipients[g].map((r) => r.email)));
 
@@ -122,7 +140,7 @@ export function PublishMonthDialog({ monthKey, monthName, drafts, changeDrafts, 
       </button>
       {state?.ok && <ActionMessage state={state} />}
       <Modal open={open} title={`Zveřejnit návrhy: ${monthName}`} onRequestClose={() => setOpen(false)} wide>
-        <form action={action} onSubmit={submitKeepingValues(action)} className="stack">
+        <form action={action} onSubmit={submitKeepingValues(action)} onInput={(e) => readFilled(e.currentTarget)} onChange={(e) => readFilled(e.currentTarget)} className="stack">
           <input type="hidden" name="month" value={monthKey} />
           <datalist id="publish-topics">
             {topics.map((name) => (
@@ -149,9 +167,19 @@ export function PublishMonthDialog({ monthKey, monthName, drafts, changeDrafts, 
               zveřejňují jednotlivě u akce.
             </p>
           )}
+          {incomplete > 0 && (
+            <label className="check">
+              {/* Hodnota je počet, který správce potvrzuje. Server zveřejnění odmítne, když nesedí. */}
+              <input type="checkbox" name="allowIncomplete" value={incomplete} checked={allowIncomplete} onChange={(e) => setAllowIncomplete(e.target.checked)} />
+              <span>
+                Zveřejnit i {plural(incomplete, "termín", "termíny", "termínů")} bez tématu nebo vedoucího. Pozvánky odejdou hned, téma
+                a vedoucího jde doplnit později.
+              </span>
+            </label>
+          )}
           {state && !state.ok && <ActionMessage state={state} />}
           <div className="dialog-actions">
-            <button type="submit" className="btn btn-primary" disabled={pending || chosen.length === 0}>
+            <button type="submit" className="btn btn-primary" disabled={pending || chosen.length === 0 || (incomplete > 0 && !allowIncomplete)}>
               {pending ? "Zveřejňuji…" : chosen.length ? `Zveřejnit ${plural(chosen.length, "akci", "akce", "akcí")}` : "Zveřejnit"}
             </button>
             <button type="button" className="btn" onClick={() => setOpen(false)}>
