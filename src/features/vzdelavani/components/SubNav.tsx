@@ -5,7 +5,8 @@ import { usePathname } from "next/navigation";
 
 const ITEMS = [
   { href: "/vzdelavani/harmonogram", label: "Plán", also: ["/vzdelavani/akce"] },
-  { href: "/vzdelavani/zapisy", label: "Zápisy a témata", also: ["/vzdelavani/temata"] },
+  { href: "/vzdelavani/zapisy", label: "Zápisy", also: [] },
+  { href: "/vzdelavani/temata", label: "Témata", also: [] },
 ];
 
 export function SubNav() {

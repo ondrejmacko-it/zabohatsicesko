@@ -1,6 +1,10 @@
-import { redirect } from "next/navigation";
+import type { Metadata } from "next";
+import { TopicsSection } from "@/features/vzdelavani/components/TopicsSection";
+import { requireUser } from "@/server/auth/session";
 
-export default function TopicsRedirect() {
-  // Témata jsou na jedné stránce se zápisy. Starší odkazy dál fungují.
-  redirect("/vzdelavani/zapisy#temata");
+export const metadata: Metadata = { title: "Témata" };
+
+export default async function TopicsPage() {
+  const user = await requireUser();
+  return <TopicsSection user={user} />;
 }

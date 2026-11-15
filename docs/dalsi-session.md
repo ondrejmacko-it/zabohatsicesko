@@ -9,27 +9,32 @@ Pokračuj na modulu Vzdělávání (repo `ondrejmacko-it/zabohatsicesko`). Nečt
 Kontext máš v `docs/dalsi-session.md` a `README.md`, pravidla v `CLAUDE.md`, audit v přiloženém ZIPu. Tykej mi,
 kroky pro mě piš úplně, pod sebe, s přesnými kliky (Windows, PowerShell).
 
-**Stav:** PR 4b část 1 (Kalendář, trvalá zařízení, hlavní správce, texty Správy, Integrace) je draft z větve
-`claude/brave-clarke-uyu0gb`. Nejdřív ověř v Neonu (`zbc-wiki-produkce`), že po merge a přihlášení správce
-`calendar_links` mají `sync_status = 'synced'` a `calendar_id = 'primary'`.
+**Stav:** PR 4b část 2 (úvod s kartami modulů, záložky Plán | Zápisy | Témata, Plán bez řádku Kalendáře, Správa
+na 320 px) je draft z větve `claude/vibrant-ritchie-d100a3`. Google: postup v `docs/google-overeni.md`. Až uživatel
+pošle doménu, nastav Production `APP_URL=https://<domena>`. Až potvrdí Publish app, nastav `GOOGLE_OAUTH_PUBLISHED=1`
+(obojí přes API, Redeploy dělá uživatel). Po změně domény se všichni přihlásí znovu (cookie `__Host-` na hostu).
 
-**PR 4b část 2 (tato relace), úklid UI:**
-1. Úvod: karty modulů (Vzdělávání, pro správce Správa systému) a pod nimi Nejbližší akce (3).
-2. Vzdělávání: záložky Plán | Zápisy | Témata (U09), staré adresy přesměrovat (`/vzdelavani/temata`, kotva `#temata`).
-3. Z Plánu pryč řádek Kalendáře s dlouhým ID, jen krátké upozornění správci, když propojení nefunguje.
-4. „Nejbližší akce“ jen na úvodu.
-5. Správa bez vodorovného posunu na 320 a 360 px přihlášený jako správce (U01, v prohlížeči zatím neověřeno).
-6. Google Cloud (uživatel kliká, ty píšeš kroky): souhlasová obrazovka v režimu Testing dává obnovovacím tokenům
-   platnost 7 dní, Kalendář se pak každý týden odpojí. Navrhni přechod na „In production“ (Publish app), název
-   a logo aplikace, vlastní doménu (Vercel → Domains, DNS) ověřenou v Google Search Console (`*.vercel.app`
-   ověřit nejde) a ověření aplikace pro rozsah `calendar.events`. Pak `GOOGLE_OAUTH_PUBLISHED=1` a nová `APP_URL`.
-7. Pak PR 5–8 (A03 + texty T01–T04, přístupnost U02–U08, Připravit měsíc G6, bezpečnost a rychlost).
+**Další:** PR 5–8 (A03 + texty T01–T04, přístupnost U02–U08, Připravit měsíc G6, bezpečnost a rychlost).
 
 Nouzové zrušení zařízení hlavního správce (UI ho záměrně nenabízí) jde bez změny kódu a deploye přes Neon SQL:
 `UPDATE trusted_devices SET revoked_at = now() WHERE id = '<id>'` (ID z dotazu na `trusted_devices` podle e-mailu).
 Platí od dalšího požadavku. Můžeš ho provést i ty přes Neon MCP, ale jen na výslovný pokyn uživatele.
 
 ---
+
+## Stav 15. 11. 2026 odpoledne 2 (větev `claude/vibrant-ritchie-d100a3`, draft PR 4b část 2)
+* **Neon `zbc-wiki-produkce` po merge #32:** 7 vazeb `synced`, `calendar_id = primary`, `connected_at` 13:54 UTC
+  (merge 13:50 UTC). Bez zásahu.
+* **Úvod:** karty modulů (Vzdělávání, Správa systému jen pro `canManageUsers`) a Nejbližší akce (3, `NextEventsList`).
+  Nejbližší akce z Plánu pryč, `nextEventsFor` bez filtru Plánu, `matchesPlanFilter` smazán.
+* **Záložky:** Plán | Zápisy | Témata. `/vzdelavani/temata` je samostatná stránka (`TopicsSection`), stará kotva
+  `/vzdelavani/zapisy#temata` přesměruje v prohlížeči (`TopicsAnchorRedirect`).
+* **Plán:** místo `CalendarStatusLine` jen `CalendarAlert` (nepropojeno/vypršelo/nedostupné/vyprší do 2 dnů).
+  Podrobný stav zůstal ve Správě.
+* **Správa 320/360 px:** přetékala tabulka příjemců (dlouhé e-maily). Teď `overflow-wrap: anywhere` a pod 480 px
+  řádky pod sebou. Ověřeno v Chromiu za správce ukázky (rozbalené sekce, okno Pozvat, simulované dlouhé adresy
+  a štítky ostré Wiki). Ostrá Správa s Googlem lokálně přihlásit nejde.
+* Ověřeno: lint, typy, 169/169 testů, build, Chromium (správce i účastník, 1280/390/360/320, přesměrování).
 
 ## Stav 15. 11. 2026 pozdě večer (větev `claude/brave-clarke-uyu0gb`, draft PR 4b část 1)
 * **Diagnóza Kalendáře:** propojení se 15. 11. ve 14:01 uložilo (přepis fungoval, stránka ukazovala jen datum).
