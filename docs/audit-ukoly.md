@@ -32,7 +32,7 @@ Hotovo: **U02** (#36). **U03** tlačítko zájmu má stále text „Mám zájem�
 ## PR 7: Připravit měsíc (G6) · draft #39, větev `claude/pripravit-mesic` (popis stavu je v té větvi)
 Jedno okno: návrhy měsíce, mezery (bez tématu/vedoucího), publikum, stav párování. Přidání návrhu nic neodešle. Šablona zůstává v nastavení. Datum a skupiny ručně měnitelné.
 
-## PR 8: bezpečnost a rychlost · draft, větev `claude/bezpecnost-rychlost`
+## PR 8: bezpečnost a rychlost · draft #40, větev `claude/bezpecnost-rychlost`
 Hotovo: `npm audit` 0 zranitelností (15. 11.). CSP s nonce a Referrer-Policy `same-origin` už nastavoval `src/proxy.ts`; nově `next.config.ts` přidává nosniff, Referrer-Policy, X-Frame-Options a HSTS (jen produkční build) i statickým souborům a prefetchům, které proxy vynechává. Limit serverových akcí 120 za minutu na uživatele v `runAction` (nahrávky mají dál vlastní 10 za hodinu). Plán načítá data v jedné paralelní vlně místo pěti postupných, počet dotazů (správce 14, účastník 5, Úvod 4) hlídá rozpočet v `tests/pocet-dotazu.test.ts` včetně kontroly, že neroste s počtem akcí. Logy: `logError` pustí jen kód z bezpečných znaků (část kódů pochází z odpovědi Googlu). Testy: `tests/limity-a-logy.test.ts`, `e2e/stranky.spec.ts` (hlavičky).
 
 ## Mimo rozsah teď

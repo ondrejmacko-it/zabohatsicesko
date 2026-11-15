@@ -37,7 +37,19 @@ Nouzové zrušení zařízení hlavního správce (UI ho záměrně nenabízí) 
 `UPDATE trusted_devices SET revoked_at = now() WHERE id = '<id>'` (ID z dotazu na `trusted_devices` podle e-mailu).
 Platí od dalšího požadavku. Můžeš ho provést i ty přes Neon MCP, ale jen na výslovný pokyn uživatele.
 
-**Stav 15. 11. noc 4 (poslední):** PR 6 dokončený jako draft z větve `claude/pristupnost-u03-u08` (base `main`):
+**Stav 15. 11. noc 5 (poslední):** #38 (PR 6) je v `main`. Otevřené drafty, oba base `main`, mergovat nezávisle:
+* PR 7 [#39](https://github.com/ondrejmacko-it/zabohatsicesko/pull/39) (`claude/pripravit-mesic`): okno „Připravit měsíc“ (G6). Tlačítko vždy pro správce, doplnění termínů,
+  párování nadcházejících akcí, živé mezery, sloupce datum/skupina/téma/vedoucí, „Uložit změny“ (nic neodešle) a „Zveřejnit“.
+  176/176 vitest, e2e 772 prošlo + 18 přeskočeno.
+* PR 8 [#40](https://github.com/ondrejmacko-it/zabohatsicesko/pull/40) (`claude/bezpecnost-rychlost`): hlavičky i pro statické soubory (HSTS v produkci), limit akcí
+  120/min v `runAction`, Plán v jedné paralelní vlně dotazů + rozpočet dotazů v testu, `logError` jen bezpečný kód,
+  `npm audit` 0. 178/178 vitest, e2e 775 prošlo + 18 přeskočeno.
+* Po merge obou se střetne řádek s počtem testů v `README.md` (správně 180) a sekce PR 7/8 v `docs/audit-ukoly.md`.
+
+**Další krok:** po merge #39 a #40 kompletní kontrola celého výtvoru na preview (role správce, vedoucí, účastník FP a RM;
+1280/390/360/320), hlavičky na preview (F12 → Network), okno Připravit měsíc živě s Google Kalendářem. Zbývá jen A07 (rozhodne firma).
+
+**Stav 15. 11. noc 4:** PR 6 dokončený jako draft z větve `claude/pristupnost-u03-u08` (base `main`):
 U03, U04 (kotva `#zadosti`), U05, U07 (menu jako disclosure), U08 (souhrn chyb, fokus, pole podle šířky formuláře,
 320×256). Testy `e2e/pristupnost.spec.ts` a `tests/journey.test.ts`. Draft PR [#38](https://github.com/ondrejmacko-it/zabohatsicesko/pull/38).
 **PR 7 rozpracovaný** na větvi `claude/pripravit-mesic` (z `main`, bez PR, commit `b895da1`): hotová jen serverová
