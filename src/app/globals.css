@@ -2178,3 +2178,12 @@ p.cal-status {
 .module-card .item-meta {
   display: block;
 }
+
+/* Úzký telefon (320 px): tabulky (Integrace) se vejdou bez vodorovného posunu. */
+@media (max-width: 400px) {
+  .table th,
+  .table td {
+    padding-inline: 6px;
+    overflow-wrap: anywhere;
+  }
+}

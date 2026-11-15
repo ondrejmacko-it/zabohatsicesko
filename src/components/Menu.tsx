@@ -19,7 +19,7 @@ const EDGE = 8;
 /**
  * Rozbalovací menu. Seznam je ukotvený k oknu prohlížeče (position: fixed), takže ho neořízne rolovaná část
  * dialogu ani tabulka, a otevře se nahoru, když se dolů nevejde. Zavírá se klikem mimo, klávesou Esc,
- * posunem stránky a volbou položky. Položky zůstávají v dokumentu i po zavření: okna otevřená z menu
+ * posunem stránky (když tlačítko ujede) a volbou položky. Položky zůstávají v dokumentu i po zavření: okna otevřená z menu
  * (Upravit, Zrušit) si tak drží stav.
  */
 export function Menu({ label, children, small, iconOnly, className }: Props) {
@@ -43,6 +43,9 @@ export function Menu({ label, children, small, iconOnly, className }: Props) {
   useEffect(() => {
     if (!open) return;
     const close = () => setOpen(false);
+    // Posun stránky menu zavře, jen když tlačítko opravdu ujelo. Událost scroll z posunu těsně před
+    // klepnutím (telefon, posun k tlačítku) přijde až po otevření a menu by hned zase zavřela.
+    const openedAt = trigger.current?.getBoundingClientRect().top ?? 0;
     const onPointer = (event: PointerEvent) => {
       if (!root.current?.contains(event.target as Node)) close();
     };
@@ -55,7 +58,9 @@ export function Menu({ label, children, small, iconOnly, className }: Props) {
       trigger.current?.focus();
     };
     const onScroll = (event: Event) => {
-      if (!list.current?.contains(event.target as Node)) close();
+      if (list.current?.contains(event.target as Node)) return;
+      const top = trigger.current?.getBoundingClientRect().top ?? openedAt;
+      if (Math.abs(top - openedAt) > 4) close();
     };
     document.addEventListener("pointerdown", onPointer, true);
     document.addEventListener("keydown", onKey, true);

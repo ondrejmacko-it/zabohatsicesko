@@ -23,6 +23,16 @@ function fieldsFingerprint(root: HTMLElement): string {
 }
 
 /**
+ * Vrátí fokus tam, odkud se okno otevřelo. Položka zavřeného menu je skrytá a fokus by nepřijala,
+ * proto se fokus vrátí na tlačítko menu.
+ */
+function focusBack(origin: HTMLElement | null) {
+  if (!origin?.isConnected) return;
+  const target = origin.closest("[hidden]") ? origin.closest(".menu")?.querySelector<HTMLElement>(":scope > button") : origin;
+  target?.focus();
+}
+
+/**
  * Přístupný modální dialog nad nativním <dialog>: past fokusu, Esc, klik mimo, návrat fokusu po zavření.
  *
  * Okno se vykresluje přímo do <body>, ne do místa, kde je v kódu. Druhé okno otevřené z prvního tak není
@@ -46,7 +56,7 @@ export function Modal({ open, title, onRequestClose, children, wide, selfGuarded
     initialFields.current = fieldsFingerprint(dialog);
     return () => {
       dialog.close();
-      if (returnFocus?.isConnected) returnFocus.focus();
+      focusBack(returnFocus);
     };
   }, [shown]);
 
