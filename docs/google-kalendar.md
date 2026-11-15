@@ -10,14 +10,24 @@ simulace, testovací režim zapíná `CALENDAR_MODE=google-test`.
   znamená simulaci. Neúplná konfigurace integraci nespustí, do simulace se nevrací a nic nezapisuje.
 - Připojuje se **jeden účet za organizaci** a platí pro celou Wiki, včetně zápisů vedoucích (odkaz na zápis
   v pozvánce jde přes něj). Účet musí smět zapisovat do kalendáře vzdělávání.
-- **Propojení je automatické** (od 13. 11. 2026): když se organizátor nebo správce přihlásí účtem Google
-  a propojení chybí, Wiki ho hned po přihlášení pošle na souhlas ke Kalendáři a vrátí na Plán
-  (`needsCalendarConnection`, `/api/google/kalendar/pripojit?auto=1`). Účet z přihlášení jde Googlu jako
+- **Propojení je automatické** (od 13. 11. 2026): když se správce přihlásí účtem Google a propojení chybí,
+  Wiki požádá o souhlas ke Kalendáři rovnou na přihlašovací obrazovce (z nového prohlížeče druhým krokem
+  `/api/google/kalendar/pripojit?auto=1`) a vrátí ho na Plán, viz [google-prihlaseni.md](google-prihlaseni.md). Účet z přihlášení jde Googlu jako
   `login_hint`, výběr účtu se proto podruhé nenabízí. Ostatní role žádné oprávnění navíc nedostanou.
 - Když souhlas neproběhne (zrušení, chybějící zaškrtnutí oprávnění) nebo propojení později zanikne, má
-  organizátor v Plánu v „Čeká na vás“ jako první úkol „Propojte Kalendář Google“. Vede na stejný souhlas.
+  správce v Plánu v „Čeká na vás“ jako první úkol „Propojte Kalendář Google“. Vede na stejný souhlas.
 - *Vzdělávání → Integrace* zůstává technická stránka: stav propojení, ruční připojení jiným účtem (s výběrem
   účtu) a odpojení. Při vstupu kódem a fiktivní roli se propojuje jen tudy nebo z úkolu v Plánu.
+- **Stav Kalendáře** ukazuje řádek „Kalendář“ na Plánu (jen správce mimo náhled) a sekce „Kalendář a pozvánky“
+  ve Správě: propojený účet, v režimu Testing datum vypršení (dva dny předem nabídne „Obnovit propojení“)
+  a tabulku, kdo dostane pozvánku podle skupiny. Propojení se při načtení ověří u Googlu.
+- **Příjemci pozvánek:** s `CALENDAR_ATTENDEES=audience` aktivní účty skupiny akce, včetně fiktivní role svázané
+  s účtem Google přes `GOOGLE_LOGIN_ACCOUNTS`. Dialog akce ukazuje jejich počet a jména podle vybraného publika.
+  Od 14. 11. 2026 je proměnná nastavená pro všechna preview (všechna sdílí jednu databázi i jeden kalendář).
+- **Automatické vazby a fronta:** zveřejněná budoucí nezrušená akce bez vazby dostane pozvánku po otevření Plánu
+  správcem, po zveřejnění, hromadném zveřejnění („Zveřejnit návrhy“) a obnově ukázkových dat
+  (`linkPublishedWithoutInvite`, `syncPending`). Cizí nespárovaná pozvánka ve stejném čase vazbu zastaví,
+  správce pak spáruje, nebo založí novou.
 - Přihlášení a Kalendář jsou dva oddělené souhlasy za sebou. Přihlášení žádá jen identitu a žádný token
   neukládá, Kalendář žádá `calendar.events` a ukládá obnovovací token.
 - Wiki žádá jen o rozsah `calendar.events`. Obnovovací token se ukládá šifrovaně (AES-256-GCM, klíč
@@ -33,13 +43,13 @@ simulace, testovací režim zapíná `CALENDAR_MODE=google-test`.
   režimu jde nová pozvánka **jen testovacím příjemcům**, skutečné publikum akce se neosloví.
 - Odvolání přístupu u Googlu integraci odpojí i ve Wiki. Akce ukáže „Vyžaduje pozornost“ a po novém
   připojení se nejnovější zveřejněná verze odešle sama (`resumeAfterReconnect`). Akce zastavené jinou
-  chybou, například ruční změnou v Kalendáři, dál rozhoduje organizátor.
+  chybou, například ruční změnou v Kalendáři, dál rozhoduje správce.
 - Obnova ukázkových dat připojení Kalendáře ani vazby na Google účty nemaže.
 
 ## Co nastavit po dodání přístupů
 
 1. V Google Cloud založit projekt pro test, zapnout Google Calendar API a vytvořit OAuth klienta typu
-   webová aplikace. Souhlasová obrazovka v režimu testování, testovací uživatel je účet organizátora.
+   webová aplikace. Souhlasová obrazovka v režimu testování, testovací uživatel je účet správce.
 2. Přesměrovací adresa klienta: `<APP_URL>/api/google/kalendar/callback`. U preview na Vercelu použít
    stálou adresu větve, ne adresu jednoho nasazení.
 3. Proměnné prostředí (jen Preview, tajemství jako sensitive):
@@ -54,22 +64,23 @@ simulace, testovací režim zapíná `CALENDAR_MODE=google-test`.
 | `CALENDAR_ATTENDEES` | Nepovinné. Prázdné: pozvánky jdou jen testovacím příjemcům. `audience`: Wiki zve aktivní účty skupiny, pro kterou je akce určená (i pozvané před prvním přihlášením, bez fiktivních rolí), při změně skupin nebo odebrání přístupu upraví budoucí pozvánky a rozešle změnu. Ručně přidané hosty a odpovědi nemění. Po přepnutí se stávající pozvánky srovnají při nejbližším zveřejnění změny nebo změně účtu ve skupině. |
 | `TOKEN_ENCRYPTION_KEY` | 32 náhodných bajtů v base64 (`openssl rand -base64 32`). |
 | `APP_URL` | Veřejná adresa nasazení, ze které se skládá přesměrovací adresa i odkaz v pozvánce. |
+| `GOOGLE_OAUTH_PUBLISHED` | Nepovinné. `1`, když je souhlasová obrazovka zveřejněná. Vypne upozornění, že propojení v režimu Testing vyprší po 7 dnech. |
 
-4. Po nasazení obnovit ukázková data (v testovacím režimu vzniknou akce bez vazby na pozvánku).
-   Organizátor se přihlásí účtem Google a souhlas ke Kalendáři potvrdí rovnou při přihlášení. Bez
+4. Po nasazení obnovit ukázková data. Zveřejněné budoucí akce dostanou pozvánku samy, jakmile je Kalendář
+   propojený a správce otevře Plán. Správce se přihlásí účtem Google a souhlas ke Kalendáři potvrdí rovnou při přihlášení. Bez
    přihlášení Googlem jde účet připojit ve *Vzdělávání → Integrace*.
 
 Omezení, dokud je souhlasová obrazovka v režimu testování: Google po 7 dnech zneplatní obnovovací token,
-propojení zanikne a organizátor dostane úkol „Propojte Kalendář Google“. Možnosti, jak se toho zbavit, jsou
+propojení zanikne a správce dostane úkol „Propojte Kalendář Google“. Možnosti, jak se toho zbavit, jsou
 v [google-workspace-moznosti.md](google-workspace-moznosti.md).
 
 ## Živý test (část 02 zadání)
 
-Organizátor a jeden testovací příjemce. Každý krok zapsat jako ověřený, nebo s rozdílem.
+Správce a jeden testovací příjemce. Každý krok zapsat jako ověřený, nebo s rozdílem.
 
 1. V testovacím kalendáři existuje pozvánka na čt 12. 11. 2026 s příjemcem, známým RSVP a odkazem na
    schůzku. V detailu Tréninku RM ji spárovat.
-2. Změnit téma a zveřejnit. Zkontrolovat stejné ID události, pohled organizátora i příjemce, zachované
+2. Změnit téma a zveřejnit. Zkontrolovat stejné ID události, pohled správce i příjemce, zachované
    RSVP a odkaz na schůzku.
 3. Změnit čas a zveřejnit. Příjemce dostane oznámení podle svého nastavení.
 4. Uložit totéž znovu a spustit synchronizaci podruhé. V kalendáři je stále jedna pozvánka.

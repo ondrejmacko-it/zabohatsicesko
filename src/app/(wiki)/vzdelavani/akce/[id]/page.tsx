@@ -20,6 +20,7 @@ import { getEventDetail } from "@/server/services/detail";
 import { listPeople, loadTemplate } from "@/server/services/events";
 import { resolvePreview } from "@/server/services/preview";
 import { listTopics } from "@/server/services/topics";
+import { loadInviteRecipients } from "@/server/services/calendar-status";
 
 export const metadata: Metadata = { title: "Detail akce" };
 
@@ -48,12 +49,15 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
   const dayKey = toDateKey(start);
   const title = card.topicTitle ? `${card.label}: ${card.topicTitle}` : card.label;
   const status = primaryStatus(card);
-  const [people, topics] = organizer ? await Promise.all([listPeople(user), listTopics(user)]) : [[], []];
+  // Neplatná sestava hostů (chybná konfigurace) dialog nezastaví, jen v něm chybí seznam pozvaných.
+  const [people, topics, invite] = organizer
+    ? await Promise.all([listPeople(user), listTopics(user), loadInviteRecipients(user).catch(() => null)])
+    : [[], [], null];
   const planDays = organizer ? (await loadTemplate()).filter((slot) => slot.active).map((slot) => slot.isoWeekday) : [];
   const editable = organizer && detail.form && card.planStatus !== "cancelled";
   const replaceable = editable && detail.fromTemplate && !EXTRAORDINARY_TYPES.has(card.type) && !card.past;
   const dialogProps = editable
-    ? { mode: "edit" as const, id: card.id, revision: detail.revision, initial: detail.form!, published: detail.publishedForm, people, topics, inviteeCount: detail.sync?.inviteeCount ?? 0, planDays }
+    ? { mode: "edit" as const, id: card.id, revision: detail.revision, initial: detail.form!, published: detail.publishedForm, people, topics, invite, planDays }
     : null;
   // Nástroje vedoucího (nahrání, úprava zápisu) by v náhledu běžely pod správcem, proto se nenabízejí.
   const handlerPreview = Boolean(preview) && detail.recording.access === "handler";
@@ -110,7 +114,8 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
               {replaceable && <EventDialog {...dialogProps!} replace />}
             </EventMenu>
           )}
-          {editable && <EventDialog {...dialogProps!} primary />}
+          {/* U proběhlé akce, kterou správce sám vede, je hlavní krok nahrávka. Úprava zůstává vedle jako vedlejší. */}
+          {editable && <EventDialog {...dialogProps!} primary={!(handler && card.past)} />}
         </div>
       </div>
 

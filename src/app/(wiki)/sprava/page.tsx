@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ActionForm } from "@/components/ActionForm";
-import { AccessForm, InviteForm } from "@/features/sprava/components/AccessForms";
-import { rejectRequestAction } from "@/features/sprava/actions";
+import { AccountActions, InviteForm } from "@/features/sprava/components/AccessForms";
 import { GROUP_LABELS, ROLE_LABELS, USER_STATUS_LABELS } from "@/lib/labels";
 import { formatDate, toDateKey } from "@/lib/time";
 import type { Role } from "@/lib/types";
@@ -67,21 +65,8 @@ export default async function AdminPage() {
           <p className="muted small">Nikdo nečeká. Nový kolega se přihlásí účtem Google a jeho žádost se objeví tady.</p>
         ) : (
           pending.map((a) => (
-            <article key={a.id} className="item-card stack">
-              <AccountHead account={a} />
-              <AccessForm userId={a.id} roles={roles} role={a.role} groups={a.groups} mode="approve" />
-              <ActionForm
-                action={rejectRequestAction}
-                fields={{ userId: a.id }}
-                label="Zamítnout"
-                small
-                variant="danger"
-                confirm={{
-                  title: "Zamítnout žádost",
-                  text: `Žádost účtu ${a.email} zmizí. Pokud se přihlásí znovu, vznikne nová žádost.`,
-                  confirmLabel: "Zamítnout",
-                }}
-              />
+            <article key={a.id} className="item-card">
+              <AccountHead account={a} actions={<AccountActions account={a} roles={roles} />} />
             </article>
           ))
         )}
@@ -95,24 +80,11 @@ export default async function AdminPage() {
       <section className="section stack" aria-labelledby="uzivatele">
         <h2 id="uzivatele">Uživatelé</h2>
         {others.map((a) => (
-          <article key={a.id} className="item-card stack">
-            <AccountHead account={a} />
-            {a.editable ? (
-              <details>
-                <summary className="small">{a.status === "disabled" ? "Vrátit přístup" : "Upravit roli a skupiny"}</summary>
-                <AccessForm
-                  userId={a.id}
-                  roles={roles}
-                  role={a.role}
-                  groups={a.groups}
-                  mode={a.status === "disabled" ? "restore" : "edit"}
-                />
-              </details>
-            ) : (
-              <p className="small muted">
-                Svůj účet měnit nemůžete.
-              </p>
-            )}
+          <article key={a.id} className="item-card">
+            <AccountHead
+              account={a}
+              actions={a.editable ? <AccountActions account={a} roles={roles} /> : <span className="menu-placeholder" aria-hidden="true" />}
+            />
           </article>
         ))}
       </section>
@@ -124,11 +96,14 @@ export default async function AdminPage() {
   );
 }
 
-function AccountHead({ account: a }: { account: Account }) {
+function AccountHead({ account: a, actions }: { account: Account; actions: React.ReactNode }) {
   return (
     <div className="spread">
       <div>
-        <p className="item-title">{a.name}</p>
+        <p className="item-title">
+          {a.name}
+          {!a.editable && a.status === "active" && <span className="small muted"> · váš účet</span>}
+        </p>
         <p className="item-meta">
           {a.email} · {ROLE_LABELS[a.role]}
           {a.groups.length > 0 && ` · ${a.groups.map((g) => GROUP_LABELS[g]).join(", ")}`}
@@ -141,14 +116,17 @@ function AccountHead({ account: a }: { account: Account }) {
               : "Pozvánka čeká na první přihlášení"}
         </p>
       </div>
-      {a.status === "active" && a.origin !== "demo" && !a.googleLinked ? (
-        // Účet už platí, ale kolega se ještě nepřihlásil. „Aktivní“ by tu mátlo.
-        <span className="badge badge-ochre">Pozvaný</span>
-      ) : (
-        <span className={`badge${a.status === "active" ? " badge-ok" : a.status === "pending" ? " badge-ochre" : " badge-danger"}`}>
-          {USER_STATUS_LABELS[a.status]}
-        </span>
-      )}
+      <div className="account-side">
+        {a.status === "active" && a.origin !== "demo" && !a.googleLinked ? (
+          // Účet už platí, ale kolega se ještě nepřihlásil. „Aktivní“ by tu mátlo.
+          <span className="badge badge-ochre">Pozvaný</span>
+        ) : (
+          <span className={`badge${a.status === "active" ? " badge-ok" : a.status === "pending" ? " badge-ochre" : " badge-danger"}`}>
+            {USER_STATUS_LABELS[a.status]}
+          </span>
+        )}
+        {actions}
+      </div>
     </div>
   );
 }

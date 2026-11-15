@@ -236,7 +236,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
                 published={null}
                 people={people}
                 topics={topics}
-                inviteeCount={0}
+                invite={calendar}
                 planDays={activeSlots.map((s) => s.isoWeekday)}
               />
             </div>

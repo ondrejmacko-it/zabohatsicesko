@@ -1,5 +1,6 @@
 import { ActionForm } from "@/components/ActionForm";
 import { AutoRefresh } from "@/components/AutoRefresh";
+import { Menu } from "@/components/Menu";
 import { ERROR_LABELS, RECORDING_STATE_LABELS, TEMPLATE_LABELS } from "@/lib/labels";
 import type { MinutesContent, RecordingState } from "@/lib/types";
 import type { RecordingPanel } from "@/server/services/recordings";
@@ -65,23 +66,34 @@ export function RecordingSection({ eventId, eventLabel, panel }: { eventId: stri
     <ActionForm
       action={withdrawMinutesAction}
       fields={{ id: eventId }}
-      label="Stáhnout zveřejněný zápis"
+      label="Stáhnout zveřejněný zápis…"
       pendingLabel="Stahuji…"
+      variant="danger"
       confirm={{
         title: "Stáhnout zveřejněný zápis",
         text: "Kolegové zápis přestanou vidět a z pozvánky v Kalendáři zmizí odkaz na něj. Zápis zůstane u vás jako návrh, který můžete opravit a zveřejnit znovu.",
         confirmLabel: "Stáhnout zápis",
       }}
-      small
     />
   );
+  const published = Boolean(panel.publicMinutes) || minutes?.status === "published";
   return (
     <section className="section" id="nahravka" aria-labelledby="nahravka-title">
       <AutoRefresh active={state === "processing"} />
       <div className="spread">
         <h2 id="nahravka-title">Nahrávka a zápis</h2>
-        <span className={STATE_BADGE[state]} role="status">
-          {RECORDING_STATE_LABELS[state]}
+        <span className="row">
+          <span className={STATE_BADGE[state]} role="status">
+            {RECORDING_STATE_LABELS[state]}
+          </span>
+          {/* Méně časté kroky jsou v nabídce, hlavní akce sekce (nahrát, zveřejnit) zůstávají na očích. */}
+          <Menu label="Další možnosti nahrávky" small iconOnly>
+            <a className="btn" href="/demo/testovaci-nahravka.wav" download>
+              Stáhnout testovací nahrávku
+            </a>
+            {published && <hr className="menu-divider" />}
+            {published && withdraw}
+          </Menu>
         </span>
       </div>
       <p className="small muted">
@@ -117,10 +129,7 @@ export function RecordingSection({ eventId, eventLabel, panel }: { eventId: stri
           {minutes.status === "draft" ? (
             <>
               {panel.publicMinutes && (
-                <div className="notice spread">
-                  <p>Kolegové zatím vidí zápis z původní nahrávky, dokud nezveřejníte tento.</p>
-                  {withdraw}
-                </div>
+                <p className="notice">Kolegové zatím vidí zápis z původní nahrávky, dokud nezveřejníte tento.</p>
               )}
               <p className="notice">
                 Návrh zápisu vytvořený z přepisu. Doporučená šablona: {TEMPLATE_LABELS[minutes.detectedTemplate]}.
@@ -130,10 +139,7 @@ export function RecordingSection({ eventId, eventLabel, panel }: { eventId: stri
             </>
           ) : (
             <>
-              <div className="notice notice-ok spread">
-                <p>Zápis je zveřejněný pro publikum akce.</p>
-                {withdraw}
-              </div>
+              <p className="notice notice-ok">Zápis je zveřejněný pro publikum akce. Stáhnout ho jde v nabídce ⋯ u nadpisu.</p>
               <MinutesView content={minutes.content} />
             </>
           )}

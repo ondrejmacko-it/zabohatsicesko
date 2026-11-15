@@ -28,13 +28,17 @@ export type CalendarStatus = {
 
 const DAY_MS = 24 * 3600 * 1000;
 
-export async function loadCalendarStatus(viewer: Viewer): Promise<CalendarStatus> {
+export type InviteRecipients = Pick<CalendarStatus, "attendeeSource" | "recipients" | "audienceRecipients">;
+
+/**
+ * Komu Wiki pošle pozvánku podle skupiny akce. Bez dotazu na Google, proto se hodí i do dialogu akce.
+ * V simulaci jsou to aktivní účty skupiny, v režimu Googlu podle `CALENDAR_ATTENDEES`.
+ */
+export async function loadInviteRecipients(viewer: Viewer): Promise<InviteRecipients> {
   if (!canPlan(viewer)) throw new DomainError("forbidden");
   const db = await getDb();
   const cfg = googleCalendarConfig();
-  const google = calendarMode() === "google-test";
-  const source: AttendeeSource = google ? attendeeSource() : "audience";
-
+  const source: AttendeeSource = calendarMode() === "google-test" ? attendeeSource() : "audience";
   const people = await listRecipients(db, cfg !== null);
   const byGroup = (list: Array<{ email: string; name: string; groups: string[] }>) =>
     Object.fromEntries(GROUPS.map((g) => [g, list.filter((u) => u.groups.includes(g)).map(({ email, name }) => ({ email, name }))])) as GroupRecipients;
@@ -44,8 +48,15 @@ export async function loadCalendarStatus(viewer: Viewer): Promise<CalendarStatus
     const fixed = (await audienceAttendees(db, "vsichni", "allowlist")).map(({ email, name }) => ({ email, name }));
     recipients = Object.fromEntries(GROUPS.map((g) => [g, fixed])) as GroupRecipients;
   }
+  return { attendeeSource: source, recipients, audienceRecipients };
+}
 
-  const base = { attendeeSource: source, recipients, audienceRecipients };
+export async function loadCalendarStatus(viewer: Viewer): Promise<CalendarStatus> {
+  const base = await loadInviteRecipients(viewer);
+  const db = await getDb();
+  const cfg = googleCalendarConfig();
+  const google = calendarMode() === "google-test";
+
   if (!google) return { mode: "simulation", connection: null, problem: null, calendarId: null, ...base };
   if (!cfg) return { mode: "google", connection: null, problem: googleCalendarConfigProblems().length ? "not_configured" : "not_connected", calendarId: null, ...base };
 
