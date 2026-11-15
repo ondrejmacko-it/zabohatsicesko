@@ -21,7 +21,7 @@ export function CalendarStatusLine({ status, now, detailed }: { status: Calendar
       <p className="cal-status" role="status">
         <strong>Kalendář</strong>
         <span className="badge badge-outline">ukázkový režim</span>
-        <span className="cal-status-rest">Pozvánky se neposílají, dostávají je jen fiktivní role.</span>
+        <span className="cal-status-rest">Simulace · skutečné e-maily se neodesílají.</span>
       </p>
     );
   }
@@ -52,12 +52,12 @@ export function CalendarStatusLine({ status, now, detailed }: { status: Calendar
         <span className="cal-status-rest">
           účtem {connection.accountEmail} · kalendář {status.calendarId} · pozvánky dostává:{" "}
           {status.attendeeSource === "allowlist"
-            ? `jen testovací adresa ${[...accounts].join(", ") || "(žádná)"}, skuteční účastníci zatím ne`
+            ? `pouze testovací příjemci (${accounts.size})`
             : `účty podle skupin (${accounts.size})`}
           {!detailed && (
             <>
               {" · "}
-              <Link href="/sprava#pozvanky">Kdo co dostane</Link>
+              <Link href="/sprava#pozvanky">Příjemci pozvánek podle skupin</Link>
             </>
           )}
         </span>

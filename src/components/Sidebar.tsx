@@ -8,7 +8,7 @@ type Item = { label: string; icon: IconName; href?: string; match?: (path: strin
 
 // Ostatní sekce Wiki jsou v ukázce jen kulisy shellu, bez interního obsahu.
 const ITEMS: Item[] = [
-  { label: "Knihovna", icon: "library", href: "/", match: (p) => p === "/" },
+  { label: "Domů", icon: "library", href: "/", match: (p) => p === "/" },
   { label: "Moje role", icon: "user" },
   { label: "Jak pracujeme", icon: "workflow" },
   { label: "Vzdělávání", icon: "education", href: "/vzdelavani", match: (p) => p.startsWith("/vzdelavani"), badgeKey: "education" },
@@ -16,14 +16,14 @@ const ITEMS: Item[] = [
 
 const ADMIN: Item = { label: "Správa systému", icon: "settings", href: "/sprava", match: (p) => p.startsWith("/sprava"), badgeKey: "admin" };
 
-/** `live`: ostrá Wiki. Neaktivní kulisy ukázky (Knihovna, další sekce, hledání) se v ní nezobrazují. */
+/** `live`: ostrá Wiki. Neaktivní kulisy ukázky (další sekce, dokumenty, hledání) se v ní nezobrazují. */
 type Props = { badge: number; canManageUsers: boolean; pendingRequests: number; live: boolean };
 
 export function Sidebar({ badge, canManageUsers, pendingRequests, live }: Props) {
   const pathname = usePathname();
   // Správa je jen pro toho, kdo ji smí používat. Ostatním zůstává jako neaktivní položka shellu.
   const shell = [...ITEMS, canManageUsers ? ADMIN : { label: ADMIN.label, icon: ADMIN.icon }];
-  const items = live ? shell.filter((item) => item.href && item.label !== "Knihovna") : shell;
+  const items = live ? shell.filter((item) => item.href) : shell;
   const counts = { education: badge, admin: pendingRequests };
   return (
     <aside className="sidebar" aria-label="Hlavní navigace">

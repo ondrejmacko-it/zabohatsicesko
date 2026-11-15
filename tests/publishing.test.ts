@@ -104,9 +104,9 @@ describe("potvrzení dopadu změny", () => {
     const { revision, ...change } = await inputOf(PUBLISHED_RM, { audience: "fp" });
     const impact = (await changeImpact(organizer, PUBLISHED_RM, change))!;
     expect(impact.changes).toEqual([{ field: "Publikum", from: "Relationship manažeři", to: "Finanční poradci" }]);
-    expect(impact.guests.add).toEqual(["Účastník FP"]);
+    expect(impact.guests.add).toEqual(["Účastník – finanční poradce"]);
     expect(impact.guests.remove).toEqual([]);
-    expect(impact.guests.manual).toEqual(["Účastník RM"]); // přidaný ručně v Kalendáři, Wiki ho neodebírá
+    expect(impact.guests.manual).toEqual(["Účastník – relationship manažer"]); // přidaný ručně v Kalendáři, Wiki ho neodebírá
     expect(impact.notes.join(" ")).toContain("simulaci");
 
     // Server zveřejnění bez potvrzení odmítne, stejně tak potvrzení jiné změny.

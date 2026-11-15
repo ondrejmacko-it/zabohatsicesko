@@ -5,7 +5,9 @@ Stav k 15. 11. odpoledne. Hotové = sloučené nebo v otevřeném draft PR.
 ## Hotovo
 * S01, S02 (PR 1), A01, A02, A04, A05, A06, A08 (PR 3), U01 (PR #33: Správa 320/360, Integrace ověřit znovu), U09 (PR #33: záložka Témata, stará kotva přesměruje).
 
-## PR 5: stavy nahrávek a texty (A03, T01–T04)
+## PR 5: stavy nahrávek a texty (A03, T01–T04) · draft, větev `claude/audit-texty-a03`
+Hotovo v kódu: A03 (`progressOf`, `recordingProgressByEvent` v `journey.ts`, špatný soubor bez „Zkusit znovu“), T01/T02 a přepisy z tabulky, T03 (`formatEventWhen`), T04 (Integrace, `predani.md`, `google-kalendar.md`), neutrální okno „Akce/Zápis není dostupný“ (část U06). Testy `tests/stav-nahravky.test.ts`. **Neověřeno v Chromiu** (lokální `next start` přes http: CSP blokuje skripty, přihlášení neprojde, použít `next dev`).
+
 * **A03** Nepodporovaná nebo selhaná nahrávka: Plán, výběr „Přidat zápis“, detail i čtenář musí ukazovat stejný stav (`journey.ts` 98–166, `recordings.ts` 281–329). Selhání služby = „Zkusit znovu“, špatný formát = „Nahrát jinou“, čtenář = „Zápis zatím nevyšel“. Při náhradě zůstává starý zveřejněný zápis vidět.
 * **T01** Slovník: „Stáhnout zápis“ (stáhne ze zveřejnění) → „Vrátit zápis do návrhu“, „Pozvat“ uloží účet → přesně, sjednotit „Nahrát nahrávku“ (`RecordingSection.tsx` 69–78, `AccessForms.tsx` 212–223). Dál: Plán, Pro koho (akce), Skupiny (účty), Zápis k dokončení, Zveřejnit zápis, Povolit přihlášení. Zrušit akci (zveřejněná) / Smazat návrh / Zahodit návrh změny. Zavřít (prohlížení) / Zpět (potvrzení) / Zrušit (formulář). Vykání.
 * **T02** Audio smí i správce, UI tvrdí jen vedoucí a kontrolor (`RecordingSection.tsx` 100, `EventPeek.tsx` 91). Čtenáři nevysvětlovat nedostupné funkce.
@@ -13,7 +15,12 @@ Stav k 15. 11. odpoledne. Hotové = sloučené nebo v otevřeném draft PR.
 * **T04** Integrace bez textu o historickém testu jako aktuálním stavu (`integrace/page.tsx` 67–91), `docs/predani.md` aktualizovat (uvádí 49 testů a staré režimy), `docs/google-kalendar.md` 94–116.
 * Dalších 69 přepisů je v auditu v `textove-upravy.csv` (sloupce: původní, navržené znění, důvod, soubor/řádek, priorita).
 
-## PR 6: přístupnost a přehlednost (U02–U08)
+## Testy desktop a macOS · draft #35, větev `claude/testy-desktop-macos` (stojí na #34)
+`npm run e2e` (Playwright, 750 testů, 7 projektů). Opraveno: CSP bez nonce na `/soukromi` a 404, menu na telefonu se hned zavíralo, návrat fokusu z okna otevřeného z menu (část U07), Integrace 320 px.
+
+## PR 6: přístupnost a přehlednost (U02–U08) · draft, větev `claude/audit-pristupnost-u02-u08` (stojí na #35)
+Hotovo: **U02** (hlavička mřížky tmavým textem, drobný okrový text a klíče řádků tmavší, axe teď kontrast hlídá a prochází). Část U06 (neutrální okno, zachovaný měsíc a pohled, test v `e2e/okna.spec.ts`) a U07 (návrat fokusu) už v #34/#35. Zbývá U03, U04, U05, zbytek U07 (`aria-haspopup`), U08.
+
 * **U02** Kontrast: hlavička mřížky 2,5:1 (`schedule.module.css` 19–28) → tmavá na zelenošedé 6,28:1. Drobný okrový text 4,44:1 → tmavší okr. Ověřit axe.
 * **U03** Tlačítko zájmu: viditelný text a přístupný název se shodují, `aria-pressed` (`TopicActions.tsx` 23–26).
 * **U04** Správa: čekající žádosti první, odkaz z upozornění na jejich kotvu, tlačítko „Nastavit a schválit“.

@@ -52,11 +52,8 @@ export function RecordingSection({ eventId, eventLabel, panel }: { eventId: stri
     return (
       <section className="section" id="zapis" aria-labelledby="zapis-title">
         <h2 id="zapis-title">Zápis</h2>
-        {panel.minutes ? <MinutesView content={panel.minutes} /> : <p className="muted">
-            {panel.state === "processing"
-              ? "Zápis se připravuje. Objeví se tady, až ho vedoucí zkontroluje a zveřejní."
-              : "Zápis zatím není k dispozici, vedoucí ještě nenahrál záznam."}
-          </p>}
+        {/* Čtenáři se nevysvětluje, proč zápis chybí (nahrávka, přepis), to řeší vedoucí. */}
+        {panel.minutes ? <MinutesView content={panel.minutes} /> : <p className="muted">Zápis zatím není zveřejněný.</p>}
       </section>
     );
   }
@@ -66,17 +63,18 @@ export function RecordingSection({ eventId, eventLabel, panel }: { eventId: stri
     <ActionForm
       action={withdrawMinutesAction}
       fields={{ id: eventId }}
-      label="Stáhnout zveřejněný zápis…"
-      pendingLabel="Stahuji…"
+      label="Vrátit zápis do návrhu…"
+      pendingLabel="Vracím…"
       variant="danger"
       confirm={{
-        title: "Stáhnout zveřejněný zápis",
+        title: "Vrátit zápis do návrhu",
         text: "Kolegové zápis přestanou vidět a z pozvánky v Kalendáři zmizí odkaz na něj. Zápis zůstane u vás jako návrh, který můžete opravit a zveřejnit znovu.",
-        confirmLabel: "Stáhnout zápis",
+        confirmLabel: "Vrátit do návrhu",
       }}
     />
   );
   const published = Boolean(panel.publicMinutes) || minutes?.status === "published";
+  const wrongFile = state === "failed" && errorCode === "unsupported_fixture";
   return (
     <section className="section" id="nahravka" aria-labelledby="nahravka-title">
       <AutoRefresh active={state === "processing"} />
@@ -89,7 +87,7 @@ export function RecordingSection({ eventId, eventLabel, panel }: { eventId: stri
           {/* Méně časté kroky jsou v nabídce, hlavní akce sekce (nahrát, zveřejnit) zůstávají na očích. */}
           <Menu label="Další možnosti nahrávky" small iconOnly>
             <a className="btn" href="/demo/testovaci-nahravka.wav" download>
-              Stáhnout testovací nahrávku
+              Stáhnout ukázkovou nahrávku
             </a>
             {published && <hr className="menu-divider" />}
             {published && withdraw}
@@ -97,7 +95,7 @@ export function RecordingSection({ eventId, eventLabel, panel }: { eventId: stri
         </span>
       </div>
       <p className="small muted">
-        Nahrávku a pracovní přepis vidí jen vedoucí akce a pověřený kontrolor. Kolegové uvidí až zveřejněný zápis.
+        Nahrávku a přepis vidí vedoucí akce, pověřený kontrolor a správce. Kolegové uvidí až zveřejněný zápis.
       </p>
 
       {recording && (
@@ -113,8 +111,13 @@ export function RecordingSection({ eventId, eventLabel, panel }: { eventId: stri
 
       {state === "failed" && (
         <div className="stack">
-          <p className="notice notice-danger">{ERROR_LABELS[errorCode ?? ""] ?? "Zpracování se nepovedlo."}</p>
-          <ActionForm action={retryTranscriptionAction} fields={{ id: eventId }} label="Zkusit zpracování znovu" variant="primary" />
+          <p className="notice notice-danger">{ERROR_LABELS[errorCode ?? ""] ?? "Přepis se nepovedl."}</p>
+          {/* Špatný soubor nový pokus nespraví, pomůže jen jiná nahrávka (formulář níže). */}
+          {wrongFile ? (
+            <p className="small">Vyberte jinou nahrávku níže.</p>
+          ) : (
+            <ActionForm action={retryTranscriptionAction} fields={{ id: eventId }} label="Zkusit přepis znovu" variant="primary" />
+          )}
         </div>
       )}
 
@@ -139,7 +142,7 @@ export function RecordingSection({ eventId, eventLabel, panel }: { eventId: stri
             </>
           ) : (
             <>
-              <p className="notice notice-ok">Zápis je zveřejněný pro publikum akce. Stáhnout ho jde v nabídce ⋯ u nadpisu.</p>
+              <p className="notice notice-ok">Zápis je zveřejněný pro publikum akce. Vrátit ho do návrhu jde v nabídce ⋯ u nadpisu.</p>
               <MinutesView content={minutes.content} />
             </>
           )}

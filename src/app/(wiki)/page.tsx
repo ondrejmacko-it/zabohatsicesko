@@ -7,7 +7,6 @@ import { requireUser } from "@/server/auth/session";
 import { now } from "@/server/config";
 import { canManageUsers } from "@/server/policy";
 import { nextEventsFor } from "@/server/services/events";
-import { ROLE_LABELS } from "@/lib/labels";
 
 /** Kolik nejbližších akcí úvod ukáže. Celý měsíc je v Plánu. */
 const NEXT_ROWS = 3;
@@ -26,16 +25,13 @@ export default async function HomePage() {
   ];
   return (
     <>
-      <h1>Dobrý den</h1>
-      <p className="page-sub">
-        {user.name} · {ROLE_LABELS[user.role]}
-      </p>
+      <h1>Vítejte, {user.name}.</h1>
       {/* Hledání je kulisa ukázky, ostrá Wiki neaktivní pole neukazuje. */}
       {!isLiveWiki() && (
         <input
           className="search-field"
-          placeholder="Co dnes potřebujete vyřešit? Hledejte napříč znalostmi i postupy…"
-          aria-label="Vyhledávání (v ukázce není k dispozici)"
+          placeholder="Vyhledávání ve Wiki je mimo rozsah ukázky."
+          aria-label="Vyhledávání ve Wiki je mimo rozsah ukázky"
           disabled
         />
       )}

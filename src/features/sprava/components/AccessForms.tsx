@@ -11,8 +11,8 @@ import { createLoginLinkAction, inviteUserAction, rejectRequestAction, revokeDev
 
 /** Výběr role a skupin. Nabízí jen role, které smí přihlášený uživatel přidělit (hlídá i server). */
 const PRESETS: Array<{ label: string; role: Role; groups: Group[] }> = [
-  { label: "Účastník FP", role: "member", groups: ["vsichni", "fp"] },
-  { label: "Účastník RM", role: "member", groups: ["vsichni", "rm"] },
+  { label: "Účastník – finanční poradce", role: "member", groups: ["vsichni", "fp"] },
+  { label: "Účastník – relationship manažer", role: "member", groups: ["vsichni", "rm"] },
   { label: "Člen Týmu A", role: "member", groups: ["vsichni", "tym-a"] },
   { label: "Správce", role: "admin", groups: [...GROUPS] },
 ];
@@ -87,6 +87,7 @@ function AccessForm({ userId, roles, role, groups, mode, onDone }: AccessProps) 
   return (
     <form action={action} onSubmit={submitKeepingValues(action)} className="stack">
       <input type="hidden" name="userId" value={userId} />
+      <input type="hidden" name="intent" value={mode} />
       <AccessFields roles={roles} role={role} groups={mode === "approve" && groups.length === 0 ? ["vsichni"] : groups} />
       <ActionMessage state={state} />
       <div className="row">
@@ -177,7 +178,7 @@ export function AccountActions({ account: a, roles, live, editable = true }: Acc
     <div className="row account-actions">
       {a.status === "pending" && (
         <button type="button" className="btn btn-primary btn-small" onClick={() => setMode("approve")}>
-          Schválit…
+          Nastavit a schválit
         </button>
       )}
       <Menu label={`Možnosti účtu ${a.name}`} small iconOnly>
@@ -280,7 +281,7 @@ function RevokeAccess({ account: a, onClose }: { account: AccountActionsProps["a
   );
 }
 
-/** Tlačítko „Pozvat člověka“ s oknem. Po uložení okno ukáže odkaz ke zkopírování. */
+/** Tlačítko „Přidat přístup“ s oknem. Po uložení okno ukáže odkaz ke zkopírování. */
 export function InviteButton({ roles }: { roles: Role[] }) {
   const [open, setOpen] = useState(false);
   const [round, setRound] = useState(0);
@@ -293,10 +294,10 @@ export function InviteButton({ roles }: { roles: Role[] }) {
   return (
     <>
       <button type="button" className="btn btn-primary" onClick={() => setOpen(true)}>
-        Pozvat člověka
+        Přidat přístup
       </button>
       {open && (
-        <Modal open title="Pozvat člověka" onRequestClose={close} selfGuarded={created}>
+        <Modal open title="Přidat přístup" onRequestClose={close} selfGuarded={created}>
           <InviteForm key={round} roles={roles} onCreated={() => setCreated(true)} />
         </Modal>
       )}

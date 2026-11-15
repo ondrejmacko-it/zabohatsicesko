@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { GROUP_LABELS, TYPE_LABELS } from "@/lib/labels";
-import { Icon } from "@/components/Icon";
 import { AddMinutesPicker, MinutesPeek } from "@/features/vzdelavani/components/MinutesPeek";
 import { TopicsAnchorRedirect } from "@/features/vzdelavani/components/TopicsAnchorRedirect";
 import { groupByMonth } from "@/features/vzdelavani/minutes";
@@ -52,13 +51,12 @@ export default async function MinutesPage({ searchParams }: { searchParams: Sear
         <h2 id="zapisy">Zápisy</h2>
         {canAdd && (
           <Link className="btn btn-primary" href={link({ pridat: "1" })} scroll={false}>
-            <Icon name="plus" /> Přidat zápis{missing.items.length > 0 && <span className="count-badge">{missing.items.length}</span>}
+            Zápisy k dokončení{missing.items.length > 0 && <span className="count-badge">{missing.items.length}</span>}
           </Link>
         )}
       </div>
       <p className="lead-text">
-        Shrnutí proběhlých akcí, které jsou určené vám: o čem to bylo, co se rozhodlo a co dál. Stejný zápis najdete i přímo u akce
-        v Plánu.
+        Vyhledávejte ve zveřejněných zápisech.
       </p>
 
       {all.length > 0 && (

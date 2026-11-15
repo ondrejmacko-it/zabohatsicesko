@@ -38,7 +38,7 @@ export function MinutesEditor({
       <ActionMessage state={state} />
       <div className="row">
         <button type="submit" name="intent" value="save" className="btn" disabled={pending}>
-          Uložit úpravy
+          Uložit návrh zápisu
         </button>
         <button type="submit" name="intent" value="publish" className="btn btn-primary" disabled={pending}>
           Zveřejnit zápis

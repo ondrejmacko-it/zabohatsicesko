@@ -20,10 +20,10 @@ export function InterestButton({ topicId, interested, topicName }: { topicId: st
         type="submit"
         className={interested ? "btn btn-small interest-on" : "btn btn-small"}
         aria-pressed={interested}
-        aria-label={`${interested ? "Zrušit zájem o téma" : "Mám zájem o téma"} ${topicName}`}
+        aria-label={`${interested ? "Zájem přidán" : "Mám zájem"}: ${topicName}`}
         disabled={pending}
       >
-        {interested ? "✓ Mám zájem" : "Mám zájem"}
+        {interested ? "Zájem přidán" : "Mám zájem"}
       </button>
       {state && !state.ok && <ActionMessage state={state} />}
     </form>
@@ -77,7 +77,7 @@ function ProposeForm({ groups, onClose }: { groups: Group[]; onClose: () => void
         <ActionMessage state={state} />
         <div className="row">
           <button type="submit" className="btn btn-primary" disabled={pending}>
-            Odeslat
+            Přidat téma
           </button>
           <button type="button" className="btn" onClick={onClose}>
             Zrušit

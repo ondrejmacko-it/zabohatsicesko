@@ -28,7 +28,7 @@
     },
     {
       "id": "demo-vedouci",
-      "name": "Vedoucí ukázky",
+      "name": "Vedoucí akce",
       "role": "member",
       "groups": [
         "vsichni",
@@ -39,7 +39,7 @@
     },
     {
       "id": "demo-ucastnik",
-      "name": "Účastník FP",
+      "name": "Účastník – finanční poradce",
       "role": "member",
       "groups": [
         "vsichni",
@@ -48,7 +48,7 @@
     },
     {
       "id": "demo-mimo-skupinu",
-      "name": "Účastník RM",
+      "name": "Účastník – relationship manažer",
       "role": "member",
       "groups": [
         "vsichni",

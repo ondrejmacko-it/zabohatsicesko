@@ -29,7 +29,7 @@ export function PlanFilters({ keep, types, type, preview, states, resetHref }: P
       ))}
       {preview && (
         <label className="field">
-          <span className="field-label">Zobrazit jako</span>
+          <span className="field-label">Náhled za kolegu nebo skupinu</span>
           <select className="select" name="jako" defaultValue={preview.value} onChange={submit}>
             <option value="">Správce (vidím vše)</option>
             <optgroup label="Co vidí skupina">
@@ -66,9 +66,9 @@ export function PlanFilters({ keep, types, type, preview, states, resetHref }: P
         <label className="field">
           <span className="field-label">Stav</span>
           <select className="select" name="stav" defaultValue={states.value ?? ""} onChange={submit}>
-            <option value="">Vše v plánu ({states.summary.planned})</option>
+            <option value="">Všechny stavy ({states.summary.planned})</option>
             <option value="navrhy">Čeká na zveřejnění ({states.summary.toPublish})</option>
-            <option value="doplnit">K doplnění ({states.summary.toComplete})</option>
+            <option value="doplnit">Chybí údaje ({states.summary.toComplete})</option>
           </select>
         </label>
       )}

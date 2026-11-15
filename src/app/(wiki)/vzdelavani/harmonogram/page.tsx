@@ -135,44 +135,40 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
     )}
     {preview && (
       <p className="notice" role="status">
-        Díváte se jako <strong>{preview.label}</strong>. Celá stránka ukazuje jen to, co tento pohled opravdu vidí. Návrhy a úpravy
-        jsou schované, úkoly jsou jen ke čtení. <Link href={link({ jako: undefined })}>Zpět na pohled správce</Link>
+        Pohled: <strong>{preview.label}</strong> · jen ke čtení. <Link href={link({ jako: undefined })}>Zpět do správy plánu</Link>
       </p>
     )}
       </div>
       {calendar && <CalendarAlert status={calendar} now={now()} />}
-      <div className="plan-top">
-        <section className="section" aria-labelledby="ceka">
-          <h2 id="ceka">
-            {preview ? "Úkoly v náhledu" : "Čeká na vás"}
-            {tasks.length > 0 && <span className="count-badge">{tasks.length}</span>}
-          </h2>
-          {tasks.length === 0 ? (
-            <p className="muted">
-              {hiddenTasks > 0
-                ? "Vybranému filtru neodpovídá žádný úkol."
-                : preview
-                  ? "Tento pohled teď žádný úkol nemá."
-                  : "Teď po vás nic nechceme. Úkoly se tu objeví, když povedete akci nebo budete kontrolovat zápis."}
-            </p>
-          ) : (
-            <>
-              <ul className="brief-list">{tasks.slice(0, TOP_ROWS).map(taskRow)}</ul>
-              {tasks.length > TOP_ROWS && (
-                <details className="brief-more">
-                  <summary>Další úkoly ({tasks.length - TOP_ROWS})</summary>
-                  <ul className="brief-list">{tasks.slice(TOP_ROWS).map(taskRow)}</ul>
-                </details>
-              )}
-            </>
-          )}
-          {hiddenTasks > 0 && (
-            <p className="hint">
-              Filtr skrývá další úkoly ({hiddenTasks}). <Link href={link({ typ: undefined, stav: undefined })}>Zobrazit všechny</Link>
-            </p>
-          )}
-        </section>
-      </div>
+      {/* Prázdná karta úkolů nic neříká, proto se bez úkolů skryje. Filtr, který úkoly schoval, ji nechá. */}
+      {(tasks.length > 0 || hiddenTasks > 0) && (
+        <div className="plan-top">
+          <section className="section" aria-labelledby="ceka">
+            <h2 id="ceka">
+              {preview ? "Úkoly v náhledu" : "Čeká na vás"}
+              {tasks.length > 0 && <span className="count-badge">{tasks.length}</span>}
+            </h2>
+            {tasks.length === 0 ? (
+              <p className="muted">Vybranému filtru neodpovídá žádný úkol.</p>
+            ) : (
+              <>
+                <ul className="brief-list">{tasks.slice(0, TOP_ROWS).map(taskRow)}</ul>
+                {tasks.length > TOP_ROWS && (
+                  <details className="brief-more">
+                    <summary>Další úkoly ({tasks.length - TOP_ROWS})</summary>
+                    <ul className="brief-list">{tasks.slice(TOP_ROWS).map(taskRow)}</ul>
+                  </details>
+                )}
+              </>
+            )}
+            {hiddenTasks > 0 && (
+              <p className="hint">
+                Filtr skrývá další úkoly ({hiddenTasks}). <Link href={link({ typ: undefined, stav: undefined })}>Zobrazit všechny</Link>
+              </p>
+            )}
+          </section>
+        </div>
+      )}
 
       <section className="section" aria-labelledby="mesic">
         <div className="spread schedule-toolbar">
@@ -198,7 +194,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
           {managing && (
             <div className="row">
               <Menu label="Nástroje správce" className="organizer-tools">
-                <ActionForm action={generateMonthAction} fields={{ month: monthKey }} label="Doplnit měsíc ze šablony" pendingLabel="Doplňuji…" />
+                <ActionForm action={generateMonthAction} fields={{ month: monthKey }} label="Přidat chybějící termíny jako návrhy" pendingLabel="Přidávám…" />
                 <TemplateDialog slots={template} />
               </Menu>
               {monthDrafts && calendar && monthDrafts.drafts.length > 0 && (
@@ -239,7 +235,10 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
         </div>
 
         {summary && !summary.planned && (
-          <p className="notice month-summary-empty">Měsíc je zatím prázdný. Doplňte ho ze šablony v Nástrojích správce, nebo přidejte akci.</p>
+          <div className="notice month-summary-empty">
+            <p>V tomto měsíci zatím nejsou žádné akce.</p>
+            {managing && <ActionForm action={generateMonthAction} fields={{ month: monthKey }} label="Přidat chybějící termíny jako návrhy" pendingLabel="Přidávám…" variant="primary" />}
+          </div>
         )}
 
         {listView ? (

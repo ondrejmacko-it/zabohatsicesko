@@ -18,7 +18,8 @@
 .grid thead th {
   padding: 10px 12px;
   background: var(--sage);
-  color: #fff;
+  /* Tmavý text na zelenošedé (kontrast 6,3:1), bílý měl jen 2,5:1. */
+  color: var(--ink);
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -163,7 +164,7 @@
 }
 
 .cancelled {
-  color: var(--ochre);
+  color: var(--ochre-dark);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.05em;
@@ -206,7 +207,7 @@
 
 /* Popisek údaje je vedlejší, hodnota hlavní. */
 .key {
-  color: var(--muted);
+  color: var(--ink-soft);
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.04em;

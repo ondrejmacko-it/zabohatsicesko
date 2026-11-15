@@ -1665,7 +1665,7 @@ a.brief-link:hover {
 
 /* ——— Chybějící údaj: v celé Wiki stejně, menší, kurzívou a okrově, aby se nepletl se skutečnou hodnotou ——— */
 .todo {
-  color: var(--ochre);
+  color: var(--ochre-dark);
   font-size: 0.9em;
   font-style: italic;
   font-weight: 500;
@@ -2177,4 +2177,13 @@ p.cal-status {
 .module-card .item-title,
 .module-card .item-meta {
   display: block;
+}
+
+/* Úzký telefon (320 px): tabulky (Integrace) se vejdou bez vodorovného posunu. */
+@media (max-width: 400px) {
+  .table th,
+  .table td {
+    padding-inline: 6px;
+    overflow-wrap: anywhere;
+  }
 }

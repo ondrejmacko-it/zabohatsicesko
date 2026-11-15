@@ -13,7 +13,7 @@ import { SyncPanelView } from "@/features/vzdelavani/components/SyncPanelView";
 import { badgeClass, primaryStatus, statusAdvice } from "@/features/vzdelavani/status";
 import { EXTRAORDINARY_TYPES, GROUP_LABELS, PLAN_STATUS_LABELS, TYPE_LABELS } from "@/lib/labels";
 import { safeDecode } from "@/lib/params";
-import { formatDate, formatEventTime, monthOf, toDateKey } from "@/lib/time";
+import { formatDate, formatEventWhen, monthOf, toDateKey } from "@/lib/time";
 import { requireUser } from "@/server/auth/session";
 import { isOrganizer } from "@/server/policy";
 import { getEventDetail } from "@/server/services/detail";
@@ -64,8 +64,8 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
   const handler = detail.recording.access === "handler" && !preview;
   const planHref = `/vzdelavani/harmonogram?mesic=${monthOf(dayKey)}`;
   const back = preview
-    ? { href: `${planHref}&jako=${encodeURIComponent(query.jako!)}`, label: "Zpět na harmonogram v náhledu" }
-    : (ORIGINS[query.odkud ?? ""] ?? { href: planHref, label: "Zpět na harmonogram" });
+    ? { href: `${planHref}&jako=${encodeURIComponent(query.jako!)}`, label: "Zpět na plán (v náhledu)" }
+    : (ORIGINS[query.odkud ?? ""] ?? { href: planHref, label: "Zpět na plán" });
 
   return (
     <>
@@ -76,7 +76,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
 
       {preview && (
         <p className="notice" role="status">
-          Díváte se jako <strong>{preview.label}</strong>. Akci vidíte tak, jak ji vidí tento pohled, bez nástrojů správce.{" "}
+          Pohled: <strong>{preview.label}</strong> · jen ke čtení.{" "}
           <Link href={`/vzdelavani/akce/${encodeURIComponent(card.id)}`}>Otevřít v pohledu správce</Link>
         </p>
       )}
@@ -132,7 +132,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
           <div>
             <dt>Kdy</dt>
             <dd>
-              <Icon name="calendar" /> {formatDate(dayKey)} · {formatEventTime(start, new Date(card.endsAt), card.allDay)}
+              <Icon name="calendar" /> {formatEventWhen(start, new Date(card.endsAt), card.allDay)}
             </dd>
           </div>
           {card.type !== "holiday" && (
@@ -157,7 +157,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
           )}
           {detail.reviewerName && (
             <>
-              <dt>Kontrolor zápisu</dt>
+              <dt>Kdo zkontroluje zápis</dt>
               <dd>{detail.reviewerName}</dd>
             </>
           )}

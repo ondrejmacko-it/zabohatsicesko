@@ -110,7 +110,7 @@ export async function changeImpact(viewer: Viewer, eventId: string, input: Event
     impact.notes.push("Testovací režim Googlu zve jen pevný seznam testovacích příjemců. Změna publika proto hosty v pozvánce nezmění.");
     return impact;
   }
-  if (calendarMode() === "simulation") impact.notes.push("Kalendář běží v simulaci: hosté jsou fiktivní role a žádná skutečná zpráva neodejde.");
+  if (calendarMode() === "simulation") impact.notes.push("V simulaci se e-mail neodešle.");
   if (next.startsAt <= now()) {
     impact.notes.push("Akce už proběhla nebo právě běží, hosty v pozvánce Wiki nemění.");
     return impact;
@@ -200,7 +200,7 @@ export async function cancelImpact(viewer: Viewer, eventId: string): Promise<Can
   }
   impact.hasInvite = true;
   if (new Date(published.endsAt) <= now()) impact.notes.push("Akce už proběhla. Zrušení se přesto zapíše do Wiki i do Kalendáře.");
-  if (calendarMode() === "simulation") impact.notes.push("Kalendář běží v simulaci: hosté jsou fiktivní role a žádná skutečná zpráva neodejde.");
+  if (calendarMode() === "simulation") impact.notes.push("V simulaci se e-mail neodešle.");
   try {
     const external = await calendarProvider(db).get(link.calendarId, link.externalEventId);
     if (!external) throw new CalendarError("calendar_missing", false);
