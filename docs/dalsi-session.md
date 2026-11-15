@@ -25,6 +25,10 @@ z auditu, okna „Akce/Zápis není dostupný“. Lint, typy, 173/173 testů a b
 `next start` na http blokuje skripty přes CSP (přihlášení do ukázky neprojde); ověřit přes `npx next dev -p 3100`
 (nebo zjistit, proč CSP lokálně blokuje i vlastní skripty, to by byla chyba k opravě v PR 8).
 
+**Priorita uživatele (15. 11.):** hlavně testy pro desktopy a macOS. Automatizovaná sada v Playwrightu (desktop
+1280, 1440×900, 1512×982 a 1920×1080, Retina `deviceScaleFactor: 2`, macOS user agent, klávesnice, axe), WebKit jen
+pokud je v prostředí k dispozici. Skutečné Safari na Macu ověří uživatel podle kroků.
+
 **Další krok:** ověřit PR 5 v Chromiu (role správce, vedoucí, účastník FP i RM; 1280/390/360/320; bez posunu a chyb),
 pak PR 6 (U02–U08), PR 7 (Připravit měsíc, G6), PR 8 (bezpečnost a rychlost) podle `docs/audit-ukoly.md`. Každý
 draft stavět na předchozím. Pak kompletní kontrola celého výtvoru. Neptat se, rozhodnout nejméně invazivně.
