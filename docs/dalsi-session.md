@@ -12,7 +12,7 @@ dávej mi přesné kroky pod sebou (mám Windows).
 
 **Stav:** PR 1–3 sloučené (#27, #28, #29). Ostrá Wiki běží na `https://zbc-vzdelavani-demo.vercel.app`
 (Production, vlastní DB Neon, Google přihlášení, správce `BOOTSTRAP_ADMIN_EMAILS` vznikl, Kalendář propojený,
-souhlas v režimu Testing do 22. 11.). Z auditu zbývá A03, A07 (čeká na firmu), U01–U09, T01–T04 (69 textů)
+OAuth aplikace zveřejněná „In production“ bez ověření Googlem, `GOOGLE_OAUTH_PUBLISHED=1`, veřejná stránka `/soukromi` z #30). Z auditu zbývá A03, A07 (čeká na firmu), U01–U09, T01–T04 (69 textů)
 a G6 Připravit měsíc.
 
 **Cíl:** Wiki připravená k ostrému nasazení: maximální bezpečnost, přehlednost, stručnost, rychlost.
@@ -55,7 +55,7 @@ Jeden PR na relaci, z `main`, draft, merge dělám já.
 - PR 8: bezpečnost a rychlost: bezpečnostní hlavičky (CSP, HSTS, frame-ancestors, Referrer-Policy),
   revize cookie a limitů, Lighthouse a velikost bundlu na Production, `npm audit`.
 
-Já dělám: Google konzoli (Test users, později „Publish app“, pak nastav `GOOGLE_OAUTH_PUBLISHED=1`),
+Já dělám: Google konzoli (ověření brandingu přes Search Console je volitelné, chce meta značku na webu),
 produkční nasazení (Vercel → Deployments → ⋯ → Create Deployment → `main`) a merge PR.
 Na `main` nepushuj. Před předáním lint, typy, testy, build a průchod v Chromiu. Respektuj limit kontextu.
 
