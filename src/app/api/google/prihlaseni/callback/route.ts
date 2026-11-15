@@ -6,7 +6,7 @@ import { completeLogin, verifyLoginState, type LoginFailure } from "@/server/aut
 import { SESSION_COOKIE, encodeSession, sessionCookieOptions } from "@/server/auth/session";
 import { config, googleLoginConfig } from "@/server/config";
 import { grantsCalendar, needsCalendarConnection, revokeToken, saveGrant } from "@/server/calendar/google-auth";
-import { resumeAfterReconnect, syncEvent } from "@/server/calendar/sync";
+import { syncAfterReconnect } from "@/server/calendar/sync";
 import { getDb } from "@/server/db/client";
 import { users } from "@/server/db/schema";
 import { canPlan } from "@/server/policy";
@@ -70,23 +70,20 @@ export async function GET(request: NextRequest) {
     const missing = await needsCalendarConnection(db, plans);
 
     // Správce dal souhlas ke Kalendáři už na přihlašovací obrazovce: propojení se uloží hned, bez dalšího kroku.
+    // Nový souhlas vždy přepíše starý záznam, i kdyby starý ještě vypadal platně.
     let connected = false;
     if (grant) {
-      if (missing && grantsCalendar(grant.scopes)) {
+      if (plans && grantsCalendar(grant.scopes)) {
         await saveGrant(db, { ...grant, userId: result.userId });
         await audit(db, result.userId, "calendar.connected", "settings", "google-calendar");
         connected = true;
-        // Změny zveřejněné během odpojení se po novém propojení odešlou bez ručního opakování.
-        const resumed = await resumeAfterReconnect(db);
-        if (resumed.length) {
-          after(async () => {
-            for (const eventId of resumed) await syncEvent(eventId);
-          });
-        }
-      } else {
-        // Přihlásil se někdo, kdo neplánuje, propojení mezitím vzniklo, nebo rozsah Kalendáře odškrtl.
+        after(() => syncAfterReconnect(db));
+      } else if (!plans) {
+        // Oprávnění od někoho, kdo plán nespravuje, Wiki nedrží.
         await revokeToken(grant.refreshToken);
       }
+      // Správce, který rozsah Kalendáře odškrtl, se nezneplatňuje: zneplatnění u Googlu by shodilo
+      // celé oprávnění účtu včetně dřív uloženého propojení Kalendáře.
     }
     // Druhé automatické přesměrování jen tehdy, když o Kalendář ještě nikdo nežádal (první přihlášení
     // správce z tohoto prohlížeče). Po odmítnutí nebo výslovném „bez Kalendáře“ zůstává úkol na Plánu.

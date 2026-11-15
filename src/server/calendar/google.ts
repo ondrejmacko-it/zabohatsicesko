@@ -185,6 +185,11 @@ export class GoogleCalendar implements CalendarProvider {
         guestsCanModify: false,
       },
     });
+    // 404 při zakládání znamená, že připojený účet kalendář nevidí. Bez toho by chyba vypadala jako výpadek.
+    if (status === 404) {
+      logError("google.calendar", "http_404_calendar");
+      throw new CalendarError("calendar_no_access", false);
+    }
     const created = status === 200 ? toExternal(body as GoogleEvent) : status === 409 ? await this.get(calendarId, id) : null;
     if (!created) throw new CalendarError("calendar_unavailable", status === 409);
     // Akce zrušená ještě před prvním propsáním: pozvánka vznikne a hned se zruší stejnou cestou jako jindy.
@@ -236,6 +241,7 @@ export class GoogleCalendar implements CalendarProvider {
         maxResults: "50",
       },
     });
+    if (status === 404) throw new CalendarError("calendar_no_access", false);
     if (status !== 200) throw new CalendarError("calendar_missing", false);
     const items = (body as { items?: GoogleEvent[] }).items ?? [];
     return items

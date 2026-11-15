@@ -216,6 +216,7 @@ export function storedAccessToken(db: Executor, cfg: GoogleCalendarConfig, fetch
       if (!refreshToken) {
         // Jiný klíč nebo poškozený záznam. Token je nepoužitelný, integraci je potřeba připojit znovu.
         logError("google.oauth", "token_undecryptable");
+        await forgetCredential(db);
         throw new CalendarError("calendar_revoked", false);
       }
       const { status, body } = await tokenRequest(fetchImpl, {
@@ -246,12 +247,32 @@ export async function connectionStatus(db: Executor): Promise<ConnectionStatus> 
   return row ? { accountEmail: row.accountEmail, connectedAt: row.connectedAt } : null;
 }
 
+export type ConnectionHealth = "valid" | "missing" | "unknown";
+
+/**
+ * Platí uložené propojení ještě? Záznam v databázi nestačí: přístup mohl být u Googlu odebrán.
+ * Vynutí obnovu přístupového tokenu, odvolaný nebo nečitelný token rovnou smaže (pak „missing“).
+ * Výpadek Googlu vrací „unknown“, aby správce kvůli chvilkové chybě nedostal zbytečnou žádost o souhlas.
+ */
+export async function checkConnection(db: Executor, cfg: GoogleCalendarConfig, fetchImpl: FetchLike = fetch): Promise<ConnectionHealth> {
+  if (!(await connectionStatus(db))) return "missing";
+  try {
+    await storedAccessToken(db, cfg, fetchImpl).get(true);
+    return "valid";
+  } catch (error) {
+    if (error instanceof CalendarError && error.code === "calendar_revoked") return "missing";
+    return "unknown";
+  }
+}
+
 /**
  * Má Wiki po přihlášení sama požádat o propojení Kalendáře? Jen v režimu Googlu, jen u toho, kdo plán
- * spravuje, a jen když propojení chybí. Ostatní role žádné oprávnění navíc nedostávají.
+ * spravuje, a vždy, když platné propojení chybí. Ostatní role žádné oprávnění navíc nedostávají.
  */
-export async function needsCalendarConnection(db: Executor, managesPlan: boolean): Promise<boolean> {
-  return managesPlan && googleCalendarConfig() !== null && (await connectionStatus(db)) === null;
+export async function needsCalendarConnection(db: Executor, managesPlan: boolean, fetchImpl: FetchLike = fetch): Promise<boolean> {
+  const cfg = googleCalendarConfig();
+  if (!managesPlan || !cfg) return false;
+  return (await checkConnection(db, cfg, fetchImpl)) === "missing";
 }
 
 /** Odpojí integraci: zneplatní token u Googlu (pokud to jde) a vždy smaže uložený záznam. */

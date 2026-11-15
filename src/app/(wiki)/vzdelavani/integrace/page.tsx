@@ -18,7 +18,7 @@ import {
   loginMode,
   attendeeSource,
 } from "@/server/config";
-import { formatDayMonth, toDateKey } from "@/lib/time";
+import { formatDayMonth, toDateKey, toTimeKey } from "@/lib/time";
 import { getDb } from "@/server/db/client";
 import { isOrganizer } from "@/server/policy";
 import { readSwitches, type SimulationSwitch } from "@/server/settings";
@@ -36,6 +36,7 @@ const CONNECT_RESULTS: Record<string, { text: string; ok: boolean }> = {
   zamitnuto: { text: "Souhlas u Googlu nebyl udělen. Nic se nezměnilo.", ok: false },
   "chybi-opravneni": { text: "Chybí oprávnění k událostem Kalendáře. Při souhlasu ho nechte zaškrtnuté.", ok: false },
   "neplatny-stav": { text: "Připojení vypršelo nebo nezačalo v tomto prohlížeči. Zkuste to znovu.", ok: false },
+  "bez-pristupu": { text: "Účet je připojený, ale nemá přístup ke kalendáři, do kterého Wiki zapisuje. Připojte účet, který kalendář vlastní.", ok: false },
   nepripojeno: { text: "Připojení se nepodařilo dokončit. Zkuste to znovu.", ok: false },
 };
 
@@ -56,55 +57,57 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
 
   return (
     <>
-      <section className="section">
-        <h2>Režimy integrací</h2>
-        {/* Na telefonu se pruh režimů v záhlaví modulu skrývá, tady je vidět vždy. */}
-        <ModeStrip className="status-strip mode-strip" />
-        <table className="table">
-          <thead>
-            <tr>
-              <th scope="col">Integrace</th>
-              <th scope="col">Režim</th>
-              <th scope="col">Co je ověřeno</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Google Kalendář</td>
-              <td>{integrationModes.calendar === "simulation" ? "Simulace" : "Testovací režim Google · živý test 12. 11. 2026"}</td>
-              <td>
-                {googleTest
-                  ? `Živý test se skutečným účtem prošel 12. 11. 2026: spárování, změna tématu a času, výskyt série, nová pozvánka, ruční změna v Kalendáři i odvolání přístupu. ${attendeeSource() === "audience" ? "Pozvánky jdou skupině, pro kterou je akce určená." : "Pozvánky jdou jen testovacím příjemcům."}`
-                  : "Identita pozvánky, hosté a RSVP, oznámení, opakování bez duplicit, pořadí revizí a chyby. Ověřeno proti simulaci, ne proti skutečnému Google účtu."}
-              </td>
-            </tr>
-            <tr>
-              <td>Přihlášení</td>
-              <td>{loginMode() === "google-test" ? "Fiktivní role + účet Google · neověřeno proti Googlu" : "Fiktivní role"}</td>
-              <td>
-                {loginMode() !== "google-test"
-                  ? "Vstup přístupovým kódem a výběrem fiktivní role. Oprávnění ověřuje server podle role v databázi."
-                  : googleLoginConfig()
-                    ? "Ověření ID tokenu (podpis, vydavatel, příjemce, platnost, ověřený e-mail) a vazba na stabilní identifikátor prošly testy s napodobeným Googlem. Živé přihlášení zatím neproběhlo."
-                    : `Přihlášení účtem Google je vypnuté, konfigurace není úplná: ${googleLoginConfigProblems().join(", ")}.`}
-              </td>
-            </tr>
-            <tr>
-              <td>Přepis a zápis</td>
-              <td>{integrationModes.transcription === "fixture" ? "Ukázkový (testovací nahrávka)" : "Skutečný test"}</td>
-              <td>Celá cesta od nahrání po zveřejněný zápis s testovací nahrávkou. Jiný soubor skončí čitelnou chybou.</td>
-            </tr>
-            <tr>
-              <td>Úložiště nahrávek</td>
-              <td>Soukromé v databázi</td>
-              <td>Soubor je dostupný jen přes autorizovanou serverovou cestu, nikdy přes veřejný odkaz.</td>
-            </tr>
-          </tbody>
-        </table>
-        <p className="small muted section-actions">
-          Hodnoty tajemství se v aplikaci nezobrazují. Prostředí: {config.databaseUrl ? "hostovaná databáze" : "lokální databáze"}.
-        </p>
-      </section>
+      {!live && (
+        <section className="section">
+          <h2>Režimy integrací</h2>
+          {/* Na telefonu se pruh režimů v záhlaví modulu skrývá, tady je vidět vždy. */}
+          <ModeStrip className="status-strip mode-strip" />
+          <table className="table">
+            <thead>
+              <tr>
+                <th scope="col">Integrace</th>
+                <th scope="col">Režim</th>
+                <th scope="col">Co je ověřeno</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Google Kalendář</td>
+                <td>{integrationModes.calendar === "simulation" ? "Simulace" : "Testovací režim Google · živý test 12. 11. 2026"}</td>
+                <td>
+                  {googleTest
+                    ? `Živý test se skutečným účtem prošel 12. 11. 2026: spárování, změna tématu a času, výskyt série, nová pozvánka, ruční změna v Kalendáři i odvolání přístupu. ${attendeeSource() === "audience" ? "Pozvánky jdou skupině, pro kterou je akce určená." : "Pozvánky jdou jen testovacím příjemcům."}`
+                    : "Identita pozvánky, hosté a RSVP, oznámení, opakování bez duplicit, pořadí revizí a chyby. Ověřeno proti simulaci, ne proti skutečnému Google účtu."}
+                </td>
+              </tr>
+              <tr>
+                <td>Přihlášení</td>
+                <td>{loginMode() === "google-test" ? "Fiktivní role + účet Google · neověřeno proti Googlu" : "Fiktivní role"}</td>
+                <td>
+                  {loginMode() !== "google-test"
+                    ? "Vstup přístupovým kódem a výběrem fiktivní role. Oprávnění ověřuje server podle role v databázi."
+                    : googleLoginConfig()
+                      ? "Ověření ID tokenu (podpis, vydavatel, příjemce, platnost, ověřený e-mail) a vazba na stabilní identifikátor prošly testy s napodobeným Googlem. Živé přihlášení zatím neproběhlo."
+                      : `Přihlášení účtem Google je vypnuté, konfigurace není úplná: ${googleLoginConfigProblems().join(", ")}.`}
+                </td>
+              </tr>
+              <tr>
+                <td>Přepis a zápis</td>
+                <td>{integrationModes.transcription === "fixture" ? "Ukázkový (testovací nahrávka)" : "Skutečný test"}</td>
+                <td>Celá cesta od nahrání po zveřejněný zápis s testovací nahrávkou. Jiný soubor skončí čitelnou chybou.</td>
+              </tr>
+              <tr>
+                <td>Úložiště nahrávek</td>
+                <td>Soukromé v databázi</td>
+                <td>Soubor je dostupný jen přes autorizovanou serverovou cestu, nikdy přes veřejný odkaz.</td>
+              </tr>
+            </tbody>
+          </table>
+          <p className="small muted section-actions">
+            Hodnoty tajemství se v aplikaci nezobrazují. Prostředí: {config.databaseUrl ? "hostovaná databáze" : "lokální databáze"}.
+          </p>
+        </section>
+      )}
 
       {googleTest && (
         <section className="section" aria-labelledby="google-kalendar">
@@ -127,46 +130,55 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                 <dt>Účet</dt>
                 <dd>
                   {connection
-                    ? `${connection.accountEmail} · připojeno ${formatDayMonth(toDateKey(connection.connectedAt))}`
+                    ? `${connection.accountEmail} · připojeno ${formatDayMonth(toDateKey(connection.connectedAt))} v ${toTimeKey(connection.connectedAt)}`
                     : "nepřipojeno"}
                 </dd>
-                <dt>Kalendář</dt>
-                <dd>{googleConfig.calendarId}</dd>
-                <dt>Povolené kalendáře</dt>
-                <dd>{googleConfig.allowedCalendarIds.length}</dd>
-                <dt>Hosté pozvánek</dt>
-                <dd>
-                  {attendeeSource() === "audience"
-                    ? "publikum akce: aktivní uživatelé skupiny, pro kterou je akce určená"
-                    : `jen testovací příjemci: ${googleConfig.allowedAttendees.length ? googleConfig.allowedAttendees.join(", ") : "žádní, pozvánky vzniknou bez hostů"}`}
-                </dd>
+                {!live && (
+                  <>
+                    <dt>Kalendář</dt>
+                    <dd>{googleConfig.calendarId}</dd>
+                    <dt>Povolené kalendáře</dt>
+                    <dd>{googleConfig.allowedCalendarIds.length}</dd>
+                    <dt>Hosté pozvánek</dt>
+                    <dd>
+                      {attendeeSource() === "audience"
+                        ? "publikum akce: aktivní uživatelé skupiny, pro kterou je akce určená"
+                        : `jen testovací příjemci: ${googleConfig.allowedAttendees.length ? googleConfig.allowedAttendees.join(", ") : "žádní, pozvánky vzniknou bez hostů"}`}
+                    </dd>
+                  </>
+                )}
               </dl>
-              <p className="small muted">
-                Správce, který se přihlásí účtem Google, pošle Wiki na souhlas sama a vrátí ho na Plán. Tato
-                stránka slouží ke kontrole, ručnímu připojení jiným účtem a odpojení. Jedno připojení platí pro celou Wiki.
-              </p>
-              <p className="small muted">
-                Wiki žádá jen o oprávnění k událostem. Obnovovací token je uložený šifrovaně na serveru, v aplikaci ani v logu
-                se nezobrazuje. Komu pozvánky jdou, určuje nastavení serveru a ověřuje se před každým zápisem. Wiki přidává a odebírá jen své hosty.
-              </p>
+              {!live && (
+                <>
+                  <p className="small muted">
+                    Správce, který se přihlásí účtem Google, pošle Wiki na souhlas sama a vrátí ho na Plán. Tato
+                    stránka slouží ke kontrole, ručnímu připojení jiným účtem a odpojení. Jedno připojení platí pro celou Wiki.
+                  </p>
+                  <p className="small muted">
+                    Wiki žádá jen o oprávnění k událostem. Obnovovací token je uložený šifrovaně na serveru, v aplikaci ani v logu
+                    se nezobrazuje. Komu pozvánky jdou, určuje nastavení serveru a ověřuje se před každým zápisem. Wiki přidává a odebírá jen své hosty.
+                  </p>
+                </>
+              )}
               <div className="section-actions row">
                 {connection ? (
-                  <Menu label="Možnosti připojení">
+                  <>
                     <a className="btn" href="/api/google/kalendar/pripojit">
-                      Připojit znovu nebo jiným účtem
+                      Připojit znovu
                     </a>
-                    <hr className="menu-divider" />
-                    <ActionForm
-                      action={disconnectCalendarAction}
-                      label="Odpojit Kalendář…"
-                      variant="danger"
-                      confirm={{
-                        title: "Odpojit Google Kalendář",
-                        text: "Přístup se u Googlu zneplatní a uložený token se smaže. Změny akcí zůstanou ve Wiki a po novém připojení se dají odeslat.",
-                        confirmLabel: "Odpojit",
-                      }}
-                    />
-                  </Menu>
+                    <Menu label="Další možnosti">
+                      <ActionForm
+                        action={disconnectCalendarAction}
+                        label="Odpojit Kalendář…"
+                        variant="danger"
+                        confirm={{
+                          title: "Odpojit Google Kalendář",
+                          text: "Přístup se u Googlu zneplatní a uložený token se smaže. Změny akcí zůstanou ve Wiki a po novém připojení se dají odeslat.",
+                          confirmLabel: "Odpojit",
+                        }}
+                      />
+                    </Menu>
+                  </>
                 ) : (
                   <a className="btn btn-primary" href="/api/google/kalendar/pripojit">
                     Připojit Google Kalendář

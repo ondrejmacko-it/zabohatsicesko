@@ -1,4 +1,4 @@
-import { and, eq, gt, isNotNull, isNull, lt, ne, or, sql } from "drizzle-orm";
+import { and, eq, gt, inArray, isNotNull, isNull, lt, ne, or, sql } from "drizzle-orm";
 import { addDays, fromPragueLocal, toDateKey } from "@/lib/time";
 import type { EventSnapshot } from "@/lib/types";
 import { audit, logError } from "@/server/audit";
@@ -378,17 +378,50 @@ export async function requestRetry(viewer: Viewer, eventId: string): Promise<voi
 }
 
 /**
- * Po novém připojení účtu vrátí do fronty akce, které zastavilo odvolání přístupu.
- * Ostatní chyby (například ruční změnu v Kalendáři) dál řeší správce sám.
- * @returns ID akcí, které má volající znovu synchronizovat
+ * Chyby, které může vyřešit nové propojení: jiný účet, nový token nebo opravené nastavení kalendáře.
+ * Ruční změnu v Kalendáři, chybějící pozvánku nebo spor o originál dál rozhoduje správce.
+ */
+const FIXED_BY_RECONNECT = ["calendar_revoked", "calendar_unavailable", "calendar_no_access", "calendar_not_allowed", "calendar_not_configured"];
+
+/**
+ * Po novém připojení účtu vrátí do fronty akce, které zastavil přístup ke Kalendáři.
+ * Vazby, ke kterým ještě žádná pozvánka nevznikla, převede na kalendář z aktuálního nastavení.
+ * @returns ID akcí vrácených do fronty
  */
 export async function resumeAfterReconnect(db: Db): Promise<string[]> {
+  const target = targetCalendarId();
+  await db
+    .update(calendarLinks)
+    .set({ calendarId: target })
+    .where(and(isNull(calendarLinks.externalEventId), ne(calendarLinks.calendarId, target)));
   const resumed = await db
     .update(calendarLinks)
     .set({ syncStatus: "pending", attempts: 0, errorCode: null, updatedAt: new Date() })
-    .where(and(eq(calendarLinks.syncStatus, "attention"), eq(calendarLinks.errorCode, "calendar_revoked")))
+    .where(and(eq(calendarLinks.syncStatus, "attention"), inArray(calendarLinks.errorCode, FIXED_BY_RECONNECT)))
     .returning({ eventId: calendarLinks.eventId });
   return resumed.map((r) => r.eventId);
+}
+
+/**
+ * Smí připojený účet zapisovat do nastaveného kalendáře? Krátké čtení jednoho dne po uložení propojení,
+ * aby špatný kalendář nebo účet bez přístupu správce poznal hned, ne až na každé akci zvlášť.
+ */
+export async function probeTargetCalendar(db: Db): Promise<"ok" | "no_access" | "unknown"> {
+  const from = now();
+  try {
+    await calendarProvider(db).listBetween(targetCalendarId(), from, new Date(from.getTime() + 24 * 60 * 60 * 1000));
+    return "ok";
+  } catch (error) {
+    if (!(error instanceof CalendarError)) throw error;
+    return error.code === "calendar_no_access" || error.code === "calendar_not_allowed" ? "no_access" : "unknown";
+  }
+}
+
+/** Po uložení nového propojení odešle celou frontu: obnovené akce, čekající změny i akce bez pozvánky. */
+export async function syncAfterReconnect(db: Db): Promise<string[]> {
+  const resumed = await resumeAfterReconnect(db);
+  await syncPublished();
+  return resumed;
 }
 
 /** Správce výslovně rozhodl založit novou pozvánku pro zveřejněnou akci bez vazby. */

@@ -3,7 +3,7 @@ import { audit, logError } from "@/server/audit";
 import { getCurrentUser } from "@/server/auth/session";
 import { completeAuthorization, verifyAuthorizationState } from "@/server/calendar/google-auth";
 import { CalendarError } from "@/server/calendar/provider";
-import { resumeAfterReconnect, syncEvent } from "@/server/calendar/sync";
+import { probeTargetCalendar, syncAfterReconnect } from "@/server/calendar/sync";
 import { googleCalendarConfig } from "@/server/config";
 import { getDb } from "@/server/db/client";
 import { isOrganizer } from "@/server/policy";
@@ -37,13 +37,10 @@ export async function GET(request: NextRequest) {
     const result = await completeAuthorization(db, cfg, { code, verifier, userId: user.id });
     if (result !== "connected") return finish(result === "missing_scope" ? "chybi-opravneni" : "nepripojeno");
     await audit(db, user.id, "calendar.connected", "settings", "google-calendar");
-    // Změny zveřejněné během odpojení se po novém připojení odešlou bez ručního opakování.
-    const resumed = await resumeAfterReconnect(db);
-    if (resumed.length) {
-      after(async () => {
-        for (const eventId of resumed) await syncEvent(eventId);
-      });
-    }
+    // Účet bez přístupu k nastavenému kalendáři: propojení platí, ale správce se to musí dozvědět hned.
+    if ((await probeTargetCalendar(db)) === "no_access") return finish("bez-pristupu");
+    // Celá fronta (i akce zastavené dřívějším propojením) se odešle bez ručního opakování.
+    after(() => syncAfterReconnect(db));
     return finish("pripojeno");
   } catch (error) {
     if (!(error instanceof CalendarError)) logError("google.oauth", "callback_failed", error);
