@@ -12,7 +12,7 @@ import { EventDialog } from "@/features/vzdelavani/components/EventDialog";
 import { EventPeek } from "@/features/vzdelavani/components/EventPeek";
 import { PublishMonthDialog, type InviteMode } from "@/features/vzdelavani/components/PublishMonthDialog";
 import { PlanFilters } from "@/features/vzdelavani/components/PlanFilters";
-import { Agenda, Legend, ScheduleGrid } from "@/features/vzdelavani/components/Schedule";
+import { Agenda, Legend, NextEventsList, ScheduleGrid } from "@/features/vzdelavani/components/Schedule";
 import { TemplateDialog } from "@/features/vzdelavani/components/TemplateDialog";
 import { PLAN_STATES, filterCards, monthSummary, monthTasks } from "@/features/vzdelavani/status";
 import styles from "@/features/vzdelavani/components/schedule.module.css";
@@ -23,7 +23,7 @@ import { requireUser } from "@/server/auth/session";
 import { now } from "@/server/config";
 import { defaultAudience } from "@/server/domain/generation";
 import { isOrganizer } from "@/server/policy";
-import { listMonth, listMonthDrafts, listPeople, loadTemplate } from "@/server/services/events";
+import { listMonth, listMonthDrafts, listPeople, loadTemplate, nextEventFor } from "@/server/services/events";
 import { loadCalendarStatus } from "@/server/services/calendar-status";
 import { listTasks } from "@/server/services/journey";
 import { listPreviewOptions, resolvePreview } from "@/server/services/preview";
@@ -32,6 +32,13 @@ import { listTopics } from "@/server/services/topics";
 export const metadata: Metadata = { title: "Plán vzdělávání" };
 
 type SearchParams = Promise<{ mesic?: string; pohled?: string; jako?: string; typ?: string; stav?: string; akce?: string }>;
+
+/** Nejbližší zveřejněná akce: z již načteného aktuálního měsíce, jinak jedním dotazem dopředu. */
+async function nearestEvent(viewer: Parameters<typeof nextEventFor>[0], monthCards: EventCard[]): Promise<EventCard | null> {
+  const from = now();
+  const inMonth = monthCards.find((c) => c.planStatus === "published" && c.type !== "holiday" && new Date(c.startsAt) >= from);
+  return inMonth ?? (await nextEventFor(viewer));
+}
 
 /** Kolik úkolů se vejde bez rozbalení. */
 const TOP_ROWS = 3;
@@ -89,16 +96,18 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   const taskSummary = summary && type ? monthSummary(filterCards(monthCards, monthKey, { type }), monthKey) : summary;
   const ownTasks = viewerTasks.filter((task) => !state && (!type || task.eventType === type));
   const hiddenTasks = viewerTasks.length - ownTasks.length;
-  const tasks = [
-    ...ownTasks,
-    ...(taskSummary ? monthTasks(taskSummary, formatMonth(monthKey).split(" ")[0]!).filter((task) => !state || task.state === state) : []).map((task) => ({
-      key: `mesic-${task.state}`,
-      title: task.title,
-      detail: task.detail,
-      href: `${link({ stav: task.state })}#mesic`,
-      action: task.action,
-    })),
-  ];
+  const monthStepTasks = (taskSummary ? monthTasks(taskSummary, formatMonth(monthKey).split(" ")[0]!).filter((task) => !state || task.state === state) : []).map((task) => ({
+    key: `mesic-${task.state}`,
+    title: task.title,
+    detail: task.detail,
+    href: `${link({ stav: task.state })}#mesic`,
+    action: task.action,
+  }));
+  // Krok měsíce je hlavní práce správce: zůstane mezi úkoly viditelnými bez rozbalení (i na telefonu).
+  const stepAt = Math.min(ownTasks.length, TOP_ROWS - 1);
+  const tasks = [...ownTasks.slice(0, stepAt), ...monthStepTasks, ...ownTasks.slice(stepAt)];
+  // Kdo nemá úkoly ani neplánuje, uvidí na telefonu nejdřív nejbližší akci (měsíční seznam začíná prvním dnem).
+  const nextEvent = !managing && tasks.length === 0 ? await nearestEvent(viewer, monthKey === monthOf(todayKey) ? monthCards : []) : null;
   const taskRow = (task: (typeof tasks)[number] & { external?: boolean }) => (
     <li key={task.key} className="brief-row">
       <span className="brief-main">
@@ -170,6 +179,12 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
         </div>
       )}
 
+      {nextEvent && (
+        <section className={`section ${styles.mobileOnly}`} aria-labelledby="nejblizsi">
+          <h2 id="nejblizsi">Nejbližší akce</h2>
+          <NextEventsList cards={[nextEvent]} todayKey={todayKey} hrefFor={peekHref} />
+        </section>
+      )}
       <section className="section" aria-labelledby="mesic">
         <div className="spread schedule-toolbar">
           <div className="row">

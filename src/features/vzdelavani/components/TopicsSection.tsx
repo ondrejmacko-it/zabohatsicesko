@@ -42,7 +42,7 @@ export async function TopicsSection({ user }: { user: Viewer }) {
               <li key={t.id} className={recommended.has(t.id) ? "topic-card topic-recommended" : "topic-card"}>
                 <div className="topic-main">
                   <p className="item-title">
-                    {t.name}
+                    <span id={`tema-${t.id}`}>{t.name}</span>
                     {recommended.has(t.id) && <span className="badge badge-ochre topic-badge">Doporučené</span>}
                   </p>
                   <p className="item-meta">
@@ -65,7 +65,7 @@ export async function TopicsSection({ user }: { user: Viewer }) {
                   )}
                 </div>
                 <div className="topic-actions">
-                  <InterestButton topicId={t.id} interested={t.interestedByViewer} topicName={t.name} />
+                  <InterestButton topicId={t.id} interested={t.interestedByViewer} titleId={`tema-${t.id}`} />
                   {organizer && <TopicManage topic={t} groups={groups} />}
                 </div>
               </li>

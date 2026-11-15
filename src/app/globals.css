@@ -2187,3 +2187,21 @@ p.cal-status {
     overflow-wrap: anywhere;
   }
 }
+
+/* Dialog akce: pole vedle sebe jen tam, kde je na ně místo (šířka formuláře, ne okna prohlížeče). U08 */
+.event-form {
+  container-type: inline-size;
+}
+
+@container (max-width: 34rem) {
+  .event-form .form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Čas od a do se vejde vedle sebe i na úzkém telefonu, pod sebe jde až pod 17 rem. */
+@container (min-width: 17rem) and (max-width: 34rem) {
+  .event-form .form-grid .form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
