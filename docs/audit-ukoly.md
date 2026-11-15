@@ -5,7 +5,9 @@ Stav k 15. 11. odpoledne. Hotové = sloučené nebo v otevřeném draft PR.
 ## Hotovo
 * S01, S02 (PR 1), A01, A02, A04, A05, A06, A08 (PR 3), U01 (PR #33: Správa 320/360, Integrace ověřit znovu), U09 (PR #33: záložka Témata, stará kotva přesměruje).
 
-## PR 5: stavy nahrávek a texty (A03, T01–T04)
+## PR 5: stavy nahrávek a texty (A03, T01–T04) · draft, větev `claude/audit-texty-a03`
+Hotovo v kódu: A03 (`progressOf`, `recordingProgressByEvent` v `journey.ts`, špatný soubor bez „Zkusit znovu“), T01/T02 a přepisy z tabulky, T03 (`formatEventWhen`), T04 (Integrace, `predani.md`, `google-kalendar.md`), neutrální okno „Akce/Zápis není dostupný“ (část U06). Testy `tests/stav-nahravky.test.ts`. **Neověřeno v Chromiu** (lokální `next start` přes http: CSP blokuje skripty, přihlášení neprojde, použít `next dev`).
+
 * **A03** Nepodporovaná nebo selhaná nahrávka: Plán, výběr „Přidat zápis“, detail i čtenář musí ukazovat stejný stav (`journey.ts` 98–166, `recordings.ts` 281–329). Selhání služby = „Zkusit znovu“, špatný formát = „Nahrát jinou“, čtenář = „Zápis zatím nevyšel“. Při náhradě zůstává starý zveřejněný zápis vidět.
 * **T01** Slovník: „Stáhnout zápis“ (stáhne ze zveřejnění) → „Vrátit zápis do návrhu“, „Pozvat“ uloží účet → přesně, sjednotit „Nahrát nahrávku“ (`RecordingSection.tsx` 69–78, `AccessForms.tsx` 212–223). Dál: Plán, Pro koho (akce), Skupiny (účty), Zápis k dokončení, Zveřejnit zápis, Povolit přihlášení. Zrušit akci (zveřejněná) / Smazat návrh / Zahodit návrh změny. Zavřít (prohlížení) / Zpět (potvrzení) / Zrušit (formulář). Vykání.
 * **T02** Audio smí i správce, UI tvrdí jen vedoucí a kontrolor (`RecordingSection.tsx` 100, `EventPeek.tsx` 91). Čtenáři nevysvětlovat nedostupné funkce.

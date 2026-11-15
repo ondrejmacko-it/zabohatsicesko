@@ -55,7 +55,7 @@ export function EventDialog(props: Props) {
         }}
       >
         {!props.replace && <Icon name={props.mode === "create" ? "plus" : "pencil"} />}
-        {props.replace ? "Nahradit pravidelný termín" : props.mode === "create" ? "Přidat akci" : "Upravit"}
+        {props.replace ? "Změnit typ tohoto termínu" : props.mode === "create" ? "Přidat akci" : "Upravit"}
       </button>
       {open && <EventForm key={session} {...props} onClose={() => setOpen(false)} />}
     </>
@@ -150,7 +150,7 @@ function EventForm({ mode, id, revision, initial, published, people, topics, inv
   const requestClose = () => (dirty && !pending ? setConfirmDiscard(true) : onClose());
 
   return (
-    <Modal open title={replace ? "Nahradit pravidelný termín" : mode === "create" ? "Přidat akci" : "Upravit akci"} onRequestClose={requestClose} wide selfGuarded>
+    <Modal open title={replace ? "Změnit typ tohoto termínu" : mode === "create" ? "Přidat akci" : "Upravit akci"} onRequestClose={requestClose} wide selfGuarded>
       {confirmDiscard ? (
         <div className="stack">
           <p>Máte neuložené změny. Opravdu chcete dialog zavřít a změny zahodit?</p>
@@ -290,7 +290,7 @@ function EventForm({ mode, id, revision, initial, published, people, topics, inv
               </>
             )}
             <label className="field">
-              <span className="field-label">Publikum</span>
+              <span className="field-label">Pro koho</span>
               <select className="select" name="audience" value={values.audience} onChange={(e) => set("audience", e.target.value as EventFormValues["audience"])}>
                 {GROUPS.map((g) => (
                   <option key={g} value={g}>
@@ -302,16 +302,16 @@ function EventForm({ mode, id, revision, initial, published, people, topics, inv
             </label>
           </div>
           {invite && !isHoliday && <InviteeList invite={invite} audience={values.audience} />}
-          {!isHoliday && <p className="field-hint">Návrh jde uložit i neúplný. Pro zveřejnění je potřeba téma a vedoucí.</p>}
+          {!isHoliday && <p className="field-hint">Návrh můžete uložit bez tématu nebo vedoucího. Při zveřejnění neúplného termínu vás požádáme o potvrzení.</p>}
           </fieldset>
 
           {!isHoliday && (
             <details className="more-settings" open={moreOpen} onToggle={(e) => setMoreOpen(e.currentTarget.open)}>
-              <summary>Další nastavení: název v plánu a kontrolor zápisu</summary>
+              <summary>Další nastavení: název v plánu a kdo zkontroluje zápis</summary>
               <div className="form-grid">
                 {labelField}
                 <label className="field">
-              <span className="field-label">Kontrolor zápisu</span>
+              <span className="field-label">Kdo zkontroluje zápis</span>
               <select className="select" name="reviewerId" value={values.reviewerId} onChange={(e) => set("reviewerId", e.target.value)}>
                 <option value="">Jen vedoucí</option>
                 {people.map((p) => (
@@ -373,7 +373,7 @@ function EventForm({ mode, id, revision, initial, published, people, topics, inv
               {published ? "Uložit návrh změny" : "Uložit návrh"}
             </button>
             <button type="submit" name="intent" value="publish" className="btn btn-primary" disabled={pending || checking}>
-              {checking ? "Počítám dopad…" : pending ? "Ukládám…" : confirmed ? "Potvrdit dopad a zveřejnit" : published ? "Zveřejnit změnu" : "Zveřejnit"}
+              {checking ? "Ověřuji změny a příjemce…" : pending ? "Ukládám…" : confirmed || published ? "Zveřejnit změnu" : "Zveřejnit"}
             </button>
             <button type="button" className="btn" onClick={requestClose}>
               Zrušit
@@ -389,9 +389,9 @@ const SHOWN_GUESTS = 8;
 
 function guestCountLabel(count: number): string {
   if (count === 0) return "Pozvánku nedostane nikdo";
-  if (count === 1) return "Pozvánku dostane 1 člověk";
-  if (count < 5) return `Pozvánku dostanou ${count} lidé`;
-  return `Pozvánku dostane ${count} lidí`;
+  if (count === 1) return "1 příjemce pozvánky";
+  if (count < 5) return `${count} příjemci pozvánky`;
+  return `${count} příjemců pozvánky`;
 }
 
 /** Kdo dostane pozvánku podle vybraného publika. Ukazuje skutečné příjemce, v testovacím režimu i to, kdo zatím pozván nebude. */

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { RouteModal } from "@/components/RouteModal";
+import { RouteModal, UnavailableModal } from "@/components/RouteModal";
 import { GROUP_LABELS, TYPE_LABELS } from "@/lib/labels";
 import { formatDate, toDateKey } from "@/lib/time";
 import type { Viewer } from "@/server/policy";
@@ -9,8 +9,18 @@ import { RecordingSection } from "./RecordingSection";
 
 const STATE_TEXT: Record<MissingMinutesItem["state"], string> = {
   none: "bez nahrávky",
-  processing: "nahrávka se zpracovává",
+  processing: "nahrávka se přepisuje",
+  failed: "přepis se nepovedl",
+  unsupported: "soubor nejde přepsat",
   draft: "návrh čeká na kontrolu",
+};
+
+const STATE_ACTION: Record<MissingMinutesItem["state"], string> = {
+  none: "Nahrát nahrávku",
+  processing: "Zobrazit stav",
+  failed: "Zkusit přepis znovu",
+  unsupported: "Vybrat jinou nahrávku",
+  draft: "Zkontrolovat",
 };
 
 /**
@@ -19,7 +29,7 @@ const STATE_TEXT: Record<MissingMinutesItem["state"], string> = {
  */
 export async function MinutesPeek({ user, eventId, closeHref }: { user: Viewer; eventId: string; closeHref: string }) {
   const detail = await getEventDetail(user, eventId);
-  if (!detail || detail.recording.access === "none") return null;
+  if (!detail || detail.recording.access === "none") return <UnavailableModal title="Zápis není dostupný" closeHref={closeHref} backLabel="Zpět na zápisy" />;
   const { card } = detail;
   const day = formatDate(toDateKey(new Date(card.startsAt)));
   const title = card.topicTitle ? `${card.label}: ${card.topicTitle}` : card.label;
@@ -41,10 +51,10 @@ export async function MinutesPeek({ user, eventId, closeHref }: { user: Viewer; 
   );
 }
 
-/** Okno „Přidat zápis“: proběhlé akce, kterým zápis chybí. Výběr akce otevře její zápis ve stejném okně. */
+/** Okno „Zápisy k dokončení“: proběhlé akce, kterým zápis chybí. Výběr akce otevře její zápis ve stejném okně. */
 export function AddMinutesPicker({ items, hrefFor, closeHref }: { items: MissingMinutesItem[]; hrefFor: (eventId: string) => string; closeHref: string }) {
   return (
-    <RouteModal title="Přidat zápis" closeHref={closeHref}>
+    <RouteModal title="Zápisy k dokončení" closeHref={closeHref}>
       {items.length === 0 ? (
         <div className="empty-state">
           <p className="item-title">Všechny proběhlé akce už zápis mají.</p>
@@ -65,7 +75,7 @@ export function AddMinutesPicker({ items, hrefFor, closeHref }: { items: Missing
                     </span>
                   </span>
                   <span className={item.canHandle ? "btn btn-small btn-primary" : "btn btn-small"} aria-hidden="true">
-                    {!item.canHandle ? "Otevřít akci" : item.state === "draft" ? "Zkontrolovat" : item.state === "processing" ? "Zobrazit stav" : "Nahrát záznam"}
+                    {item.canHandle ? STATE_ACTION[item.state] : "Otevřít akci"}
                   </span>
                 </>
               );

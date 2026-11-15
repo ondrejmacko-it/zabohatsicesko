@@ -125,12 +125,12 @@ async function DemoGate({ linkResult }: { linkResult: string }) {
   return (
     <GateShell title="Ukázka modulu Vzdělávání">
       <p className="page-sub">
-        Ukázka pracuje výhradně s fiktivními daty.{" "}
+        Prohlížíte ukázku s fiktivními daty.{" "}
         {calendarMode() === "google-test"
           ? attendeeSource() === "allowlist"
-            ? "Kalendář běží v testovacím režimu Googlu jen s testovacími příjemci, přepis v ukázkovém režimu."
-            : "Kalendář běží v testovacím režimu Googlu, pozvánky dostanou účty ve skupině akce. Přepis běží v ukázkovém režimu."
-          : "Kalendář a přepis běží v označeném ukázkovém režimu."}
+            ? "Google pošle pozvánky jen testovacím adresám."
+            : "Google posílá pozvánky podle skupiny akce."
+          : "Kalendář v ukázce e-maily neodesílá."}
       </p>
       {linkError && gate === "code" && (
         <p className="form-error" role="alert">

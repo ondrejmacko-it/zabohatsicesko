@@ -25,10 +25,10 @@ export function TemplateDialog({ slots }: { slots: SlotValue[] }) {
   return (
     <>
       <button type="button" className="btn" onClick={() => setOpen(true)}>
-        Šablona týdne
+        Pravidelný týden
       </button>
       {state?.ok && <ActionMessage state={state} />}
-      <Modal open={open} title="Šablona týdne" onRequestClose={() => setOpen(false)} wide>
+      <Modal open={open} title="Pravidelný týden" onRequestClose={() => setOpen(false)} wide>
         <p className="small muted">
           Časy a typy pro pravidelné dny. Když má den víc typů, střídají se po týdnech. Konkrétní akce pak můžete
           kdykoli upravit ručně.

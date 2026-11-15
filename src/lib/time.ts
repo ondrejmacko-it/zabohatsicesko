@@ -176,3 +176,17 @@ export function formatEventTime(startsAt: Date, endsAt: Date, allDay: boolean): 
   if (startDay === lastDay) return `${toTimeKey(startsAt)}–${toTimeKey(endsAt)}`;
   return `${formatDayMonth(startDay)} ${toTimeKey(startsAt)} – ${formatDayMonth(lastDay)} ${toTimeKey(endsAt)}`;
 }
+
+/**
+ * Datum a čas akce pro detail i náhled jedním zápisem. Jednodenní „čt 12. 11. 2026 · 9:00–11:00“,
+ * vícedenní bez opakování prvního data: „čt 12. 11. 9:00 – pá 13. 11. 2026 16:00“, celodenní „po 21. – st 23. 12. 2026“.
+ */
+export function formatEventWhen(startsAt: Date, endsAt: Date, allDay: boolean): string {
+  const startDay = toDateKey(startsAt);
+  const lastDay = allDay ? addDays(toDateKey(endsAt), -1) : toDateKey(endsAt);
+  if (startDay === lastDay) return `${formatDate(startDay)} · ${allDay ? "celý den" : `${toTimeKey(startsAt)}–${toTimeKey(endsAt)}`}`;
+  const sameYear = startDay.slice(0, 4) === lastDay.slice(0, 4);
+  const from = `${weekdayShort(startDay)} ${formatDayMonth(startDay)}${sameYear ? "" : ` ${startDay.slice(0, 4)}`}`;
+  if (allDay) return `${from} – ${formatDate(lastDay)}`;
+  return `${from} ${toTimeKey(startsAt)} – ${formatDate(lastDay)} ${toTimeKey(endsAt)}`;
+}

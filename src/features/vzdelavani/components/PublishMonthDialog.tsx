@@ -112,7 +112,7 @@ export function PublishMonthDialog({ monthKey, monthName, drafts, changeDrafts, 
                   className="input"
                   name={`topic-${d.id}`}
                   defaultValue={d.topicTitle ?? ""}
-                  placeholder="Téma (nepovinné)"
+                  placeholder="Téma"
                   aria-label={`Téma: ${d.label} ${formatDayMonth(dateKey)}`}
                   list="publish-topics"
                   maxLength={120}
@@ -136,7 +136,7 @@ export function PublishMonthDialog({ monthKey, monthName, drafts, changeDrafts, 
   return (
     <>
       <button type="button" className="btn" onClick={() => setOpen(true)}>
-        Zveřejnit návrhy <span className="count-badge">{drafts.length}</span>
+        Zkontrolovat {plural(drafts.length, "návrh", "návrhy", "návrhů")}
       </button>
       {state?.ok && <ActionMessage state={state} />}
       <Modal open={open} title={`Zveřejnit návrhy: ${monthName}`} onRequestClose={() => setOpen(false)} wide>
@@ -148,11 +148,15 @@ export function PublishMonthDialog({ monthKey, monthName, drafts, changeDrafts, 
             ))}
           </datalist>
           <div className="publish-impact" role="status">
-            <strong>{chosen.length ? `Zveřejníte ${plural(chosen.length, "akci", "akce", "akcí")}` : "Není vybraný žádný návrh"}</strong>
+            <strong>
+              {chosen.length
+                ? `${chosen.length === 1 ? "Vybrána" : chosen.length < 5 ? "Vybrány" : "Vybráno"} ${chosen.length} z ${plural(drafts.length, "akce", "akcí", "akcí")}${incomplete ? ` · ${plural(incomplete, "neúplná", "neúplné", "neúplných")}` : ""}`
+                : "Není vybraný žádný návrh"}
+            </strong>
             {chosen.length > 0 && (
               <span className="small">
-                {inviteMode === "simulation" && "Ukázkový režim: žádné e-maily se neposílají, pozvánky dostanou jen fiktivní role."}
-                {inviteMode === "disconnected" && "Kalendář není propojený. Akce budou vidět ve Wiki, pozvánky odejdou po propojení."}
+                {inviteMode === "simulation" && "Simulace · skutečné e-maily se neodesílají."}
+                {inviteMode === "disconnected" && "Vydá se ve Wiki. Pozvánky čekají na propojení a ověření."}
                 {inviteMode === "allowlist" && `Pozvánky půjdou jen na testovací adresu (${[...invited].join(", ") || "žádná"}), kolegům zatím ne.`}
                 {inviteMode === "audience" &&
                   `E-mail s pozvánkou od Googlu dostane ${plural(invited.size, "člověk", "lidé", "lidí")}: ${audiences.map((g) => `${GROUP_LABELS[g]} (${recipients[g].length})`).join(", ")}.`}

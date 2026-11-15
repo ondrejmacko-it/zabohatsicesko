@@ -45,7 +45,6 @@ export function GateForm({ personas, gate }: { personas: Persona[]; gate: GateMo
           {pending ? "Ověřuji…" : "Vstoupit do ukázky"}
         </button>
       </div>
-      {gate === "local" && <p className="small muted">Lokální režim bez přístupové brány. Na hostingu je kód povinný.</p>}
     </form>
   );
 }

@@ -10,7 +10,7 @@ describe("zájemci o téma", () => {
     const [topic] = await listTopics(memberFp);
     await setInterest(memberFp, topic!.id, true);
     const names = await listTopicInterested(organizer);
-    expect(names.get(topic!.id)).toContain("Účastník FP");
+    expect(names.get(topic!.id)).toContain("Účastník – finanční poradce");
     await expect(listTopicInterested(memberFp)).rejects.toMatchObject({ code: "forbidden" });
     await expect(listTopicInterested(lead)).rejects.toMatchObject({ code: "forbidden" });
   });

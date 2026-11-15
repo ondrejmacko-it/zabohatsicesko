@@ -24,7 +24,9 @@ export function SyncPanelView({ eventId, sync }: { eventId: string; sync: SyncPa
           : "badge badge-outline";
   const statusLabel =
     sync.status === "unlinked"
-      ? "Bez vazby na pozvánku"
+      ? sync.candidates.length > 0
+        ? "Čeká na spárování"
+        : "Zatím bez pozvánky"
       : sync.status === "none"
         ? "Návrh se do Kalendáře neposílá"
         : SYNC_STATUS_LABELS[sync.status];
@@ -86,7 +88,7 @@ export function SyncPanelView({ eventId, sync }: { eventId: string; sync: SyncPa
           <ActionForm
             action={retrySyncAction}
             fields={{ id: eventId, force: "on" }}
-            label="Přepsat pozvánku hodnotami z Wiki"
+            label="Použít údaje z Wiki"
             variant="primary"
             confirm={{
               title: "Přepsat pozvánku",
