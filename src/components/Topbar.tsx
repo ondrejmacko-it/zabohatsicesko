@@ -3,6 +3,7 @@ import { signOut, switchPersona } from "@/app/vstup/actions";
 import type { Persona } from "@/server/auth/personas";
 import type { CurrentUser } from "@/server/auth/session";
 import { ROLE_LABELS } from "@/lib/labels";
+import { isLiveWiki } from "@/server/config";
 
 export function Topbar({ user, personas }: { user: CurrentUser; personas: Persona[] }) {
   return (
@@ -12,9 +13,11 @@ export function Topbar({ user, personas }: { user: CurrentUser; personas: Person
         <span className="brand-tagline">Za bohatší Česko – znalosti a procesy na jednom místě</span>
       </Link>
       <div className="account">
-        <span className="demo-badge" title="Fiktivní data a ukázkové režimy integrací">
-          Ukázka<span className="demo-badge-detail"> · fiktivní data</span>
-        </span>
+        {!isLiveWiki() && (
+          <span className="demo-badge" title="Fiktivní data a ukázkové režimy integrací">
+            Ukázka<span className="demo-badge-detail"> · fiktivní data</span>
+          </span>
+        )}
         {user.signedInWith === "google" ? (
           <span className="small muted" title={user.email}>
             Přihlášení účtem Google

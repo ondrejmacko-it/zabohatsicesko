@@ -1,4 +1,4 @@
-import { calendarMode } from "@/server/config";
+import { calendarMode, isLiveWiki } from "@/server/config";
 import { ne, sql } from "drizzle-orm";
 import seed from "../../demo/seed.json";
 import { isoWeekday, toDateKey } from "@/lib/time";
@@ -135,6 +135,8 @@ const TABLES = [
 
 /** Smaže všechna data dema a nahraje seed znovu. Jedna transakce, buď vše, nebo nic. */
 export async function resetDatabase(tx: Executor): Promise<void> {
+  // Pojistka pro všechny cesty (tlačítko, `npm run db:reset`): ostrá Wiki se nikdy nepřepíše seedem.
+  if (isLiveWiki()) throw new Error("Obnova ukázkových dat je v ostré Wiki (WIKI_MODE=production) zakázaná.");
   // Skutečné účty (pozvánky a žádosti), vazby na Google ani připojení Kalendáře nejsou ukázková data.
   // Všechno odkazuje na uživatele, takže je TRUNCATE … CASCADE smaže. Bez obnovení by obnova
   // odhlásila lidi, zahodila jim přidělené role a odpojila Kalendář. Jejich zájmy o témata se obnoví do seedu.

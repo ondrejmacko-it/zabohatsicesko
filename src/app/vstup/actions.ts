@@ -6,7 +6,7 @@ import { z } from "zod";
 import { audit, hashKey, withinRateLimit } from "@/server/audit";
 import { accessCodeMatches, endSession, getCurrentUser, startSession } from "@/server/auth/session";
 import { listPersonas } from "@/server/auth/personas";
-import { config } from "@/server/config";
+import { config, isLiveWiki } from "@/server/config";
 import { getDb } from "@/server/db/client";
 
 export type GateState = { error: string | null };
@@ -19,6 +19,8 @@ const gateSchema = z.object({
 /** Vstup do ukázky: na hostingu ověří přístupový kód, pak založí session zvolené fiktivní role. */
 export async function enterDemo(_prev: GateState, formData: FormData): Promise<GateState> {
   const parsed = gateSchema.safeParse({ code: formData.get("code") ?? undefined, persona: formData.get("persona") });
+  // Ostrá Wiki pouští dovnitř jen účty Google. Kontrola je tady, ne jen ve skrytém formuláři.
+  if (isLiveWiki()) return { error: "Do Wiki se přihlaste účtem Google." };
   if (!parsed.success) return { error: "Vyberte roli, se kterou chcete ukázku projít." };
 
   const db = await getDb();
@@ -43,7 +45,7 @@ export async function switchPersona(formData: FormData): Promise<void> {
   const current = await getCurrentUser();
   if (!current) redirect("/vstup");
   // Kdo se přihlásil svým účtem Google, vystupuje jen sám za sebe. Cizí roli si zvolit nesmí.
-  if (current.signedInWith === "google") redirect("/");
+  if (current.signedInWith === "google" || isLiveWiki()) redirect("/");
   const persona = String(formData.get("persona") ?? "");
   const personas = await listPersonas();
   if (personas.some((p) => p.id === persona)) {

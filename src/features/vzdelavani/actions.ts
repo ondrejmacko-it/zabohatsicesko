@@ -8,7 +8,7 @@ import { audit } from "@/server/audit";
 import { disconnect as disconnectCalendar } from "@/server/calendar/google-auth";
 import { simulateManualEdit } from "@/server/calendar/simulated";
 import { pairWithExisting, requestNewInvite, requestRetry, syncEvent, syncPublished } from "@/server/calendar/sync";
-import { calendarMode } from "@/server/config";
+import { calendarMode, isLiveWiki } from "@/server/config";
 import { getDb } from "@/server/db/client";
 import { isOrganizer } from "@/server/policy";
 import { resetDatabase } from "@/server/seed";
@@ -382,7 +382,8 @@ export async function archiveTopicAction(_prev: ActionResult | null, formData: F
 
 export async function setSimulationAction(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
   return run(async (user) => {
-    if (!isOrganizer(user)) throw new DomainError("forbidden");
+    // Ukázkové přepínače chyb v ostré Wiki neexistují. Server je odmítne i při přímém volání.
+    if (!isOrganizer(user) || isLiveWiki()) throw new DomainError("forbidden");
     const data = z.object({ key: z.enum(SIMULATION_SWITCHES), value: z.enum(["true", "false"]) }).parse(formObject(formData));
     const db = await getDb();
     await writeSwitch(db, data.key, data.value === "true");
@@ -393,7 +394,7 @@ export async function setSimulationAction(_prev: ActionResult | null, formData: 
 
 export async function simulateManualEditAction(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
   return run(async (user) => {
-    if (!isOrganizer(user)) throw new DomainError("forbidden");
+    if (!isOrganizer(user) || isLiveWiki()) throw new DomainError("forbidden");
     // Nástroj ukázky existuje jen nad simulací, skutečný kalendář se takto nemění.
     if (calendarMode() !== "simulation") throw new DomainError("invalid_state");
     const data = z.object({ externalId: z.string().max(80) }).parse(formObject(formData));
@@ -415,7 +416,8 @@ export async function disconnectCalendarAction(): Promise<ActionResult> {
 
 export async function resetDemoAction(): Promise<ActionResult> {
   return run(async (user) => {
-    if (!isOrganizer(user)) throw new DomainError("forbidden");
+    // Obnova smaže všechna data a nahraje fiktivní seed. V ostré Wiki by zničila skutečný plán.
+    if (!isOrganizer(user) || isLiveWiki()) throw new DomainError("forbidden");
     const db = await getDb();
     await db.transaction(async (tx) => {
       await resetDatabase(tx);
