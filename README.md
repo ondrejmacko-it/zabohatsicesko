@@ -50,9 +50,9 @@ serveru) nebo tlačítkem *Vzdělávání → Integrace → Obnovit ukázková d
 |---|---|
 | Správce ZBC ukázky | Plánuje a zveřejňuje akce, přiděluje role a skupiny, zve a schvaluje účty Google (Správa systému). |
 | Správce vzdělávání | Druhý správce se stejnými právy. Na preview bývá svázaný s testovacím účtem Google, který propojuje Kalendář. |
-| Vedoucí ukázky | Vede akce, nahrává záznam, kontroluje a zveřejňuje zápis. |
-| Účastník FP | Kolega ze skupiny finančních poradců. Čte plán a zveřejněné zápisy své skupiny. |
-| Účastník RM | Kolega mimo publikum tréninku poradců. Přístup k cizí akci je zamítnut i přímým odkazem. |
+| Vedoucí akce | Vede akce, nahrává záznam, kontroluje a zveřejňuje zápis. |
+| Účastník – finanční poradce | Kolega ze skupiny finančních poradců. Čte plán a zveřejněné zápisy své skupiny. |
+| Účastník – relationship manažer | Kolega mimo publikum tréninku poradců. Přístup k cizí akci je zamítnut i přímým odkazem. |
 
 Role jsou jen dvě: **Správce** (plánuje, zveřejňuje, spravuje účty, Kalendář a u každé akce smí nahrát záznam,
 upravit, zveřejnit i stáhnout zápis) a **Člen týmu** (vidí akce a zápisy svých skupin, vede akce, ke kterým je

@@ -73,10 +73,10 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
             <tbody>
               <tr>
                 <td>Google Kalendář</td>
-                <td>{integrationModes.calendar === "simulation" ? "Simulace" : "Testovací režim Google · živý test 12. 11. 2026"}</td>
+                <td>{integrationModes.calendar === "simulation" ? "Simulace" : "Google · testovací režim"}</td>
                 <td>
                   {googleTest
-                    ? `Živý test se skutečným účtem prošel 12. 11. 2026: spárování, změna tématu a času, výskyt série, nová pozvánka, ruční změna v Kalendáři i odvolání přístupu. ${attendeeSource() === "audience" ? "Pozvánky jdou skupině, pro kterou je akce určená." : "Pozvánky jdou jen testovacím příjemcům."}`
+                    ? `Zápis do Kalendáře přes propojený účet Google. ${attendeeSource() === "audience" ? "Pozvánky jdou skupině, pro kterou je akce určená." : "Pozvánky jdou jen testovacím příjemcům."} Aktuální stav propojení je níže.`
                     : "Identita pozvánky, hosté a RSVP, oznámení, opakování bez duplicit, pořadí revizí a chyby. Ověřeno proti simulaci, ne proti skutečnému Google účtu."}
                 </td>
               </tr>
@@ -87,7 +87,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                   {loginMode() !== "google-test"
                     ? "Vstup přístupovým kódem a výběrem fiktivní role. Oprávnění ověřuje server podle role v databázi."
                     : googleLoginConfig()
-                      ? "Ověření ID tokenu (podpis, vydavatel, příjemce, platnost, ověřený e-mail) a vazba na stabilní identifikátor prošly testy s napodobeným Googlem. Živé přihlášení zatím neproběhlo."
+                      ? "Ověření ID tokenu (podpis, vydavatel, příjemce, platnost, ověřený e-mail) a vazba na stabilní identifikátor účtu Google."
                       : `Přihlášení účtem Google je vypnuté, konfigurace není úplná: ${googleLoginConfigProblems().join(", ")}.`}
                 </td>
               </tr>
@@ -104,7 +104,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
             </tbody>
           </table>
           <p className="small muted section-actions">
-            Hodnoty tajemství se v aplikaci nezobrazují. Prostředí: {config.databaseUrl ? "hostovaná databáze" : "lokální databáze"}.
+            Prostředí: {config.databaseUrl ? "hostovaná databáze" : "lokální databáze"}.
           </p>
         </section>
       )}

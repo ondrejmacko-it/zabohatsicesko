@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { Icon } from "@/components/Icon";
-import { RouteModal } from "@/components/RouteModal";
+import { RouteModal, UnavailableModal } from "@/components/RouteModal";
 import { Todo, missingText } from "@/components/Todo";
 import { EXTRAORDINARY_TYPES, GROUP_LABELS, PLAN_STATUS_LABELS } from "@/lib/labels";
-import { formatDate, formatEventTime, toDateKey } from "@/lib/time";
+import { formatEventWhen } from "@/lib/time";
 import type { Viewer } from "@/server/policy";
 import { isOrganizer } from "@/server/policy";
 import { getEventDetail } from "@/server/services/detail";
@@ -19,11 +19,11 @@ type Props = { user: Viewer; eventId: string; preview: PlanPreview | null; previ
 
 /**
  * Rychlý náhled akce v okně nad Plánem: stav, základní údaje a hlavní krok. Zápis, nahrávka a Kalendář
- * zůstávají na celé stránce detailu. Neviditelná nebo neexistující akce okno neotevře.
+ * zůstávají na celé stránce detailu. Neviditelná nebo neexistující akce ukáže neutrální „Akce není dostupná“.
  */
 export async function EventPeek({ user, eventId, preview, previewKey, closeHref }: Props) {
   const detail = await getEventDetail(preview?.viewer ?? user, eventId);
-  if (!detail) return null;
+  if (!detail) return <UnavailableModal title="Akce není dostupná" closeHref={closeHref} backLabel="Zpět na plán" />;
   const { card } = detail;
   const managing = isOrganizer(user) && !preview;
   const editable = managing && detail.form && card.planStatus !== "cancelled";
@@ -36,7 +36,7 @@ export async function EventPeek({ user, eventId, preview, previewKey, closeHref 
   const holiday = card.type === "holiday";
   const fullHref = `/vzdelavani/akce/${encodeURIComponent(card.id)}${previewKey ? `?jako=${encodeURIComponent(previewKey)}` : ""}`;
   const minutesReady = detail.recording.access === "reader" && Boolean(detail.recording.minutes);
-  const links = [...(minutesReady ? [{ href: `${fullHref}#zapis`, label: "Zobrazit zápis" }] : []), { href: fullHref, label: "Otevřít celý detail" }];
+  const links = [...(minutesReady ? [{ href: `${fullHref}#zapis`, label: "Zobrazit zápis" }] : []), { href: fullHref, label: "Podrobnosti akce" }];
   const replaceable = editable && detail.fromTemplate && !EXTRAORDINARY_TYPES.has(card.type) && !card.past;
   const dialogProps = editable
     ? {
@@ -60,14 +60,14 @@ export async function EventPeek({ user, eventId, preview, previewKey, closeHref 
           {card.past && card.planStatus === "published" ? " · proběhlo" : ""}
         </strong>
         {advice && <span>{advice}</span>}
-        {preview && <span>Díváte se jako {preview.label}, okno je jen ke čtení.</span>}
+        {preview && <span>Pohled: {preview.label} · jen ke čtení.</span>}
         {card.planStatus === "cancelled" && detail.cancelReason && <span>Důvod: {detail.cancelReason}</span>}
       </div>
       <dl className="fact-list">
         <div>
           <dt>Kdy</dt>
           <dd>
-            <Icon name="calendar" /> {formatDate(toDateKey(start))} · {formatEventTime(start, new Date(card.endsAt), card.allDay)}
+            <Icon name="calendar" /> {formatEventWhen(start, new Date(card.endsAt), card.allDay)}
           </dd>
         </div>
         {!holiday && (
@@ -88,7 +88,6 @@ export async function EventPeek({ user, eventId, preview, previewKey, closeHref 
         </div>
       </dl>
       {holiday && <p className="hint">Svátek je v plánu jen pro přehled, do Kalendáře se neposílá.</p>}
-      {!holiday && <p className="hint">Kalendář, nahrávku a zápis najdete v celém detailu{managing ? " (Další možnosti)" : ""}.</p>}
       <div className="dialog-actions peek-actions">
         {managing ? (
           <EventMenu id={card.id} revision={detail.revision} canCancel={detail.canCancel} canDelete={detail.canDelete} links={links}>

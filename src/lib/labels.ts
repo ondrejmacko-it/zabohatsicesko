@@ -26,7 +26,7 @@ export const GROUP_LABELS: Record<Group, string> = {
 
 /** Vysvětlení zkratek skupin přímo u výběru publika. */
 export const GROUP_HINTS: Record<Group, string> = {
-  vsichni: "Pozvánku dostanou všichni kolegové s přístupem do Wiki.",
+  vsichni: "Akci uvidí skupina Všichni.",
   fp: "FP = finanční poradci.",
   rm: "RM = relationship manažeři.",
   "tym-a": "Tým A = kolegové ze skupiny Tým A, pro kterou je Action time.",
@@ -52,17 +52,17 @@ export const PLAN_STATUS_LABELS: Record<PlanStatus, string> = {
 };
 
 export const SYNC_STATUS_LABELS: Record<SyncStatus, string> = {
-  pending: "Čeká",
+  pending: "Pozvánka se odesílá",
   synced: "Synchronizováno",
-  attention: "Vyžaduje pozornost",
+  attention: "Změna se nepropsala",
 };
 
 export const RECORDING_STATE_LABELS: Record<RecordingState, string> = {
   awaiting: "Čeká na nahrávku",
   processing: "Zpracovává se",
   review: "Ke kontrole",
-  available: "Zápis dostupný",
-  failed: "Zpracování se nepovedlo",
+  available: "Zápis zveřejněn",
+  failed: "Přepis se nepovedl",
 };
 
 export const TEMPLATE_LABELS: Record<string, string> = {
@@ -84,7 +84,7 @@ export const ERROR_LABELS: Record<string, string> = {
   calendar_series_master: "Vazba míří na celou opakovanou sérii. Wiki mění jen jeden výskyt, spárujte konkrétní termín.",
   calendar_not_organizer: "Originál pozvánky vlastní jiný účet. Připojte účet, který pozvánku založil, nebo založte novou pozvánku.",
   calendar_not_configured: "Testovací režim Google Kalendáře nemá úplnou konfiguraci na serveru.",
-  unsupported_fixture: "Ukázkový přepis zná jen testovací nahrávku. Pro jiný soubor je potřeba skutečný testovací režim.",
-  transcription_unavailable: "Služba přepisu je dočasně nedostupná. Zkuste zpracování znovu.",
-  invalid_output: "Návrh zápisu neprošel kontrolou formátu. Zkuste zpracování znovu.",
+  unsupported_fixture: "Tento soubor ukázka nepřepíše. Použijte ukázkovou nahrávku.",
+  transcription_unavailable: "Služba přepisu je dočasně nedostupná. Zkuste přepis znovu.",
+  invalid_output: "Návrh zápisu neprošel kontrolou formátu. Zkuste přepis znovu.",
 };

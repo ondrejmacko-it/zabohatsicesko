@@ -40,7 +40,7 @@ export function UploadForm({ eventId, eventLabel, replacing }: { eventId: string
       <ActionMessage state={state} />
       <div className="row">
         <button type="submit" className="btn btn-primary" disabled={pending || !file || tooLarge}>
-          {pending ? "Nahrávám…" : "Potvrdit a nahrát"}
+          {pending ? "Nahrávám…" : "Nahrát nahrávku"}
         </button>
       </div>
     </form>

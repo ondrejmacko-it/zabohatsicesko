@@ -61,7 +61,7 @@ describe("úprava zveřejněné akce a Kalendář", () => {
     expect(invite.id).toBe("demo-existing-rm-1112");
     expect(invite.summary).toBe("Trénink RM: Nové téma tréninku");
     // Původní host i jeho odpověď zůstávají, Wiki jen doplnila chybějící publikum akce.
-    expect(invite.attendees[0]).toEqual({ email: "demo-mimo-skupinu@example.invalid", name: "Účastník RM", responseStatus: "accepted" });
+    expect(invite.attendees[0]).toEqual({ email: "demo-mimo-skupinu@example.invalid", name: "Účastník – relationship manažer", responseStatus: "accepted" });
     expect(invite.attendees.map((a) => a.email).sort()).toEqual(
       ["demo-mimo-skupinu", "demo-organizator", "demo-spravce", "demo-vedouci"].map((id) => `${id}@example.invalid`),
     );
@@ -191,7 +191,7 @@ describe("úprava zveřejněné akce a Kalendář", () => {
       DEMO_CALENDAR_ID,
       "puvodni-pozvanka-26-11",
       { summary: "Trénink RM", description: "", startsAt: new Date("2026-11-26T11:30:00Z"), endsAt: new Date("2026-11-26T14:00:00Z"), cancelled: false },
-      [{ email: "demo-mimo-skupinu@example.invalid", name: "Účastník RM", responseStatus: "tentative" }],
+      [{ email: "demo-mimo-skupinu@example.invalid", name: "Účastník – relationship manažer", responseStatus: "tentative" }],
     );
     await expect(pairWithExisting(organizer, "ev-11-19", existing.id)).rejects.toMatchObject({ code: "invalid_state" });
     expect((await pairingCandidates(organizer, "ev-11-26")).map((c) => c.id)).toEqual([existing.id]);

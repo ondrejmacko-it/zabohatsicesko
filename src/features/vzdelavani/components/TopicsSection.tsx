@@ -29,8 +29,8 @@ export async function TopicsSection({ user }: { user: Viewer }) {
         <ProposeTopicDialog groups={groups} />
       </div>
       <p className="lead-text">
-        O čem by vzdělávání mělo být. Dejte najevo zájem nebo navrhněte vlastní téma. Doporučená jsou ta, o která je největší zájem
-        a dlouho neproběhla. O zařazení do plánu rozhoduje správce.{organizer && " Kdo má o téma zájem, zjistíte kliknutím na počet zájemců."}
+        Navrhněte téma nebo hlasujte pro jiné. Doporučená jsou ta, o která je největší zájem a dlouho neproběhla. O zařazení do plánu
+        rozhoduje správce.{organizer && " Kdo má o téma zájem, zjistíte kliknutím na počet zájemců."}
       </p>
       {topics.length === 0 ? (
         <p className="muted">Zatím tu nejsou žádná témata. Navrhněte první.</p>

@@ -204,7 +204,7 @@ export async function generateMonthAction(_prev: ActionResult | null, formData: 
   return run(async (user) => {
     const month = z.string().refine(isValidMonthKey).parse(formData.get("month"));
     const { created, withTopic } = await generateMonth(user, month);
-    if (!created) return { ok: true, message: "Měsíc už má všechna místa ze šablony. Nic se nezměnilo." };
+    if (!created) return { ok: true, message: "Všechny pravidelné termíny už v plánu jsou." };
     const places = `${created} ${created === 1 ? "místo" : created < 5 ? "místa" : "míst"}`;
     const topicNote = withTopic
       ? ` U ${withTopic} ${withTopic === 1 ? "termínu" : "termínů"} je předvyplněné doporučené téma podle zájmu, před zveřejněním ho můžete změnit.`
@@ -362,7 +362,7 @@ export async function withdrawMinutesAction(_prev: ActionResult | null, formData
     const { id } = eventIdSchema.parse(formObject(formData));
     await withdrawMinutes(user, id);
     after(() => syncEvent(id));
-    return { ok: true, message: "Zápis je stažený. Kolegové ho nevidí, dokud ho znovu nezveřejníte." };
+    return { ok: true, message: "Zápis se vrátil do návrhu. Kolegové ho už nevidí." };
   });
 }
 

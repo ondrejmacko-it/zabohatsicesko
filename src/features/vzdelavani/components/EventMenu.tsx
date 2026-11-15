@@ -74,7 +74,6 @@ function CancelDialog({ id, revision, onClose }: { id: string; revision: number;
     };
   }, [id, attempt]);
   const unverified = impact === "failed" || (impact !== null && !impact.verified);
-  const informs = impact !== null && impact !== "failed" && impact.verified && impact.guests.length > 0;
   return (
     <Modal open title="Zrušit akci" onRequestClose={onClose}>
       <form action={action} onSubmit={submitKeepingValues(action)} className="stack">
@@ -86,13 +85,13 @@ function CancelDialog({ id, revision, onClose }: { id: string; revision: number;
             <strong>Koho se zrušení dotkne</strong>
           </p>
           {impact === null && <p className="small">Zjišťuji, kdo je v pozvánce…</p>}
-          {impact === "failed" && <p className="small">Dopad se nepodařilo načíst. Komu přijde zpráva o zrušení, teď nejde ověřit.</p>}
+          {impact === "failed" && <p className="small">Příjemce oznámení se nepodařilo ověřit.</p>}
           {impact && impact !== "failed" && (
             <ul className="prose-list">
-              <li>Ve Wiki uvidí stav Zrušeno a důvod skupina {impact.audience}.</li>
+              <li>Zrušení a důvod uvidí ve Wiki skupina {impact.audience}.</li>
               {impact.guests.length > 0 && (
                 <li>
-                  Zprávu o zrušení z Kalendáře dostane {impact.guests.length === 1 ? "1 host" : `hostů: ${impact.guests.length}`} ({impact.guests.join(", ")}).
+                  Kalendář odešle oznámení {impact.guests.length === 1 ? "1 hostovi" : `${impact.guests.length} hostům`} ({impact.guests.join(", ")}).
                 </li>
               )}
               {impact.notes.map((note) => (
@@ -105,7 +104,7 @@ function CancelDialog({ id, revision, onClose }: { id: string; revision: number;
               setImpact(null);
               setAttempt((n) => n + 1);
             }}>
-              Zkusit znovu
+              Ověřit znovu
             </button>
           )}
         </div>
@@ -122,7 +121,7 @@ function CancelDialog({ id, revision, onClose }: { id: string; revision: number;
         <ActionMessage state={state} />
         <div className="row">
           <button type="submit" className="btn btn-danger" disabled={pending || impact === null || (unverified && !acceptUnverified)}>
-            {informs ? "Zrušit akci a informovat pozvané" : "Zrušit akci"}
+            Zrušit akci
           </button>
           <button type="button" className="btn" onClick={onClose}>
             Zpět

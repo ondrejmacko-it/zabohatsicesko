@@ -87,11 +87,15 @@ Správce a jeden testovací příjemce. Každý krok zapsat jako ověřený, neb
 5. Opakovaná akce: spárovat jeden výskyt týdenní série, změnit jeho téma a potom ho zrušit. Sousední
    výskyty i série zůstanou beze změny.
 6. Vytvořit novou pozvánku pro akci bez vazby. Hostem je jen testovací příjemce.
-7. Upravit název přímo v Google Kalendáři. Wiki ukáže rozdíl a nabídne přepsání.
-8. V nastavení Google účtu odebrat aplikaci přístup. Další synchronizace skončí stavem „Vyžaduje
-   pozornost“ s výzvou k připojení, po připojení projde.
+7. Upravit název přímo v Google Kalendáři. Wiki ukáže rozdíl a nabídne „Použít údaje z Wiki“.
+8. V nastavení Google účtu odebrat aplikaci přístup. Další synchronizace skončí stavem „Změna se
+   nepropsala“ s výzvou k připojení, po připojení projde.
 
 ## Výsledek živého testu 12. 11. 2026
+
+Historický záznam testu. Názvy stavů a tlačítek se od té doby změnily („Vyžaduje pozornost“ je teď
+„Změna se nepropsala“, „Přepsat pozvánku hodnotami z Wiki“ je „Použít údaje z Wiki“). Aktuální stav
+integrací je v [predani.md](predani.md).
 
 Preview větve `ccr-2d4283fa-slno9d`, účet organizátora `zbc.test.spravce`, příjemce `zbc.test.uzivatel`,
 testovací kalendář „Vzdělávání test“. Wiki ovládal Playwright, Google kontroloval uživatel.

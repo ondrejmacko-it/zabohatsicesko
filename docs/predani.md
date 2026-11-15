@@ -18,8 +18,8 @@ oddělení ostré Wiki od ukázky a kroky nasazení v [nasazeni.md](nasazeni.md)
 | Integrace | Režim v demu | Co je ověřeno | Co ověřeno není |
 |---|---|---|---|
 | Google Kalendář | **Simulace** se stejným rozhraním jako budoucí adaptér | Identita pozvánky, zachování hostů, RSVP a odkazu na schůzku, jedno oznámení na změnu, opakování bez duplicit, pořadí revizí, výpadek, odvolaný přístup, ruční změna mimo Wiki, zrušení jednoho termínu | Zápis do skutečného Google účtu. Simulovaný krok **nebyl** ověřen proti Google. |
-| Google Kalendář, testovací režim | **Připravený, vypnutý.** Adaptér Google Calendar API se zapíná `CALENDAR_MODE=google-test` | Proti napodobenému HTTP: vytvoření bez duplicit, úprava jen spravovaných polí, jeden výskyt série, odmítnutí zápisu do série a do cizí pozvánky, povolené kalendáře a příjemci, šifrování a obnova tokenu, odvolaný přístup, dělení chyb na přechodné a trvalé | **Neověřeno proti Googlu.** Živý test podle části 02 čeká na testovací účty, postup je v [google-kalendar.md](google-kalendar.md). |
-| Přihlášení Google identitou | **Jediný vstup ostré Wiki** (`LOGIN_MODE=google-test`), v ukázce se nenabízí | Proti napodobenému Googlu: podpis, vydavatel, příjemce, platnost, nonce a ověřený e-mail v ID tokenu, vazba na stabilní `sub`, odmítnutí účtu mimo seznam a záměny účtu, okamžité ukončení session po odebrání, zákaz přepínání rolí | **Neověřeno proti Googlu.** Postup je v [google-prihlaseni.md](google-prihlaseni.md). Seznam účtů v proměnné prostředí je jen pro test, ostrá Wiki ho ignoruje. |
+| Google Kalendář, ostrá Wiki | **Zapnutý v ostré Wiki** (`CALENDAR_MODE=google-test`, kalendář `primary`, pozvánky podle skupiny akce) | Testy proti napodobenému HTTP: vytvoření bez duplicit, úprava jen spravovaných polí, jeden výskyt série, odmítnutí zápisu do série a do cizí pozvánky, povolené kalendáře a příjemci, šifrování a obnova tokenu, odvolaný přístup, chybějící přístup ke kalendáři. Živě: test 12. 11. 2026 (záznam v [google-kalendar.md](google-kalendar.md)) a provoz od 15. 11. 2026 (vazby synchronizované) | Dlouhodobý provoz s větším počtem příjemců. |
+| Přihlášení Google identitou | **Jediný vstup ostré Wiki** (`LOGIN_MODE=google-test`, pozvánka na jedno zařízení), v ukázce se nenabízí | Proti napodobenému Googlu: podpis, vydavatel, příjemce, platnost, nonce a ověřený e-mail v ID tokenu, vazba na stabilní `sub`, odmítnutí účtu mimo pozvánku a záměny účtu, okamžité ukončení session po odebrání, zákaz přepínání rolí. Živě: přihlášení správce v ostré Wiki (aplikace Google v režimu In production) | Postup je v [google-prihlaseni.md](google-prihlaseni.md). Seznam účtů v proměnné prostředí je jen pro test, ostrá Wiki ho ignoruje. |
 | Přepis a zápis | **Ukázkový**: zná jen přiloženou syntetickou nahrávku (podle otisku SHA-256) | Celá cesta nahrání → zpracování → kontrola → oprava → zveřejnění, opakované doručení úlohy, nahrazení audia, výpadek a opakování | Skutečný přepis a shrnutí. Jiný soubor skončí čitelnou chybou „nepodporovaný soubor“. |
 | Úložiště nahrávek | Soukromé, v databázi, vydávání jen přes autorizovanou cestu | Přístup vedoucího, zamítnutí účastníka a kolegy mimo publikum, přístup správce, i přímým odkazem | Uchovávání a mazání podle pravidel firmy. |
 
@@ -27,7 +27,7 @@ Přepínače chybových stavů jsou v *Vzdělávání → Integrace* (jen správ
 
 ## Ověřené scénáře
 
-Automaticky: `npm test` (49 testů nad skutečnou databází PGlite, z toho 15 pro adaptér Google Kalendáře proti napodobenému HTTP), lint, typová kontrola a produkční build.
+Automaticky: `npm test` (přes 170 testů nad skutečnou databází PGlite, včetně adaptéru Google Kalendáře proti napodobenému HTTP), lint, typová kontrola a produkční build.
 Ručně v prohlížeči (Chromium, desktop 1440 px a iPhone 13) celý průchod podle části 04:
 
 1. Špatný přístupový kód i zvací odkaz se špatným kódem jsou odmítnuty, platný odkaz pustí k výběru role bez psaní kódu. Bez přihlášení vede stránka na vstup a API vrací 401.
@@ -62,17 +62,16 @@ Ručně v prohlížeči (Chromium, desktop 1440 px a iPhone 13) celý průchod p
 ## Před pilotem s lidmi (harmonogram)
 
 1. **Přístupy a hosting.** Ostrá Wiki je oddělená od ukázky (vlastní databáze, jen účty Google,
-   správa uživatelů ve Wiki), kroky jsou v [nasazeni.md](nasazeni.md). Zbývá živý test proti Googlu,
-   zveřejnění souhlasové obrazovky (režim Testing: 100 uživatelů, propojení na 7 dní), plán Vercelu
+   správa uživatelů ve Wiki), kroky jsou v [nasazeni.md](nasazeni.md). Aplikace Google je v režimu
+   In production (bez vlastní domény a bez ověření aplikace, do 100 uživatelů). Zbývá plán Vercelu
    pro komerční provoz, zálohy a obnova.
-2. **Google Kalendář, živý test** podle části 02. Adaptér, připojení účtu a testovací režim jsou hotové,
-   zbývá dodat testovací účty a OAuth klienta a projít kroky v [google-kalendar.md](google-kalendar.md).
-   Produkce dostane vlastního OAuth klienta, vlastní klíč a vlastní seznam kalendářů.
+2. **Google Kalendář** běží v ostré Wiki. Živý test 12. 11. 2026 a postup jsou v
+   [google-kalendar.md](google-kalendar.md).
 3. **Rozhodnutí s firmou:** kdo vlastní současné pozvánky a ke kterému kalendáři má Wiki zapisovat; zda se
    série převádí, nebo se nové akce zakládají od domluveného data; jak se střídají typy po výjimce.
 
 **Vypnutí integrace:** odpojení oprávnění zastaví zápisy. Změny zůstanou ve Wiki uložené a akce ukáže stav
-„Vyžaduje pozornost“. Po opětovném připojení správce spustí „Zkusit synchronizaci znovu“ a odešle se
+„Změna se nepropsala“. Po opětovném připojení správce spustí „Zkusit synchronizaci znovu“ a odešle se
 nejnovější zveřejněná verze, starší revize se nepošle.
 
 ## Před klientskými nahrávkami

@@ -45,7 +45,9 @@ export async function updateAccessAction(_prev: ActionResult | null, formData: F
       .parse({ ...accessOf(formData), userId: formData.get("userId"), status: formData.get("status") });
     await updateAccess(user, data.userId, data);
     after(() => syncPending());
-    return { ok: true, message: data.status === "active" ? "Uloženo." : "Přístup je odebraný." };
+    if (data.status === "disabled") return { ok: true, message: "Přístup je odebraný." };
+    const intent = formData.get("intent");
+    return { ok: true, message: intent === "approve" ? "Přístup schválen." : intent === "restore" ? "Přístup vrácen." : "Role a skupiny uloženy." };
   });
 }
 
