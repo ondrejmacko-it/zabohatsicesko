@@ -5,7 +5,12 @@ import { z } from "zod";
 import { GROUPS, ROLES } from "@/lib/types";
 import { runAction, type ActionResult } from "@/features/shared/run-action";
 import { syncPending } from "@/server/calendar/sync";
-import { inviteUser, rejectRequest, updateAccess } from "@/server/services/users";
+import { config } from "@/server/config";
+import { formatDate, toDateKey } from "@/lib/time";
+import { createLoginLink, inviteUser, rejectRequest, revokeLoginLink, revokeUserDevice, updateAccess } from "@/server/services/users";
+
+/** Odkaz s tokenem ve fragmentu: prohlížeč ho na server sám nepošle ani při kliknutí. */
+const linkFor = (token: string) => `${config.appUrl}/vstup#${token}`;
 
 // Každá akce znovu ověří session a oprávnění na serveru (services/users.ts) a validuje vstup.
 
@@ -26,9 +31,10 @@ export async function inviteUserAction(_prev: ActionResult | null, formData: For
     const data = z
       .object({ ...access, email: z.string().trim().toLowerCase().email().max(254), name: z.string().trim().min(2).max(80) })
       .parse({ ...accessOf(formData), email: formData.get("email"), name: formData.get("name") });
-    await inviteUser(user, data);
+    const { link } = await inviteUser(user, data);
     after(() => syncPending());
-    return { ok: true, message: `Pozvánka je uložená: ${data.name}. Pošlete kolegovi odkaz na Wiki.` };
+    if (!link) return { ok: true, message: `Účet je založený: ${data.name}.` };
+    return { ok: true, message: `Odkaz pro ${data.name} platí do ${formatDate(toDateKey(link.expiresAt))}.`, link: linkFor(link.token) };
   });
 }
 
@@ -47,5 +53,26 @@ export async function rejectRequestAction(_prev: ActionResult | null, formData: 
   return runAction(async (user) => {
     await rejectRequest(user, userId.parse(formData.get("userId")));
     return { ok: true, message: "Žádost je zamítnutá." };
+  });
+}
+
+export async function createLoginLinkAction(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
+  return runAction(async (user) => {
+    const link = await createLoginLink(user, userId.parse(formData.get("userId")));
+    return { ok: true, message: `Odkaz platí do ${formatDate(toDateKey(link.expiresAt))}. Starší nepoužitý odkaz už neplatí.`, link: linkFor(link.token) };
+  });
+}
+
+export async function revokeLoginLinkAction(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
+  return runAction(async (user) => {
+    await revokeLoginLink(user, userId.parse(formData.get("userId")));
+    return { ok: true, message: "Odkaz už neplatí." };
+  });
+}
+
+export async function revokeDeviceAction(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
+  return runAction(async (user) => {
+    await revokeUserDevice(user, userId.parse(formData.get("userId")), z.string().min(1).max(64).parse(formData.get("deviceId")));
+    return { ok: true, message: "Zařízení je odhlášené." };
   });
 }

@@ -1,14 +1,20 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AccountActions, InviteForm } from "@/features/sprava/components/AccessForms";
+import {
+  AccountActions,
+  InviteButton,
+} from "@/features/sprava/components/AccessForms";
 import { GROUP_LABELS, ROLE_LABELS, USER_STATUS_LABELS } from "@/lib/labels";
 import { formatDate, toDateKey } from "@/lib/time";
 import type { Role } from "@/lib/types";
-import { CalendarStatusLine, InviteRecipients } from "@/features/vzdelavani/components/CalendarStatusLine";
+import {
+  CalendarStatusLine,
+  InviteRecipients,
+} from "@/features/vzdelavani/components/CalendarStatusLine";
 import { loadCalendarStatus } from "@/server/services/calendar-status";
 import { requireUser } from "@/server/auth/session";
-import { config, now } from "@/server/config";
+import { isLiveWiki, now } from "@/server/config";
 import { canManageUsers } from "@/server/policy";
 import { listAccounts, type Account } from "@/server/services/users";
 
@@ -18,11 +24,15 @@ export default async function AdminPage() {
   const user = await requireUser();
   // Stejná odpověď jako neexistující stránka: bez oprávnění se o správě nic nedozví.
   if (!canManageUsers(user)) notFound();
-  const [accounts, calendar] = await Promise.all([listAccounts(user), loadCalendarStatus(user)]);
+  const [accounts, calendar] = await Promise.all([
+    listAccounts(user),
+    loadCalendarStatus(user),
+  ]);
   // Jedna role pro plánování a správu. Starší hodnota „organizer“ se už nepřiděluje, pravidla ji berou stejně.
   const roles: Role[] = ["admin", "member"];
   const pending = accounts.filter((a) => a.status === "pending");
   const others = accounts.filter((a) => a.status !== "pending");
+  const live = isLiveWiki();
 
   return (
     <>
@@ -30,90 +40,140 @@ export default async function AdminPage() {
         <div>
           <h1>Správa systému</h1>
           <p className="page-sub">
-            Kdo smí do Wiki a co uvidí. Google jen ověří, kdo se přihlašuje. Roli a skupiny přidělujete tady.
+            Role určuje, co člověk smí, skupiny, které akce a zápisy uvidí.
           </p>
         </div>
+        <InviteButton roles={roles} />
       </div>
 
-      <section className="section" aria-labelledby="jak-to-funguje">
-        <h2 id="jak-to-funguje">Jak to funguje</h2>
-        <ul className="prose-list">
-          <li>
-            <strong>Role</strong> říká, co člověk smí dělat. Člen týmu vidí plán a zápisy svých skupin. Správce plánuje a zveřejňuje
-            akce, spravuje účty, vidí vše a u každé akce smí nahrát záznam a zveřejnit zápis.
-          </li>
-          <li>
-            <strong>Skupiny</strong> říkají, co člověk uvidí: jen akce a zápisy určené jeho skupinám. Všichni = celá firma, FP = finanční
-            poradci, RM = relationship manažeři, Tým A = účastníci Action time.
-          </li>
-          <li>
-            <strong>Vedoucí akce</strong> není role. Správce ho vybere u konkrétní akce a vedoucí pak u ní nahrává záznam a
-            zveřejňuje zápis.
-          </li>
-        </ul>
-      </section>
-
-      <section className="section stack" aria-labelledby="pozvanky" id="pozvanky-kalendare">
-        <h2 id="pozvanky">Kalendář a pozvánky</h2>
-        <CalendarStatusLine status={calendar} now={now()} detailed />
-        <InviteRecipients status={calendar} />
-      </section>
-
-      <section className="section stack" aria-labelledby="zadosti">
-        <h2 id="zadosti">Čekající žádosti {pending.length > 0 && <span className="badge badge-ochre">{pending.length}</span>}</h2>
-        {pending.length === 0 ? (
-          <p className="muted small">Nikdo nečeká. Nový kolega se přihlásí účtem Google a jeho žádost se objeví tady.</p>
-        ) : (
-          pending.map((a) => (
+      {pending.length > 0 && (
+        <section className="section stack" aria-labelledby="zadosti">
+          <h2 id="zadosti">
+            Čekající žádosti{" "}
+            {pending.length > 0 && (
+              <span className="badge badge-ochre">{pending.length}</span>
+            )}
+          </h2>
+          {pending.map((a) => (
             <article key={a.id} className="item-card">
-              <AccountHead account={a} actions={<AccountActions account={a} roles={roles} />} />
+              <AccountHead
+                account={a}
+                actions={<AccountActions account={a} roles={roles} />}
+              />
             </article>
-          ))
-        )}
-      </section>
-
-      <section className="section stack" aria-labelledby="pozvat">
-        <h2 id="pozvat">Pozvat kolegu</h2>
-        <InviteForm roles={roles} appUrl={config.appUrl} />
-      </section>
+          ))}
+        </section>
+      )}
 
       <section className="section stack" aria-labelledby="uzivatele">
-        <h2 id="uzivatele">Uživatelé</h2>
+        <h2 id="uzivatele">Lidé</h2>
         {others.map((a) => (
           <article key={a.id} className="item-card">
             <AccountHead
               account={a}
-              actions={a.editable ? <AccountActions account={a} roles={roles} /> : <span className="menu-placeholder" aria-hidden="true" />}
+              live={live}
+              actions={
+                a.editable || live ? (
+                  <AccountActions
+                    account={a}
+                    roles={roles}
+                    editable={a.editable}
+                    {...(live
+                      ? {
+                          live: {
+                            inviteWaiting: a.access.invite.kind === "waiting",
+                            devices: a.access.devices,
+                          },
+                        }
+                      : {})}
+                  />
+                ) : (
+                  <span className="menu-placeholder" aria-hidden="true" />
+                )
+              }
             />
           </article>
         ))}
       </section>
 
-      <p className="small muted">
-        <Link href="/vzdelavani/integrace">Technické nastavení ukázky</Link> (stav propojení, ukázka chyb, obnova ukázkových dat)
-      </p>
+      <section
+        className="section stack"
+        aria-labelledby="pozvanky"
+        id="pozvanky-kalendare"
+      >
+        <h2 id="pozvanky">Kalendář</h2>
+        <CalendarStatusLine status={calendar} now={now()} />
+        <details>
+          <summary className="small">Kdo dostane pozvánky do Kalendáře</summary>
+          <InviteRecipients status={calendar} />
+        </details>
+      </section>
+
+      {live ? (
+        <p className="small muted">
+          <Link href="/vzdelavani/integrace">
+            Připojit Kalendář znovu nebo jiným účtem
+          </Link>
+        </p>
+      ) : (
+        <p className="small muted">
+          <Link href="/vzdelavani/integrace">Technické nastavení ukázky</Link>
+        </p>
+      )}
     </>
   );
 }
 
-function AccountHead({ account: a, actions }: { account: Account; actions: React.ReactNode }) {
+/** Stav přístupu v ostré Wiki: zařízení a poslední odkaz. */
+function accessLine(a: Account): string {
+  const { invite, devices } = a.access;
+  const parts: string[] = [];
+  if (devices.length)
+    parts.push(
+      devices
+        .map(
+          (d) =>
+            `${d.label} (naposledy ${formatDate(toDateKey(d.lastSeenAt))})`,
+        )
+        .join(", "),
+    );
+  if (invite.kind === "waiting")
+    parts.push(`odkaz čeká do ${formatDate(toDateKey(invite.expiresAt))}`);
+  if (invite.kind === "expired") parts.push("odkaz vypršel");
+  return parts.length ? parts.join(" · ") : "Bez zařízení. Pošlete nový odkaz.";
+}
+
+function AccountHead({
+  account: a,
+  actions,
+  live = false,
+}: {
+  account: Account;
+  actions: React.ReactNode;
+  live?: boolean;
+}) {
   return (
     <div className="spread">
       <div>
         <p className="item-title">
           {a.name}
-          {!a.editable && a.status === "active" && <span className="small muted"> · váš účet</span>}
+          {!a.editable && a.status === "active" && (
+            <span className="small muted"> · váš účet</span>
+          )}
         </p>
         <p className="item-meta">
           {a.email} · {ROLE_LABELS[a.role]}
-          {a.groups.length > 0 && ` · ${a.groups.map((g) => GROUP_LABELS[g]).join(", ")}`}
+          {a.groups.length > 0 &&
+            ` · ${a.groups.map((g) => GROUP_LABELS[g]).join(", ")}`}
         </p>
         <p className="item-meta">
-          {a.origin === "demo"
-            ? "Fiktivní role ukázky"
-            : a.googleLinked
-              ? `Účet Google svázán${a.lastLoginAt ? `, naposledy ${formatDate(toDateKey(a.lastLoginAt))}` : ""}`
-              : "Pozvánka čeká na první přihlášení"}
+          {live && a.status === "active"
+            ? accessLine(a)
+            : a.origin === "demo"
+              ? "Fiktivní role ukázky"
+              : a.googleLinked
+                ? `Účet Google svázán${a.lastLoginAt ? `, naposledy ${formatDate(toDateKey(a.lastLoginAt))}` : ""}`
+                : "Pozvánka čeká na první přihlášení"}
         </p>
       </div>
       <div className="account-side">
@@ -121,7 +181,9 @@ function AccountHead({ account: a, actions }: { account: Account; actions: React
           // Účet už platí, ale kolega se ještě nepřihlásil. „Aktivní“ by tu mátlo.
           <span className="badge badge-ochre">Pozvaný</span>
         ) : (
-          <span className={`badge${a.status === "active" ? " badge-ok" : a.status === "pending" ? " badge-ochre" : " badge-danger"}`}>
+          <span
+            className={`badge${a.status === "active" ? " badge-ok" : a.status === "pending" ? " badge-ochre" : " badge-danger"}`}
+          >
             {USER_STATUS_LABELS[a.status]}
           </span>
         )}

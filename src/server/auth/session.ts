@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
+import { deviceAllowsSession, inviteOnlyLogin } from "@/server/auth/devices";
 import { googleSessionAllowed } from "@/server/auth/google-login";
 import { config, isLiveWiki } from "@/server/config";
 import { getDb, type Executor } from "@/server/db/client";
@@ -17,12 +18,23 @@ export const SESSION_COOKIE = config.isProduction ? "__Host-zbc_session" : "zbc_
 
 /** Jak session vznikla: výběrem fiktivní role, nebo přihlášením Google identitou. */
 export type SignInMethod = "demo" | "google";
-type Payload = { uid: string; exp: number; via?: "google" };
+/** `d` = zařízení, ze kterého session vznikla (ostrá Wiki). Zneplatnění zařízení session ukončí. */
+type Payload = { uid: string; exp: number; via?: "google"; d?: string };
 
 const sign = (data: string) => createHmac("sha256", config.sessionSecret).update(data).digest("base64url");
 
-export function encodeSession(userId: string, nowSec = Math.floor(Date.now() / 1000), method: SignInMethod = "demo"): string {
-  const payload: Payload = { uid: userId, exp: nowSec + SESSION_TTL_SEC, ...(method === "google" ? { via: "google" } : {}) };
+export function encodeSession(
+  userId: string,
+  nowSec = Math.floor(Date.now() / 1000),
+  method: SignInMethod = "demo",
+  deviceId?: string,
+): string {
+  const payload: Payload = {
+    uid: userId,
+    exp: nowSec + SESSION_TTL_SEC,
+    ...(method === "google" ? { via: "google" } : {}),
+    ...(deviceId ? { d: deviceId } : {}),
+  };
   const data = Buffer.from(JSON.stringify(payload)).toString("base64url");
   return `${data}.${sign(data)}`;
 }
@@ -31,10 +43,12 @@ export function decodeSession(token: string | undefined, nowSec = Math.floor(Dat
   return readSession(token, nowSec)?.userId ?? null;
 }
 
+export type SessionData = { userId: string; method: SignInMethod; deviceId?: string };
+
 export function readSession(
   token: string | undefined,
   nowSec = Math.floor(Date.now() / 1000),
-): { userId: string; method: SignInMethod } | null {
+): SessionData | null {
   if (!token) return null;
   const [data, signature] = token.split(".");
   if (!data || !signature) return null;
@@ -44,7 +58,11 @@ export function readSession(
   try {
     const payload = JSON.parse(Buffer.from(data, "base64url").toString("utf8")) as Partial<Payload>;
     if (typeof payload.uid !== "string" || typeof payload.exp !== "number" || payload.exp <= nowSec) return null;
-    return { userId: payload.uid, method: payload.via === "google" ? "google" : "demo" };
+    return {
+      userId: payload.uid,
+      method: payload.via === "google" ? "google" : "demo",
+      ...(typeof payload.d === "string" ? { deviceId: payload.d } : {}),
+    };
   } catch {
     return null;
   }
@@ -81,10 +99,12 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
 /** Uživatel platné session podle aktuálního stavu v databázi. Role, skupiny i stav se čtou vždy znovu. */
 export async function resolveSessionUser(
   db: Executor,
-  session: { userId: string; method: SignInMethod },
+  session: SessionData,
 ): Promise<CurrentUser | null> {
   const { userId } = session;
   if (session.method === "google" && !(await googleSessionAllowed(db, userId))) return null;
+  // Ostrá Wiki: session platí jen z důvěryhodného zařízení. Starší session bez zařízení neplatí.
+  if (inviteOnlyLogin() && !(session.deviceId && (await deviceAllowsSession(db, session.deviceId, userId)))) return null;
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
   // Čekající žádost ani odebraný přístup dovnitř nepustí, ani se starší platnou cookie.
   if (!user || user.orgId !== config.orgId || user.status !== "active") return null;

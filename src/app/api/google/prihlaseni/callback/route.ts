@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { NextResponse, after, type NextRequest } from "next/server";
 import { audit, logError } from "@/server/audit";
+import { DEVICE_COOKIE, deviceCookieOptions, deviceLabel, findDevice, inviteOnlyLogin, registerBootstrapDevice, touchDevice } from "@/server/auth/devices";
 import { completeLogin, verifyLoginState, type LoginFailure } from "@/server/auth/google-login";
 import { SESSION_COOKIE, encodeSession, sessionCookieOptions } from "@/server/auth/session";
 import { config, googleLoginConfig } from "@/server/config";
@@ -18,6 +19,7 @@ const FAILURES: Record<LoginFailure, string> = {
   not_allowed: "ucet-neni-povoleny",
   account_conflict: "ucet-neni-povoleny",
   requests_full: "ucet-neni-povoleny",
+  wrong_account: "jiny-ucet",
 };
 
 // Návrat z Googlu. Kód se smění jen tehdy, když stav odpovídá podepsané cookie téhož prohlížeče.
@@ -42,7 +44,16 @@ export async function GET(request: NextRequest) {
 
   try {
     const db = await getDb();
-    const result = await completeLogin(db, cfg, { code, nonce: pending.nonce, verifier: pending.verifier });
+    const scope = pending.scope;
+    if (inviteOnlyLogin()) {
+      // Zařízení se ověřuje znovu: mezi začátkem přihlášení a návratem ho mohl správce zneplatnit.
+      if (!scope) return finish(gateUrl("neplatny-stav"));
+      if (scope.kind === "device") {
+        const device = await findDevice(db, request.cookies.get(DEVICE_COOKIE)?.value);
+        if (!device || device.id !== scope.deviceId || device.userId !== scope.userId) return finish(gateUrl("neplatny-stav"));
+      }
+    }
+    const result = await completeLogin(db, cfg, { code, nonce: pending.nonce, verifier: pending.verifier, ...(scope ? { scope } : {}) });
     const grant = result.grant;
     if (!result.ok) {
       // Oprávnění ke Kalendáři od účtu, který se dovnitř nedostal, Wiki nedrží.
@@ -81,7 +92,16 @@ export async function GET(request: NextRequest) {
     // správce z tohoto prohlížeče). Po odmítnutí nebo výslovném „bez Kalendáře“ zůstává úkol na Plánu.
     const connectNext = missing && !connected && pending.calendar === "later";
     const response = finish(`${config.appUrl}${connectNext ? CONNECT_PATH : "/"}`);
-    response.cookies.set(SESSION_COOKIE, encodeSession(result.userId, undefined, "google"), sessionCookieOptions);
+    let deviceId: string | undefined;
+    if (scope?.kind === "device") {
+      deviceId = scope.deviceId;
+      await touchDevice(db, deviceId);
+    } else if (scope?.kind === "bootstrap") {
+      const device = await registerBootstrapDevice(db, result.userId, deviceLabel(request.headers.get("user-agent")));
+      deviceId = device.id;
+      response.cookies.set(DEVICE_COOKIE, device.cookieValue, deviceCookieOptions);
+    }
+    response.cookies.set(SESSION_COOKIE, encodeSession(result.userId, undefined, "google", deviceId), sessionCookieOptions);
     response.cookies.set(HINT_COOKIE, encodeHint(result.userId), hintCookieOptions);
     return response;
   } catch (error) {

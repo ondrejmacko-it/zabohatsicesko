@@ -7,7 +7,7 @@ import { Modal } from "@/components/Modal";
 import { submitKeepingValues } from "@/features/shared/keep-values";
 import { GROUP_LABELS, ROLE_LABELS } from "@/lib/labels";
 import { GROUPS, type Group, type Role } from "@/lib/types";
-import { inviteUserAction, rejectRequestAction, updateAccessAction } from "../actions";
+import { createLoginLinkAction, inviteUserAction, rejectRequestAction, revokeDeviceAction, revokeLoginLinkAction, updateAccessAction } from "../actions";
 
 /** Výběr role a skupin. Nabízí jen role, které smí přihlášený uživatel přidělit (hlídá i server). */
 const PRESETS: Array<{ label: string; role: Role; groups: Group[] }> = [
@@ -51,6 +51,7 @@ function AccessFields({ roles, role: initialRole, groups: initialGroups }: { rol
             </option>
           ))}
         </select>
+        {role !== "member" && <span className="field-hint">Správce plánuje akce, spravuje lidi a vidí všechny zápisy.</span>}
       </label>
       <fieldset className="field">
         <legend className="field-label">Skupiny (které akce a zápisy uvidí)</legend>
@@ -103,7 +104,62 @@ function AccessForm({ userId, roles, role, groups, mode, onDone }: AccessProps) 
 type AccountActionsProps = {
   account: { id: string; name: string; email: string; role: Role; groups: Group[]; status: "pending" | "active" | "disabled" };
   roles: Role[];
+  /** Ostrá Wiki: odkazy a zařízení. Úpravy role a přístupu jen u cizího účtu. */
+  live?: { inviteWaiting: boolean; devices: Array<{ id: string; label: string }> };
+  editable?: boolean;
 };
+
+/** Zvací odkaz s kopírováním. Ukáže se jen jednou, v DB je jen jeho otisk. */
+export function InviteLink({ link }: { link: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <div className="stack">
+      <input className="input" readOnly value={link} aria-label="Zvací odkaz" onFocus={(e) => e.currentTarget.select()} />
+      <div className="row">
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={() => navigator.clipboard.writeText(link).then(() => setCopied(true), () => setCopied(false))}
+        >
+          {copied ? "Zkopírováno" : "Kopírovat"}
+        </button>
+      </div>
+      <p className="field-hint">Odkaz funguje jednou a jen na zařízení, kde ho kolega otevře. Pošlete ho jen jemu.</p>
+    </div>
+  );
+}
+
+/** Nový odkaz pro existující účet: potvrzení, pak odkaz ke zkopírování. */
+function NewLink({ account: a, onClose }: { account: AccountActionsProps["account"]; onClose: () => void }) {
+  const [state, action, pending] = useActionState(createLoginLinkAction, null);
+  return (
+    <Modal open title="Nový odkaz" onRequestClose={onClose}>
+      <p className="small muted">
+        {a.name} · {a.email}
+      </p>
+      {state?.ok && state.link ? (
+        <>
+          <ActionMessage state={state} />
+          <InviteLink link={state.link} />
+        </>
+      ) : (
+        <form action={action} className="stack">
+          <input type="hidden" name="userId" value={a.id} />
+          <p>Odkaz přidá jedno zařízení. Starší nepoužitý odkaz přestane platit.</p>
+          <ActionMessage state={state} />
+          <div className="row">
+            <button type="submit" className="btn btn-primary" disabled={pending}>
+              {pending ? "Vytvářím…" : "Vytvořit odkaz"}
+            </button>
+            <button type="button" className="btn" onClick={onClose}>
+              Zrušit
+            </button>
+          </div>
+        </form>
+      )}
+    </Modal>
+  );
+}
 
 const MODAL_TITLES = { approve: "Schválit přístup", edit: "Role a skupiny", restore: "Vrátit přístup" } as const;
 
@@ -111,9 +167,10 @@ const MODAL_TITLES = { approve: "Schválit přístup", edit: "Role a skupiny", r
  * Akce nad účtem ve Správě. Hlavní krok (schválení žádosti) je vidět, ostatní jsou v menu.
  * Úpravy role a skupin běží v okně, odebrání přístupu se potvrzuje.
  */
-export function AccountActions({ account: a, roles }: AccountActionsProps) {
+export function AccountActions({ account: a, roles, live, editable = true }: AccountActionsProps) {
   const [mode, setMode] = useState<AccessProps["mode"] | null>(null);
   const [revoking, setRevoking] = useState(false);
+  const [linking, setLinking] = useState(false);
   const close = () => setMode(null);
   return (
     <div className="row account-actions">
@@ -136,7 +193,31 @@ export function AccountActions({ account: a, roles }: AccountActionsProps) {
             }}
           />
         )}
-        {a.status === "active" && (
+        {live && a.status === "active" && (
+          <>
+            <button type="button" className="btn" onClick={() => setLinking(true)}>
+              Nový odkaz…
+            </button>
+            {live.inviteWaiting && (
+              <ActionForm action={revokeLoginLinkAction} fields={{ userId: a.id }} label="Zneplatnit odkaz" />
+            )}
+            {live.devices.map((d) => (
+              <ActionForm
+                key={d.id}
+                action={revokeDeviceAction}
+                fields={{ userId: a.id, deviceId: d.id }}
+                label={`Odhlásit ${d.label}…`}
+                variant="danger"
+                confirm={{
+                  title: "Odhlásit zařízení",
+                  text: `${a.name} se z tohoto zařízení (${d.label}) přestane přihlašovat hned. Další přístup jen přes nový odkaz.`,
+                  confirmLabel: "Odhlásit",
+                }}
+              />
+            ))}
+          </>
+        )}
+        {editable && a.status === "active" && (
           <>
             <button type="button" className="btn" onClick={() => setMode("edit")}>
               Upravit roli a skupiny
@@ -146,7 +227,7 @@ export function AccountActions({ account: a, roles }: AccountActionsProps) {
             </button>
           </>
         )}
-        {a.status === "disabled" && (
+        {editable && a.status === "disabled" && (
           <button type="button" className="btn" onClick={() => setMode("restore")}>
             Vrátit přístup…
           </button>
@@ -161,6 +242,7 @@ export function AccountActions({ account: a, roles }: AccountActionsProps) {
         </Modal>
       )}
       {revoking && <RevokeAccess account={a} onClose={() => setRevoking(false)} />}
+      {linking && <NewLink account={a} onClose={() => setLinking(false)} />}
     </div>
   );
 }
@@ -197,8 +279,38 @@ function RevokeAccess({ account: a, onClose }: { account: AccountActionsProps["a
   );
 }
 
-export function InviteForm({ roles, appUrl }: { roles: Role[]; appUrl: string }) {
+/** Tlačítko „Pozvat člověka“ s oknem. Po uložení okno ukáže odkaz ke zkopírování. */
+export function InviteButton({ roles }: { roles: Role[] }) {
+  const [open, setOpen] = useState(false);
+  const [round, setRound] = useState(0);
+  const close = () => {
+    setOpen(false);
+    setRound((n) => n + 1);
+  };
+  return (
+    <>
+      <button type="button" className="btn btn-primary" onClick={() => setOpen(true)}>
+        Pozvat člověka
+      </button>
+      {open && (
+        <Modal open title="Pozvat člověka" onRequestClose={close}>
+          <InviteForm key={round} roles={roles} />
+        </Modal>
+      )}
+    </>
+  );
+}
+
+function InviteForm({ roles }: { roles: Role[] }) {
   const [state, action, pending] = useActionState(inviteUserAction, null);
+  if (state?.ok && state.link) {
+    return (
+      <div className="stack">
+        <ActionMessage state={state} />
+        <InviteLink link={state.link} />
+      </div>
+    );
+  }
   return (
     <form action={action} onSubmit={submitKeepingValues(action)} className="stack" key={state?.ok ? state.message : undefined}>
       <div className="form-grid">
@@ -212,12 +324,9 @@ export function InviteForm({ roles, appUrl }: { roles: Role[]; appUrl: string })
         </label>
       </div>
       <AccessFields roles={roles} role="member" groups={["vsichni"]} />
-      <p className="field-hint">
-        Wiki zatím e-mail s pozvánkou neposílá. Pošlete kolegovi odkaz {appUrl} a ať se přihlásí touto adresou.
-      </p>
       <div>
         <button type="submit" className="btn btn-primary" disabled={pending}>
-          {pending ? "Ukládám…" : "Pozvat"}
+          {pending ? "Ukládám…" : "Vytvořit odkaz"}
         </button>
       </div>
       <ActionMessage state={state} />

@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
+import { cookies } from "next/headers";
+import { DEVICE_COOKIE, findDevice, maskEmail } from "@/server/auth/devices";
 import { listPersonas } from "@/server/auth/personas";
+import { getDb } from "@/server/db/client";
+import { InviteClaim } from "./InviteClaim";
 import { hasGatePass } from "@/server/auth/gate";
 import { attendeeSource, calendarMode, config, googleLoginConfig, isLiveWiki } from "@/server/config";
 import { GateForm } from "./GateForm";
@@ -16,6 +20,7 @@ const GOOGLE_RESULTS: Record<string, string> = {
   zruseno: "Přihlášení účtem Google bylo zrušeno.",
   "zruseno-kalendar": "Přihlášení se souhlasem ke Kalendáři bylo zrušeno. Můžete to zkusit znovu, nebo se přihlásit bez Kalendáře a propojit ho později z Plánu.",
   "nepodarilo-se": "Přihlášení účtem Google se nepodařilo dokončit. Zkuste to prosím znovu.",
+  "jiny-ucet": "Tento účet Google k pozvánce nepatří. Přihlaste se účtem, na který vás správce pozval.",
 };
 
 const LINK_RESULTS: Record<string, string> = {
@@ -23,14 +28,20 @@ const LINK_RESULTS: Record<string, string> = {
   limit: "Příliš mnoho pokusů. Zkuste to prosím za 15 minut.",
 };
 
-type SearchParams = { google?: string; pozvanka?: string; odkaz?: string };
+type SearchParams = { google?: string; pozvanka?: string; odkaz?: string; spravce?: string };
+
+/** Pojistka proti zamčení: `/vstup?spravce=1` nabídne Google jen adresám ze zaváděcího seznamu. */
 
 export default async function GatePage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   await connection(); // vždy za běhu, nikdy při buildu
   const params = await searchParams;
   // Zvací odkaz ukázky: kód ověří a cookie brány uloží obsluha trasy, sem se vrátí už bez kódu v adrese.
   if (params.pozvanka && !isLiveWiki()) redirect(`/vstup/pozvanka?kod=${encodeURIComponent(params.pozvanka.slice(0, 200))}`);
-  return isLiveWiki() ? <LiveGate googleResult={params.google ?? ""} /> : <DemoGate linkResult={params.odkaz ?? ""} />;
+  return isLiveWiki() ? (
+    <LiveGate googleResult={params.google ?? ""} bootstrap={params.spravce === "1"} />
+  ) : (
+    <DemoGate linkResult={params.odkaz ?? ""} />
+  );
 }
 
 function GateShell({ title, children }: { title: string; children: React.ReactNode }) {
@@ -55,18 +66,27 @@ function GateShell({ title, children }: { title: string; children: React.ReactNo
   );
 }
 
-/** Ostrá Wiki: jen přihlášení účtem Google, bez fiktivních rolí a bez textů ukázky. */
-function LiveGate({ googleResult }: { googleResult: string }) {
+/**
+ * Ostrá Wiki: přihlášení Googlem jen z důvěryhodného zařízení (po použití pozvánky). Bez něj neutrální
+ * stránka bez tlačítka. Pozvánku z fragmentu adresy zpracuje `InviteClaim`.
+ */
+async function LiveGate({ googleResult, bootstrap }: { googleResult: string; bootstrap: boolean }) {
   const googleError = GOOGLE_RESULTS[googleResult];
   const isPending = googleResult === "ceka-na-schvaleni";
+  const device = await findDevice(await getDb(), (await cookies()).get(DEVICE_COOKIE)?.value);
+  if (!device && !bootstrap) {
+    return (
+      <GateShell title="Firemní Wiki">
+        <p className="page-sub">Do Wiki se vstupuje přes osobní pozvánku. Odkaz vám pošle správce.</p>
+        <InviteClaim />
+      </GateShell>
+    );
+  }
   return (
     <GateShell title="Přihlášení do Wiki">
+      {device && <p className="small muted">Přihlaste se účtem Google {maskEmail(device.email)}.</p>}
       {googleLoginConfig() ? (
         <section className="stack gate-google" aria-label="Přihlášení účtem Google">
-          <p className="page-sub">
-            Google jen ověří, kdo jste. Roli a skupiny přiděluje správce ve Wiki, nový účet nejdřív počká na
-            schválení. Správce Google požádá i o zápis do Kalendáře, účastníci pozvánky jen dostávají.
-          </p>
           {googleError && (
             <p className={isPending ? "notice" : "form-error"} role={isPending ? "status" : "alert"}>
               {googleError}
@@ -74,15 +94,15 @@ function LiveGate({ googleResult }: { googleResult: string }) {
           )}
           <div className="row">
             {/* Odkaz, ne formulář: navigaci na Google nesmí blokovat CSP form-action. */}
-            <a className="btn btn-primary" href="/api/google/prihlaseni">
+            <a className="btn btn-primary" href={device ? "/api/google/prihlaseni" : "/api/google/prihlaseni?spravce=1"}>
               Přihlásit se účtem Google
             </a>
             {googleResult === "zruseno-kalendar" ? (
-              <a className="btn" href="/api/google/prihlaseni?kalendar=ne">
+              <a className="btn" href={`/api/google/prihlaseni?kalendar=ne${device ? "" : "&spravce=1"}`}>
                 Přihlásit se bez Kalendáře
               </a>
             ) : (
-              <a className="small" href="/api/google/prihlaseni?jiny=1">
+              <a className="small" href={`/api/google/prihlaseni?jiny=1${device ? "" : "&spravce=1"}`}>
                 Použít jiný účet
               </a>
             )}

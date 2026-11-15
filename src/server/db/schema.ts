@@ -259,3 +259,30 @@ export const rateLimits = pgTable("rate_limits", {
   windowStart: ts("window_start").notNull(),
   count: integer("count").notNull(),
 });
+
+/** Zařízení, ze kterého se uživatel ostré Wiki smí přihlásit. V DB jen otisk tajemství z cookie. */
+export const trustedDevices = pgTable("trusted_devices", {
+  id: text("id").primaryKey(),
+  orgId: text("org_id").notNull(),
+  userId: text("user_id").notNull(),
+  secretHash: text("secret_hash").notNull(),
+  label: text("label").notNull(),
+  createdAt: ts("created_at").notNull().defaultNow(),
+  lastSeenAt: ts("last_seen_at").notNull().defaultNow(),
+  expiresAt: ts("expires_at").notNull(),
+  revokedAt: ts("revoked_at"),
+});
+
+/** Jednorázový zvací odkaz. V DB jen otisk tokenu, token zná jen správce, který odkaz vytvořil. */
+export const loginInvites = pgTable("login_invites", {
+  id: text("id").primaryKey(),
+  orgId: text("org_id").notNull(),
+  userId: text("user_id").notNull(),
+  tokenHash: text("token_hash").notNull(),
+  createdBy: text("created_by"),
+  createdAt: ts("created_at").notNull().defaultNow(),
+  expiresAt: ts("expires_at").notNull(),
+  usedAt: ts("used_at"),
+  revokedAt: ts("revoked_at"),
+  deviceId: text("device_id"),
+});
