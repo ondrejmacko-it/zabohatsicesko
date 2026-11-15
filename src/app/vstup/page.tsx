@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { listPersonas } from "@/server/auth/personas";
 import { hasGatePass } from "@/server/auth/gate";
-import { calendarMode, config, googleLoginConfig, isLiveWiki } from "@/server/config";
+import { attendeeSource, calendarMode, config, googleLoginConfig, isLiveWiki } from "@/server/config";
 import { GateForm } from "./GateForm";
 
 export const metadata: Metadata = { title: "Vstup" };
@@ -104,7 +104,9 @@ async function DemoGate({ linkResult }: { linkResult: string }) {
       <p className="page-sub">
         Ukázka pracuje výhradně s fiktivními daty.{" "}
         {calendarMode() === "google-test"
-          ? "Kalendář běží v testovacím režimu Googlu jen s testovacími příjemci, přepis v ukázkovém režimu."
+          ? attendeeSource() === "allowlist"
+            ? "Kalendář běží v testovacím režimu Googlu jen s testovacími příjemci, přepis v ukázkovém režimu."
+            : "Kalendář běží v testovacím režimu Googlu, pozvánky dostanou účty ve skupině akce. Přepis běží v ukázkovém režimu."
           : "Kalendář a přepis běží v označeném ukázkovém režimu."}
       </p>
       {linkError && gate === "code" && (

@@ -66,7 +66,6 @@ function CancelDialog({ id, revision, onClose }: { id: string; revision: number;
   const [acceptUnverified, setAcceptUnverified] = useState(false);
   useEffect(() => {
     let active = true;
-    setImpact(null);
     previewCancelAction(id)
       .then((result) => active && setImpact(result.ok && result.impact ? result.impact : "failed"))
       .catch(() => active && setImpact("failed"));
@@ -102,7 +101,10 @@ function CancelDialog({ id, revision, onClose }: { id: string; revision: number;
             </ul>
           )}
           {unverified && (
-            <button type="button" className="btn btn-small" onClick={() => setAttempt((n) => n + 1)}>
+            <button type="button" className="btn btn-small" onClick={() => {
+              setImpact(null);
+              setAttempt((n) => n + 1);
+            }}>
               Zkusit znovu
             </button>
           )}
