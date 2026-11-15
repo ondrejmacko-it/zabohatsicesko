@@ -15,7 +15,12 @@ Hotovo v kódu: A03 (`progressOf`, `recordingProgressByEvent` v `journey.ts`, š
 * **T04** Integrace bez textu o historickém testu jako aktuálním stavu (`integrace/page.tsx` 67–91), `docs/predani.md` aktualizovat (uvádí 49 testů a staré režimy), `docs/google-kalendar.md` 94–116.
 * Dalších 69 přepisů je v auditu v `textove-upravy.csv` (sloupce: původní, navržené znění, důvod, soubor/řádek, priorita).
 
-## PR 6: přístupnost a přehlednost (U02–U08)
+## Testy desktop a macOS · draft #35, větev `claude/testy-desktop-macos` (stojí na #34)
+`npm run e2e` (Playwright, 750 testů, 7 projektů). Opraveno: CSP bez nonce na `/soukromi` a 404, menu na telefonu se hned zavíralo, návrat fokusu z okna otevřeného z menu (část U07), Integrace 320 px.
+
+## PR 6: přístupnost a přehlednost (U02–U08) · draft, větev `claude/audit-pristupnost-u02-u08` (stojí na #35)
+Hotovo: **U02** (hlavička mřížky tmavým textem, drobný okrový text a klíče řádků tmavší, axe teď kontrast hlídá a prochází). Část U06 (neutrální okno, zachovaný měsíc a pohled, test v `e2e/okna.spec.ts`) a U07 (návrat fokusu) už v #34/#35. Zbývá U03, U04, U05, zbytek U07 (`aria-haspopup`), U08.
+
 * **U02** Kontrast: hlavička mřížky 2,5:1 (`schedule.module.css` 19–28) → tmavá na zelenošedé 6,28:1. Drobný okrový text 4,44:1 → tmavší okr. Ověřit axe.
 * **U03** Tlačítko zájmu: viditelný text a přístupný název se shodují, `aria-pressed` (`TopicActions.tsx` 23–26).
 * **U04** Správa: čekající žádosti první, odkaz z upozornění na jejich kotvu, tlačítko „Nastavit a schválit“.

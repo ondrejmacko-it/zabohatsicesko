@@ -66,15 +66,12 @@ export async function expectNoHorizontalScroll(page: Page) {
   expect(overflow, "vodorovný posun").toEqual([]);
 }
 
-/**
- * axe bez závažných nálezů (critical, serious).
- * Kontrast (U02) zatím vypnutý: opravuje ho audit PR 6, který pravidlo zase zapne.
- */
+/** axe bez závažných nálezů (critical, serious), včetně kontrastu textu (U02). */
 export async function expectNoSeriousA11y(page: Page) {
-  const results = await new AxeBuilder({ page }).disableRules(["color-contrast"]).analyze();
+  const results = await new AxeBuilder({ page }).analyze();
   const serious = results.violations
     .filter((violation) => violation.impact === "critical" || violation.impact === "serious")
-    .map((violation) => `${violation.id}: ${violation.nodes.map((node) => node.target.join(" ")).slice(0, 3).join(" | ")}`);
+    .map((violation) => `${violation.id}: ${violation.nodes.map((node) => `${node.target.join(" ")} ${node.any[0]?.message ?? ""}`).slice(0, 4).join(" | ")}`);
   expect(serious, "závažné nálezy axe").toEqual([]);
 }
 

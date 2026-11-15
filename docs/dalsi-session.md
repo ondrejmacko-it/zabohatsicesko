@@ -37,6 +37,16 @@ Nouzové zrušení zařízení hlavního správce (UI ho záměrně nenabízí) 
 `UPDATE trusted_devices SET revoked_at = now() WHERE id = '<id>'` (ID z dotazu na `trusted_devices` podle e-mailu).
 Platí od dalšího požadavku. Můžeš ho provést i ty přes Neon MCP, ale jen na výslovný pokyn uživatele.
 
+**Stav 15. 11. noc 2:** draft [#35](https://github.com/ondrejmacko-it/zabohatsicesko/pull/35) (`claude/testy-desktop-macos`, na #34): `npm run e2e`
+(Playwright 1.63.0 nad produkčním buildem, ukázka + ostrá Wiki s falešnými Google hodnotami, 750/750 na Windows 1280/1920,
+macOS 1440/1512 Retina s UA Safari/Chrome, telefony 390/360/320; WebKit v prostředí není, `E2E_WEBKIT=1` na Macu).
+Opraveno: CSP bez nonce na `/soukromi` a 404 (byla to skutečná chyba, ne http), menu na telefonu, fokus z okna z menu,
+Integrace 320 px. Ruční postup pro Mac: `docs/overeni-mac.md`. Draft PR 6 z `claude/audit-pristupnost-u02-u08` (na #35):
+zatím jen U02. Base #34 ukazuje na sloučenou #33, po merge přepnout base na `main`.
+
+**Další krok:** dokončit PR 6 (U03, U04, U05, zbytek U07, U08), pak PR 7 (G6) a PR 8 podle `docs/audit-ukoly.md`.
+Před každým PR `npm run e2e` (cca 5 min, `E2E_SKIP_BUILD=1` bez buildu).
+
 ---
 
 ## Stav 15. 11. 2026 odpoledne 2 (větev `claude/vibrant-ritchie-d100a3`, draft PR 4b část 2)
