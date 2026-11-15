@@ -7,59 +7,76 @@ a přilož audit ZIP `ZBC_Audit_balicek_2026-11-15.zip` (do repa nepatří).
 
 Pokračuj na modulu Vzdělávání (repo `ondrejmacko-it/zabohatsicesko`). Nečti znovu celé zadání ani celý kód.
 Kontext máš v `docs/dalsi-session.md` a `README.md`, pravidla v `CLAUDE.md`, audit v přiloženém ZIPu
-(`ZBC_Kompletni_audit_2026-11-15.md`, `textove-upravy.csv`, `navrh-*.png`). Tykej mi, piš přátelsky,
-dávej mi přesné kroky pod sebou (mám Windows).
+(`ZBC_Kompletni_audit_2026-11-15.md`, `textove-upravy.csv`, `navrh-*.png`). Tykej mi, piš přátelsky.
+Moje kroky mi vždycky piš úplně, pod sebe, s přesnými kliky (mám Windows, PowerShell, ne bash).
 
-**Stav:** PR 1–3 sloučené (#27, #28, #29). Ostrá Wiki běží na `https://zbc-vzdelavani-demo.vercel.app`
-(Production, vlastní DB Neon, Google přihlášení, správce `BOOTSTRAP_ADMIN_EMAILS` vznikl, Kalendář propojený,
-OAuth aplikace zveřejněná „In production“ bez ověření Googlem, `GOOGLE_OAUTH_PUBLISHED=1`, veřejná stránka `/soukromi` z #30). Z auditu zbývá A03, A07 (čeká na firmu), U01–U09, T01–T04 (69 textů)
-a G6 Připravit měsíc.
+**Stav (15. 11. večer):** PR 1–3 a #30 sloučené. Ostrá Wiki běží na `https://zbc-vzdelavani-demo.vercel.app`:
+vlastní DB Neon, přihlášení Googlem, správce z `BOOTSTRAP_ADMIN_EMAILS`, Kalendář propojený, OAuth aplikace
+„In production“ bez ověření Googlem (varování „neověřená aplikace“, limit 100 lidí), `GOOGLE_OAUTH_PUBLISHED=1`,
+veřejná `/soukromi`. Každý merge do `main` hned nasadí produkci (ignored build step = Automatic).
+Dnes se přihlásí Googlem kdokoli, bez schválení ale nic nevidí.
 
-**Cíl:** Wiki připravená k ostrému nasazení: maximální bezpečnost, přehlednost, stručnost, rychlost.
-Jeden PR na relaci, z `main`, draft, merge dělám já.
+**Cíl: konečně dotáhnout ostrou Wiki.** Pozvat a spravovat lidi musí jít jednoduše, a přitom bezpečně.
+UI má být přehledné, jednoznačné a stručné. Bezpečnost, rychlost, optimalizace. Nejdřív mi ukaž návrh
+a zeptej se na otevřené body, pak implementuj. Jeden PR na relaci z `main`, draft, merge dělám já.
 
-**PR 4 (tato relace): přihlášení jen přes pozvánku + úklid ostrého UI podle mých screenshotů**
+**PR 4 (tato relace): přihlášení jen přes pozvánku + úklid ostrého UI**
 
-1. *Pozvánka (nejdřív se mě zeptej na otevřené body níže, pak navrhni řešení a teprve potom implementuj):*
-   - Na `/vstup` (a vůbec k přihlášení Googlem) se dostane jen ten, kdo má unikátní odkaz vytvořený
-     přihlášeným uživatelem, např. `https://zbc-vzdelavani-demo.vercel.app/vstup#NDSHjindW32dhiuHU234G`.
-   - Odkaz je náhodný (aspoň 128 bitů), v DB jen jeho hash, jednorázový, s vypršením. Po použití se
-     váže na jedno zařízení (podepsaná HttpOnly `__Host-` cookie s otiskem), přes které se dotyčný
-     přihlašuje X dní. Na jiném zařízení odkaz nefunguje.
+1. *Pozvánka na jedno zařízení:*
+   - Na `/vstup` a k přihlášení Googlem se dostane jen ten, kdo má unikátní odkaz od přihlášeného
+     uživatele, např. `https://zbc-vzdelavani-demo.vercel.app/vstup#NDSHjindW32dhiuHU234G`.
+   - Odkaz náhodný (aspoň 128 bitů), v DB jen hash, jednorázový, s vypršením. Po použití se váže na jedno
+     zařízení (podepsaná HttpOnly `__Host-` cookie, otisk v DB), přes které se dotyčný přihlašuje X dní.
+     Na jiném zařízení odkaz nefunguje.
    - Fragment `#…` se na server neposílá: klient ho přečte, pošle POSTem a hned ho z adresy smaže.
-   - Bez platné pozvánky ani zařízení: neutrální stránka bez tlačítka Google, OAuth trasy odmítnou
-     přímé volání na serveru. Limit pokusů, audit log bez tokenů.
-   - Správa: „Vytvořit pozvánku“ (jméno, e-mail Google, role, skupiny) vrátí odkaz ke zkopírování,
-     seznam aktivních pozvánek a zařízení, zneplatnění. Nahradí dnešní „Pozvat kolegu“.
-   - Výjimka, aby se nikdo nezamkl: `BOOTSTRAP_ADMIN_EMAILS` a už přihlášená zařízení dnešního správce.
-   - Testy oprávnění: bez pozvánky, prošlá, použitá, jiné zařízení, zneplatněná, cizí e-mail v Googlu.
+   - Bez pozvánky ani platného zařízení: neutrální stránka bez tlačítka Google. OAuth trasy přímé volání
+     odmítnou na serveru. Limit pokusů, audit bez tokenů.
+   - Správa: „Pozvat člověka“ (jméno, e-mail Google, role, skupiny) → odkaz a tlačítko „Kopírovat“.
+     Přehled pozvánek (čeká, použitá, vypršelá) a zařízení s jedním klikem na zneplatnění nebo nový odkaz.
+     Nahradí dnešní „Pozvat kolegu“ i čekající žádosti od cizích lidí.
+   - Pojistka proti zamčení: `BOOTSTRAP_ADMIN_EMAILS` a už přihlášené zařízení správce.
+   - Testy: bez pozvánky, prošlá, použitá, jiné zařízení, zneplatněná, jiný e-mail v Googlu než v pozvánce.
    - Preview (ukázka) si nechá dnešní zvací odkaz s přístupovým kódem.
-   Otevřené body pro mě: kolik dní platí nepoužitý odkaz a kolik dní zařízení (návrh 7 a 30), zda
-   pozvánky smí tvořit každý přihlášený nebo jen správce, zda musí e-mail Googlu souhlasit s pozvánkou
-   (návrh ano), co po vypršení zařízení (návrh: nový odkaz od správce), počet zařízení na osobu (návrh 1).
-2. *Úvodní stránka (screen 1):* nedává smysl, chybí karty. Udělat karty modulů (Vzdělávání, pro správce
-   Správa systému) a pod tím nejbližší akce, ať je jasné, kam kliknout.
-3. *Vzdělávání (screen 2):* rozdělit záložky na **Plán | Zápisy | Témata** (U09, staré adresy a kotvy
-   přesměrovat). Z Plánu odstranit řádek Kalendáře a propojení (jen krátké upozornění pro správce, když
-   je propojení rozbité nebo do 2 dnů vyprší). Zvážit odstranění duplicity „Nejbližší akce“ s úvodem.
-4. *Správa (screen 3, 4):* stručně a jednoznačně. Čekající žádosti první (U04). Pryč box „Jak to funguje“
-   (max. jedna věta), dlouhé ID kalendáře, text „Wiki zatím e-mail s pozvánkou neposílá…“ a v ostré Wiki
-   odkaz „Technické nastavení ukázky“. Kalendář jako jeden řádek stavu, tabulka příjemců v rozbalení.
-   Správa bez vodorovného posunu na 320 a 360 px (U01).
+   - Zeptej se mě: platnost nepoužitého odkazu a zařízení (návrh 7 a 30 dní), kdo smí zvát (já jsem řekl
+     „kdo už je přihlášený“; návrh: správce, nebo člen jen do svých skupin bez role správce), musí e-mail
+     Googlu souhlasit s pozvánkou (návrh ano), co po vypršení zařízení (návrh nový odkaz), kolik zařízení
+     na člověka (návrh 1, správce může přidat další).
+2. *Úvod (screen 1):* nedává smysl, chybí karty. Karty modulů (Vzdělávání, pro správce Správa systému)
+   a pod nimi nejbližší akce.
+3. *Vzdělávání (screen 2):* záložky **Plán | Zápisy | Témata** (U09, staré adresy přesměrovat). Z Plánu pryč
+   řádek Kalendáře a propojení, jen krátké upozornění pro správce, když je propojení rozbité. Zvážit
+   duplicitu „Nejbližší akce“ s úvodem.
+4. *Správa (screen 3, 4):* stručně. Nahoře pozvánky a lidé. Pryč box „Jak to funguje“ (max. jedna věta),
+   dlouhé ID kalendáře, „Wiki zatím e-mail s pozvánkou neposílá…“, v ostré Wiki „Technické nastavení
+   ukázky“. Kalendář jako jeden řádek stavu, tabulka příjemců v rozbalení. Bez vodorovného posunu na
+   320 a 360 px (U01).
+5. Ověř, že propojení Kalendáře nevyprší 22. 11. (vzniklo v režimu Testing). Když ano, napiš mi přesně,
+   jak ho obnovit.
 
 **Další PR po jednom na relaci** (pořadí můžu změnit):
-- PR 5: stavy nahrávek (A03) a 69 textů z `textove-upravy.csv` (T01–T04), jednotné datum (T03).
-- PR 6: přístupnost a layout (U02 kontrast, U03, U05, U06, U07, U08), barvy podle palety Wiki, axe a měření
-  320–1920 px.
+- PR 5: stavy nahrávek (A03), 69 textů z `textove-upravy.csv` (T01–T04), jednotné datum (T03).
+- PR 6: přístupnost a layout (U02 kontrast, U03, U05–U08), barvy podle palety Wiki, axe, šířky 320–1920 px.
 - PR 7: Připravit měsíc (G6, `navrh-spravce-mesic.png`).
-- PR 8: bezpečnost a rychlost: bezpečnostní hlavičky (CSP, HSTS, frame-ancestors, Referrer-Policy),
-  revize cookie a limitů, Lighthouse a velikost bundlu na Production, `npm audit`.
+- PR 8: bezpečnost a rychlost: revize CSP a hlaviček (HSTS), cookie, limitů a oprávnění, Lighthouse a
+  velikost bundlu na Production, `npm audit`. Volitelně meta značka pro Google Search Console (ověření
+  brandingu, aby lidi viděli název aplikace místo varování) a úklid starých domén v Google konzoli.
 
-Já dělám: Google konzoli (ověření brandingu přes Search Console je volitelné, chce meta značku na webu),
-produkční nasazení (Vercel → Deployments → ⋯ → Create Deployment → `main`) a merge PR.
-Na `main` nepushuj. Před předáním lint, typy, testy, build a průchod v Chromiu. Respektuj limit kontextu.
+Já dělám: kliky v Google a Vercel konzoli, merge PR. Na `main` nepushuj. Před předáním lint, typy, testy,
+build a průchod v Chromiu. Respektuj limit kontextu.
 
 ---
+
+## Stav 15. 11. 2026 večer (větev `claude/zen-feynman-jcmjd3`, PR #30 sloučený)
+* #30: veřejná `/soukromi` (zásady ochrany soukromí, Limited Use), odkaz ze vstupu. Google bez ní nepovolil
+  „Publish app“. OAuth je „In production“, branding neověřený (Google chce ověřit vlastnictví domény přes
+  Search Console), logo nenahrávat (vynutí ověření). `GOOGLE_OAUTH_PUBLISHED=1` nastavená přes API,
+  produkce znovu nasazená, řádek „Souhlas platí do 22. 11.“ zmizel. Jestli propojení Kalendáře skutečně
+  nevyprší, neověřeno.
+* V Google konzoli jsou v Authorized domains staré adresy preview větví, ukázka Google nepoužívá, lze uklidit.
+* Produkční adresa není ze sandboxu Claude dostupná (síťová pravidla prostředí), stav ověřuj přes API Vercelu.
+* Požadavky uživatele z této relace (úplně v promptu výše): přihlášení jen přes jednorázový odkaz na jedno
+  zařízení, karty na úvodu, oddělené Zápisy a Témata, pryč Kalendář z Plánu, stručná Správa, všechny body
+  auditu, maximální bezpečnost a rychlost. Uživatel chce kroky vždy úplně a pod sebou, má Windows.
 
 ## Stav 15. 11. 2026 odpoledne (po PR 3, větev `claude/zen-feynman-jcmjd3`, jen tento soubor)
 * **Production nasazená** uživatelem (Create Deployment z `main` po #29). Ignored build step je prázdný
