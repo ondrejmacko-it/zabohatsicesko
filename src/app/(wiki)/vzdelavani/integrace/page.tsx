@@ -62,7 +62,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
           <h2>Režimy integrací</h2>
           {/* Na telefonu se pruh režimů v záhlaví modulu skrývá, tady je vidět vždy. */}
           <ModeStrip className="status-strip mode-strip" />
-          <table className="table">
+          <table className="table table-stack">
             <thead>
               <tr>
                 <th scope="col">Integrace</th>

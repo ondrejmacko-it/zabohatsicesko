@@ -37,6 +37,21 @@ Nouzové zrušení zařízení hlavního správce (UI ho záměrně nenabízí) 
 `UPDATE trusted_devices SET revoked_at = now() WHERE id = '<id>'` (ID z dotazu na `trusted_devices` podle e-mailu).
 Platí od dalšího požadavku. Můžeš ho provést i ty přes Neon MCP, ale jen na výslovný pokyn uživatele.
 
+
+**Stav 16. 11. noc 2, audit (poslední):** #47, #48, #49 nebyly v `main` (ověřeno `git merge-base --is-ancestor`).
+Blok „Stav 16. 11. noc, notifikace“ je v předávce větve #49.
+* #47: text ve Správě podle `personalSelfInvite()`, lint/typy ok, vitest 202/202, e2e 788 ok + 30 přeskočeno.
+  Popis PR doplněný. V `docs/kalendar-ucastniku.md` (větev #47) je část „Po merge #47“: výklad `setup_code`, kroky Vercelu, živý test.
+* Neon (jen čtení, před merge): oba kalendáře `active`, `synced_at` 19:39 UTC, sloupce `event_format`/`setup_code` zatím nejsou.
+* Draft #50 `claude/audit-drobne-opravy`: Témata a Integrace na 320 px, `docs/audit-zaverecny.md`. e2e 788 ok.
+  ZIP screenshotů poslán uživateli (mimo repo).
+* **Další krok:** po merge #47 a nasazení číst `select status, event_format, setup_code, synced_at from personal_calendars`.
+  `event_format = 0` → uživatel otevře Úvod. Pak self-invite podle `docs/kalendar-ucastniku.md` a výsledek tam zapsat.
+* Otevřené: nálezy 3 a 4 z auditu (useknuté menu a zástupný text na 320 px), rozhodne uživatel.
+* Při merge #49 a #50 se může střetnout tento soubor (obě větve sem přidávají blok), ponechat oba bloky.
+
+**Stav 16. 11. večer, připomínky (poslední):** #45 je v `main`. Propojení živě funguje (oba účty `active`). Google ale odmítá
+
 **Stav 16. 11. noc, notifikace (poslední):** relace skončila na limitu kontextu (200 tis.). #45 a #46 jsou v `main`,
 #46 je na Production od 19:41 UTC. Akce se ale naposledy přepsaly 19:39 UTC, takže připomínky z #46 v kalendářích nejsou.
 * Draft #47 `claude/vynuceny-prepis-akci`: migrace `0010` (`personal_calendars.event_format`, `setup_code`).
@@ -57,6 +72,7 @@ Platí od dalšího požadavku. Můžeš ho provést i ty přes Neon MCP, ale je
   Screenshotovat stav po sloučení #47–#49 (lokální integrační větev, nepushovat).
 
 **Stav 16. 11. večer, připomínky (předchozí):** #45 je v `main`. Propojení živě funguje (oba účty `active`). Google ale odmítá
+
 `calendarList.patch` (audit `setup_none`), takže kalendář nemá výchozí připomínky ani e-mailová upozornění. Draft PR
 z větve `claude/pripominky-v-akcich`: připomínky přímo v každé akci (e-mail den předem, oznámení 30 min), přepis všech
 akcí při dalším přihlášení nebo zveřejnění. Lint/typy/vitest cíleně ok, celé e2e v této větvi nespuštěné.
