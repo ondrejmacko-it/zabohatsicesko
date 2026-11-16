@@ -38,7 +38,7 @@ Nouzové zrušení zařízení hlavního správce (UI ho záměrně nenabízí) 
 Platí od dalšího požadavku. Můžeš ho provést i ty přes Neon MCP, ale jen na výslovný pokyn uživatele.
 
 
-**Stav 16. 11. noc 3, kalendář 401 (poslední):** #47–#50 jsou v `main`. Draft z větve `claude/oprava-kalendare-401`:
+**Stav 16. 11. noc 3, kalendář 401 (poslední):** #47–#50 jsou v `main`. Draft [#51](https://github.com/ondrejmacko-it/zabohatsicesko/pull/51) z větve `claude/oprava-kalendare-401`:
 `calendarList.get` → `update` → `patch` varianty, 401 už neukončí nastavení (důvod do `setup_code`), `selected/hidden`,
 `EVENT_FORMAT = 3`, kontrola odvolání po 10 min (Úvod čeká max. 2,5 s), „Kalendář odpojen“ + „Připojit Kalendář znovu“
 na Úvodu, v Plánu a ve Správě. Podrobnosti a kroky v `docs/kalendar-ucastniku.md`, část „Po merge #47: 401…“.
