@@ -71,6 +71,18 @@ test.describe("přístup bez přihlášení", () => {
     await expect(page).toHaveURL(/\/vstup/);
   });
 
+  test("bezpečnostní hlavičky má stránka i statický soubor", async ({ page, request }) => {
+    const response = await page.goto("/vstup");
+    const pageHeaders = response!.headers();
+    expect(pageHeaders["referrer-policy"]).toBe("same-origin");
+    expect(pageHeaders["x-content-type-options"]).toBe("nosniff");
+    expect(pageHeaders["strict-transport-security"]).toContain("max-age=");
+    const script = await page.locator("script[src*='/_next/static/']").first().getAttribute("src");
+    const asset = await request.get(script!);
+    expect(asset.headers()["x-content-type-options"]).toBe("nosniff");
+    expect(asset.headers()["referrer-policy"]).toBe("same-origin");
+  });
+
   test("každý skript stránky nese nonce z CSP", async ({ page }) => {
     for (const path of ["/vstup", "/soukromi", "/tato-stranka-neexistuje"]) {
       const response = await page.goto(path);

@@ -15,10 +15,16 @@ export async function audit(
   await db.insert(auditLog).values({ orgId: config.orgId, actorId, action, entityType, entityId });
 }
 
+/**
+ * Kód do logu jen z bezpečných znaků. Část kódů pochází z odpovědi Googlu (`error`, `reason`), takže
+ * cokoli delšího nebo s jinými znaky (e-mail, token, text chyby) se nezapíše.
+ */
+export const safeLogCode = (code: string) => (/^[\w.-]{1,64}$/.test(code) ? code : "unknown");
+
 /** Provozní log jen s kódem chyby, nikdy s obsahem dat. */
 export function logError(scope: string, code: string, error?: unknown): void {
-  const kind = error instanceof Error ? error.name : typeof error;
-  console.error(JSON.stringify({ scope, code, kind }));
+  const kind = error instanceof Error ? safeLogCode(error.name) : typeof error;
+  console.error(JSON.stringify({ scope: safeLogCode(scope), code: safeLogCode(code), kind }));
 }
 
 export const hashKey = (value: string) => createHash("sha256").update(value).digest("hex").slice(0, 32);
