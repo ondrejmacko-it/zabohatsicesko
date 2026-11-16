@@ -18,7 +18,7 @@ Hotovo v kódu: A03 (`progressOf`, `recordingProgressByEvent` v `journey.ts`, š
 ## Testy desktop a macOS · draft #35, větev `claude/testy-desktop-macos` (stojí na #34)
 `npm run e2e` (Playwright, 750 testů, 7 projektů). Opraveno: CSP bez nonce na `/soukromi` a 404, menu na telefonu se hned zavíralo, návrat fokusu z okna otevřeného z menu (část U07), Integrace 320 px.
 
-## PR 6: přístupnost a přehlednost (U02–U08) · U02 sloučené v #36, zbytek draft z větve `claude/pristupnost-u03-u08`
+## PR 6: přístupnost a přehlednost (U02–U08) · sloučené (#36, #38)
 Hotovo: **U02** (#36). **U03** tlačítko zájmu má stále text „Mám zájem“ bez vlastního `aria-label`, stav nese `aria-pressed` a fajfka, téma se čte přes `aria-describedby` z nadpisu karty. **U04** pořadí (žádosti první) a „Nastavit a schválit“ už byly, nově úkol „Projít žádosti“ vede na `/sprava#zadosti`. **U05** účastník bez úkolů má na telefonu nahoře „Nejbližší akce“ (z načteného měsíce, jinak jeden dotaz), krok měsíce správce je vždy mezi třemi viditelnými úkoly, prázdný panel se nezobrazuje. **U06** (#34/#35). **U07** menu je disclosure: bez `aria-haspopup`, položky běžným Tab, odchod fokusu menu zavře, návrat fokusu z okna (#35). **U08** dialog akce skládá pole podle šířky formuláře (container query, ne okna), souhrn chyb nahoře, fokus na první chybné pole (i ve sbalených Dalších údajích), ověřeno 320×256. Testy: `e2e/pristupnost.spec.ts`, `tests/journey.test.ts`.
 
 * **U02** Kontrast: hlavička mřížky 2,5:1 (`schedule.module.css` 19–28) → tmavá na zelenošedé 6,28:1. Drobný okrový text 4,44:1 → tmavší okr. Ověřit axe.
@@ -29,8 +29,8 @@ Hotovo: **U02** (#36). **U03** tlačítko zájmu má stále text „Mám zájem�
 * **U07** `Menu.tsx` 63–93: buď disclosure s běžným Tab (bez `aria-haspopup`), nebo skutečné menu s klávesnicí. Návrat fokusu po zavření vnořeného okna.
 * **U08** Mobilní dialog akce: pole vedle sebe jen při dostatku místa, souhrn chyb, fokus na první chybu, ověřit 320×256.
 
-## PR 7: Připravit měsíc (G6) · rozpracováno na větvi `claude/pripravit-mesic` (jen server, viz `docs/dalsi-session.md`)
-Jedno okno: návrhy měsíce, mezery (bez tématu/vedoucího), publikum, stav párování. Přidání návrhu nic neodešle. Šablona zůstává v nastavení. Datum a skupiny ručně měnitelné.
+## PR 7: Připravit měsíc (G6) · draft #39, větev `claude/pripravit-mesic`
+Hotovo: tlačítko „Připravit měsíc“ vidí správce vždy (i bez návrhů, s počtem návrhů). Okno: „Doplnit chybějící termíny“ (`generateMonthAction`, nic neodešle), přehled párování nadcházejících zveřejněných akcí (`monthCards[].syncStatus`), živý přehled mezer (bez tématu nebo vedoucího), řádky návrhů se sloupci datum, skupina, téma a vedoucí, dole „Zveřejnit“, „Uložit změny“ (uloží bez zveřejnění, nic neodešle, nezměněné návrhy nechá) a „Zrušit“. Ruční datum jen v témže měsíci a v budoucnu (server: `outside_month`), čas a délka zůstanou. Šablona zůstala v menu Nástroje správce, doplnění termínů se z menu přesunulo do okna (prázdný měsíc má tlačítko dál). Testy: `tests/hromadne-zverejneni.test.ts` (datum mimo měsíc, minulost, uložení bez zveřejnění), `e2e/okna.spec.ts` (okno, kroky, sloupce, mezery, uložení bez změn).
 
 ## PR 8: bezpečnost a rychlost
 `npm audit` (v auditu 0 zranitelností), hlavičky (CSP, Referrer-Policy), limity serverových akcí, počet dotazů na Plánu a Úvodu, logy bez citlivých údajů.

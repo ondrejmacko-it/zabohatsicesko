@@ -2052,7 +2052,7 @@ p.cal-status {
 
 .publish-row {
   display: grid;
-  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 0.8fr);
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.9fr) minmax(0, 0.9fr) minmax(0, 1fr) minmax(0, 0.9fr);
   align-items: center;
   gap: 10px;
   padding: 8px 0;
@@ -2086,7 +2086,12 @@ p.cal-status {
   background: var(--band);
 }
 
-@media (max-width: 640px) {
+/* Sloupce se skládají podle šířky seznamu v okně, ne obrazovky. */
+.publish-list {
+  container-type: inline-size;
+}
+
+@container (max-width: 760px) {
   .publish-row {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
@@ -2094,6 +2099,27 @@ p.cal-status {
   .publish-pick {
     grid-column: 1 / -1;
   }
+}
+
+/* Okno Připravit měsíc: kroky nad návrhy (doplnění, párování, mezery). */
+.prepare-step {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.prepare-step h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.prepare-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 0.875rem;
 }
 
 /* Hosté pozvánky v dialogu akce: počet jako hlavní údaj, jména a vysvětlení tlumeně. */

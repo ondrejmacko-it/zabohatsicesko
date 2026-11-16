@@ -55,6 +55,12 @@ const optionalId = z
   .string()
   .max(64)
   .transform((v) => (v === "" ? null : v));
+/** Prázdné datum = beze změny. Jinak musí jít o platné místní datum (RRRR-MM-DD). */
+const optionalDate = z
+  .string()
+  .max(10)
+  .refine((v) => v === "" || isValidDateKey(v))
+  .transform((v) => (v === "" ? undefined : v));
 
 const eventSchema = z
   .object({
@@ -213,18 +219,35 @@ export async function generateMonthAction(_prev: ActionResult | null, formData: 
   });
 }
 
-/** Zveřejní vybrané návrhy měsíce najednou. Pole formuláře: `pick` (ID), `rev-<id>`, `topic-<id>`, `lead-<id>`. */
+/**
+ * Okno Připravit měsíc. `intent=save` uloží úpravy všech řádků (`row`) bez zveřejnění a nic neodešle,
+ * jinak se zveřejní vybrané návrhy (`pick`). Pole řádku: `rev-<id>`, `topic-<id>`, `lead-<id>`,
+ * `date-<id>` (místní datum) a `aud-<id>` (skupina).
+ */
 export async function publishMonthAction(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
   return run(async (user) => {
     const month = z.string().refine(isValidMonthKey).parse(formData.get("month"));
-    const ids = z.array(z.string().min(1).max(80)).min(1).max(100).safeParse(formData.getAll("pick"));
-    if (!ids.success) return { ok: false, error: "Vyberte aspoň jeden návrh." };
+    const publish = formData.get("intent") !== "save";
+    const ids = z.array(z.string().min(1).max(80)).min(1).max(100).safeParse(formData.getAll(publish ? "pick" : "row"));
+    if (!ids.success) return { ok: false, error: publish ? "Vyberte aspoň jeden návrh." : "V měsíci nejsou žádné návrhy k uložení." };
     const items = ids.data.map((id) => ({
       id,
       revision: z.coerce.number().int().positive().parse(formData.get(`rev-${id}`)),
       topicTitle: text(120).parse(formData.get(`topic-${id}`) ?? ""),
       leadId: optionalId.parse(formData.get(`lead-${id}`) ?? ""),
+      date: optionalDate.parse(formData.get(`date-${id}`) ?? ""),
+      audience: z.enum(GROUPS).optional().parse(formData.get(`aud-${id}`) || undefined),
     }));
+    const skippedNote = (skipped: number) =>
+      skipped
+        ? ` ${skipped} ${skipped === 1 ? "návrh mezitím někdo změnil a zůstal" : "návrhy mezitím někdo změnil a zůstaly"} beze změny, zkontrolujte je.`
+        : "";
+    if (!publish) {
+      const { published: saved, skipped } = await publishDrafts(user, month, items, 0, { publish: false });
+      if (!saved.length) return skipped ? { ok: false, error: `Nic se neuložilo.${skippedNote(skipped)}` } : { ok: true, message: "Žádné změny k uložení." };
+      const count = `${saved.length} ${saved.length === 1 ? "návrh" : saved.length < 5 ? "návrhy" : "návrhů"}`;
+      return { ok: true, message: `Uloženo: ${count}. Zůstávají v návrhu, nic se neodeslalo.${skippedNote(skipped)}` };
+    }
     const confirmedIncomplete = z.coerce.number().int().min(0).max(100).catch(0).parse(formData.get("allowIncomplete") ?? 0);
     let result;
     try {
@@ -236,12 +259,9 @@ export async function publishMonthAction(_prev: ActionResult | null, formData: F
     }
     const { published, skipped } = result;
     if (published.length) after(() => syncPublished());
-    const skippedNote = skipped
-      ? ` ${skipped} ${skipped === 1 ? "návrh mezitím někdo změnil a zůstal" : "návrhy mezitím někdo změnil a zůstaly"} beze změny, zkontrolujte je.`
-      : "";
-    if (!published.length) return { ok: false, error: `Nic se nezveřejnilo.${skippedNote}` };
+    if (!published.length) return { ok: false, error: `Nic se nezveřejnilo.${skippedNote(skipped)}` };
     const count = `${published.length} ${published.length === 1 ? "akce" : published.length < 5 ? "akce" : "akcí"}`;
-    return { ok: true, message: `Zveřejněno: ${count}. Pozvánky do Kalendáře se odesílají.${skippedNote}` };
+    return { ok: true, message: `Zveřejněno: ${count}. Pozvánky do Kalendáře se odesílají.${skippedNote(skipped)}` };
   });
 }
 
