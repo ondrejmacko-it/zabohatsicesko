@@ -62,6 +62,12 @@ při průzkumu, opravy čekají. Zjištěno (Neon jen čtením, žádný zápis)
    (zbc.test.spravce@) na vaši adresu“. Účastník oprávnění ke Kalendáři nepotřebuje, pozvánku posílá správcův kalendář.
 3. **Vzhled** (odkaz „Připojit Kalendář znovu“ mimo kartu), 4. **pravé tlačítko** (nejdřív navrhnout uživateli, DevTools
    nejde zablokovat), 5. **kompletní průchod**: zatím neudělané.
+* **Otevřená otázka (16. 11.):** uživatel chce, aby akce byly v Kalendáři účastníka „automaticky od prvního přihlášení“
+  a myslí, že k tomu chybí žádost o Kalendář při přihlášení. Navrženo: A) ponechat pozvánky ze správcova kalendáře
+  (nic od účastníka, jen ověřit Spam a nastavení „Přidávat pozvánky: Od všech“), B) žádat při přihlášení každého
+  účastníka o `calendar.events` a zapisovat do jeho kalendáře (citlivý rozsah: Google bez ověření aplikace ukáže
+  varování „neověřená aplikace“, ověření je mimo rozsah podle Trvalých faktů, víc tokenů a odvolání). Doporučeno A.
+  Před prací na B počkat na rozhodnutí uživatele.
 * `README.md` má po merge #39/#40 rozbitou tabulku příkazů (řádek `npm test` dvakrát a prázdné řádky). Opravit v prvním PR.
 * `docs/audit-ukoly.md`: hotovo vše kromě A07; zbývá jen 69 přepisů z `textove-upravy.csv` (potřebuje audit ZIP).
 
