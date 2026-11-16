@@ -2,7 +2,7 @@ import { and, eq, gt, inArray, isNotNull, isNull, lt, ne, or, sql } from "drizzl
 import { addDays, fromPragueLocal, toDateKey } from "@/lib/time";
 import type { EventSnapshot } from "@/lib/types";
 import { audit, logError } from "@/server/audit";
-import { attendeeSource, calendarMode, config, googleCalendarConfig, now } from "@/server/config";
+import { attendeeSource, calendarMode, config, googleCalendarConfig, now, personalDelivery } from "@/server/config";
 import { getDb, type Db } from "@/server/db/client";
 import { calendarLinks, events, minutes, recordings, type ManagedFields } from "@/server/db/schema";
 import { calendarSummary } from "@/server/domain/snapshot";
@@ -12,6 +12,7 @@ import { isOrganizer, type Viewer } from "@/server/policy";
 import { audienceAttendees, planGuests, samePlan } from "./attendees";
 import { GoogleCalendar } from "./google";
 import { connectionStatus, storedAccessToken } from "./google-auth";
+import { markLinksDelivered, syncPersonalCalendars } from "./personal";
 import { CalendarError, type CalendarProvider, type ExternalEvent, type ManagedEventData } from "./provider";
 import { SimulatedCalendar } from "./simulated";
 import { targetCalendarId } from "./target";
@@ -62,7 +63,7 @@ export function mergeDescription(current: string, wikiBlock: string, url: string
   return (kept.length ? [...kept, "", ...block] : block).join(html ? "<br>" : "\n");
 }
 
-function desiredData(eventId: string, snapshot: EventSnapshot, minutesPublished: boolean): ManagedEventData {
+export function desiredData(eventId: string, snapshot: EventSnapshot, minutesPublished: boolean): ManagedEventData {
   const url = eventUrl(eventId);
   return {
     summary: calendarSummary(snapshot),
@@ -118,6 +119,12 @@ async function markAttention(db: Db, eventId: string, errorCode: string, attempt
  */
 export async function syncEvent(eventId: string, options: { force?: boolean } = {}): Promise<void> {
   const db = await getDb();
+  // Osobní kalendáře: do kalendáře správce se nic nezapisuje, pozvánky ani e-maily nevznikají.
+  if (personalDelivery()) {
+    await markLinksDelivered(db, eventId);
+    await syncPersonalCalendars(db);
+    return;
+  }
   const link = await acquireLease(db, eventId);
   if (!link) return;
   const provider = calendarProvider(db);
@@ -257,6 +264,11 @@ async function pushToCalendar(
 /** Dožene akce čekající ve frontě, například po změně skupin uživatele. Opakované volání je bezpečné. */
 export async function syncPending(): Promise<void> {
   const db = await getDb();
+  if (personalDelivery()) {
+    await markLinksDelivered(db);
+    await syncPersonalCalendars(db);
+    return;
+  }
   const pending = await db
     .select({ eventId: calendarLinks.eventId })
     .from(calendarLinks)
@@ -291,6 +303,8 @@ export function looksLikeSameInvite(
  */
 export async function linkPublishedWithoutInvite(): Promise<string[]> {
   const db = await getDb();
+  // Osobní kalendáře nepárují s kalendářem správce. Akce bez vazby čtou přímo z plánu.
+  if (personalDelivery()) return [];
   // Bez použitelného Kalendáře by vazby jen spadly do chyby. Počká se na propojení.
   if (calendarMode() !== "simulation") {
     const cfg = googleCalendarConfig();

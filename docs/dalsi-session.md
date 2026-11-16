@@ -37,6 +37,19 @@ Nouzové zrušení zařízení hlavního správce (UI ho záměrně nenabízí) 
 `UPDATE trusted_devices SET revoked_at = now() WHERE id = '<id>'` (ID z dotazu na `trusted_devices` podle e-mailu).
 Platí od dalšího požadavku. Můžeš ho provést i ty přes Neon MCP, ale jen na výslovný pokyn uživatele.
 
+**Stav 16. 11. noc (poslední):** relace skončila na limitu kontextu. #41 a #42 jsou v `main`.
+* Draft [#43](https://github.com/ondrejmacko-it/zabohatsicesko/pull/43) z větve `claude/kalendar-ucastniku` (base `main`): serverové jádro Kalendáře účastníků, **vypnuté**
+  (`CALENDAR_DELIVERY` výchozí `invites`). Podrobnosti a co chybí: `docs/kalendar-ucastniku.md`, sekce „Stav
+  implementace“ a „Upozornění e-mailem od Googlu“. Lint, typy, 189/189 vitest, e2e 786 prošlo + 18 přeskočeno.
+* Uživatel 16. 11. povolil v prostředí hosty `developers.google.com` a `support.google.com` (dokumentace Googlu).
+* **Další krok 1:** UI stavu osobního kalendáře (Úvod + Plán: stav a jedno tlačítko → `/api/google/prihlaseni?kalendar=osobni`;
+  Správa: sloupec „Kalendář“ z `personalCalendarStates`), spouštěč `after(syncPersonalCalendars)` při otevření Úvodu,
+  úklid 27 pozvánek z `primary` správce (tlačítko ve Správě, jen `zbcKey`, `sendUpdates=none`, vazby přepnout),
+  štítek „Návrh, do Kalendáře zatím nejde“, e2e. Pak `CALENDAR_DELIVERY=personal` přes API Vercelu a živé ověření.
+* **Další krok 2–4 (neudělané):** kontrola úniku dat do klienta/HTML a hlaviček, jednotný design (odkaz „Připojit
+  Kalendář znovu“ ve Správě → tlačítko v kartě; role × 1280/390/360/320), závěrečný audit `docs/audit-zaverecny.md`
+  se screenshoty v ZIPech ≤ 30 MB mimo repo. Na limit kontextu dávat každý úkol do samostatné relace.
+
 **Stav 16. 11. večer (poslední):** relace skončila na limitu kontextu (200 tis.).
 * Draft [#41](https://github.com/ondrejmacko-it/zabohatsicesko/pull/41) `claude/uklid-readme`: README (tabulka příkazů), souhrn auditu, zjištění 16. 11., návrh `docs/kalendar-ucastniku.md`.
 * Draft [#42](https://github.com/ondrejmacko-it/zabohatsicesko/pull/42) `claude/pozvanka-po-prihlaseni` (úkol 2): pozvánka se spotřebuje až po přihlášení pozvaným účtem

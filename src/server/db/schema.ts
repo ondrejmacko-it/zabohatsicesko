@@ -286,3 +286,38 @@ export const loginInvites = pgTable("login_invites", {
   revokedAt: ts("revoked_at"),
   deviceId: text("device_id"),
 });
+
+export type PersonalCalendarStatus = "active" | "declined" | "revoked" | "calendar_deleted";
+
+/**
+ * Vlastní kalendář „Vzdělávání ZBC“ v účtu Google uživatele (`CALENDAR_DELIVERY=personal`). Bez cizího
+ * klíče na `users`: po smazání účtu musí řádek přežít, aby Wiki stihla kalendář smazat a token zneplatnit.
+ */
+export const personalCalendars = pgTable("personal_calendars", {
+  userId: text("user_id").primaryKey(),
+  orgId: text("org_id").notNull(),
+  accountEmail: text("account_email").notNull(),
+  /** Prázdné po odvolání nebo odmítnutí. Jinak AES-256-GCM s kontextem `org:google-personal:<userId>`. */
+  encryptedRefreshToken: text("encrypted_refresh_token").notNull(),
+  scopes: text("scopes").notNull(),
+  calendarId: text("calendar_id"),
+  status: text("status").$type<PersonalCalendarStatus>().notNull(),
+  errorCode: text("error_code"),
+  syncRequestedAt: ts("sync_requested_at"),
+  syncedAt: ts("synced_at"),
+  leaseUntil: ts("lease_until"),
+  updatedAt: ts("updated_at").notNull().defaultNow(),
+});
+
+/** Událost akce Wiki v osobním kalendáři. Otisk dat pozná, jestli je potřeba ji v Googlu měnit. */
+export const personalCalendarEntries = pgTable(
+  "personal_calendar_entries",
+  {
+    userId: text("user_id").notNull(),
+    eventId: text("event_id").notNull(),
+    externalEventId: text("external_event_id").notNull(),
+    dataHash: text("data_hash").notNull(),
+    updatedAt: ts("updated_at").notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.eventId] })],
+);

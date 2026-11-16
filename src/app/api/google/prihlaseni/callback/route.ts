@@ -4,8 +4,9 @@ import { audit, logError } from "@/server/audit";
 import { DEVICE_COOKIE, INVITE_COOKIE, checkInvite, claimInvite, deviceCookieOptions, deviceLabel, findDevice, inviteCookieOptions, inviteOnlyLogin, registerBootstrapDevice, touchDevice } from "@/server/auth/devices";
 import { completeLogin, verifyLoginState, type LoginFailure } from "@/server/auth/google-login";
 import { PRIMARY_ADMIN_SESSION_TTL_SEC, SESSION_COOKIE, encodeSession, sessionCookieOptions } from "@/server/auth/session";
-import { config, googleLoginConfig, isPrimaryAdmin } from "@/server/config";
+import { config, googleLoginConfig, isPrimaryAdmin, personalDelivery } from "@/server/config";
 import { grantsCalendar, needsCalendarConnection, revokeToken, saveGrant } from "@/server/calendar/google-auth";
+import { grantsPersonalCalendar, markPersonalDeclined, savePersonalGrant, syncPersonalCalendars } from "@/server/calendar/personal";
 import { syncAfterReconnect } from "@/server/calendar/sync";
 import { getDb } from "@/server/db/client";
 import { users } from "@/server/db/schema";
@@ -40,7 +41,7 @@ export async function GET(request: NextRequest) {
   const code = params.get("code");
   // Uživatel přihlášení zrušil, nebo Google vrátil chybu. Hodnota chyby se nikam nepropisuje.
   // Po odmítnuté žádosti o Kalendář nabídne brána přihlášení bez něj, ať se správce nezasekne.
-  if (!code || code.length > 2048) return finish(gateUrl(pending.calendar === "ask" ? "zruseno-kalendar" : "zruseno"));
+  if (!code || code.length > 2048) return finish(gateUrl(pending.calendar === "ask" || pending.calendar === "personal" ? "zruseno-kalendar" : "zruseno"));
 
   try {
     const db = await getDb();
@@ -93,7 +94,16 @@ export async function GET(request: NextRequest) {
     // Správce dal souhlas ke Kalendáři už na přihlašovací obrazovce: propojení se uloží hned, bez dalšího kroku.
     // Nový souhlas vždy přepíše starý záznam, i kdyby starý ještě vypadal platně.
     let connected = false;
-    if (grant) {
+    const personal = personalDelivery() && grant !== undefined && grantsPersonalCalendar(grant.scopes);
+    if (personal && grant) {
+      // Vlastní kalendář „Vzdělávání ZBC“: token jde šifrovaně do databáze, akce se zapíšou hned po přesměrování.
+      await savePersonalGrant(db, result.userId, grant);
+      after(() => syncPersonalCalendars(db));
+    } else if ((pending.calendar === "personal" || pending.calendar === "skip") && personalDelivery() && account) {
+      // Kalendář odškrtnutý: Wiki se znovu neptá, uživatel má na Úvodu tlačítko „Propojit Kalendář“.
+      await markPersonalDeclined(db, result.userId, account.email);
+      if (grant && !plans) await revokeToken(grant.refreshToken);
+    } else if (grant) {
       if (plans && grantsCalendar(grant.scopes)) {
         await saveGrant(db, { ...grant, userId: result.userId });
         await audit(db, result.userId, "calendar.connected", "settings", "google-calendar");

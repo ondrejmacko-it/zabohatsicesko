@@ -301,4 +301,32 @@ CREATE INDEX login_invites_user_idx ON login_invites (user_id);
 UPDATE trusted_devices SET expires_at = '9999-12-31T00:00:00Z' WHERE revoked_at IS NULL AND expires_at > now();
 `,
   },
+  {
+    id: "0009_personal_calendars",
+    sql: `
+CREATE TABLE personal_calendars (
+  user_id text PRIMARY KEY,
+  org_id text NOT NULL,
+  account_email text NOT NULL,
+  encrypted_refresh_token text NOT NULL,
+  scopes text NOT NULL,
+  calendar_id text,
+  status text NOT NULL CHECK (status IN ('active', 'declined', 'revoked', 'calendar_deleted')),
+  error_code text,
+  sync_requested_at timestamptz,
+  synced_at timestamptz,
+  lease_until timestamptz,
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE personal_calendar_entries (
+  user_id text NOT NULL REFERENCES personal_calendars(user_id) ON DELETE CASCADE,
+  event_id text NOT NULL,
+  external_event_id text NOT NULL,
+  data_hash text NOT NULL,
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (user_id, event_id)
+);
+`,
+  },
 ];
