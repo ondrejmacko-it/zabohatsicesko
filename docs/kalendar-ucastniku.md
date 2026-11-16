@@ -126,6 +126,56 @@ vzniklé před opravou musí uživatel smazat ručně.
   v hlavním kalendáři jako pozvánka. Zapnutí i vypnutí změní otisk, takže se všechny akce přepíšou.
   Rozhodne živý test.
 
+## Po merge #47: čtení `setup_code` a živý test self-invite (připraveno 16. 11. noc)
+
+**Stav před merge (Neon `zbc-wiki-produkce`, jen čtení, 16. 11. ~20:45 UTC):** oba osobní kalendáře `active`,
+`calendar_id` vyplněné, `error_code` prázdné, `synced_at` 19:39 UTC. Sloupce `event_format` a `setup_code`
+v produkci ještě nejsou (přijdou s migrací `0010` v #47). Důvod odmítnutí `calendarList.patch` proto zatím
+určit nejde.
+
+**1. Po merge a nasazení Production** relace přečte (jen čtení):
+`select status, event_format, setup_code, synced_at from personal_calendars`.
+* `event_format = 0`: přepis ještě neproběhl. Uživatel otevře Úvod Wiki přihlášený jako účastník
+  (a pak jako správce), počká minutu a obnoví stránku. Pak se dotaz zopakuje.
+* Výklad `setup_code` (první část = co prošlo, za ní každý neúspěšný pokus `varianta:kód`):
+
+| Kód | Co znamená | Co dál |
+| --- | --- | --- |
+| `full` | Barva, připomínky i e-mailová upozornění nastavená | Nic, Google posílá upozornění sám |
+| `nocolor`, `basic`, `reminders` | Prošla jen menší varianta | Podle chybějící části (např. bez `eventChange` nechodí e-mail o změně) |
+| `none\|…:403_forbidden` | Google zápis nastavení kalendáře zakázal | Rozsah `calendar.app.created` na `calendarList` nestačí, zbývá self-invite nebo vlastní e-maily |
+| `…:403_insufficientPermissions` | Token nemá potřebný rozsah | Odpojit a znovu propojit Kalendář, zkontrolovat rozsahy v konzoli |
+| `…:404` | Kalendář v seznamu účtu chybí | Kalendář nebyl přidán do `calendarList`, upozornění nejdou nastavit |
+| `…:400_…` | Google odmítl obsah požadavku | Chyba v kódu, opravit podle kódu |
+
+**2. Zapnutí `CALENDAR_PERSONAL_NOTIFY=self-invite` (uživatel, Windows, prohlížeč):**
+1. Otevři https://vercel.com a přihlas se.
+2. Klikni na projekt **zbc-vzdelavani-demo**.
+3. Nahoře klikni na **Settings**, vlevo na **Environment Variables**.
+4. Do **Key** napiš `CALENDAR_PERSONAL_NOTIFY`, do **Value** napiš `self-invite`.
+5. U **Environments** nech zaškrtnuté jen **Production** (Preview a Development odškrtni).
+6. Klikni na **Save**.
+7. Nahoře klikni na **Deployments**. U prvního řádku se štítkem **Production** a **Current** klikni na **⋯** vpravo.
+8. Klikni na **Redeploy**, v okně znovu na **Redeploy**. Počkej, až je stav **Ready** (asi 2 minuty).
+
+Pozor: zapnutí změní otisk všech akcí, takže se všechny akce účastníka přepíšou se `sendUpdates=all`.
+Účastník pak může dostat **jeden e-mail za každou akci** (desítky e-mailů najednou).
+
+**3. Živé ověření (uživatel):**
+1. V anonymním okně (Ctrl+Shift+N) otevři https://zbc-vzdelavani-demo.vercel.app a přihlas se jako účastník.
+2. Otevři **Úvod**, počkej minutu a stiskni F5.
+3. V Gmailu toho účtu hledej `Vzdělávání ZBC`. Pak klikni vlevo na **Více** → **Spam** a hledej znovu.
+4. **Nová akce:** jako správce v Plánu klikni na **Přidat akci** pro skupinu účastníka a zveřejni ji.
+   Jako účastník otevři Úvod a F5. V Gmailu čekej pozvánku (i ve Spamu).
+5. **Změna:** jako správce otevři tu akci, změň čas, ulož. Účastník: Úvod, F5. Čekej „Aktualizovaná událost“.
+6. **Zrušení:** jako správce akci zruš. Účastník: Úvod, F5. Čekej „Zrušená událost“.
+7. **Připomínky:** v Google Kalendáři účastníka otevři akci v kalendáři „Vzdělávání ZBC“. U zvonku čekej
+   „30 minut předem“ a „1 den předem, e-mail“.
+8. Zapiš, co dorazilo a kam (Doručené, Spam, nic) a zda se akce objevila i v hlavním kalendáři jako pozvánka.
+
+**Vypnutí:** Settings → Environment Variables → u `CALENDAR_PERSONAL_NOTIFY` klikni na **⋯** → **Remove**,
+pak Redeploy jako výše. Akce se znovu přepíšou bez hosta.
+
 ## Živě 16. 11. 19:30 po #45: propojení funguje, upozornění ne
 
 * Oba účty `active`, kalendář uložený, akce zapsané. Audit `calendar.personal.setup_none` u obou: Google odmítl
