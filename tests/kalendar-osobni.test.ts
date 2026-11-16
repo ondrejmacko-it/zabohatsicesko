@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import { beginLogin, verifyLoginState } from "@/server/auth/google-login";
-import { PERSONAL_SCOPE, needsPersonalCalendar, personalCalendarState, savePersonalGrant, syncPersonalCalendar } from "@/server/calendar/personal";
+import { EVENT_FORMAT, PERSONAL_SCOPE, needsPersonalCalendar, personalSyncNeeded, personalCalendarState, savePersonalGrant, syncPersonalCalendar } from "@/server/calendar/personal";
 import { calendarDelivery } from "@/server/config";
 import { personalCalendarEntries, personalCalendars, users } from "@/server/db/schema";
 import { participant, resetDemo } from "./helpers";
@@ -156,13 +156,84 @@ describe("osobní kalendář", () => {
     const google = fakeGoogle({ forbidSetup: 1 });
     expect(await syncPersonalCalendar(db, participant.id, { fetchImpl: google.fetchImpl, clock })).toBe("synced");
     const patches = google.calls.filter((c) => c.url.pathname.includes("/calendarList/"));
-    // Druhý pokus už bez e-mailových upozornění, která Google odmítl.
+    // Druhý pokus bez barvy, upozornění i připomínky zůstávají.
     expect(patches).toHaveLength(2);
-    expect((patches[1]!.body as { notificationSettings?: unknown }).notificationSettings).toBeUndefined();
+    expect((patches[1]!.body as { backgroundColor?: unknown }).backgroundColor).toBeUndefined();
+    expect((patches[1]!.body as { notificationSettings?: unknown }).notificationSettings).toBeDefined();
     const [row] = await db.select().from(personalCalendars).where(eq(personalCalendars.userId, participant.id));
-    expect(row).toMatchObject({ status: "active", calendarId: "cal-1", errorCode: null });
+    expect(row).toMatchObject({ status: "active", calendarId: "cal-1", errorCode: null, setupCode: "full|full:403_insufficientPermissions" });
     expect(row!.encryptedRefreshToken).not.toBe("");
     expect(google.calls.some((c) => c.url.pathname.includes("/events"))).toBe(true);
+  });
+
+  test("odmítnuté nastavení kalendáře uloží strojový důvod každého pokusu, akce se přesto zapíšou", async () => {
+    await db.delete(personalCalendars);
+    await db.delete(personalCalendarEntries);
+    await savePersonalGrant(db, participant.id, grant);
+    const google = fakeGoogle({ forbidSetup: 4 });
+    expect(await syncPersonalCalendar(db, participant.id, { fetchImpl: google.fetchImpl, clock })).toBe("synced");
+    const [row] = await db.select().from(personalCalendars).where(eq(personalCalendars.userId, participant.id));
+    expect(row!.setupCode).toBe(["none", "full", "nocolor", "basic", "reminders"].map((l, i) => (i ? `${l}:403_insufficientPermissions` : l)).join("|"));
+    expect(row!.setupCode).not.toContain("ucastnik");
+    expect(google.calls.some((c) => c.url.pathname.includes("/events"))).toBe(true);
+  });
+
+  test("nasazení nové podoby akcí samo spustí přepis všech akcí a nové nastavení kalendáře", async () => {
+    await db.delete(personalCalendars);
+    await db.delete(personalCalendarEntries);
+    await savePersonalGrant(db, participant.id, grant);
+    await syncPersonalCalendar(db, participant.id, { fetchImpl: fakeGoogle().fetchImpl });
+    expect(await personalSyncNeeded(db)).toBe(false);
+    const entries = await db.select().from(personalCalendarEntries).where(eq(personalCalendarEntries.userId, participant.id));
+    expect(entries.length).toBeGreaterThan(0);
+    // Stav jako v produkci před nasazením: akce zapsané starší podobou, kalendář srovnaný starou verzí.
+    await db.update(personalCalendarEntries).set({ dataHash: "stary-otisk" });
+    await db.update(personalCalendars).set({ eventFormat: EVENT_FORMAT - 1 });
+    expect(await personalSyncNeeded(db)).toBe(true);
+    const google = fakeGoogle();
+    expect(await syncPersonalCalendar(db, participant.id, { fetchImpl: google.fetchImpl })).toBe("synced");
+    expect(google.calls.filter((c) => c.url.pathname.includes("/calendarList/"))).toHaveLength(1);
+    expect(google.calls.filter((c) => c.url.pathname.includes("/events") && c.method !== "DELETE")).toHaveLength(entries.length);
+    const [row] = await db.select().from(personalCalendars).where(eq(personalCalendars.userId, participant.id));
+    expect(row!.eventFormat).toBe(EVENT_FORMAT);
+    expect(await personalSyncNeeded(db)).toBe(false);
+  });
+
+  test("zkušební režim self-invite: host je jen účet vlastníka, Google pošle e-mail o změně i zrušení", async () => {
+    await db.delete(personalCalendars);
+    await db.delete(personalCalendarEntries);
+    await savePersonalGrant(db, participant.id, grant);
+    process.env.CALENDAR_PERSONAL_NOTIFY = "self-invite";
+    try {
+      const google = fakeGoogle();
+      expect(await syncPersonalCalendar(db, participant.id, { fetchImpl: google.fetchImpl })).toBe("synced");
+      const writes = google.calls.filter((c) => c.url.pathname.includes("/events"));
+      expect(writes.length).toBeGreaterThan(0);
+      for (const w of writes) {
+        expect(w.url.searchParams.get("sendUpdates")).toBe("all");
+        expect(w.body).toMatchObject({ attendees: [{ email: "ucastnik@example.com" }], guestsCanModify: false, guestsCanSeeOtherGuests: false });
+      }
+      // Akce, která uživateli přestala patřit, se smaže s upozorněním (e-mail o zrušení).
+      const [entry] = await db.select().from(personalCalendarEntries).where(eq(personalCalendarEntries.userId, participant.id)).limit(1);
+      await db.insert(personalCalendarEntries).values({ userId: participant.id, eventId: "zrusena-akce", externalEventId: "ext-zrusena", dataHash: entry!.dataHash });
+      await db.update(personalCalendars).set({ syncRequestedAt: new Date(Date.now() + 60_000) });
+      const again = fakeGoogle();
+      await syncPersonalCalendar(db, participant.id, { fetchImpl: again.fetchImpl });
+      const deletion = again.calls.find((c) => c.method === "DELETE" && c.url.pathname.endsWith("/ext-zrusena"))!;
+      expect(deletion.url.searchParams.get("sendUpdates")).toBe("all");
+    } finally {
+      delete process.env.CALENDAR_PERSONAL_NOTIFY;
+    }
+    // Vypnutí režimu přepíše akce zpět bez hosta a bez e-mailů.
+    const off = fakeGoogle();
+    await db.update(personalCalendars).set({ syncRequestedAt: new Date(Date.now() + 120_000) });
+    await syncPersonalCalendar(db, participant.id, { fetchImpl: off.fetchImpl });
+    const rewrites = off.calls.filter((c) => c.url.pathname.includes("/events"));
+    expect(rewrites.length).toBeGreaterThan(0);
+    for (const w of rewrites) {
+      expect(w.url.searchParams.get("sendUpdates")).toBe("none");
+      expect((w.body as { attendees?: unknown }).attendees).toBeUndefined();
+    }
   });
 
   test("403 insufficientPermissions u akcí nechá token i kalendář a ukáže „Nedaří se zapsat“, ne odvolání", async () => {

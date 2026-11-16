@@ -127,26 +127,36 @@ export class PersonalCalendarApi {
   }
 
   /**
-   * Nastaví položku v seznamu kalendářů uživatele: barvu, připomínky a e-mailová upozornění. Když Google
-   * celé nastavení odmítne, zkusí se bez e-mailových upozornění. Nic z toho není podmínkou zápisu akcí,
-   * proto chyba nikdy nevyletí ven, jen se zaloguje kód.
+   * Nastaví položku v seznamu kalendářů uživatele: připomínky, e-mailová upozornění a barvu. Zkouší se od
+   * nejúplnějšího nastavení po nejmenší, aby šlo poznat, kterou část Google odmítá. Nic z toho není
+   * podmínkou zápisu akcí, proto chyba nikdy nevyletí ven. Vrací i strojový kód každého neúspěchu
+   * (`full:403_insufficientPermissions`), který se uloží do `personal_calendars.setup_code` kvůli diagnostice.
    */
-  async configureCalendar(calendarId: string): Promise<CalendarSetup> {
+  async configureCalendar(calendarId: string): Promise<{ setup: CalendarSetup; failures: string[] }> {
     const path = `/users/me/calendarList/${encodeURIComponent(calendarId)}`;
-    const attempts: Array<[CalendarSetup, Record<string, unknown>]> = [
-      ["full", { ...CALENDAR_COLORS, defaultReminders: DEFAULT_REMINDERS, notificationSettings: { notifications: NOTIFICATIONS } }],
-      ["basic", { ...CALENDAR_COLORS, defaultReminders: DEFAULT_REMINDERS }],
+    const reminders = { defaultReminders: DEFAULT_REMINDERS };
+    const notifications = { notificationSettings: { notifications: NOTIFICATIONS } };
+    const attempts: Array<[string, CalendarSetup, Record<string, unknown>, boolean]> = [
+      ["full", "full", { ...CALENDAR_COLORS, ...reminders, ...notifications }, true],
+      ["nocolor", "full", { ...reminders, ...notifications }, false],
+      ["basic", "basic", { ...CALENDAR_COLORS, ...reminders }, true],
+      ["reminders", "basic", reminders, false],
     ];
-    for (const [setup, body] of attempts) {
+    const failures: string[] = [];
+    for (const [label, setup, body, colors] of attempts) {
       try {
-        const { status } = await this.request("PATCH", path, { query: { colorRgbFormat: "true" }, body });
-        if (status === 200) return setup;
+        const { status } = await this.request("PATCH", path, { query: colors ? { colorRgbFormat: "true" } : {}, body });
+        if (status === 200) return { setup, failures };
+        failures.push(`${label}:${status}`);
       } catch (error) {
         if (!(error instanceof CalendarError)) throw error;
-        logError("google.personal", `configure_${setup}_${error.reason || error.code}`);
+        // Odvolaný token nemá smysl zkoušet dál, synchronizace ho pozná u první akce.
+        if (error.code === "calendar_revoked") return { setup: "none", failures: [...failures, `${label}:401`] };
+        failures.push(`${label}:${error.code === "calendar_forbidden" ? "403" : "err"}${error.reason ? `_${error.reason}` : ""}`);
       }
+      logError("google.personal", `configure_${failures.at(-1)}`);
     }
-    return "none";
+    return { setup: "none", failures };
   }
 
   async deleteCalendar(calendarId: string): Promise<void> {
@@ -158,7 +168,7 @@ export class PersonalCalendarApi {
    * události (Wiki spravuje všechna pole), 404 = mezitím smazaná, založí se znovu.
    * @returns `calendar_missing`, když uživatel smazal celý kalendář
    */
-  async putEvent(calendarId: string, eventId: string, data: ManagedEventData, known: boolean): Promise<"ok" | "calendar_missing"> {
+  async putEvent(calendarId: string, eventId: string, data: ManagedEventData, known: boolean, guest?: string): Promise<"ok" | "calendar_missing"> {
     const body = {
       id: eventId,
       summary: data.summary,
@@ -170,9 +180,11 @@ export class PersonalCalendarApi {
       // (audit `calendar.personal.setup_none`), zápis akce ale projde. Bez toho by akce neměla žádnou.
       reminders: { useDefault: false, overrides: DEFAULT_REMINDERS.map((r) => ({ ...r })) },
       transparency: "opaque",
+      // Zkušební režim `self-invite`: host je jen sám vlastník kalendáře, nic víc nesmí měnit ani vidět.
+      ...(guest ? { attendees: [{ email: guest }], guestsCanModify: false, guestsCanInviteOthers: false, guestsCanSeeOtherGuests: false } : {}),
     };
     const base = `/calendars/${encodeURIComponent(calendarId)}/events`;
-    const query = { sendUpdates: "none" };
+    const query = { sendUpdates: guest ? "all" : "none" };
     const update = () => this.request("PUT", `${base}/${encodeURIComponent(eventId)}`, { query, body });
     const insert = () => this.request("POST", base, { query, body });
     let result = known ? await update() : await insert();
@@ -184,7 +196,7 @@ export class PersonalCalendarApi {
   }
 
   /** Smaže událost. Už smazaná (404, 410) je v pořádku. */
-  async deleteEvent(calendarId: string, eventId: string): Promise<void> {
-    await this.request("DELETE", `/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`, { query: { sendUpdates: "none" } });
+  async deleteEvent(calendarId: string, eventId: string, notify = false): Promise<void> {
+    await this.request("DELETE", `/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`, { query: { sendUpdates: notify ? "all" : "none" } });
   }
 }
