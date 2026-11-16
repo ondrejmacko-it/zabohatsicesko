@@ -42,13 +42,17 @@ test.describe("ostrá Wiki", () => {
     expect(response.headers().location).toContain("/vstup");
   });
 
-  test("osobní kalendář: tlačítko Propojit bez zařízení vede zpět na vstup", async ({ request }) => {
+  test("osobní kalendář: tlačítko Propojit bez zařízení vede zpět na vstup", async ({ request }, testInfo) => {
+    // Serverová odpověď nezávisí na zařízení. Jeden projekt stačí a nevyčerpá limit přihlášení (20 za 10 min).
+    test.skip(testInfo.project.name !== "windows-1280", "stačí jeden projekt");
     const response = await request.get(`${live}/api/google/prihlaseni?kalendar=osobni`, { maxRedirects: 0 });
     expect([302, 303, 307]).toContain(response.status());
     expect(response.headers().location).toContain("/vstup");
   });
 
-  test("osobní kalendář: první přihlášení správce žádá jen vlastní kalendář Wiki, ne kalendář účtu", async ({ request }) => {
+  test("osobní kalendář: první přihlášení správce žádá jen vlastní kalendář Wiki, ne kalendář účtu", async ({ request }, testInfo) => {
+    // Serverová odpověď nezávisí na zařízení. Jeden projekt stačí a nevyčerpá limit přihlášení (20 za 10 min).
+    test.skip(testInfo.project.name !== "windows-1280", "stačí jeden projekt");
     const response = await request.get(`${live}/api/google/prihlaseni?spravce=1`, { maxRedirects: 0 });
     const location = new URL(response.headers().location ?? "");
     expect(location.hostname).toBe("accounts.google.com");
