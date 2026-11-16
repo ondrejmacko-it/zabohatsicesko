@@ -37,7 +37,54 @@ Nouzové zrušení zařízení hlavního správce (UI ho záměrně nenabízí) 
 `UPDATE trusted_devices SET revoked_at = now() WHERE id = '<id>'` (ID z dotazu na `trusted_devices` podle e-mailu).
 Platí od dalšího požadavku. Můžeš ho provést i ty přes Neon MCP, ale jen na výslovný pokyn uživatele.
 
-**Stav 15. 11. noc 5 (poslední):** #38 (PR 6) je v `main`. Otevřené drafty, oba base `main`, mergovat nezávisle:
+**Stav 16. 11. večer (poslední):** relace skončila na limitu kontextu (200 tis.).
+* Draft [#41](https://github.com/ondrejmacko-it/zabohatsicesko/pull/41) `claude/uklid-readme`: README (tabulka příkazů), souhrn auditu, zjištění 16. 11., návrh `docs/kalendar-ucastniku.md`.
+* Draft [#42](https://github.com/ondrejmacko-it/zabohatsicesko/pull/42) `claude/pozvanka-po-prihlaseni` (úkol 2): pozvánka se spotřebuje až po přihlášení pozvaným účtem
+  (`checkInvite` bez zápisu, cookie `zbc_invite` 30 min, scope `invite`, `claimInvite(..., userId)` v callbacku).
+  Lint, typy, 184/184 vitest, e2e 786 prošlo + 18 přeskočeno. Živě neověřeno.
+* **Další krok 1 (hlavní):** implementovat Kalendář účastníků podle `docs/kalendar-ucastniku.md` (varianta a,
+  `calendar.app.created`, vlastní kalendář „Vzdělávání ZBC“, bez pozvánek). Nejdřív se zeptat, kam konzole
+  zařadila rozsah (necitlivý/citlivý), krok 1 v tom souboru.
+* **Další krok 2:** úkol 3 (krátká kontrola, že tokeny a cizí data nejdou do klienta ani HTML; žádné blokování
+  pravého tlačítka), úkol 4 (jednotný design, začít odkazem „Připojit Kalendář znovu nebo jiným účtem“ ve Správě →
+  tlačítko v kartě; projít role a šířky 1280/390/360/320). Obojí zatím neuděláno.
+* Pozor: e2e ve zvláštním worktree potřebuje `cp -al node_modules` (symlink Turbopack odmítne).
+
+**Stav 16. 11. (poslední, jen zjištění, kód beze změn):** #39 (PR 7) a #40 (PR 8) jsou sloučené v `main` (`7c72b91`)
+a nasazené na https://zbc-vzdelavani-demo.vercel.app (ostrá Wiki, Neon `zbc-wiki-produkce`, projekt `bitter-breeze-02749976`).
+Uživatel ověřil hlavičky (nosniff, X-Frame-Options DENY, Referrer-Policy same-origin). Relace skončila na limitu kontextu
+při průzkumu, opravy čekají. Zjištěno (Neon jen čtením, žádný zápis):
+1. **Pozvánka**: odkaz pro ondrasssssko@ se spotřeboval hned prvním otevřením (12:31, vzniklo zařízení v anonymním okně),
+   druhé otevření v běžném okně server odmítl (`invite.rejected` 12:33), přihlášení Googlem proběhlo jen na tom zařízení.
+   Cizí účet Google se k pozvánce nepřihlásí (`scopedAccount`: `wrong_account`). **Skutečná slabina:** kdo otevře odkaz první,
+   ho spálí (zařízení vznikne dřív než přihlášení), pozvaný pak potřebuje nový odkaz. **Oprava (další krok, větev
+   `claude/pozvanka-po-prihlaseni`):** `/api/pozvanka` jen ověří platnost (bez zápisu) a uloží HttpOnly cookie `zbc_invite`
+   s tokenem (30 min, lax); `/api/google/prihlaseni` bez zařízení vezme scope `{ kind: "invite", userId }` + login_hint;
+   `scopedAccount` ho vyhodnotí jako `device` (shoda e-mailu); callback teprve po úspěchu zavolá `claimInvite` s kontrolou
+   `invite.userId === result.userId` v transakci, založí zařízení, smaže `zbc_invite`. Špatný účet = pozvánka zůstane platná.
+   `LiveGate` ukáže tlačítko Google i s platnou `zbc_invite`. Testy do `tests/pozvanky.test.ts` (cizí účet nespálí, druhé
+   použití neplatí, souběh) a e2e ostré Wiki. Zařízení d-4f01ed32 (ondrasssssko, Opera) je v pořádku, nerušit.
+2. **Kalendář**: synchronizace **funguje**. 27 zveřejněných akcí má `sync_status = synced`, bez chyb, kalendář `primary`
+   účtu zbc.test.spravce@, skuteční hosté v `managed_attendees` (FP → ondrasssssko@, RM → zbc.test.uzivatel@), API volá
+   `sendUpdates=all`. Nesynchronizované jsou jen svátky (záměr) a **8 listopadových návrhů** (nezveřejněné, do Kalendáře
+   nejdou). Akce `tym-a` mají prázdné hosty (skupina bez členů). Příčina „nic v Kalendáři“ je tedy nejspíš u příjemce:
+   pozvánka od neznámého odesílatele (Google Kalendář → Nastavení → Obecné → Události z pozvánek „jen od známých
+   odesílatelů“), Spam v Gmailu, nebo kontrola jiného účtu (ondra.macko1@ není ve Wiki). Neověřeno živě: přístup do
+   schránek příjemců nemám. Ověření: detail akce jako správce ukazuje hosty načtené přímo z Googlu. Do UI doplnit:
+   v Plánu u návrhů „Návrh, do Kalendáře zatím nejde“, u účastníka v detailu „Pozvánku posílá kalendář Wiki
+   (zbc.test.spravce@) na vaši adresu“. Účastník oprávnění ke Kalendáři nepotřebuje, pozvánku posílá správcův kalendář.
+3. **Vzhled** (odkaz „Připojit Kalendář znovu“ mimo kartu), 4. **pravé tlačítko** (nejdřív navrhnout uživateli, DevTools
+   nejde zablokovat), 5. **kompletní průchod**: zatím neudělané.
+* **Otevřená otázka (16. 11.):** uživatel chce, aby akce byly v Kalendáři účastníka „automaticky od prvního přihlášení“
+  a myslí, že k tomu chybí žádost o Kalendář při přihlášení. Navrženo: A) ponechat pozvánky ze správcova kalendáře
+  (nic od účastníka, jen ověřit Spam a nastavení „Přidávat pozvánky: Od všech“), B) žádat při přihlášení každého
+  účastníka o `calendar.events` a zapisovat do jeho kalendáře (citlivý rozsah: Google bez ověření aplikace ukáže
+  varování „neověřená aplikace“, ověření je mimo rozsah podle Trvalých faktů, víc tokenů a odvolání). Doporučeno A.
+  Před prací na B počkat na rozhodnutí uživatele.
+* `README.md` má po merge #39/#40 rozbitou tabulku příkazů (řádek `npm test` dvakrát a prázdné řádky). Opravit v prvním PR.
+* `docs/audit-ukoly.md`: hotovo vše kromě A07; zbývá jen 69 přepisů z `textove-upravy.csv` (potřebuje audit ZIP).
+
+**Stav 15. 11. noc 5:** #38 (PR 6) je v `main`. Otevřené drafty, oba base `main`, mergovat nezávisle:
 * PR 7 [#39](https://github.com/ondrejmacko-it/zabohatsicesko/pull/39) (`claude/pripravit-mesic`): okno „Připravit měsíc“ (G6). Tlačítko vždy pro správce, doplnění termínů,
   párování nadcházejících akcí, živé mezery, sloupce datum/skupina/téma/vedoucí, „Uložit změny“ (nic neodešle) a „Zveřejnit“.
   176/176 vitest, e2e 772 prošlo + 18 přeskočeno.

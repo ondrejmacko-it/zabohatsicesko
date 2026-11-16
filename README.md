@@ -15,12 +15,12 @@ Stejně je připravené **přihlášení Google identitou** jako druhý režim v
 tokenu, vazba účtu na stabilní `sub`, role dál z databáze). Také **neověřeno proti Googlu**, viz
 [docs/google-prihlaseni.md](docs/google-prihlaseni.md).
 
-| | |
-|---|---|
 Stejný kód běží i jako **ostrá Wiki pro firmu** (`WIKI_MODE=production`): vstup jen účtem Google,
 vlastní prázdná databáze, skutečný čas a Google Kalendář. Rozdělení Production a Preview, proměnné
 a kroky nasazení jsou v [docs/nasazeni.md](docs/nasazeni.md).
 
+| | |
+|---|---|
 | ![Harmonogram](docs/screenshots/harmonogram.png) | ![Detail akce a Kalendář](docs/screenshots/detail-kalendar.png) |
 | ![Zápis z nahrávky](docs/screenshots/zapis.png) | ![Agenda na mobilu](docs/screenshots/agenda-mobil.png) |
 
@@ -40,11 +40,7 @@ serveru) nebo tlačítkem *Vzdělávání → Integrace → Obnovit ukázková d
 | Příkaz | Co dělá |
 |---|---|
 | `npm run lint` · `npm run typecheck` | ESLint a TypeScript |
-
 | `npm test` | 180 testů: správa uživatelů, přístupy, plán a revize, Kalendář, přihlášení Google, témata, nahrávky, čas a session |
-
-| `npm test` | 180 testů: správa uživatelů, přístupy, plán a revize, Kalendář, přihlášení Google, témata, nahrávky, čas a session |
-
 | `npm run e2e` | Playwright nad produkčním buildem: 4 role, všechny stránky a okna, klávesnice, axe, ostrá Wiki s falešnými hodnotami Google. Desktop Windows (1280, 1920), macOS (1440×900, 1512×982, Retina, user agent Safari a Chrome) a telefony (390, 360, 320). Vykresluje Chromium, skutečné Safari viz [docs/overeni-mac.md](docs/overeni-mac.md). `E2E_SKIP_BUILD=1` přeskočí build. |
 | `npm run build` | Produkční build (vyžaduje `SESSION_SECRET` a `DEMO_ACCESS_CODE`) |
 | `npm run db:migrate` · `npm run db:reset` | Migrace a seed, nebo obnova ukázkových dat |

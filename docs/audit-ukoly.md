@@ -1,6 +1,6 @@
 # Úkoly z auditu 15. 11. 2026 (vlastní výtah, podklady do repa nepatří)
 
-Stav k 15. 11. odpoledne. Hotové = sloučené nebo v otevřeném draft PR.
+Stav k 16. 11. Hotové = sloučené v `main` nebo v otevřeném draft PR. Vše z auditu je hotové kromě A07 (mimo rozsah) a 69 textových přepisů z `textove-upravy.csv` (potřebují audit ZIP, v relaci nebyl).
 
 ## Hotovo
 * S01, S02 (PR 1), A01, A02, A04, A05, A06, A08 (PR 3), U01 (PR #33: Správa 320/360, Integrace ověřit znovu), U09 (PR #33: záložka Témata, stará kotva přesměruje).
@@ -29,16 +29,16 @@ Hotovo: **U02** (#36). **U03** tlačítko zájmu má stále text „Mám zájem�
 * **U07** `Menu.tsx` 63–93: buď disclosure s běžným Tab (bez `aria-haspopup`), nebo skutečné menu s klávesnicí. Návrat fokusu po zavření vnořeného okna.
 * **U08** Mobilní dialog akce: pole vedle sebe jen při dostatku místa, souhrn chyb, fokus na první chybu, ověřit 320×256.
 
-
-## PR 7: Připravit měsíc (G6) · draft #39, větev `claude/pripravit-mesic` (popis stavu je v té větvi)
-Jedno okno: návrhy měsíce, mezery (bez tématu/vedoucího), publikum, stav párování. Přidání návrhu nic neodešle. Šablona zůstává v nastavení. Datum a skupiny ručně měnitelné.
-
-## PR 7: Připravit měsíc (G6) · draft #39, větev `claude/pripravit-mesic`
+## PR 7: Připravit měsíc (G6) · sloučené #39, větev `claude/pripravit-mesic`
 Hotovo: tlačítko „Připravit měsíc“ vidí správce vždy (i bez návrhů, s počtem návrhů). Okno: „Doplnit chybějící termíny“ (`generateMonthAction`, nic neodešle), přehled párování nadcházejících zveřejněných akcí (`monthCards[].syncStatus`), živý přehled mezer (bez tématu nebo vedoucího), řádky návrhů se sloupci datum, skupina, téma a vedoucí, dole „Zveřejnit“, „Uložit změny“ (uloží bez zveřejnění, nic neodešle, nezměněné návrhy nechá) a „Zrušit“. Ruční datum jen v témže měsíci a v budoucnu (server: `outside_month`), čas a délka zůstanou. Šablona zůstala v menu Nástroje správce, doplnění termínů se z menu přesunulo do okna (prázdný měsíc má tlačítko dál). Testy: `tests/hromadne-zverejneni.test.ts` (datum mimo měsíc, minulost, uložení bez zveřejnění), `e2e/okna.spec.ts` (okno, kroky, sloupce, mezery, uložení bez změn).
 
-
-## PR 8: bezpečnost a rychlost · draft #40, větev `claude/bezpecnost-rychlost`
+## PR 8: bezpečnost a rychlost · sloučené #40, větev `claude/bezpecnost-rychlost`
 Hotovo: `npm audit` 0 zranitelností (15. 11.). CSP s nonce a Referrer-Policy `same-origin` už nastavoval `src/proxy.ts`; nově `next.config.ts` přidává nosniff, Referrer-Policy, X-Frame-Options a HSTS (jen produkční build) i statickým souborům a prefetchům, které proxy vynechává. Limit serverových akcí 120 za minutu na uživatele v `runAction` (nahrávky mají dál vlastní 10 za hodinu). Plán načítá data v jedné paralelní vlně místo pěti postupných, počet dotazů (správce 14, účastník 5, Úvod 4) hlídá rozpočet v `tests/pocet-dotazu.test.ts` včetně kontroly, že neroste s počtem akcí. Logy: `logError` pustí jen kód z bezpečných znaků (část kódů pochází z odpovědi Googlu). Testy: `tests/limity-a-logy.test.ts`, `e2e/stranky.spec.ts` (hlavičky).
+
+## Po auditu 16. 11.
+* Pozvací odkaz se spotřebuje až po přihlášení pozvaným účtem · draft #42, větev `claude/pozvanka-po-prihlaseni`.
+* Kalendář účastníků bez pozvánek · návrh `docs/kalendar-ucastniku.md`, implementace čeká.
+* Jednotný design a kontrola úniku dat do klienta · neuděláno.
 
 ## Mimo rozsah teď
 A07 (přepis, rozhodne firma), vlastní doména, logo a ověření aplikace u Googlu (firma Wiki zatím nemá).
