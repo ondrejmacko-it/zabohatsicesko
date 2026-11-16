@@ -150,6 +150,8 @@ export async function personalSyncNeeded(db: Executor): Promise<boolean> {
               isNotNull(personalCalendars.errorCode),
               isNull(personalCalendars.syncedAt),
               gt(personalCalendars.syncRequestedAt, personalCalendars.syncedAt),
+              // Nasazení s novou podobou akcí: samo nic nezmění, proto se přepis spustí odsud.
+              lt(personalCalendars.eventFormat, EVENT_FORMAT),
             ),
           ),
           isNull(users.id),
@@ -161,8 +163,12 @@ export async function personalSyncNeeded(db: Executor): Promise<boolean> {
   return Boolean(row);
 }
 
-/** Verze podoby zapsané akce. Zvýšení přepíše všechny akce v kalendářích (2 = připomínky přímo v akci). */
-const EVENT_FORMAT = 2;
+/**
+ * Verze podoby zapsané akce. Zvýšení přepíše všechny akce v kalendářích a znovu zkusí nastavení kalendáře
+ * (2 = připomínky přímo v akci). Kalendář si pamatuje verzi v `event_format`, `personalSyncNeeded` podle ní
+ * pozná, že po nasazení je co přepisovat.
+ */
+export const EVENT_FORMAT = 2;
 const hashOf = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex").slice(0, 32);
 export const personalEventId = (eventId: string) => eventIdForKey(`personal:${config.orgId}:${eventId}`);
 
@@ -207,6 +213,17 @@ async function acquireLease(db: Executor, userId: string) {
   return row ?? null;
 }
 
+/**
+ * Nastaví kalendář v seznamu kalendářů uživatele a uloží výsledek jako strojový kód: runtime logy nejsou
+ * vždy dostupné, důvod odmítnutí od Googlu tak zůstane k přečtení v databázi.
+ */
+async function configure(db: Executor, api: PersonalCalendarApi, userId: string, calendarId: string) {
+  const { setup, failures } = await api.configureCalendar(calendarId);
+  const setupCode = [setup, ...failures].join("|").slice(0, 200);
+  await setState(db, userId, { setupCode });
+  if (setup !== "full") await audit(db, userId, `calendar.personal.setup_${setup}`, "user", userId);
+}
+
 async function setState(db: Executor, userId: string, values: Partial<typeof personalCalendars.$inferInsert>) {
   await db.update(personalCalendars).set({ ...values, updatedAt: new Date() }).where(whereUser(userId));
 }
@@ -242,12 +259,16 @@ export async function syncPersonalCalendar(db: Db, userId: string, deps: Persona
     if (calendarId && !row.syncedAt) {
       // Čerstvý souhlas stejného účtu: kalendář, který Wiki založila dřív, se použije znovu. Smazal-li ho
       // uživatel, založí se nový. Uživatel o propojení právě požádal, stav „smazán“ by tu nedával smysl.
-      if (await api.calendarExists(calendarId)) await api.configureCalendar(calendarId);
+      if (await api.calendarExists(calendarId)) await configure(db, api, userId, calendarId);
       else {
         await db.delete(personalCalendarEntries).where(eq(personalCalendarEntries.userId, userId));
         await setState(db, userId, { calendarId: null });
         calendarId = null;
       }
+    }
+    else if (calendarId && row.eventFormat < EVENT_FORMAT) {
+      // Nová podoba akcí po nasazení: jednou za verzi se zkusí i nastavení kalendáře.
+      await configure(db, api, userId, calendarId);
     }
     for (let round = 0; round < MAX_ROUNDS; round += 1) {
       const started = clock();
@@ -267,8 +288,7 @@ export async function syncPersonalCalendar(db: Db, userId: string, deps: Persona
           calendarId = await api.insertCalendar();
           await setState(db, userId, { calendarId });
           await audit(db, userId, "calendar.personal.created", "user", userId);
-          const setup = await api.configureCalendar(calendarId);
-          if (setup !== "full") await audit(db, userId, `calendar.personal.setup_${setup}`, "user", userId);
+          await configure(db, api, userId, calendarId);
         }
         for (const [eventId, w] of changed) {
           const externalEventId = personalEventId(eventId);
@@ -288,7 +308,7 @@ export async function syncPersonalCalendar(db: Db, userId: string, deps: Persona
           await db.delete(personalCalendarEntries).where(and(eq(personalCalendarEntries.userId, userId), eq(personalCalendarEntries.eventId, entry.eventId)));
         }
       }
-      await setState(db, userId, { syncedAt: started, errorCode: null });
+      await setState(db, userId, { syncedAt: started, errorCode: null, eventFormat: EVENT_FORMAT });
       const [after] = await db.select({ requested: personalCalendars.syncRequestedAt }).from(personalCalendars).where(whereUser(userId)).limit(1);
       if (!after?.requested || after.requested <= started) return "synced";
     }

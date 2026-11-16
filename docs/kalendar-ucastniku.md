@@ -102,6 +102,24 @@ vzniklé před opravou musí uživatel smazat ručně.
   zapsat“, další běh nezaloží druhý kalendář), opakované propojení (existující kalendář znovu použit, smazaný
   nahrazen jedním novým).
 
+## Po #46 (16. 11. večer): akce se nepřepsaly, oprava spouštěče
+
+* #46 je na Production od 19:41 UTC, poslední přepis akcí v Neonu proběhl 19:39 UTC. Připomínky z #46 se
+  tedy do kalendářů nedostaly. Příčina: změna `EVENT_FORMAT` sama nic nespustí. `personalSyncNeeded` ji
+  nevidí a přihlášení už propojeného účtu synchronizaci nespouští (souhlas se nemění).
+* Oprava (větev `claude/vynuceny-prepis-akci`, migrace `0010`): `personal_calendars.event_format` si pamatuje
+  verzi podoby akcí. Nižší verze = Úvod spustí přepis všech akcí a jednou za verzi znovu zkusí nastavení
+  kalendáře. Dnešní řádky mají po migraci `0`, přepíšou se tedy při prvním otevření Úvodu po nasazení.
+* Diagnostika bez logů Vercelu: `personal_calendars.setup_code` ukládá výsledek nastavení kalendáře jako
+  strojový kód, např. `none|full:403_forbidden|nocolor:403_forbidden|basic:404|reminders:403_forbidden`.
+  Pokusy jdou od úplného (barva, připomínky, upozornění) po nejmenší (jen připomínky). Dřív 404 prošla tiše bez logu.
+* Dokumentace Googlu (ověřeno 16. 11.): `calendarList.patch` a `calendarList.get` rozsah `calendar.app.created`
+  povoluje, `calendarList.insert` ne. Připomínky v akci jsou „private information, specific to an
+  authenticated user“, e-mailové připomínky nejsou zastaralé, omezení pro sekundární kalendáře dokumentace neuvádí.
+  `eventCreation` = „A new event is added to one of the user's calendars“ (ne jen pozvánky), `eventChange`
+  a `eventCancellation` platí jen pro akce, kam byl uživatel pozván. Bez funkčního `calendarList.patch`
+  nechodí žádné z nich.
+
 ## Živě 16. 11. 19:30 po #45: propojení funguje, upozornění ne
 
 * Oba účty `active`, kalendář uložený, akce zapsané. Audit `calendar.personal.setup_none` u obou: Google odmítl

@@ -329,4 +329,14 @@ CREATE TABLE personal_calendar_entries (
 );
 `,
   },
+  {
+    id: "0010_personal_calendar_format",
+    sql: `
+-- Verze podoby akcí, se kterou byl kalendář naposledy srovnán. Nižší než aktuální = přepsat akce a znovu
+-- zkusit nastavení kalendáře. Výchozí 0 přepíše všechny dnešní kalendáře při nejbližším otevření Úvodu.
+ALTER TABLE personal_calendars ADD COLUMN event_format integer NOT NULL DEFAULT 0;
+-- Výsledek posledního nastavení seznamu kalendářů: strojový kód bez obsahu dat (např. none|full:403_forbidden).
+ALTER TABLE personal_calendars ADD COLUMN setup_code text;
+`,
+  },
 ];
