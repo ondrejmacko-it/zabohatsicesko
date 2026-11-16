@@ -140,13 +140,12 @@ async function LiveGate({ googleResult, bootstrap }: { googleResult: string; boo
             <GoogleMark />
             <span>Přihlásit se účtem Google</span>
           </a>
-          <div className="gate-alt">
-            {googleResult === "zruseno-kalendar" ? (
+          {/* Jiný účet se vybírá přímo v okně Googlu, druhý odkaz by dělal totéž co hlavní tlačítko. */}
+          {googleResult === "zruseno-kalendar" && (
+            <div className="gate-alt">
               <a href={`/api/google/prihlaseni?kalendar=ne${spravce}`}>Přihlásit se bez Kalendáře</a>
-            ) : (
-              <a href={`/api/google/prihlaseni?jiny=1${spravce}`}>Použít jiný účet</a>
-            )}
-          </div>
+            </div>
+          )}
         </section>
       ) : (
         <p className="form-error" role="alert">

@@ -32,7 +32,7 @@ async function calendarRequestFor(db: Executor, hintedUserId: string | null, sco
 }
 
 // Začátek přihlášení Google identitou. Jen v nakonfigurovaném testovacím režimu.
-// `?jiny=1` nabídne výběr účtu bez ohledu na minulé přihlášení, `?kalendar=ne` přihlásí bez žádosti o Kalendář.
+// `?kalendar=ne` přihlásí bez žádosti o Kalendář.
 // Ostrá Wiki pustí na Google jen prohlížeč s důvěryhodným zařízením, s platnou pozvánkou v cookie, nebo `?spravce=1`
 // pro adresy ze zaváděcího seznamu správců. Přímé volání bez zařízení skončí na neutrální stránce vstupu.
 export async function GET(request: NextRequest) {
@@ -72,9 +72,7 @@ export async function GET(request: NextRequest) {
       ? { calendar: "skip" }
       : params.get("kalendar") === "osobni" && personalDelivery()
         ? { calendar: "personal" }
-        : params.get("jiny") === "1"
-          ? {}
-          : await calendarRequestFor(db, hintedUserId, scope);
+        : await calendarRequestFor(db, hintedUserId, scope);
   const { url, cookieValue } = beginLogin(cfg, undefined, { ...calendar, ...(loginHint ? { loginHint } : {}), ...(scope ? { scope } : {}) });
   const response = NextResponse.redirect(url);
   response.cookies.set(LOGIN_COOKIE, cookieValue, loginCookieOptions);
