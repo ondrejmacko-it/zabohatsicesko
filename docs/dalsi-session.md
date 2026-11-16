@@ -37,7 +37,7 @@ Nouzové zrušení zařízení hlavního správce (UI ho záměrně nenabízí) 
 `UPDATE trusted_devices SET revoked_at = now() WHERE id = '<id>'` (ID z dotazu na `trusted_devices` podle e-mailu).
 Platí od dalšího požadavku. Můžeš ho provést i ty přes Neon MCP, ale jen na výslovný pokyn uživatele.
 
-**Stav 16. 11. pozdě v noci (poslední):** #43 je v `main`. Draft PR z větve `claude/kalendar-ucastniku-ui`
+**Stav 16. 11. pozdě v noci (poslední):** #43 je v `main`. Draft [#44](https://github.com/ondrejmacko-it/zabohatsicesko/pull/44) z větve `claude/kalendar-ucastniku-ui`
 (base `main`): UI stavu osobního kalendáře (Úvod, Plán, Správa), spouštěč na Úvodu, úklid starých pozvánek
 ve Správě, štítek u návrhů, testy. Podrobnosti `docs/kalendar-ucastniku.md`, část „Doplněno 16. 11.“.
 * `CALENDAR_DELIVERY=personal` na Vercelu **nenastaveno**: zápis přes API zamítla kontrola oprávnění relace.
