@@ -2017,6 +2017,7 @@ a.brief-link:hover {
 
 .topic-card {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   align-items: flex-start;
   justify-content: space-between;
@@ -2033,6 +2034,8 @@ a.brief-link:hover {
 
 .topic-main {
   display: flex;
+  /* Na úzké kartě (telefon) nemá název ustupovat tlačítkům: pod 12rem jdou tlačítka na další řádek. */
+  flex: 1 1 12rem;
   flex-direction: column;
   gap: 4px;
   min-width: 0;
@@ -2406,12 +2409,45 @@ p.cal-status {
   display: block;
 }
 
-/* Úzký telefon (320 px): tabulky (Integrace) se vejdou bez vodorovného posunu. */
+/* Úzký telefon (320 px): tabulky se vejdou bez vodorovného posunu. */
 @media (max-width: 400px) {
   .table th,
   .table td {
     padding-inline: 6px;
     overflow-wrap: anywhere;
+  }
+}
+
+/* Tabulka Integrací na telefonu: tři sloupce by se lámaly po písmenech, proto řádek pod sebou. */
+@media (max-width: 480px) {
+  .table-stack thead {
+    display: none;
+  }
+
+  .table-stack tr,
+  .table-stack td {
+    display: block;
+  }
+
+  .table-stack tr {
+    padding: 10px 6px;
+    border-bottom: 1px dashed var(--line);
+  }
+
+  .table-stack td {
+    padding: 0;
+    border: 0;
+    overflow-wrap: break-word;
+  }
+
+  .table-stack td:first-child {
+    font-weight: 600;
+  }
+
+  .table-stack td:nth-child(2) {
+    margin-bottom: 4px;
+    color: var(--muted);
+    font-size: 13px;
   }
 }
 
