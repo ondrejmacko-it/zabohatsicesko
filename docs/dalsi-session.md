@@ -38,9 +38,9 @@ Nouzové zrušení zařízení hlavního správce (UI ho záměrně nenabízí) 
 Platí od dalšího požadavku. Můžeš ho provést i ty přes Neon MCP, ale jen na výslovný pokyn uživatele.
 
 **Stav 16. 11. noc (poslední):** relace skončila na limitu kontextu. #41 a #42 jsou v `main`.
-* Draft PR z větve `claude/kalendar-ucastniku` (base `main`): serverové jádro Kalendáře účastníků, **vypnuté**
+* Draft [#43](https://github.com/ondrejmacko-it/zabohatsicesko/pull/43) z větve `claude/kalendar-ucastniku` (base `main`): serverové jádro Kalendáře účastníků, **vypnuté**
   (`CALENDAR_DELIVERY` výchozí `invites`). Podrobnosti a co chybí: `docs/kalendar-ucastniku.md`, sekce „Stav
-  implementace“ a „Upozornění e-mailem od Googlu“. Lint, typy, 189/189 vitest; e2e viz PR.
+  implementace“ a „Upozornění e-mailem od Googlu“. Lint, typy, 189/189 vitest, e2e 786 prošlo + 18 přeskočeno.
 * Uživatel 16. 11. povolil v prostředí hosty `developers.google.com` a `support.google.com` (dokumentace Googlu).
 * **Další krok 1:** UI stavu osobního kalendáře (Úvod + Plán: stav a jedno tlačítko → `/api/google/prihlaseni?kalendar=osobni`;
   Správa: sloupec „Kalendář“ z `personalCalendarStates`), spouštěč `after(syncPersonalCalendars)` při otevření Úvodu,
