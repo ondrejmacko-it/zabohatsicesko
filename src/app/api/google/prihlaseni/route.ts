@@ -5,7 +5,8 @@ import { hashKey, withinRateLimit } from "@/server/audit";
 import { DEVICE_COOKIE, INVITE_COOKIE, checkInvite, findDevice, inviteOnlyLogin } from "@/server/auth/devices";
 import { beginLogin, type LoginOptions, type LoginScope } from "@/server/auth/google-login";
 import { needsCalendarConnection } from "@/server/calendar/google-auth";
-import { config, googleLoginConfig } from "@/server/config";
+import { needsPersonalCalendar } from "@/server/calendar/personal";
+import { config, googleLoginConfig, personalDelivery } from "@/server/config";
 import { getDb, type Executor } from "@/server/db/client";
 import { userIdentities, users } from "@/server/db/schema";
 import { canPlan } from "@/server/policy";
@@ -15,7 +16,9 @@ import { HINT_COOKIE, LOGIN_COOKIE, decodeHint, loginCookieOptions } from "./coo
  * Účet, který se z tohoto prohlížeče naposledy přihlásil, je aktivní správce a Wiki nemá propojený
  * Kalendář: Google dostane žádost o přihlášení i o Kalendář najednou. Jinak běžné přihlášení.
  */
-async function calendarRequestFor(db: Executor, hintedUserId: string | null): Promise<LoginOptions> {
+async function calendarRequestFor(db: Executor, hintedUserId: string | null, scope?: LoginScope): Promise<LoginOptions> {
+  // Osobní kalendáře: první přihlášení (pozvánka, zaváděcí správce) rovnou požádá o Kalendář.
+  if (scope && scope.kind !== "device" && (await needsPersonalCalendar(db, scope.kind === "invite" ? scope.userId : null))) return { calendar: "personal" };
   if (!hintedUserId) return {};
   const [known] = await db
     .select({ id: users.id, role: users.role, groups: users.groups, status: users.status, email: userIdentities.email })
@@ -24,6 +27,7 @@ async function calendarRequestFor(db: Executor, hintedUserId: string | null): Pr
     .where(and(eq(users.orgId, config.orgId), eq(users.id, hintedUserId)))
     .limit(1);
   if (!known || known.status !== "active") return {};
+  if (await needsPersonalCalendar(db, known.id)) return { calendar: "personal", loginHint: known.email };
   return (await needsCalendarConnection(db, canPlan(known))) ? { calendar: "ask", loginHint: known.email } : {};
 }
 
@@ -62,8 +66,15 @@ export async function GET(request: NextRequest) {
       return back;
     }
   }
+  // `?kalendar=osobni`: tlačítko „Propojit Kalendář“ u uživatele (i po odmítnutí nebo odvolání).
   const calendar: LoginOptions =
-    params.get("kalendar") === "ne" ? { calendar: "skip" } : params.get("jiny") === "1" ? {} : await calendarRequestFor(db, hintedUserId);
+    params.get("kalendar") === "ne"
+      ? { calendar: "skip" }
+      : params.get("kalendar") === "osobni" && personalDelivery()
+        ? { calendar: "personal" }
+        : params.get("jiny") === "1"
+          ? {}
+          : await calendarRequestFor(db, hintedUserId, scope);
   const { url, cookieValue } = beginLogin(cfg, undefined, { ...calendar, ...(loginHint ? { loginHint } : {}), ...(scope ? { scope } : {}) });
   const response = NextResponse.redirect(url);
   response.cookies.set(LOGIN_COOKIE, cookieValue, loginCookieOptions);

@@ -37,7 +37,7 @@ Hotovo: `npm audit` 0 zranitelností (15. 11.). CSP s nonce a Referrer-Policy `s
 
 ## Po auditu 16. 11.
 * Pozvací odkaz se spotřebuje až po přihlášení pozvaným účtem · draft #42, větev `claude/pozvanka-po-prihlaseni`.
-* Kalendář účastníků bez pozvánek · návrh `docs/kalendar-ucastniku.md`, implementace čeká.
+* Kalendář účastníků bez pozvánek · serverové jádro v draftu z větve `claude/kalendar-ucastniku` (vypnuté), UI a úklid starých pozvánek čekají (`docs/kalendar-ucastniku.md`).
 * Jednotný design a kontrola úniku dat do klienta · neuděláno.
 
 ## Mimo rozsah teď

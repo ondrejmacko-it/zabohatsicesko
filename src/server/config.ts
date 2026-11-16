@@ -96,6 +96,24 @@ export function attendeeSource(): AttendeeSource {
  */
 export const oauthConsentExpiryDays = (): number | null => (process.env.GOOGLE_OAUTH_PUBLISHED?.trim() === "1" ? null : 7);
 
+export type CalendarDelivery = "personal" | "invites";
+
+/**
+ * Jak se akce dostanou účastníkům, když běží Google Kalendář:
+ * – `personal`: Wiki zapisuje do vlastního kalendáře „Vzdělávání ZBC“ v účtu každého uživatele, bez hostů
+ *   a bez pozvánkových e-mailů (rozsah `calendar.app.created`),
+ * – `invites`: pozvánky z kalendáře správce (původní chování).
+ * Výchozí je `invites`, dokud není hotové UI stavu a úklid starých pozvánek. V simulaci vždy `invites`.
+ */
+export function calendarDelivery(): CalendarDelivery {
+  if (calendarMode() !== "google-test") return "invites";
+  const value = process.env.CALENDAR_DELIVERY?.trim();
+  if (value === "personal" || value === "invites") return value;
+  return "invites";
+}
+
+export const personalDelivery = () => calendarDelivery() === "personal";
+
 export type GoogleCalendarConfig = {
   clientId: string;
   clientSecret: string;

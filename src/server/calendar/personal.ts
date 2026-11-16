@@ -1,0 +1,301 @@
+import { createHash } from "node:crypto";
+import { and, eq, gt, inArray, isNotNull, isNull, lt, ne, or, sql } from "drizzle-orm";
+import type { EventSnapshot } from "@/lib/types";
+import { audit, logError } from "@/server/audit";
+import { config, googleCalendarConfig, personalDelivery, tokenEncryptionKey } from "@/server/config";
+import type { Db, Executor } from "@/server/db/client";
+import { calendarLinks, events, minutes, personalCalendarEntries, personalCalendars, recordings, users, type PersonalCalendarStatus } from "@/server/db/schema";
+import { openSecret, sealSecret } from "@/server/integrations/secret-box";
+import { eventIdForKey } from "./google";
+import { revokeToken, type FetchLike } from "./google-auth";
+import { PersonalCalendarApi } from "./personal-api";
+import { CalendarError } from "./provider";
+import { desiredData } from "./sync";
+
+// Osobní kalendáře účastníků (`CALENDAR_DELIVERY=personal`). Každý uživatel má v účtu Google vlastní
+// kalendář „Vzdělávání ZBC“ a Wiki do něj zapisuje akce jeho skupin. Hosté ani pozvánky nejsou.
+// Zdroj pravdy je Wiki: synchronizace porovná požadovanou sadu akcí s tím, co už do kalendáře zapsala.
+
+export const PERSONAL_SCOPE = "https://www.googleapis.com/auth/calendar.app.created";
+/** Jak daleko do minulosti Wiki akce v kalendáři drží. Starší zůstanou, jak byly. */
+const HISTORY_DAYS = 60;
+const LEASE_SEC = 120;
+/** Kolikrát se běh zopakuje, když během něj přišla další změna. */
+const MAX_ROUNDS = 3;
+
+export const grantsPersonalCalendar = (scopes: string) => scopes.split(" ").includes(PERSONAL_SCOPE);
+
+const secretContext = (userId: string) => `${config.orgId}:google-personal:${userId}`;
+
+export type PersonalDeps = { fetchImpl?: FetchLike; clock?: () => Date };
+
+function apiFor(refreshToken: string, deps: PersonalDeps): PersonalCalendarApi | null {
+  const cfg = googleCalendarConfig();
+  if (!cfg) return null;
+  return new PersonalCalendarApi({ clientId: cfg.clientId, clientSecret: cfg.clientSecret, fetchImpl: deps.fetchImpl }, refreshToken);
+}
+
+const whereUser = (userId: string) => and(eq(personalCalendars.orgId, config.orgId), eq(personalCalendars.userId, userId));
+
+/**
+ * Uloží souhlas s osobním kalendářem. Jiný účet Google než minule = nový kalendář: starý patří cizímu
+ * účtu, jeho token se zneplatní a záznamy o zapsaných akcích se zahodí.
+ */
+export async function savePersonalGrant(
+  db: Db,
+  userId: string,
+  grant: { refreshToken: string; scopes: string; accountEmail: string },
+  deps: PersonalDeps = {},
+): Promise<void> {
+  const [previous] = await db.select().from(personalCalendars).where(whereUser(userId)).limit(1);
+  const sameAccount = previous?.accountEmail === grant.accountEmail && previous.status !== "calendar_deleted";
+  if (previous && !sameAccount) {
+    const old = previous.encryptedRefreshToken ? openSecret(previous.encryptedRefreshToken, tokenEncryptionKey(), secretContext(userId)) : null;
+    if (old && previous.accountEmail !== grant.accountEmail) await revokeToken(old, deps.fetchImpl);
+    await db.delete(personalCalendarEntries).where(eq(personalCalendarEntries.userId, userId));
+  }
+  const values = {
+    accountEmail: grant.accountEmail,
+    encryptedRefreshToken: sealSecret(grant.refreshToken, tokenEncryptionKey(), secretContext(userId)),
+    scopes: grant.scopes,
+    calendarId: sameAccount ? previous.calendarId : null,
+    status: "active" as const,
+    errorCode: null,
+    syncRequestedAt: new Date(),
+    updatedAt: new Date(),
+  };
+  await db
+    .insert(personalCalendars)
+    .values({ userId, orgId: config.orgId, ...values })
+    .onConflictDoUpdate({ target: personalCalendars.userId, set: values });
+  await audit(db, userId, "calendar.personal.connected", "user", userId);
+}
+
+/** Uživatel na obrazovce Googlu Kalendář odškrtl. Wiki se při dalším přihlášení znovu neptá. */
+export async function markPersonalDeclined(db: Executor, userId: string, accountEmail: string): Promise<void> {
+  const [previous] = await db.select({ status: personalCalendars.status }).from(personalCalendars).where(whereUser(userId)).limit(1);
+  // Platné propojení z dřívějška se odškrtnutím při jiném přihlášení neruší.
+  if (previous?.status === "active") return;
+  const values = { accountEmail, encryptedRefreshToken: "", scopes: "", status: "declined" as const, errorCode: null, updatedAt: new Date() };
+  await db.insert(personalCalendars).values({ userId, orgId: config.orgId, ...values }).onConflictDoUpdate({ target: personalCalendars.userId, set: values });
+}
+
+export type PersonalCalendarState = {
+  status: PersonalCalendarStatus | "none";
+  accountEmail: string | null;
+  syncedAt: string | null;
+  /** Poslední zápis selhal přechodně, Wiki to zkusí znovu. */
+  retrying: boolean;
+};
+
+export async function personalCalendarState(db: Executor, userId: string): Promise<PersonalCalendarState> {
+  const [row] = await db.select().from(personalCalendars).where(whereUser(userId)).limit(1);
+  if (!row) return { status: "none", accountEmail: null, syncedAt: null, retrying: false };
+  return { status: row.status, accountEmail: row.accountEmail, syncedAt: row.syncedAt?.toISOString() ?? null, retrying: row.status === "active" && row.errorCode !== null };
+}
+
+/** Stav osobních kalendářů všech účtů pro Správu. Bez tokenů. */
+export async function personalCalendarStates(db: Executor): Promise<Map<string, PersonalCalendarState>> {
+  const rows = await db.select().from(personalCalendars).where(eq(personalCalendars.orgId, config.orgId));
+  return new Map(
+    rows.map((row) => [
+      row.userId,
+      { status: row.status, accountEmail: row.accountEmail, syncedAt: row.syncedAt?.toISOString() ?? null, retrying: row.status === "active" && row.errorCode !== null },
+    ]),
+  );
+}
+
+/** Má přihlášení požádat o osobní kalendář? Ne, když už platí, nebo ho uživatel odmítl (pak jen tlačítko). */
+export async function needsPersonalCalendar(db: Executor, userId: string | null): Promise<boolean> {
+  if (!personalDelivery()) return false;
+  if (!userId) return true;
+  const [row] = await db.select({ status: personalCalendars.status }).from(personalCalendars).where(whereUser(userId)).limit(1);
+  return !row || row.status === "revoked" || row.status === "calendar_deleted";
+}
+
+/** Zařadí uživatele k synchronizaci. Bez argumentu všechny aktivní. */
+export async function requestPersonalSync(db: Executor, userIds?: readonly string[]): Promise<void> {
+  const where = and(eq(personalCalendars.orgId, config.orgId), eq(personalCalendars.status, "active"));
+  await db
+    .update(personalCalendars)
+    .set({ syncRequestedAt: new Date() })
+    .where(userIds ? and(where, inArray(personalCalendars.userId, [...userIds])) : where);
+}
+
+const hashOf = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex").slice(0, 32);
+export const personalEventId = (eventId: string) => eventIdForKey(`personal:${config.orgId}:${eventId}`);
+
+/** Akce, které mají být v kalendáři uživatele: zveřejněné, nezrušené, ne svátky, z jeho skupin, nedávné a budoucí. */
+async function desiredEvents(db: Executor, groups: readonly string[], since: Date) {
+  const rows = await db
+    .select({ id: events.id, published: events.published })
+    .from(events)
+    .where(
+      and(
+        eq(events.orgId, config.orgId),
+        isNotNull(events.published),
+        ne(events.type, "holiday"),
+        gt(sql`(${events.published}->>'endsAt')::timestamptz`, sql`${since.toISOString()}::timestamptz`),
+      ),
+    );
+  const withMinutes = new Set(
+    (
+      await db
+        .select({ eventId: minutes.eventId })
+        .from(minutes)
+        .innerJoin(recordings, and(eq(recordings.id, minutes.recordingId), isNull(recordings.supersededAt)))
+        .where(eq(minutes.status, "published"))
+    ).map((m) => m.eventId),
+  );
+  const wanted = new Map<string, { data: ReturnType<typeof desiredData>; hash: string }>();
+  for (const row of rows) {
+    const snapshot = row.published as EventSnapshot;
+    if (snapshot.status === "cancelled" || snapshot.type === "holiday" || !groups.includes(snapshot.audience)) continue;
+    const data = desiredData(row.id, snapshot, withMinutes.has(row.id));
+    wanted.set(row.id, { data, hash: hashOf({ s: data.summary, d: data.description, a: data.startsAt, b: data.endsAt }) });
+  }
+  return wanted;
+}
+
+async function acquireLease(db: Executor, userId: string) {
+  const [row] = await db
+    .update(personalCalendars)
+    .set({ leaseUntil: sql`now() + make_interval(secs => ${LEASE_SEC})` })
+    .where(and(whereUser(userId), or(isNull(personalCalendars.leaseUntil), lt(personalCalendars.leaseUntil, sql`now()`))))
+    .returning();
+  return row ?? null;
+}
+
+async function setState(db: Executor, userId: string, values: Partial<typeof personalCalendars.$inferInsert>) {
+  await db.update(personalCalendars).set({ ...values, updatedAt: new Date() }).where(whereUser(userId));
+}
+
+export type PersonalSyncResult = "synced" | "skipped" | "revoked" | "calendar_deleted" | "retry" | "removed";
+
+/**
+ * Srovná kalendář jednoho uživatele s Wiki pod zámkem. Zapisuje jen rozdíly, bez změn Google nevolá.
+ * Změna, která přijde během běhu (`sync_requested_at` > začátek), spustí další kolo.
+ */
+export async function syncPersonalCalendar(db: Db, userId: string, deps: PersonalDeps = {}): Promise<PersonalSyncResult> {
+  const clock = deps.clock ?? (() => new Date());
+  const row = await acquireLease(db, userId);
+  if (!row) return "skipped";
+  try {
+    const [account] = await db.select({ status: users.status, groups: users.groups }).from(users).where(and(eq(users.orgId, config.orgId), eq(users.id, userId))).limit(1);
+    if (!account || account.status !== "active") {
+      await removePersonalCalendar(db, userId, deps);
+      return "removed";
+    }
+    if (row.status !== "active") return "skipped";
+    const refreshToken = openSecret(row.encryptedRefreshToken, tokenEncryptionKey(), secretContext(userId));
+    const api = refreshToken ? apiFor(refreshToken, deps) : null;
+    if (!api) {
+      if (!refreshToken) {
+        logError("google.personal", "token_undecryptable");
+        await setState(db, userId, { status: "revoked", errorCode: "calendar_revoked", encryptedRefreshToken: "" });
+        return "revoked";
+      }
+      return "skipped";
+    }
+    let calendarId = row.calendarId;
+    for (let round = 0; round < MAX_ROUNDS; round += 1) {
+      const started = clock();
+      const since = new Date(started.getTime() - HISTORY_DAYS * 24 * 3600 * 1000);
+      const wanted = await desiredEvents(db, account.groups, since);
+      const written = new Map(
+        (await db.select().from(personalCalendarEntries).where(eq(personalCalendarEntries.userId, userId))).map((e) => [e.eventId, e]),
+      );
+      // Akce mimo okno historie se nemažou: stará akce v kalendáři nikomu nevadí a výmaz by byl šum.
+      const stale = [...written.values()].filter((e) => !wanted.has(e.eventId));
+      const changed = [...wanted.entries()].filter(([id, w]) => written.get(id)?.dataHash !== w.hash);
+
+      if (changed.length || stale.length || !calendarId) {
+        if (!calendarId) {
+          calendarId = await api.createCalendar();
+          await setState(db, userId, { calendarId });
+          await audit(db, userId, "calendar.personal.created", "user", userId);
+        }
+        for (const [eventId, w] of changed) {
+          const externalEventId = personalEventId(eventId);
+          const result = await api.putEvent(calendarId, externalEventId, w.data, written.has(eventId));
+          if (result === "calendar_missing") {
+            await db.delete(personalCalendarEntries).where(eq(personalCalendarEntries.userId, userId));
+            await setState(db, userId, { status: "calendar_deleted", calendarId: null, errorCode: null });
+            return "calendar_deleted";
+          }
+          await db
+            .insert(personalCalendarEntries)
+            .values({ userId, eventId, externalEventId, dataHash: w.hash })
+            .onConflictDoUpdate({ target: [personalCalendarEntries.userId, personalCalendarEntries.eventId], set: { dataHash: w.hash, updatedAt: new Date() } });
+        }
+        for (const entry of stale) {
+          await api.deleteEvent(calendarId, entry.externalEventId);
+          await db.delete(personalCalendarEntries).where(and(eq(personalCalendarEntries.userId, userId), eq(personalCalendarEntries.eventId, entry.eventId)));
+        }
+      }
+      await setState(db, userId, { syncedAt: started, errorCode: null });
+      const [after] = await db.select({ requested: personalCalendars.syncRequestedAt }).from(personalCalendars).where(whereUser(userId)).limit(1);
+      if (!after?.requested || after.requested <= started) return "synced";
+    }
+    return "synced";
+  } catch (error) {
+    if (!(error instanceof CalendarError)) throw error;
+    if (error.code === "calendar_revoked") {
+      // Odvoláno u Googlu: token je k ničemu, zůstane jen stav a jedna akce k nápravě u uživatele.
+      await setState(db, userId, { status: "revoked", errorCode: "calendar_revoked", encryptedRefreshToken: "" });
+      await audit(db, userId, "calendar.personal.revoked", "user", userId);
+      return "revoked";
+    }
+    // Přechodná chyba: zkusí se při dalším spouštěči (zveřejnění, přihlášení, otevření Úvodu).
+    await setState(db, userId, { errorCode: error.code });
+    logError("calendar.personal", error.code);
+    return "retry";
+  } finally {
+    await db.update(personalCalendars).set({ leaseUntil: null }).where(whereUser(userId));
+  }
+}
+
+/** Synchronizuje všechny, kdo to potřebují, a uklidí kalendáře odebraných účtů. Opakované volání je bezpečné. */
+export async function syncPersonalCalendars(db: Db, deps: PersonalDeps = {}): Promise<void> {
+  if (!personalDelivery()) return;
+  await requestPersonalSync(db);
+  const rows = await db
+    .select({ userId: personalCalendars.userId, status: personalCalendars.status, userStatus: users.status })
+    .from(personalCalendars)
+    .leftJoin(users, eq(users.id, personalCalendars.userId))
+    .where(eq(personalCalendars.orgId, config.orgId));
+  for (const row of rows) {
+    if (row.status === "active" || row.userStatus !== "active") await syncPersonalCalendar(db, row.userId, deps);
+  }
+}
+
+/**
+ * Odebraný nebo vypnutý účet: smaže jeho kalendář „Vzdělávání ZBC“ (akce z Wiki mu nezůstanou),
+ * zneplatní token u Googlu a smaže záznamy. Volá se pod zámkem ze synchronizace.
+ */
+async function removePersonalCalendar(db: Db, userId: string, deps: PersonalDeps): Promise<void> {
+  const [row] = await db.select().from(personalCalendars).where(whereUser(userId)).limit(1);
+  if (!row) return;
+  const refreshToken = row.encryptedRefreshToken ? openSecret(row.encryptedRefreshToken, tokenEncryptionKey(), secretContext(userId)) : null;
+  if (refreshToken) {
+    const api = apiFor(refreshToken, deps);
+    try {
+      if (api && row.calendarId) await api.deleteCalendar(row.calendarId);
+    } catch (error) {
+      if (!(error instanceof CalendarError)) throw error;
+      // Kalendář zůstane v účtu, ale bez dalších změn. Token se zneplatní v každém případě.
+      logError("calendar.personal", `remove_${error.code}`);
+    }
+    await revokeToken(refreshToken, deps.fetchImpl);
+  }
+  await db.delete(personalCalendars).where(whereUser(userId));
+  await audit(db, null, "calendar.personal.removed", "user", userId);
+}
+
+/** Zveřejněná akce v režimu osobních kalendářů: vazba se jen označí za zpracovanou, zápis jde do kalendářů uživatelů. */
+export async function markLinksDelivered(db: Executor, eventId?: string): Promise<void> {
+  await db
+    .update(calendarLinks)
+    .set({ syncStatus: "synced", syncedRevision: sql`coalesce((select ${events.publishedRevision} from ${events} where ${events.id} = ${calendarLinks.eventId}), ${calendarLinks.syncedRevision})`, errorCode: null, attempts: 0, updatedAt: new Date() })
+    .where(eventId ? eq(calendarLinks.eventId, eventId) : ne(calendarLinks.syncStatus, "synced"));
+}

@@ -1,7 +1,7 @@
 import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { logError } from "@/server/audit";
-import { config, googleCalendarConfig, tokenEncryptionKey, type GoogleCalendarConfig } from "@/server/config";
+import { config, googleCalendarConfig, personalDelivery, tokenEncryptionKey, type GoogleCalendarConfig } from "@/server/config";
 import type { Executor } from "@/server/db/client";
 import { integrationCredentials } from "@/server/db/schema";
 import { openSecret, sealSecret } from "@/server/integrations/secret-box";
@@ -271,7 +271,8 @@ export async function checkConnection(db: Executor, cfg: GoogleCalendarConfig, f
  */
 export async function needsCalendarConnection(db: Executor, managesPlan: boolean, fetchImpl: FetchLike = fetch): Promise<boolean> {
   const cfg = googleCalendarConfig();
-  if (!managesPlan || !cfg) return false;
+  // Osobní kalendáře zapisují tokenem každého uživatele. Kalendář správce Wiki nepotřebuje.
+  if (!managesPlan || !cfg || personalDelivery()) return false;
   return (await checkConnection(db, cfg, fetchImpl)) === "missing";
 }
 

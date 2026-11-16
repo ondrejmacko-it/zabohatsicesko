@@ -16,6 +16,7 @@ const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const JWKS_URL = "https://www.googleapis.com/oauth2/v3/certs";
 const ISSUERS = ["https://accounts.google.com", "accounts.google.com"];
 const CALENDAR_SCOPE = "https://www.googleapis.com/auth/calendar.events";
+const PERSONAL_SCOPE = "https://www.googleapis.com/auth/calendar.app.created";
 const PROVIDER = "google" as const;
 const TIMEOUT_MS = 10_000;
 const STATE_TTL_SEC = 10 * 60;
@@ -40,9 +41,10 @@ export type LoginStart = { url: string; cookieValue: string };
  * Co má přihlášení udělat s Kalendářem:
  * – `ask`: požádat o oprávnění ke Kalendáři na stejné obrazovce (známý správce bez propojení),
  * – `later`: přihlásit a případné propojení nabídnout druhým automatickým přesměrováním,
- * – `skip`: jen přihlásit (uživatel souhlas ke Kalendáři odmítl a chce dovnitř bez něj).
+ * – `skip`: jen přihlásit (uživatel souhlas ke Kalendáři odmítl a chce dovnitř bez něj),
+ * – `personal`: požádat o vlastní kalendář „Vzdělávání ZBC“ (`calendar.app.created`, každý účet).
  */
-export type CalendarIntent = "ask" | "later" | "skip";
+export type CalendarIntent = "ask" | "later" | "skip" | "personal";
 /**
  * Komu smí přihlášení patřit (ostrá Wiki). `device`: jen účtu, kterému patří důvěryhodné zařízení
  * z cookie. `invite`: jen účtu z dosud nepoužité pozvánky (zařízení vznikne až po přihlášení).
@@ -61,13 +63,14 @@ export function beginLogin(cfg: GoogleLoginConfig, nowSec = Math.floor(Date.now(
   const nonce = randomBytes(24).toString("base64url");
   const verifier = randomBytes(48).toString("base64url");
   const data = Buffer.from(JSON.stringify({ state, nonce, verifier, calendar, scope: options.scope, exp: nowSec + STATE_TTL_SEC })).toString("base64url");
-  const withCalendar = calendar === "ask";
+  const withCalendar = calendar === "ask" || calendar === "personal";
+  const calendarScope = calendar === "personal" ? PERSONAL_SCOPE : CALENDAR_SCOPE;
   const url = new URL(AUTH_URL);
   url.search = new URLSearchParams({
     client_id: cfg.clientId,
     redirect_uri: cfg.redirectUri,
     response_type: "code",
-    scope: withCalendar ? `openid email profile ${CALENDAR_SCOPE}` : "openid email profile",
+    scope: withCalendar ? `openid email profile ${calendarScope}` : "openid email profile",
     // Běžně vždy nabídnout výběr účtu, aby se tester nepřihlásil omylem jiným účtem z prohlížeče.
     // Se žádostí o Kalendář je účet známý: stačí souhlas, který je nutný pro obnovovací token.
     prompt: withCalendar ? "consent" : "select_account",
@@ -95,7 +98,7 @@ export function verifyLoginState(
     const payload = JSON.parse(Buffer.from(data, "base64url").toString("utf8")) as Record<string, unknown>;
     if (typeof payload.state !== "string" || typeof payload.nonce !== "string" || typeof payload.verifier !== "string") return null;
     if (typeof payload.exp !== "number" || payload.exp <= nowSec) return null;
-    const calendar: CalendarIntent = payload.calendar === "ask" || payload.calendar === "skip" ? payload.calendar : "later";
+    const calendar: CalendarIntent = payload.calendar === "ask" || payload.calendar === "skip" || payload.calendar === "personal" ? payload.calendar : "later";
     const scope = parseScope(payload.scope);
     return safeEqual(payload.state, state) ? { nonce: payload.nonce, verifier: payload.verifier, calendar, ...(scope ? { scope } : {}) } : null;
   } catch {

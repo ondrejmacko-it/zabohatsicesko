@@ -23,6 +23,42 @@ a ruší“. Wiki vytvoří účastníkovi kalendář „Vzdělávání ZBC“ v
 Rozsah `calendar.app.created` dovolí jen kalendáře, které Wiki sama vytvořila. Do ostatních kalendářů
 uživatele Wiki nevidí.
 
+## Stav implementace 16. 11. noc (draft PR, větev `claude/kalendar-ucastniku`)
+
+Hotové serverové jádro, **vypnuté** (výchozí `CALENDAR_DELIVERY=invites`, merge nic nezmění):
+* `src/server/config.ts` `calendarDelivery()`, migrace `0009_personal_calendars`, tabulky `personal_calendars`
+  a `personal_calendar_entries` (bez FK na `users`, aby šel kalendář po smazání účtu uklidit).
+* `src/server/calendar/personal-api.ts`: token uživatele, `calendars.insert` „Vzdělávání ZBC“, `calendarList.patch`
+  (barva, připomínky e-mail 1 den + oznámení 30 min, upozornění eventCreation/Change/Cancellation/agenda e-mailem),
+  insert/update/delete událostí s `sendUpdates=none`, bez hostů.
+* `src/server/calendar/personal.ts`: šifrovaný token (`org:google-personal:<userId>`), zámek a opakování kola,
+  rozdíly podle otisku (bez změn Google nevolá), změna skupiny smaže cizí akce, zrušená akce zmizí, `invalid_grant`
+  = `revoked` + smazaný token, smazaný kalendář = `calendar_deleted`, vypnutý/smazaný účet = smazat kalendář,
+  zneplatnit token, smazat řádky. Logy jen kód.
+* Přihlášení: záměr `personal` (`calendar.app.created`, offline, consent), při pozvánce a zaváděcím správci rovnou,
+  u známého zařízení jen bez aktivního kalendáře, `?kalendar=osobni` = tlačítko „Propojit Kalendář“, odškrtnutí =
+  `declined` (Wiki se znovu neptá). V režimu `personal` se nežádá o kalendář správce a `syncEvent`/`syncPending`
+  nezapisují do `primary` (vazby se jen označí za zpracované).
+* Testy `tests/kalendar-osobni.test.ts` (napodobený HTTP).
+
+**Chybí před zapnutím:** UI stavu (Úvod, Plán, sloupec ve Správě, tlačítko), úklid 27 pozvánek z `primary` správce
+(jen události s `zbcKey`, `sendUpdates=none`, tlačítko ve Správě), spouštěč při otevření Úvodu, štítek
+„Návrh, do Kalendáře zatím nejde“, e2e. Pak nastavit `CALENDAR_DELIVERY=personal` přes API Vercelu.
+
+## Upozornění e-mailem od Googlu (ověřeno v dokumentaci 16. 11., živě ne)
+
+* Discovery dokument Calendar API (revize 20261111): `calendarList.patch` i `calendars.insert/delete` povoluje
+  `calendar.app.created`. Wiki tedy smí nastavit `notificationSettings` (eventCreation, eventChange,
+  eventCancellation, agenda; metoda jen `email`) a `defaultReminders` (email/popup).
+* Stránka „Reminders and notifications“ (aktualizace 2026-09-03): „Event change: The organizer modified an event
+  that the user was invited to“, „Event cancellation: An event that the user was invited to is canceled“. Změna
+  a zrušení se tedy týkají pozvánek. Když zapisuje aplikace tokenem uživatele, organizátorem je on sám, a e-mail
+  o změně proto **s velkou pravděpodobností nepřijde**. Totéž u „Event creation“ (událost vytvořil on).
+* Spolehlivě chodí: **připomínky e-mailem** (den předem, nastaveno výchozí) a **ranní přehled „agenda“**. Obojí
+  Google posílá podle času, ne podle toho, kdo změnu zapsal. Změnu času proto uživatel uvidí v připomínce i přehledu.
+* Živé ověření (po zapnutí): účastník propojí Kalendář, správce změní čas akce, účastník zkontroluje Gmail
+  (i Spam) a druhý den ráno přehled.
+
 ## Klasifikace rozsahu: ověřeno 16. 11. večer
 
 Uživatel přidal `calendar.app.created` v konzoli projektu `zbc-vzdelavani-test` a Google ho zařadil mezi
