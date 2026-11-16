@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { NextResponse, after, type NextRequest } from "next/server";
 import { audit, logError } from "@/server/audit";
-import { DEVICE_COOKIE, deviceCookieOptions, deviceLabel, findDevice, inviteOnlyLogin, registerBootstrapDevice, touchDevice } from "@/server/auth/devices";
+import { DEVICE_COOKIE, INVITE_COOKIE, checkInvite, claimInvite, deviceCookieOptions, deviceLabel, findDevice, inviteCookieOptions, inviteOnlyLogin, registerBootstrapDevice, touchDevice } from "@/server/auth/devices";
 import { completeLogin, verifyLoginState, type LoginFailure } from "@/server/auth/google-login";
 import { PRIMARY_ADMIN_SESSION_TTL_SEC, SESSION_COOKIE, encodeSession, sessionCookieOptions } from "@/server/auth/session";
 import { config, googleLoginConfig, isPrimaryAdmin } from "@/server/config";
@@ -52,6 +52,11 @@ export async function GET(request: NextRequest) {
         const device = await findDevice(db, request.cookies.get(DEVICE_COOKIE)?.value);
         if (!device || device.id !== scope.deviceId || device.userId !== scope.userId) return finish(gateUrl("neplatny-stav"));
       }
+      // Pozvánku mohl mezitím správce zneplatnit nebo ji použilo jiné okno.
+      if (scope.kind === "invite") {
+        const invite = await checkInvite(db, request.cookies.get(INVITE_COOKIE)?.value);
+        if (!invite || invite.userId !== scope.userId) return finish(gateUrl("neplatny-stav"));
+      }
     }
     const result = await completeLogin(db, cfg, { code, nonce: pending.nonce, verifier: pending.verifier, ...(scope ? { scope } : {}) });
     const grant = result.grant;
@@ -63,6 +68,22 @@ export async function GET(request: NextRequest) {
         return finish(gateUrl("ceka-na-schvaleni"));
       }
       return finish(gateUrl(FAILURES[result.reason]));
+    }
+    // Pozvánka se spotřebuje teprve teď, po přihlášení pozvaným účtem, a jen pro něj (kontrola `userId`
+    // v podmíněném UPDATE). Souběžné druhé okno už neprojde, zařízení vznikne jen jednou.
+    let claimed: { deviceId: string; cookieValue: string } | undefined;
+    if (scope?.kind === "invite") {
+      const token = request.cookies.get(INVITE_COOKIE)?.value ?? "";
+      const label = deviceLabel(request.headers.get("user-agent"));
+      const claim = result.userId === scope.userId ? await db.transaction((tx) => claimInvite(tx, token, label, new Date(), result.userId)) : { ok: false as const };
+      if (!claim.ok) {
+        if (grant) await revokeToken(grant.refreshToken);
+        await audit(db, null, "invite.rejected", "invite", "-");
+        const rejected = finish(gateUrl("neplatny-stav"));
+        rejected.cookies.set(INVITE_COOKIE, "", { ...inviteCookieOptions, maxAge: 0 });
+        return rejected;
+      }
+      claimed = { deviceId: claim.deviceId, cookieValue: claim.cookieValue };
     }
     await audit(db, result.userId, "session.start.google", "user", result.userId);
     const [account] = await db.select({ id: users.id, role: users.role, groups: users.groups, email: users.email }).from(users).where(and(eq(users.orgId, config.orgId), eq(users.id, result.userId))).limit(1);
@@ -96,6 +117,10 @@ export async function GET(request: NextRequest) {
       // Obnoví lhůtu cookie zařízení (prohlížeč drží nejvýš 400 dní), platnost dál rozhoduje databáze.
       const deviceCookie = request.cookies.get(DEVICE_COOKIE)?.value;
       if (deviceCookie) response.cookies.set(DEVICE_COOKIE, deviceCookie, deviceCookieOptions);
+    } else if (claimed) {
+      deviceId = claimed.deviceId;
+      response.cookies.set(DEVICE_COOKIE, claimed.cookieValue, deviceCookieOptions);
+      response.cookies.set(INVITE_COOKIE, "", { ...inviteCookieOptions, maxAge: 0 });
     } else if (scope?.kind === "bootstrap") {
       const device = await registerBootstrapDevice(db, result.userId, deviceLabel(request.headers.get("user-agent")));
       deviceId = device.id;

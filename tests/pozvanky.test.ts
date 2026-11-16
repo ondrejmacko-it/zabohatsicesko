@@ -1,12 +1,12 @@
 import { createSign, generateKeyPairSync } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
-import { DEVICE_NEVER_EXPIRES, claimInvite, findDevice } from "@/server/auth/devices";
+import { DEVICE_NEVER_EXPIRES, checkInvite, claimInvite, findDevice } from "@/server/auth/devices";
 import { clearSigningKeyCache, completeLogin, type LoginScope } from "@/server/auth/google-login";
 import { resolveSessionUser } from "@/server/auth/session";
 import { googleLoginConfig } from "@/server/config";
 import { getDb } from "@/server/db/client";
-import { trustedDevices, userIdentities, users } from "@/server/db/schema";
+import { loginInvites, trustedDevices, userIdentities, users } from "@/server/db/schema";
 import { createLoginLink, inviteUser, listAccounts, revokeLoginLink, revokeUserDevice, updateAccess } from "@/server/services/users";
 import { admin, participant, resetDemo } from "./helpers";
 
@@ -165,5 +165,48 @@ describe("pozvánka na jedno zařízení", () => {
     await expect(updateAccess(admin, primaryId, { role: "member", groups: [], status: "disabled" })).rejects.toMatchObject({ code: "forbidden" });
     const [after] = await (await getDb()).select().from(users).where(eq(users.id, primaryId));
     expect(after).toMatchObject({ status: "active", role: "admin" });
+  });
+});
+
+describe("pozvánka se spotřebuje až po přihlášení", () => {
+  test("otevření odkazu nic nezapíše, pozvánka platí dál", async () => {
+    const { id, link } = await inviteUser(admin, { email: KOLEGA, name: "Kolegyně", role: "member", groups: ["vsichni"] });
+    const db = await getDb();
+    expect(await checkInvite(db, link!.token)).toEqual({ userId: id, email: KOLEGA });
+    expect(await checkInvite(db, link!.token)).toEqual({ userId: id, email: KOLEGA });
+    const [row] = await db.select().from(loginInvites).where(eq(loginInvites.userId, id));
+    expect(row!.usedAt).toBeNull();
+  });
+
+  test("cizí účet Google pozvánku nespálí, pozvaný se pak přihlásí a odkaz přestane platit", async () => {
+    const { id, link } = await inviteUser(admin, { email: KOLEGA, name: "Kolegyně", role: "member", groups: ["vsichni"] });
+    const scope: LoginScope = { kind: "invite", userId: id };
+    expect(await login("cizi@example.com", "sub-cizi", scope)).toEqual({ ok: false, reason: "wrong_account" });
+    const db = await getDb();
+    expect(await checkInvite(db, link!.token)).not.toBeNull();
+    // Callback po úspěchu: spotřebuje jen pozvánku přihlášeného účtu.
+    expect(await login(KOLEGA, "sub-kolegyne", scope)).toEqual({ ok: true, userId: id });
+    expect((await db.transaction((tx) => claimInvite(tx, link!.token, "Chrome · Windows", undefined, "u-jiny"))).ok).toBe(false);
+    const claimed = await db.transaction((tx) => claimInvite(tx, link!.token, "Chrome · Windows", undefined, id));
+    expect(claimed.ok).toBe(true);
+    expect(await checkInvite(db, link!.token)).toBeNull();
+    expect(await claim(link!.token)).toEqual({ ok: false });
+  });
+
+  test("dvě souběžná dokončení založí jen jedno zařízení", async () => {
+    const { id, link } = await inviteUser(admin, { email: KOLEGA, name: "Kolegyně", role: "member", groups: ["vsichni"] });
+    const db = await getDb();
+    const results = await Promise.all([1, 2].map(() => db.transaction((tx) => claimInvite(tx, link!.token, "Chrome · Windows", undefined, id))));
+    expect(results.filter((r) => r.ok)).toHaveLength(1);
+    expect(await db.select().from(trustedDevices).where(eq(trustedDevices.userId, id))).toHaveLength(1);
+  });
+
+  test("zneplatněná nebo prošlá pozvánka neprojde ani ověřením", async () => {
+    const { id, link } = await inviteUser(admin, { email: KOLEGA, name: "Kolegyně", role: "member", groups: ["vsichni"] });
+    const db = await getDb();
+    expect(await checkInvite(db, link!.token, new Date(Date.now() + 8 * 24 * 3600 * 1000))).toBeNull();
+    await revokeLoginLink(admin, id);
+    expect(await checkInvite(db, link!.token)).toBeNull();
+    expect(await checkInvite(db, "kratky")).toBeNull();
   });
 });
