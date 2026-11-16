@@ -23,9 +23,22 @@ const ENV = {
 const saved: Record<string, string | undefined> = {};
 
 type Call = { method: string; url: URL; body: unknown };
-function fakeGoogle(opts: { revoked?: boolean; failEvents?: number } = {}) {
+type FakeOptions = {
+  revoked?: boolean;
+  failEvents?: number;
+  /** Kolikrát po sobě odpoví `calendarList.patch` 403 `insufficientPermissions`. */
+  forbidSetup?: number;
+  /** Zápis událostí odpovídá 403 s tímto důvodem. */
+  forbidEvents?: string;
+  /** Kalendář, který Wiki dřív založila, uživatel mezitím smazal. */
+  calendarGone?: boolean;
+};
+const forbidden = (reason: string) => ({ error: { code: 403, errors: [{ reason }] } });
+
+function fakeGoogle(opts: FakeOptions = {}) {
   const calls: Call[] = [];
   let failures = opts.failEvents ?? 0;
+  let setupFailures = opts.forbidSetup ?? 0;
   const json = (status: number, body: unknown) => new Response(body === null ? null : JSON.stringify(body), { status });
   const fetchImpl = (async (input: URL | string, init?: RequestInit) => {
     const url = new URL(String(input));
@@ -34,8 +47,10 @@ function fakeGoogle(opts: { revoked?: boolean; failEvents?: number } = {}) {
     if (url.pathname === "/token") return opts.revoked ? json(400, { error: "invalid_grant" }) : json(200, { access_token: "at", expires_in: 3600 });
     if (url.pathname === "/revoke") return json(200, {});
     if (url.pathname.endsWith("/calendars") && init?.method === "POST") return json(200, { id: "cal-1" });
-    if (url.pathname.includes("/calendarList/")) return json(200, {});
+    if (url.pathname.includes("/calendarList/")) return setupFailures-- > 0 ? json(403, forbidden("insufficientPermissions")) : json(200, {});
+    if (/\/calendars\/[^/]+$/.test(url.pathname) && (init?.method ?? "GET") === "GET") return opts.calendarGone ? json(404, {}) : json(200, { id: "cal-1" });
     if (url.pathname.includes("/events")) {
+      if (opts.forbidEvents) return json(403, forbidden(opts.forbidEvents));
       if (failures-- > 0) return json(503, {});
       return init?.method === "DELETE" ? json(204, null) : json(200, { id: "x" });
     }
@@ -130,5 +145,59 @@ describe("osobní kalendář", () => {
     expect(await syncPersonalCalendar(db, participant.id, { fetchImpl: removal.fetchImpl, clock })).toBe("removed");
     expect(removal.calls.some((c) => c.url.pathname === "/revoke")).toBe(true);
     expect(await db.select().from(personalCalendars).where(eq(personalCalendars.userId, participant.id))).toHaveLength(0);
+  });
+
+  test("403 u nastavení seznamu kalendářů není odvolání: kalendář se uloží a akce se zapíšou", async () => {
+    await db.update(users).set({ status: "active" }).where(eq(users.id, participant.id));
+    await db.delete(personalCalendars);
+    await db.delete(personalCalendarEntries);
+    await savePersonalGrant(db, participant.id, grant);
+    const google = fakeGoogle({ forbidSetup: 1 });
+    expect(await syncPersonalCalendar(db, participant.id, { fetchImpl: google.fetchImpl, clock })).toBe("synced");
+    const patches = google.calls.filter((c) => c.url.pathname.includes("/calendarList/"));
+    // Druhý pokus už bez e-mailových upozornění, která Google odmítl.
+    expect(patches).toHaveLength(2);
+    expect((patches[1]!.body as { notificationSettings?: unknown }).notificationSettings).toBeUndefined();
+    const [row] = await db.select().from(personalCalendars).where(eq(personalCalendars.userId, participant.id));
+    expect(row).toMatchObject({ status: "active", calendarId: "cal-1", errorCode: null });
+    expect(row!.encryptedRefreshToken).not.toBe("");
+    expect(google.calls.some((c) => c.url.pathname.includes("/events"))).toBe(true);
+  });
+
+  test("403 insufficientPermissions u akcí nechá token i kalendář a ukáže „Nedaří se zapsat“, ne odvolání", async () => {
+    await db.delete(personalCalendars);
+    await db.delete(personalCalendarEntries);
+    await savePersonalGrant(db, participant.id, grant);
+    const google = fakeGoogle({ forbidEvents: "insufficientPermissions" });
+    expect(await syncPersonalCalendar(db, participant.id, { fetchImpl: google.fetchImpl, clock })).toBe("retry");
+    const [row] = await db.select().from(personalCalendars).where(eq(personalCalendars.userId, participant.id));
+    expect(row).toMatchObject({ status: "active", calendarId: "cal-1", errorCode: "forbidden_insufficientPermissions" });
+    expect(row!.encryptedRefreshToken).not.toBe("");
+    const state = await personalCalendarState(db, participant.id);
+    expect(state).toMatchObject({ status: "active", blocked: true, retrying: false });
+    expect(await needsPersonalCalendar(db, participant.id)).toBe(false);
+    // Další běh kalendář nezakládá znovu, jen dopíše akce.
+    const retry = fakeGoogle();
+    expect(await syncPersonalCalendar(db, participant.id, { fetchImpl: retry.fetchImpl, clock })).toBe("synced");
+    expect(retry.calls.filter((c) => c.method === "POST" && c.url.pathname.endsWith("/calendars"))).toHaveLength(0);
+    expect((await personalCalendarState(db, participant.id)).blocked).toBe(false);
+  });
+
+  test("opakované propojení stejného účtu použije dřívější kalendář, smazaný nahradí jedním novým", async () => {
+    // Po odvolání a novém souhlasu: uložený kalendář existuje → žádný druhý „Vzdělávání ZBC“.
+    await db.update(personalCalendars).set({ status: "revoked", errorCode: "calendar_revoked", encryptedRefreshToken: "" }).where(eq(personalCalendars.userId, participant.id));
+    await savePersonalGrant(db, participant.id, grant);
+    const again = fakeGoogle();
+    expect(await syncPersonalCalendar(db, participant.id, { fetchImpl: again.fetchImpl, clock })).toBe("synced");
+    expect(again.calls.filter((c) => c.method === "POST" && c.url.pathname.endsWith("/calendars"))).toHaveLength(0);
+    expect(again.calls.some((c) => c.method === "GET" && c.url.pathname.endsWith("/calendars/cal-1"))).toBe(true);
+    // Uživatel kalendář mezitím smazal: nový souhlas založí právě jeden nový a akce zapíše znovu.
+    await savePersonalGrant(db, participant.id, grant);
+    const gone = fakeGoogle({ calendarGone: true });
+    expect(await syncPersonalCalendar(db, participant.id, { fetchImpl: gone.fetchImpl, clock })).toBe("synced");
+    expect(gone.calls.filter((c) => c.method === "POST" && c.url.pathname.endsWith("/calendars"))).toHaveLength(1);
+    expect(gone.calls.filter((c) => c.method === "POST" && c.url.pathname.includes("/events")).length).toBeGreaterThan(0);
+    const [row] = await db.select().from(personalCalendars).where(eq(personalCalendars.userId, participant.id));
+    expect(row).toMatchObject({ status: "active", calendarId: "cal-1" });
   });
 });

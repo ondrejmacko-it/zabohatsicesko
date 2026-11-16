@@ -6,13 +6,16 @@ import { completeLogin, verifyLoginState, type LoginFailure } from "@/server/aut
 import { PRIMARY_ADMIN_SESSION_TTL_SEC, SESSION_COOKIE, encodeSession, sessionCookieOptions } from "@/server/auth/session";
 import { config, googleLoginConfig, isPrimaryAdmin, personalDelivery } from "@/server/config";
 import { grantsCalendar, needsCalendarConnection, revokeToken, saveGrant } from "@/server/calendar/google-auth";
-import { grantsPersonalCalendar, markPersonalDeclined, savePersonalGrant, syncPersonalCalendars } from "@/server/calendar/personal";
+import { grantsPersonalCalendar, markPersonalDeclined, savePersonalGrant, syncPersonalCalendar, syncPersonalCalendars } from "@/server/calendar/personal";
 import { syncAfterReconnect } from "@/server/calendar/sync";
 import { getDb } from "@/server/db/client";
 import { users } from "@/server/db/schema";
 import { canPlan } from "@/server/policy";
 import { CONNECT_PATH } from "../../kalendar/cookie";
 import { HINT_COOKIE, LOGIN_COOKIE, encodeHint, gateUrl, hintCookieOptions, loginCookieOptions } from "../cookie";
+
+/** Jak dlouho přihlášení počká na první zápis do osobního kalendáře, než přesměruje na Úvod. */
+const FIRST_SYNC_WAIT_MS = 6_000;
 
 const FAILURES: Record<LoginFailure, string> = {
   exchange_failed: "nepodarilo-se",
@@ -98,7 +101,17 @@ export async function GET(request: NextRequest) {
     if (personal && grant) {
       // Vlastní kalendář „Vzdělávání ZBC“: token jde šifrovaně do databáze, akce se zapíšou hned po přesměrování.
       await savePersonalGrant(db, result.userId, grant);
-      after(() => syncPersonalCalendars(db));
+      // První zápis počká krátce před přesměrováním, aby Úvod rovnou ukázal „Propojeno“. Co nestihne,
+      // dokončí se po odpovědi (zámek v synchronizaci brání dvojímu běhu).
+      const first = syncPersonalCalendar(db, result.userId).catch((error: unknown) => {
+        logError("calendar.personal", "first_sync_failed", error);
+        return "retry" as const;
+      });
+      await Promise.race([first, new Promise((resolve) => setTimeout(resolve, FIRST_SYNC_WAIT_MS))]);
+      after(async () => {
+        await first;
+        await syncPersonalCalendars(db);
+      });
     } else if ((pending.calendar === "personal" || pending.calendar === "skip") && personalDelivery() && account) {
       // Kalendář odškrtnutý: Wiki se znovu neptá, uživatel má na Úvodu tlačítko „Propojit Kalendář“.
       await markPersonalDeclined(db, result.userId, account.email);

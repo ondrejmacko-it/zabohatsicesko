@@ -37,7 +37,19 @@ Nouzové zrušení zařízení hlavního správce (UI ho záměrně nenabízí) 
 `UPDATE trusted_devices SET revoked_at = now() WHERE id = '<id>'` (ID z dotazu na `trusted_devices` podle e-mailu).
 Platí od dalšího požadavku. Můžeš ho provést i ty přes Neon MCP, ale jen na výslovný pokyn uživatele.
 
-**Stav 16. 11. pozdě v noci (poslední):** #43 je v `main`. Draft [#44](https://github.com/ondrejmacko-it/zabohatsicesko/pull/44) z větve `claude/kalendar-ucastniku-ui`
+**Stav 16. 11. oprava kalendáře (poslední):** #44 je v `main`, `CALENDAR_DELIVERY=personal` je na Vercelu zapnuté.
+Živé propojení selhalo: 403 na `calendarList.patch` se tvářilo jako odvolání, ID kalendáře se neuložilo a každý pokus
+založil další „Vzdělávání ZBC“. Draft PR z větve `claude/oprava-osobniho-kalendare` (base `main`): oprava (ID hned po
+založení, 403 ≠ odvolání, znovupoužití kalendáře, první zápis v callbacku), lidské texty stavu, „Celý plán“ v hlavičce
+sekce na Úvodu, nová vstupní stránka `/vstup`. Podrobnosti `docs/kalendar-ucastniku.md`, „Oprava propojení 16. 11. večer“.
+* **Další krok 1:** po merge živé ověření podle kroků v PR. Když propojení zase nepůjde, přečíst v Neonu
+  `personal_calendars.error_code` (`forbidden_<důvod>`) a `audit_log` (`calendar.personal.setup_basic|setup_none`).
+* Stará data: oba účty jsou v DB `revoked` bez `calendar_id`. Opravené propojení je přepíše samo, zápis do DB není třeba.
+  Duplicitní kalendáře (`calendarList.list` rozsah nepovoluje) smaže uživatel ručně.
+* Runtime logy Vercelu relace nepřečte (MCP 403, CLI zakázané kontrolou oprávnění).
+* **Další krok 2–4:** beze změny (únik dat do klienta, jednotný design, závěrečný audit).
+
+**Stav 16. 11. pozdě v noci (předchozí):** #43 je v `main`. Draft [#44](https://github.com/ondrejmacko-it/zabohatsicesko/pull/44) z větve `claude/kalendar-ucastniku-ui`
 (base `main`): UI stavu osobního kalendáře (Úvod, Plán, Správa), spouštěč na Úvodu, úklid starých pozvánek
 ve Správě, štítek u návrhů, testy. Podrobnosti `docs/kalendar-ucastniku.md`, část „Doplněno 16. 11.“.
 * `CALENDAR_DELIVERY=personal` na Vercelu **nenastaveno**: zápis přes API zamítla kontrola oprávnění relace.

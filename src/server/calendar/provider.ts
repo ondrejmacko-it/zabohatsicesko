@@ -25,6 +25,8 @@ export type GuestChange = { add: SimAttendee[]; remove: readonly string[] };
 export type CalendarErrorCode =
   | "calendar_unavailable"
   | "calendar_revoked"
+  /** Google jednu operaci odmítl (403 bez odvolání přístupu). Token i kalendář zůstávají platné. */
+  | "calendar_forbidden"
   /** Připojený účet nemá přístup ke kalendáři, do kterého Wiki zapisuje (Google vrací 404). */
   | "calendar_no_access"
   | "calendar_missing"
@@ -43,6 +45,8 @@ export class CalendarError extends Error {
     readonly code: CalendarErrorCode,
     /** Přechodnou chybu má smysl zopakovat, trvalou musí vyřešit člověk. */
     readonly transient: boolean,
+    /** Strojový důvod od Googlu (např. `insufficientPermissions`) pro log a diagnostiku. Bez obsahu dat. */
+    readonly reason?: string,
   ) {
     super(code);
     this.name = "CalendarError";
