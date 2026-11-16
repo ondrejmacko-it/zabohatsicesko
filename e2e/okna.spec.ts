@@ -27,11 +27,47 @@ test.describe("okna správce", () => {
     await checkDialog(page, "Přidat akci");
   });
 
-  test("Zkontrolovat návrhy", async ({ page }) => {
+  test("Připravit měsíc", async ({ page }) => {
     await page.goto("/vzdelavani/harmonogram");
     await settle(page);
-    await page.getByRole("button", { name: /Zkontrolovat \d+ návrh/ }).click();
-    await checkDialog(page, /Zveřejnit návrhy/);
+    await page.getByRole("button", { name: /^Připravit měsíc/ }).click();
+    await checkDialog(page, /Připravit měsíc:/);
+  });
+
+  // Bez zápisu do databáze: e2e projekty běží souběžně nad jedním serverem.
+  test("Připravit měsíc: kroky, sloupce, mezery a uložení bez změn @desktop", async ({ page }) => {
+    await page.goto("/vzdelavani/harmonogram");
+    await settle(page);
+    await page.getByRole("button", { name: /^Připravit měsíc/ }).click();
+    const prepare = dialog(page, /Připravit měsíc:/);
+    await expect(prepare.getByRole("heading", { name: "Termíny ze šablony" })).toBeVisible();
+    await expect(prepare.getByRole("button", { name: "Doplnit chybějící termíny" })).toBeVisible();
+    await expect(prepare.getByRole("heading", { name: "Mezery" })).toBeVisible();
+
+    const date = prepare.getByLabel(/^Datum: /).first();
+    const value = await date.inputValue();
+    expect(value).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(await date.getAttribute("min")).toBeTruthy();
+    expect((await date.getAttribute("max"))?.slice(0, 7)).toBe(value.slice(0, 7));
+    await expect(prepare.getByLabel(/^Skupina: /).first()).toBeVisible();
+
+    // Mezery se počítají živě z rozepsaného formuláře.
+    const id = (await date.getAttribute("name"))!.replace("date-", "");
+    const topic = prepare.locator(`[name="topic-${id}"]`);
+    const gap = prepare.locator(`.prepare-list li[data-draft="${id}"]`);
+    await topic.fill("");
+    await expect(gap).toContainText("téma");
+    await topic.fill("Téma z e2e testu");
+    await expect(gap.filter({ hasText: "téma" })).toHaveCount(0);
+
+    // Vrátit původní hodnotu a uložit: bez změny server nic nezapíše a okno zůstane otevřené.
+    await page.reload();
+    await settle(page);
+    await page.getByRole("button", { name: /^Připravit měsíc/ }).click();
+    await prepare.getByRole("button", { name: "Uložit změny" }).click();
+    await expect(prepare.getByText("Žádné změny k uložení.")).toBeVisible();
+    await expect(prepare.getByRole("button", { name: /^Zveřejnit/ })).toBeVisible();
+    await expectNoHorizontalScroll(page);
   });
 
   test("Pravidelný týden z Nástrojů správce", async ({ page }) => {

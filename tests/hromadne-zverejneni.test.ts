@@ -115,4 +115,56 @@ describe("hromadné zveřejnění návrhů měsíce", () => {
     await syncPublished();
     expect((await db.select().from(simCalendarEvents)).length).toBe(after);
   });
+
+  test("ruční datum a skupina: jen ve stejném měsíci a v budoucnu, čas a délka zůstanou (G6)", async () => {
+    await generateMonth(organizer, MONTH);
+    const db = await getDb();
+    const [draft] = (await listMonthDrafts(organizer, MONTH)).drafts;
+    const base = { id: draft!.id, revision: draft!.revision, topicTitle: "Téma", leadId: "demo-vedouci" };
+    // Mimo připravovaný měsíc ani do minulosti to nejde a nic se nezmění.
+    await expect(publishDrafts(organizer, MONTH, [{ ...base, date: "2027-01-05" }], 0, { publish: false })).rejects.toMatchObject({ code: "outside_month" });
+    const [november] = (await listMonthDrafts(organizer, "2026-11")).drafts;
+    expect(november).toBeDefined();
+    await expect(
+      publishDrafts(organizer, "2026-11", [{ id: november!.id, revision: november!.revision, topicTitle: null, leadId: null, date: "2026-11-02" }], 0, { publish: false }),
+    ).rejects.toMatchObject({ code: "outside_month" });
+    expect((await loadEventRow(db, draft!.id))!.revision).toBe(draft!.revision);
+    expect((await loadEventRow(db, november!.id))!.revision).toBe(november!.revision);
+
+    const before = (await loadEventRow(db, draft!.id))!;
+    const result = await publishDrafts(organizer, MONTH, [{ ...base, date: "2026-12-30", audience: "rm" }]);
+    expect(result).toEqual({ published: [draft!.id], skipped: 0 });
+    const row = (await loadEventRow(db, draft!.id))!;
+    expect(row.published).toMatchObject({ status: "published", audience: "rm" });
+    expect(formValuesOf(snapshotOf(row))).toMatchObject({ date: "2026-12-30", startTime: formValuesOf(snapshotOf(before)).startTime, endTime: formValuesOf(snapshotOf(before)).endTime });
+    expect(row.endsAt.getTime() - row.startsAt.getTime()).toBe(before.endsAt.getTime() - before.startsAt.getTime());
+  });
+
+  test("Uložit změny bez zveřejnění nic nezveřejní ani neodešle a nezměněné návrhy nechá být (G6)", async () => {
+    await generateMonth(organizer, MONTH);
+    const db = await getDb();
+    const [a, b] = (await listMonthDrafts(organizer, MONTH)).drafts;
+    await syncPublished(); // seed má zveřejněné akce bez vazby, ty odejdou nezávisle na testu
+    const sentBefore = (await db.select().from(simCalendarEvents)).length;
+    // Neúplné termíny jde uložit i bez potvrzení počtu.
+    const result = await publishDrafts(
+      organizer,
+      MONTH,
+      [
+        { id: a!.id, revision: a!.revision, topicTitle: "Uložené téma", leadId: null, audience: "fp" },
+        { id: b!.id, revision: b!.revision, topicTitle: b!.topicTitle, leadId: b!.leadId },
+      ],
+      0,
+      { publish: false },
+    );
+    expect(result).toEqual({ published: [a!.id], skipped: 0 });
+    const saved = (await loadEventRow(db, a!.id))!;
+    expect(saved).toMatchObject({ status: "draft", topicTitle: "Uložené téma", audience: "fp", revision: a!.revision + 1 });
+    expect(saved.published).toBeNull();
+    expect((await loadEventRow(db, b!.id))!.revision).toBe(b!.revision); // beze změny, bez nové verze
+    await syncPublished();
+    expect(await link(a!.id)).toBeUndefined();
+    expect((await db.select().from(simCalendarEvents)).length).toBe(sentBefore);
+    expect((await listMonth(participant, MONTH)).some((c) => c.id === a!.id)).toBe(false);
+  });
 });
