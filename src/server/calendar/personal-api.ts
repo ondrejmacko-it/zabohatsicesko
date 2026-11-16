@@ -168,7 +168,7 @@ export class PersonalCalendarApi {
    * události (Wiki spravuje všechna pole), 404 = mezitím smazaná, založí se znovu.
    * @returns `calendar_missing`, když uživatel smazal celý kalendář
    */
-  async putEvent(calendarId: string, eventId: string, data: ManagedEventData, known: boolean): Promise<"ok" | "calendar_missing"> {
+  async putEvent(calendarId: string, eventId: string, data: ManagedEventData, known: boolean, guest?: string): Promise<"ok" | "calendar_missing"> {
     const body = {
       id: eventId,
       summary: data.summary,
@@ -180,9 +180,11 @@ export class PersonalCalendarApi {
       // (audit `calendar.personal.setup_none`), zápis akce ale projde. Bez toho by akce neměla žádnou.
       reminders: { useDefault: false, overrides: DEFAULT_REMINDERS.map((r) => ({ ...r })) },
       transparency: "opaque",
+      // Zkušební režim `self-invite`: host je jen sám vlastník kalendáře, nic víc nesmí měnit ani vidět.
+      ...(guest ? { attendees: [{ email: guest }], guestsCanModify: false, guestsCanInviteOthers: false, guestsCanSeeOtherGuests: false } : {}),
     };
     const base = `/calendars/${encodeURIComponent(calendarId)}/events`;
-    const query = { sendUpdates: "none" };
+    const query = { sendUpdates: guest ? "all" : "none" };
     const update = () => this.request("PUT", `${base}/${encodeURIComponent(eventId)}`, { query, body });
     const insert = () => this.request("POST", base, { query, body });
     let result = known ? await update() : await insert();
@@ -194,7 +196,7 @@ export class PersonalCalendarApi {
   }
 
   /** Smaže událost. Už smazaná (404, 410) je v pořádku. */
-  async deleteEvent(calendarId: string, eventId: string): Promise<void> {
-    await this.request("DELETE", `/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`, { query: { sendUpdates: "none" } });
+  async deleteEvent(calendarId: string, eventId: string, notify = false): Promise<void> {
+    await this.request("DELETE", `/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`, { query: { sendUpdates: notify ? "all" : "none" } });
   }
 }

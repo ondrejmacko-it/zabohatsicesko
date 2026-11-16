@@ -119,6 +119,12 @@ vzniklé před opravou musí uživatel smazat ručně.
   `eventCreation` = „A new event is added to one of the user's calendars“ (ne jen pozvánky), `eventChange`
   a `eventCancellation` platí jen pro akce, kam byl uživatel pozván. Bez funkčního `calendarList.patch`
   nechodí žádné z nich.
+* **Zkušební režim `CALENDAR_PERSONAL_NOTIFY=self-invite`** (výchozí vypnuto, rozhodl uživatel 16. 11.):
+  akce v „Vzdělávání ZBC“ nese jako hosta účet účastníka (jen jeho, bez práv měnit a vidět hosty)
+  a zapisuje se se `sendUpdates=all`, výmaz také. Cíl: Google pošle pozvánku a e-mail o změně a zrušení.
+  Rizika: dokumentace chování u vlastníka sekundárního kalendáře nepopisuje a akce se nejspíš objeví i
+  v hlavním kalendáři jako pozvánka. Zapnutí i vypnutí změní otisk, takže se všechny akce přepíšou.
+  Rozhodne živý test.
 
 ## Živě 16. 11. 19:30 po #45: propojení funguje, upozornění ne
 

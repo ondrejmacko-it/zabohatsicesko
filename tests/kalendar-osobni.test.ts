@@ -199,6 +199,43 @@ describe("osobní kalendář", () => {
     expect(await personalSyncNeeded(db)).toBe(false);
   });
 
+  test("zkušební režim self-invite: host je jen účet vlastníka, Google pošle e-mail o změně i zrušení", async () => {
+    await db.delete(personalCalendars);
+    await db.delete(personalCalendarEntries);
+    await savePersonalGrant(db, participant.id, grant);
+    process.env.CALENDAR_PERSONAL_NOTIFY = "self-invite";
+    try {
+      const google = fakeGoogle();
+      expect(await syncPersonalCalendar(db, participant.id, { fetchImpl: google.fetchImpl })).toBe("synced");
+      const writes = google.calls.filter((c) => c.url.pathname.includes("/events"));
+      expect(writes.length).toBeGreaterThan(0);
+      for (const w of writes) {
+        expect(w.url.searchParams.get("sendUpdates")).toBe("all");
+        expect(w.body).toMatchObject({ attendees: [{ email: "ucastnik@example.com" }], guestsCanModify: false, guestsCanSeeOtherGuests: false });
+      }
+      // Akce, která uživateli přestala patřit, se smaže s upozorněním (e-mail o zrušení).
+      const [entry] = await db.select().from(personalCalendarEntries).where(eq(personalCalendarEntries.userId, participant.id)).limit(1);
+      await db.insert(personalCalendarEntries).values({ userId: participant.id, eventId: "zrusena-akce", externalEventId: "ext-zrusena", dataHash: entry!.dataHash });
+      await db.update(personalCalendars).set({ syncRequestedAt: new Date(Date.now() + 60_000) });
+      const again = fakeGoogle();
+      await syncPersonalCalendar(db, participant.id, { fetchImpl: again.fetchImpl });
+      const deletion = again.calls.find((c) => c.method === "DELETE" && c.url.pathname.endsWith("/ext-zrusena"))!;
+      expect(deletion.url.searchParams.get("sendUpdates")).toBe("all");
+    } finally {
+      delete process.env.CALENDAR_PERSONAL_NOTIFY;
+    }
+    // Vypnutí režimu přepíše akce zpět bez hosta a bez e-mailů.
+    const off = fakeGoogle();
+    await db.update(personalCalendars).set({ syncRequestedAt: new Date(Date.now() + 120_000) });
+    await syncPersonalCalendar(db, participant.id, { fetchImpl: off.fetchImpl });
+    const rewrites = off.calls.filter((c) => c.url.pathname.includes("/events"));
+    expect(rewrites.length).toBeGreaterThan(0);
+    for (const w of rewrites) {
+      expect(w.url.searchParams.get("sendUpdates")).toBe("none");
+      expect((w.body as { attendees?: unknown }).attendees).toBeUndefined();
+    }
+  });
+
   test("403 insufficientPermissions u akcí nechá token i kalendář a ukáže „Nedaří se zapsat“, ne odvolání", async () => {
     await db.delete(personalCalendars);
     await db.delete(personalCalendarEntries);

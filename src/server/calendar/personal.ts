@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { and, eq, gt, inArray, isNotNull, isNull, lt, ne, or, sql } from "drizzle-orm";
 import type { EventSnapshot } from "@/lib/types";
 import { audit, logError } from "@/server/audit";
-import { config, googleCalendarConfig, personalDelivery, tokenEncryptionKey } from "@/server/config";
+import { config, googleCalendarConfig, personalDelivery, personalSelfInvite, tokenEncryptionKey } from "@/server/config";
 import type { Db, Executor } from "@/server/db/client";
 import { calendarLinks, events, minutes, personalCalendarEntries, personalCalendars, recordings, users, type PersonalCalendarStatus } from "@/server/db/schema";
 import { openSecret, sealSecret } from "@/server/integrations/secret-box";
@@ -173,7 +173,7 @@ const hashOf = (value: unknown) => createHash("sha256").update(JSON.stringify(va
 export const personalEventId = (eventId: string) => eventIdForKey(`personal:${config.orgId}:${eventId}`);
 
 /** Akce, které mají být v kalendáři uživatele: zveřejněné, nezrušené, ne svátky, z jeho skupin, nedávné a budoucí. */
-async function desiredEvents(db: Executor, groups: readonly string[], since: Date) {
+async function desiredEvents(db: Executor, groups: readonly string[], since: Date, guest: string | undefined) {
   const rows = await db
     .select({ id: events.id, published: events.published })
     .from(events)
@@ -199,7 +199,7 @@ async function desiredEvents(db: Executor, groups: readonly string[], since: Dat
     const snapshot = row.published as EventSnapshot;
     if (snapshot.status === "cancelled" || snapshot.type === "holiday" || !groups.includes(snapshot.audience)) continue;
     const data = desiredData(row.id, snapshot, withMinutes.has(row.id));
-    wanted.set(row.id, { data, hash: hashOf({ v: EVENT_FORMAT, s: data.summary, d: data.description, a: data.startsAt, b: data.endsAt }) });
+    wanted.set(row.id, { data, hash: hashOf({ v: EVENT_FORMAT, g: guest ?? null, s: data.summary, d: data.description, a: data.startsAt, b: data.endsAt }) });
   }
   return wanted;
 }
@@ -270,10 +270,12 @@ export async function syncPersonalCalendar(db: Db, userId: string, deps: Persona
       // Nová podoba akcí po nasazení: jednou za verzi se zkusí i nastavení kalendáře.
       await configure(db, api, userId, calendarId);
     }
+    // Zapnutí i vypnutí zkušebního režimu změní otisk všech akcí, takže se přepíšou s hostem nebo bez něj.
+    const guest = personalSelfInvite() ? row.accountEmail : undefined;
     for (let round = 0; round < MAX_ROUNDS; round += 1) {
       const started = clock();
       const since = new Date(started.getTime() - HISTORY_DAYS * 24 * 3600 * 1000);
-      const wanted = await desiredEvents(db, account.groups, since);
+      const wanted = await desiredEvents(db, account.groups, since, guest);
       const written = new Map(
         (await db.select().from(personalCalendarEntries).where(eq(personalCalendarEntries.userId, userId))).map((e) => [e.eventId, e]),
       );
@@ -292,7 +294,7 @@ export async function syncPersonalCalendar(db: Db, userId: string, deps: Persona
         }
         for (const [eventId, w] of changed) {
           const externalEventId = personalEventId(eventId);
-          const result = await api.putEvent(calendarId, externalEventId, w.data, written.has(eventId));
+          const result = await api.putEvent(calendarId, externalEventId, w.data, written.has(eventId), guest);
           if (result === "calendar_missing") {
             await db.delete(personalCalendarEntries).where(eq(personalCalendarEntries.userId, userId));
             await setState(db, userId, { status: "calendar_deleted", calendarId: null, errorCode: null });
@@ -304,7 +306,7 @@ export async function syncPersonalCalendar(db: Db, userId: string, deps: Persona
             .onConflictDoUpdate({ target: [personalCalendarEntries.userId, personalCalendarEntries.eventId], set: { dataHash: w.hash, updatedAt: new Date() } });
         }
         for (const entry of stale) {
-          await api.deleteEvent(calendarId, entry.externalEventId);
+          await api.deleteEvent(calendarId, entry.externalEventId, Boolean(guest));
           await db.delete(personalCalendarEntries).where(and(eq(personalCalendarEntries.userId, userId), eq(personalCalendarEntries.eventId, entry.eventId)));
         }
       }

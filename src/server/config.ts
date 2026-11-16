@@ -114,6 +114,14 @@ export function calendarDelivery(): CalendarDelivery {
 
 export const personalDelivery = () => calendarDelivery() === "personal";
 
+/**
+ * Zkušební režim upozornění v osobním kalendáři (`CALENDAR_PERSONAL_NOTIFY=self-invite`, výchozí vypnuto):
+ * akce v kalendáři „Vzdělávání ZBC“ nese jako hosta účet samotného účastníka a zapisuje se se
+ * `sendUpdates=all`, aby Google poslal e-mail o nové, změněné a zrušené akci. Dokumentace Googlu chování
+ * u vlastníka kalendáře nepopisuje, rozhodne živý test.
+ */
+export const personalSelfInvite = () => personalDelivery() && process.env.CALENDAR_PERSONAL_NOTIFY?.trim() === "self-invite";
+
 export type GoogleCalendarConfig = {
   clientId: string;
   clientSecret: string;
