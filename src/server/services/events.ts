@@ -40,6 +40,8 @@ export type EventCard = {
   syncStatus: SyncStatus | "unlinked" | null;
   /** Jen pro správce: zveřejněný termín, pokud ho rozpracovaný návrh přesouvá jinam. */
   movedFrom: { startsAt: string; endsAt: string; allDay: boolean } | null;
+  /** Jen pro správce: verze akce, kterou přesun tažením posílá serveru jako kontrolu souběhu. */
+  revision: number | null;
 };
 
 async function userNames(db: Executor): Promise<Map<string, string>> {
@@ -88,6 +90,7 @@ function toCard(
     past: new Date(view.endsAt) <= now(),
     syncStatus,
     movedFrom: moved ? { startsAt: last.startsAt, endsAt: last.endsAt, allDay: last.allDay } : null,
+    revision: organizer ? row.revision : null,
   };
 }
 
@@ -322,6 +325,44 @@ export async function updateEvent(
     if (mode === "publish") await publishInTx(tx, row, viewer.id, "publish");
     await audit(tx, viewer.id, mode === "publish" ? "event.publish" : "event.save", "event", id);
   });
+}
+
+export type MovePlan = { input: EventInput; mode: SaveMode; from: string; label: string };
+
+/**
+ * Přesun akce na jiný den (tažení v Plánu nebo „Přesunout na jiný den“ v detailu). Stejné místní časy
+ * a stejný počet dní, ostatní údaje beze změny. Platí pravidla ruční změny data v Připravit měsíc: cílový
+ * den je v budoucnu a ve stejném měsíci. Proběhlou ani zrušenou akci přesunout nejde.
+ * Zveřejněná akce bez rozpracovaného návrhu se rovnou zveřejní (pozvaní dostanou změnu stávající cestou),
+ * jinak se přesun uloží jako návrh. Zápis i souběh hlídá `updateEvent`.
+ */
+export async function planMove(viewer: Viewer, id: string, date: string): Promise<MovePlan> {
+  requireOrganizer(viewer);
+  const row = await loadEventRow(await getDb(), id);
+  if (!row) throw new DomainError("not_found");
+  if (row.status === "cancelled") throw new DomainError("cancelled");
+  if (row.startsAt <= now()) throw new DomainError("invalid_state");
+  const from = toDateKey(row.startsAt);
+  if (date === from) throw new DomainError("invalid_input");
+  if (monthOf(date) !== monthOf(from)) throw new DomainError("outside_month");
+  const lastDay = toDateKey(row.allDay ? new Date(row.endsAt.getTime() - 1) : row.endsAt);
+  const span = Math.round((Date.parse(lastDay) - Date.parse(from)) / 86_400_000);
+  const input: EventInput = {
+    type: row.type as EventType,
+    label: row.label,
+    date,
+    endDate: span > 0 ? addDays(date, span) : null,
+    startTime: row.allDay ? "00:00" : toTimeKey(row.startsAt),
+    endTime: row.allDay ? "23:59" : toTimeKey(row.endsAt),
+    topicTitle: row.topicTitle,
+    topicId: row.topicId,
+    audience: row.audience as Group,
+    leadId: row.leadId,
+    reviewerId: row.reviewerId,
+  };
+  if (resolveTimes(input).startsAt <= now()) throw new DomainError("outside_month");
+  const mode: SaveMode = row.status === "published" && row.revision === row.publishedRevision ? "publish" : "draft";
+  return { input, mode, from, label: row.label };
 }
 
 /** Zrušení je okamžitě zveřejněná změna: ve Wiki zůstane se stavem Zrušeno, pozvaní dostanou zprávu. */

@@ -50,14 +50,22 @@ type Props = {
   planDays?: number[];
   /** Tlačítko Upravit jako hlavní krok (v náhledu akce). */
   primary?: boolean;
+  /** Dialog se otevře hned (odkaz „+“ na dni v Plánu). Po zavření se adresa vrátí na `closeHref`. */
+  openOnMount?: boolean;
+  closeHref?: string;
 };
 
 const WEEKDAY_NAMES = ["", "pondělí", "úterý", "středu", "čtvrtek", "pátek", "sobotu", "neděli"];
 
 /** Přidání a úprava akce v jednom plovoucím dialogu. */
 export function EventDialog(props: Props) {
-  const [open, setOpen] = useState(false);
+  const router = useRouter();
+  const [open, setOpen] = useState(Boolean(props.openOnMount));
   const [session, setSession] = useState(0);
+  const close = () => {
+    setOpen(false);
+    if (props.closeHref) router.replace(props.closeHref, { scroll: false });
+  };
   return (
     <>
       <button
@@ -72,7 +80,7 @@ export function EventDialog(props: Props) {
         {!props.replace && <Icon name={props.mode === "create" ? "plus" : "pencil"} />}
         {props.replace ? "Změnit typ tohoto termínu" : props.mode === "create" ? "Přidat akci" : "Upravit"}
       </button>
-      {open && <EventForm key={session} {...props} onClose={() => setOpen(false)} />}
+      {open && <EventForm key={session} {...props} onClose={close} />}
     </>
   );
 }

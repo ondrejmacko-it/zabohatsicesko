@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Icon } from "@/components/Icon";
 import { Todo, missingText } from "@/components/Todo";
 import { TYPE_LABELS } from "@/lib/labels";
 import {
@@ -10,6 +11,7 @@ import {
   monthOf,
   monthWeeks,
   toDateKey,
+  weekdayLong,
   weekdayShort,
 } from "@/lib/time";
 import type { EventCard } from "@/server/services/events";
@@ -29,6 +31,8 @@ export type SlotTimes = Record<number, string>;
 export type CardHref = (card: EventCard) => string;
 const pageHref: CardHref = (card) => `/vzdelavani/akce/${encodeURIComponent(card.id)}`;
 type Linking = { hrefFor?: CardHref; managing?: boolean };
+/** Plánování v mřížce (jen správce): odkaz „+“ pro přidání akce na den a přesun tažením od dneška dál. */
+type Planning = { addHref?: (day: string) => string; movableFrom?: string };
 const dayOf = (card: EventCard) => toDateKey(new Date(card.startsAt));
 
 function byDay(cards: EventCard[]): Map<string, EventCard[]> {
@@ -65,12 +69,16 @@ function GhostBlock({ card, hrefFor = pageHref }: { card: EventCard; hrefFor?: C
   );
 }
 
-function EventBlock({ card, hrefFor = pageHref, managing = false }: { card: EventCard } & Linking) {
+function EventBlock({ card, hrefFor = pageHref, managing = false, movable = false }: { card: EventCard; movable?: boolean } & Linking) {
   const status = primaryStatus(card);
   const tone = cardTone(card);
   const isHoliday = card.type === "holiday";
+  // Data pro přesun tažením čte `MoveDropZone`. Odkaz zůstává odkazem: klik i klávesnice otevřou náhled.
+  const drag = movable
+    ? { draggable: true, "data-move-id": card.id, "data-move-revision": card.revision ?? 0, "data-move-label": card.label, "data-move-from": dayOf(card) }
+    : {};
   return (
-    <Link href={hrefFor(card)} scroll={false} className={`${styles.event} ${styles[tone]}`}>
+    <Link href={hrefFor(card)} scroll={false} className={`${styles.event} ${styles[tone]}`} {...drag}>
       <span className={styles.title}>{card.label}</span>
       {card.planStatus === "cancelled" && <span className={styles.cancelled}>Zrušeno</span>}
       {!isHoliday && card.planStatus !== "cancelled" && (
@@ -98,12 +106,15 @@ export function ScheduleGrid({
   slotTimes,
   hrefFor = pageHref,
   managing = false,
+  addHref,
+  movableFrom,
 }: {
   monthKey: string;
   cards: EventCard[];
   todayKey: string;
   slotTimes: SlotTimes;
-} & Linking) {
+} & Linking &
+  Planning) {
   const days = byDay(cards);
   const ghosts = ghostsByDay(cards);
   const columnDays = new Set(COLUMNS.map((c) => c.weekday));
@@ -148,14 +159,36 @@ export function ScheduleGrid({
                   const day = week[col.weekday - 1]!;
                   const inMonth = monthOf(day) === monthKey;
                   const dayCards = inMonth ? (days.get(day) ?? []) : [];
+                  const plannable = inMonth && movableFrom !== undefined && day >= movableFrom;
                   return (
-                    <td key={day} className={`${styles.cell} ${inMonth ? "" : styles.outside} ${day === todayKey ? styles.todayCell : ""}`}>
+                    <td
+                      key={day}
+                      className={`${styles.cell} ${inMonth ? "" : styles.outside} ${day === todayKey ? styles.todayCell : ""}`}
+                      data-drop-day={plannable ? day : undefined}
+                    >
                       <span className={styles.date}>
                         {formatDayMonth(day)}
                         {day === todayKey && <span className={styles.today}>dnes</span>}
                       </span>
+                      {plannable && addHref && (
+                        <Link
+                          href={addHref(day)}
+                          scroll={false}
+                          className={styles.addDay}
+                          aria-label={`Přidat akci na ${weekdayLong(day)} ${formatDayMonth(day)}`}
+                          title="Přidat akci na tento den"
+                        >
+                          <Icon name="plus" />
+                        </Link>
+                      )}
                       {dayCards.map((card) => (
-                        <EventBlock key={card.id} card={card} hrefFor={hrefFor} managing={managing} />
+                        <EventBlock
+                          key={card.id}
+                          card={card}
+                          hrefFor={hrefFor}
+                          managing={managing}
+                          movable={plannable && card.revision !== null && card.planStatus !== "cancelled" && !card.past}
+                        />
                       ))}
                       {inMonth && (ghosts.get(day) ?? []).map((card) => <GhostBlock key={`stin-${card.id}`} card={card} hrefFor={hrefFor} />)}
                     </td>

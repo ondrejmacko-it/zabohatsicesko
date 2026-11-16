@@ -17,7 +17,8 @@ import { Agenda, Legend, NextEventsList, ScheduleGrid } from "@/features/vzdelav
 import { TemplateDialog } from "@/features/vzdelavani/components/TemplateDialog";
 import { PLAN_STATES, filterCards, monthSummary, monthTasks } from "@/features/vzdelavani/status";
 import styles from "@/features/vzdelavani/components/schedule.module.css";
-import { formatMonth, isValidMonthKey, monthOf, shiftMonth, toDateKey } from "@/lib/time";
+import { MoveDropZone } from "@/features/vzdelavani/components/MoveEvent";
+import { formatMonth, isValidDateKey, isValidMonthKey, monthOf, shiftMonth, toDateKey } from "@/lib/time";
 import { EVENT_TYPES } from "@/lib/types";
 import { syncPublished } from "@/server/calendar/sync";
 import { requireUser } from "@/server/auth/session";
@@ -32,7 +33,7 @@ import { listTopics } from "@/server/services/topics";
 
 export const metadata: Metadata = { title: "Plán vzdělávání" };
 
-type SearchParams = Promise<{ mesic?: string; pohled?: string; jako?: string; typ?: string; stav?: string; akce?: string }>;
+type SearchParams = Promise<{ mesic?: string; pohled?: string; jako?: string; typ?: string; stav?: string; akce?: string; den?: string }>;
 
 /** Nejbližší zveřejněná akce: z již načteného aktuálního měsíce, jinak jedním dotazem dopředu. */
 async function nearestEvent(viewer: Parameters<typeof nextEventFor>[0], monthCards: EventCard[]): Promise<EventCard | null> {
@@ -95,7 +96,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   if (managing) after(() => syncPublished());
 
   const current = { mesic: monthKey, pohled: listView ? "seznam" : undefined, jako: preview ? params.jako : undefined, typ: type, stav: state };
-  const link = (change: Partial<typeof current> & { akce?: string }) => {
+  const link = (change: Partial<typeof current> & { akce?: string; den?: string }) => {
     const query = new URLSearchParams();
     for (const [key, value] of Object.entries({ ...current, ...change })) if (value) query.set(key, value);
     return `/vzdelavani/harmonogram?${query}`;
@@ -103,7 +104,10 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   // Klik na akci otevře náhled v okně nad Plánem. Měsíc, pohled i filtry zůstávají v adrese.
   const peekHref = (card: EventCard) => link({ akce: card.id });
   const peekId = (params.akce ?? "").slice(0, 120);
-  const newDate = monthOf(todayKey) === monthKey ? todayKey : `${monthKey}-01`;
+  // „+“ na dni v mřížce otevře Přidat akci s předvyplněným datem (`?den=`). Server datum ověří jako vždy.
+  const addDay = managing && params.den && isValidDateKey(params.den) ? params.den : null;
+  const addHref = (day: string) => link({ den: day });
+  const newDate = addDay ?? (monthOf(todayKey) === monthKey ? todayKey : `${monthKey}-01`);
   const emptyText = filtering ? "Filtru v tomto měsíci neodpovídá žádná akce." : undefined;
 
   // Stav měsíce patří správci mezi úkoly: odkaz zúží harmonogram na termíny, kterých se týká.
@@ -244,6 +248,9 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
                 />
               )}
               <EventDialog
+                key={addDay ?? "nova"}
+                openOnMount={addDay !== null}
+                closeHref={addDay ? link({}) : undefined}
                 mode="create"
                 initial={{
                   type: "other",
@@ -279,7 +286,22 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
         ) : (
           <>
             <div className={styles.desktopOnly}>
-              <ScheduleGrid monthKey={monthKey} cards={cards} todayKey={todayKey} slotTimes={slotTimes} hrefFor={peekHref} managing={managing} />
+              {managing ? (
+                <MoveDropZone>
+                  <ScheduleGrid
+                    monthKey={monthKey}
+                    cards={cards}
+                    todayKey={todayKey}
+                    slotTimes={slotTimes}
+                    hrefFor={peekHref}
+                    managing
+                    addHref={addHref}
+                    movableFrom={todayKey}
+                  />
+                </MoveDropZone>
+              ) : (
+                <ScheduleGrid monthKey={monthKey} cards={cards} todayKey={todayKey} slotTimes={slotTimes} hrefFor={peekHref} managing={managing} />
+              )}
               <Legend organizer={managing} />
             </div>
             <div className={styles.mobileOnly}>
