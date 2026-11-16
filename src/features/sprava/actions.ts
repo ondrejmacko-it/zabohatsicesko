@@ -4,6 +4,7 @@ import { after } from "next/server";
 import { z } from "zod";
 import { GROUPS, ROLES } from "@/lib/types";
 import { runAction, type ActionResult } from "@/features/shared/run-action";
+import { cleanupLegacyInvites } from "@/server/calendar/legacy-invites";
 import { syncPending } from "@/server/calendar/sync";
 import { config } from "@/server/config";
 import { formatDayMonth, toDateKey } from "@/lib/time";
@@ -76,5 +77,16 @@ export async function revokeDeviceAction(_prev: ActionResult | null, formData: F
   return runAction(async (user) => {
     await revokeUserDevice(user, userId.parse(formData.get("userId")), z.string().min(1).max(64).parse(formData.get("deviceId")));
     return { ok: true, message: "Zařízení je odhlášené." };
+  });
+}
+
+/** Úklid starých pozvánek z kalendáře správce po přechodu na osobní kalendáře. Oprávnění ověří služba. */
+export async function cleanupLegacyInvitesAction(): Promise<ActionResult> {
+  return runAction(async (user) => {
+    const result = await cleanupLegacyInvites(user);
+    const parts = [`Smazáno pozvánek: ${result.deleted}.`];
+    if (result.keptForeign) parts.push(`Spárované události, které Wiki nezaložila, zůstaly v kalendáři beze změny: ${result.keptForeign}.`);
+    if (result.failed) return { ok: false, error: `${parts.join(" ")} Google teď neodpověděl u ${result.failed} pozvánek, zkuste to prosím za chvíli znovu.` };
+    return { ok: true, message: parts.join(" ") };
   });
 }

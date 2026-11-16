@@ -184,7 +184,7 @@ export function Legend({ organizer }: { organizer: boolean }) {
       </li>
       {organizer && (
         <li>
-          <span className={`${styles.swatch} ${styles.draft}`} /> návrh, kolegové ho zatím nevidí
+          <span className={`${styles.swatch} ${styles.draft}`} /> návrh, kolegové ho zatím nevidí a do Kalendáře zatím nejde
         </li>
       )}
       {organizer && (
@@ -306,7 +306,11 @@ export function NextEventsList({ cards, todayKey, hrefFor = pageHref, emptyText 
               <span className="brief-main">
                 <span className="item-title">
                   {card.topicTitle ? `${card.label}: ${card.topicTitle}` : card.label}
-                  {card.planStatus === "draft" && <span className="badge badge-draft">Návrh</span>}
+                  {card.planStatus === "draft" && (
+                    <span className="badge badge-draft" title="Návrh, do Kalendáře zatím nejde">
+                      Návrh
+                    </span>
+                  )}
                 </span>
                 <span className="item-meta">
                   {formatEventTime(new Date(card.startsAt), new Date(card.endsAt), card.allDay)}

@@ -9,6 +9,7 @@ import { Menu } from "@/components/Menu";
 import { generateMonthAction } from "@/features/vzdelavani/actions";
 import { CalendarAlert } from "@/features/vzdelavani/components/CalendarStatusLine";
 import { EventDialog } from "@/features/vzdelavani/components/EventDialog";
+import { PersonalCalendarStatus } from "@/features/vzdelavani/components/PersonalCalendarStatus";
 import { EventPeek } from "@/features/vzdelavani/components/EventPeek";
 import { PrepareMonthDialog, type InviteMode, type PairingItem } from "@/features/vzdelavani/components/PrepareMonthDialog";
 import { PlanFilters } from "@/features/vzdelavani/components/PlanFilters";
@@ -24,7 +25,7 @@ import { now } from "@/server/config";
 import { defaultAudience } from "@/server/domain/generation";
 import { isOrganizer } from "@/server/policy";
 import { listMonth, listMonthDrafts, listPeople, loadTemplate, nextEventFor } from "@/server/services/events";
-import { loadCalendarStatus } from "@/server/services/calendar-status";
+import { loadCalendarStatus, loadPersonalCalendar } from "@/server/services/calendar-status";
 import { listTasks } from "@/server/services/journey";
 import { listPreviewOptions, resolvePreview } from "@/server/services/preview";
 import { listTopics } from "@/server/services/topics";
@@ -57,7 +58,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   // Celá stránka, tedy i úkoly, se počítá pro stejného diváka jako harmonogram.
   const viewer = preview?.viewer ?? user;
   // Všechna data stránky v jedné vlně: dotazy na sobě nezávisí, takže se čeká jen na nejpomalejší z nich.
-  const [monthCards, template, viewerTasks, people, topics, previewOptions, calendar, monthDrafts] = await Promise.all([
+  const [monthCards, template, viewerTasks, people, topics, previewOptions, calendar, monthDrafts, personal] = await Promise.all([
     listMonth(viewer, monthKey),
     loadTemplate(),
     listTasks(viewer),
@@ -66,6 +67,8 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
     organizer ? listPreviewOptions(user) : null,
     managing ? loadCalendarStatus(user) : null,
     managing ? listMonthDrafts(user, monthKey) : null,
+    // Vlastní kalendář patří přihlášenému, v náhledu očima kolegy se neukazuje.
+    preview ? null : loadPersonalCalendar(user),
   ]);
   const activeSlots = template.filter((s) => s.active);
   const slotTimes = Object.fromEntries(activeSlots.map((s) => [s.isoWeekday, `${s.startTime}–${s.endTime}`]));
@@ -161,7 +164,9 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
       </p>
     )}
       </div>
-      {calendar && <CalendarAlert status={calendar} now={now()} />}
+      {/* V režimu osobních kalendářů se do kalendáře správce nezapisuje, jeho propojení Plán nehlídá. */}
+      {calendar && !personal && <CalendarAlert status={calendar} now={now()} />}
+      {personal && <PersonalCalendarStatus state={personal} />}
       {/* Prázdná karta úkolů nic neříká, proto se bez úkolů skryje. Filtr, který úkoly schoval, ji nechá. */}
       {(tasks.length > 0 || hiddenTasks > 0) && (
         <div className="plan-top">

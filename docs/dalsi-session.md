@@ -37,7 +37,20 @@ Nouzové zrušení zařízení hlavního správce (UI ho záměrně nenabízí) 
 `UPDATE trusted_devices SET revoked_at = now() WHERE id = '<id>'` (ID z dotazu na `trusted_devices` podle e-mailu).
 Platí od dalšího požadavku. Můžeš ho provést i ty přes Neon MCP, ale jen na výslovný pokyn uživatele.
 
-**Stav 16. 11. noc (poslední):** relace skončila na limitu kontextu. #41 a #42 jsou v `main`.
+**Stav 16. 11. pozdě v noci (poslední):** #43 je v `main`. Draft PR z větve `claude/kalendar-ucastniku-ui`
+(base `main`): UI stavu osobního kalendáře (Úvod, Plán, Správa), spouštěč na Úvodu, úklid starých pozvánek
+ve Správě, štítek u návrhů, testy. Podrobnosti `docs/kalendar-ucastniku.md`, část „Doplněno 16. 11.“.
+* `CALENDAR_DELIVERY=personal` na Vercelu **nenastaveno**: zápis přes API zamítla kontrola oprávnění relace.
+  Nastaví uživatel ručně (Production, projekt `zbc-vzdelavani-demo`), nebo povolí volání a další relace ho udělá.
+  Pozor: platí od nasazení Production. Nastavit až těsně před merge tohoto PR (jinak by redeploy `main` zapnul
+  režim bez UI).
+* **Další krok 1:** živé ověření podle kroků v PR (propojení, kalendář „Vzdělávání ZBC“, změna času, Gmail i Spam,
+  ranní přehled, úklid starých pozvánek). Zápis do produkční DB přes Neon jen po výslovném souhlasu.
+* **Další krok 2–4:** beze změny (únik dat do klienta, jednotný design, závěrečný audit), každý v samostatné relaci.
+* Otevřené: odpojit i spárované cizí události při úklidu (zvoleno: ano, nemažou se), štítek „Návrh“ v seznamu
+  nese plný text jen jako nápovědu (plný text je v okně akce a legendě).
+
+**Stav 16. 11. noc (předchozí):** relace skončila na limitu kontextu. #41 a #42 jsou v `main`.
 * Draft [#43](https://github.com/ondrejmacko-it/zabohatsicesko/pull/43) z větve `claude/kalendar-ucastniku` (base `main`): serverové jádro Kalendáře účastníků, **vypnuté**
   (`CALENDAR_DELIVERY` výchozí `invites`). Podrobnosti a co chybí: `docs/kalendar-ucastniku.md`, sekce „Stav
   implementace“ a „Upozornění e-mailem od Googlu“. Lint, typy, 189/189 vitest, e2e 786 prošlo + 18 přeskočeno.

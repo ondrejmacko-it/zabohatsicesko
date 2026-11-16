@@ -1,8 +1,9 @@
 import { GROUPS, type Group } from "@/lib/types";
 import { audienceAttendees, listRecipients } from "@/server/calendar/attendees";
 import { connectionStatus, storedAccessToken } from "@/server/calendar/google-auth";
+import { personalCalendarState, personalCalendarStates, type PersonalCalendarState } from "@/server/calendar/personal";
 import { CalendarError } from "@/server/calendar/provider";
-import { attendeeSource, calendarMode, googleCalendarConfig, googleCalendarConfigProblems, oauthConsentExpiryDays, type AttendeeSource } from "@/server/config";
+import { attendeeSource, calendarMode, googleCalendarConfig, googleCalendarConfigProblems, oauthConsentExpiryDays, personalDelivery, type AttendeeSource } from "@/server/config";
 import { getDb } from "@/server/db/client";
 import { canPlan, type Viewer } from "@/server/policy";
 import { DomainError } from "@/server/services/errors";
@@ -90,4 +91,17 @@ export async function loadCalendarStatus(viewer: Viewer): Promise<CalendarStatus
     calendarId: cfg.calendarId,
     ...base,
   };
+}
+
+/** Stav osobního kalendáře přihlášeného uživatele pro Úvod a Plán. Mimo režim `personal` null. */
+export async function loadPersonalCalendar(viewer: Viewer): Promise<PersonalCalendarState | null> {
+  if (!personalDelivery()) return null;
+  return personalCalendarState(await getDb(), viewer.id);
+}
+
+/** Stav osobních kalendářů všech účtů pro Správu. Jen správce, mimo režim `personal` null. */
+export async function loadPersonalCalendars(viewer: Viewer): Promise<Map<string, PersonalCalendarState> | null> {
+  if (!canPlan(viewer)) throw new DomainError("forbidden");
+  if (!personalDelivery()) return null;
+  return personalCalendarStates(await getDb());
 }

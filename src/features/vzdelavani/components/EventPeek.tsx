@@ -56,7 +56,7 @@ export async function EventPeek({ user, eventId, preview, previewKey, closeHref 
     <RouteModal title={card.label} closeHref={closeHref}>
       <div className={`status-band status-${cardTone(card)}`} role="status">
         <strong>
-          {card.planStatus === "draft" ? "Návrh · kolegové ho zatím nevidí" : (status?.label ?? PLAN_STATUS_LABELS[card.planStatus])}
+          {card.planStatus === "draft" ? "Návrh, do Kalendáře zatím nejde · kolegové ho zatím nevidí" : (status?.label ?? PLAN_STATUS_LABELS[card.planStatus])}
           {card.past && card.planStatus === "published" ? " · proběhlo" : ""}
         </strong>
         {advice && <span>{advice}</span>}

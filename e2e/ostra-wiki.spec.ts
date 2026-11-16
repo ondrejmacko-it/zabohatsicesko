@@ -42,6 +42,21 @@ test.describe("ostrá Wiki", () => {
     expect(response.headers().location).toContain("/vstup");
   });
 
+  test("osobní kalendář: tlačítko Propojit bez zařízení vede zpět na vstup", async ({ request }) => {
+    const response = await request.get(`${live}/api/google/prihlaseni?kalendar=osobni`, { maxRedirects: 0 });
+    expect([302, 303, 307]).toContain(response.status());
+    expect(response.headers().location).toContain("/vstup");
+  });
+
+  test("osobní kalendář: první přihlášení správce žádá jen vlastní kalendář Wiki, ne kalendář účtu", async ({ request }) => {
+    const response = await request.get(`${live}/api/google/prihlaseni?spravce=1`, { maxRedirects: 0 });
+    const location = new URL(response.headers().location ?? "");
+    expect(location.hostname).toBe("accounts.google.com");
+    const scopes = (location.searchParams.get("scope") ?? "").split(" ");
+    expect(scopes).toContain("https://www.googleapis.com/auth/calendar.app.created");
+    expect(scopes).not.toContain("https://www.googleapis.com/auth/calendar.events");
+  });
+
   test("neplatný odkaz pozvánky nezaloží zařízení ani cookie pozvánky", async ({ request }) => {
     const response = await request.post(`${live}/api/pozvanka`, {
       headers: { origin: live, "content-type": "application/json" },
