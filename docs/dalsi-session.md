@@ -39,9 +39,9 @@ Platí od dalšího požadavku. Můžeš ho provést i ty přes Neon MCP, ale je
 
 **Stav 16. 11. večer (poslední):** relace skončila na limitu kontextu (200 tis.).
 * Draft [#41](https://github.com/ondrejmacko-it/zabohatsicesko/pull/41) `claude/uklid-readme`: README (tabulka příkazů), souhrn auditu, zjištění 16. 11., návrh `docs/kalendar-ucastniku.md`.
-* Draft PR `claude/pozvanka-po-prihlaseni` (úkol 2): pozvánka se spotřebuje až po přihlášení pozvaným účtem
+* Draft [#42](https://github.com/ondrejmacko-it/zabohatsicesko/pull/42) `claude/pozvanka-po-prihlaseni` (úkol 2): pozvánka se spotřebuje až po přihlášení pozvaným účtem
   (`checkInvite` bez zápisu, cookie `zbc_invite` 30 min, scope `invite`, `claimInvite(..., userId)` v callbacku).
-  Lint, typy, 184/184 vitest. Stav e2e je v popisu PR.
+  Lint, typy, 184/184 vitest, e2e 786 prošlo + 18 přeskočeno. Živě neověřeno.
 * **Další krok 1 (hlavní):** implementovat Kalendář účastníků podle `docs/kalendar-ucastniku.md` (varianta a,
   `calendar.app.created`, vlastní kalendář „Vzdělávání ZBC“, bez pozvánek). Nejdřív se zeptat, kam konzole
   zařadila rozsah (necitlivý/citlivý), krok 1 v tom souboru.
