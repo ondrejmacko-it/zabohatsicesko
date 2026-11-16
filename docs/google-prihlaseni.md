@@ -38,7 +38,7 @@ testovací účty a OAuth klienta. Výchozí režim dema zůstává vstup kódem
   Callback propojení uloží, jinak token hned zneplatní. První přihlášení z nového prohlížeče jde starou cestou:
   po přihlášení druhý souhlas (`/api/google/kalendar/pripojit?auto=1`) a návrat na Plán. Když správce souhlas
   odmítne, brána nabídne „Přihlásit se bez Kalendáře“ (`?kalendar=ne`), v Plánu pak má úkol „Propojte
-  Kalendář Google“. `?jiny=1` vynutí výběr účtu. Člen týmu žádost o Kalendář nevidí nikdy.
+  Kalendář Google“. Člen týmu žádost o Kalendář nevidí nikdy.
 
 ## Co nastavit po dodání přístupů
 

@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import { personalCalendarLabel, personalCalendarView } from "@/features/vzdelavani/components/PersonalCalendarStatus";
 import { clearAccessTokenCache, saveGrant } from "@/server/calendar/google-auth";
 import { cleanupLegacyInvites, legacyInviteCount } from "@/server/calendar/legacy-invites";
-import { personalSyncNeeded, savePersonalGrant } from "@/server/calendar/personal";
+import { EVENT_FORMAT, personalSyncNeeded, savePersonalGrant } from "@/server/calendar/personal";
 import { calendarLinks, events, integrationCredentials, personalCalendars } from "@/server/db/schema";
 import { loadPersonalCalendars } from "@/server/services/calendar-status";
 import { DomainError } from "@/server/services/errors";
@@ -167,7 +167,7 @@ describe("stav osobního kalendáře", () => {
     await savePersonalGrant(db, participant.id, { refreshToken: "rt", scopes: "x", accountEmail: "ucastnik@example.com" });
     expect(await personalSyncNeeded(db)).toBe(true);
     const later = new Date(Date.now() + 60_000);
-    await db.update(personalCalendars).set({ syncedAt: later, errorCode: null });
+    await db.update(personalCalendars).set({ syncedAt: later, errorCode: null, eventFormat: EVENT_FORMAT });
     expect(await personalSyncNeeded(db)).toBe(false);
     await db.update(personalCalendars).set({ errorCode: "calendar_unavailable" });
     expect(await personalSyncNeeded(db)).toBe(true);

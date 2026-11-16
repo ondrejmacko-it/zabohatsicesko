@@ -898,7 +898,9 @@ body > .dialog[open]:has(~ .dialog[open]) {
   display: flex;
   flex-direction: column;
   align-items: center;
+  /* Uprostřed i na mobilu. `safe` drží začátek karty viditelný, když se nevejde (klávesnice, nízký displej). */
   justify-content: center;
+  justify-content: safe center;
   gap: 18px;
   padding: 40px 16px 32px;
 }
@@ -1075,8 +1077,7 @@ body > .dialog[open]:has(~ .dialog[open]) {
 
 @media (max-width: 480px) {
   .gate-main {
-    justify-content: flex-start;
-    padding-top: 24px;
+    padding: 24px 16px;
   }
 
   .gate-card {

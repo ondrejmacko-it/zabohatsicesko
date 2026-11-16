@@ -306,6 +306,10 @@ export const personalCalendars = pgTable("personal_calendars", {
   syncRequestedAt: ts("sync_requested_at"),
   syncedAt: ts("synced_at"),
   leaseUntil: ts("lease_until"),
+  /** Verze podoby akcí (`EVENT_FORMAT`), se kterou byl kalendář naposledy srovnán. */
+  eventFormat: integer("event_format").notNull().default(0),
+  /** Výsledek nastavení kalendáře, strojový kód pro diagnostiku (`basic|full:403_forbidden`). */
+  setupCode: text("setup_code"),
   updatedAt: ts("updated_at").notNull().defaultNow(),
 });
 

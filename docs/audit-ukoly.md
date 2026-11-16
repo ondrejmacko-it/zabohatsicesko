@@ -43,7 +43,11 @@ Hotovo: `npm audit` 0 zranitelností (15. 11.). CSP s nonce a Referrer-Policy `s
 * Osobní kalendář: živé propojení 16. 11. selhalo (403 na `calendarList.patch` se tvářilo jako odvolání, ID
   kalendáře se neuložilo, každý pokus založil další). Oprava ve větvi `claude/oprava-osobniho-kalendare`,
   podrobnosti v `docs/kalendar-ucastniku.md`, „Oprava propojení 16. 11. večer“. Úvod: „Celý plán“ v hlavičce sekce.
-* Jednotný design a kontrola úniku dat do klienta · neuděláno.
+* Kontrola úniku dat do klienta · draft #49: e2e `unik-dat.spec.ts` (HTML i RSC bez tajemství, člen týmu bez
+  cizích e-mailů, bez `x-powered-by`, pravé tlačítko neblokované).
+* Jednotný design · částečně v #49 (Správa: „Připojit Kalendář znovu“ jako tlačítko v kartě), #48 (vstup na mobilu).
+  Projít role × šířky zbývá v závěrečném auditu.
+* Upozornění v osobním kalendáři · draft #47 (vynucený přepis akcí, diagnostika `setup_code`, režim `self-invite`).
 
 ## Mimo rozsah teď
 A07 (přepis, rozhodne firma), vlastní doména, logo a ověření aplikace u Googlu (firma Wiki zatím nemá).

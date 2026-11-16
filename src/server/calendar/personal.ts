@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { and, eq, gt, inArray, isNotNull, isNull, lt, ne, or, sql } from "drizzle-orm";
 import type { EventSnapshot } from "@/lib/types";
 import { audit, logError } from "@/server/audit";
-import { config, googleCalendarConfig, personalDelivery, tokenEncryptionKey } from "@/server/config";
+import { config, googleCalendarConfig, personalDelivery, personalSelfInvite, tokenEncryptionKey } from "@/server/config";
 import type { Db, Executor } from "@/server/db/client";
 import { calendarLinks, events, minutes, personalCalendarEntries, personalCalendars, recordings, users, type PersonalCalendarStatus } from "@/server/db/schema";
 import { openSecret, sealSecret } from "@/server/integrations/secret-box";
@@ -150,6 +150,8 @@ export async function personalSyncNeeded(db: Executor): Promise<boolean> {
               isNotNull(personalCalendars.errorCode),
               isNull(personalCalendars.syncedAt),
               gt(personalCalendars.syncRequestedAt, personalCalendars.syncedAt),
+              // Nasazení s novou podobou akcí: samo nic nezmění, proto se přepis spustí odsud.
+              lt(personalCalendars.eventFormat, EVENT_FORMAT),
             ),
           ),
           isNull(users.id),
@@ -161,13 +163,17 @@ export async function personalSyncNeeded(db: Executor): Promise<boolean> {
   return Boolean(row);
 }
 
-/** Verze podoby zapsané akce. Zvýšení přepíše všechny akce v kalendářích (2 = připomínky přímo v akci). */
-const EVENT_FORMAT = 2;
+/**
+ * Verze podoby zapsané akce. Zvýšení přepíše všechny akce v kalendářích a znovu zkusí nastavení kalendáře
+ * (2 = připomínky přímo v akci). Kalendář si pamatuje verzi v `event_format`, `personalSyncNeeded` podle ní
+ * pozná, že po nasazení je co přepisovat.
+ */
+export const EVENT_FORMAT = 2;
 const hashOf = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex").slice(0, 32);
 export const personalEventId = (eventId: string) => eventIdForKey(`personal:${config.orgId}:${eventId}`);
 
 /** Akce, které mají být v kalendáři uživatele: zveřejněné, nezrušené, ne svátky, z jeho skupin, nedávné a budoucí. */
-async function desiredEvents(db: Executor, groups: readonly string[], since: Date) {
+async function desiredEvents(db: Executor, groups: readonly string[], since: Date, guest: string | undefined) {
   const rows = await db
     .select({ id: events.id, published: events.published })
     .from(events)
@@ -193,7 +199,7 @@ async function desiredEvents(db: Executor, groups: readonly string[], since: Dat
     const snapshot = row.published as EventSnapshot;
     if (snapshot.status === "cancelled" || snapshot.type === "holiday" || !groups.includes(snapshot.audience)) continue;
     const data = desiredData(row.id, snapshot, withMinutes.has(row.id));
-    wanted.set(row.id, { data, hash: hashOf({ v: EVENT_FORMAT, s: data.summary, d: data.description, a: data.startsAt, b: data.endsAt }) });
+    wanted.set(row.id, { data, hash: hashOf({ v: EVENT_FORMAT, g: guest ?? null, s: data.summary, d: data.description, a: data.startsAt, b: data.endsAt }) });
   }
   return wanted;
 }
@@ -205,6 +211,17 @@ async function acquireLease(db: Executor, userId: string) {
     .where(and(whereUser(userId), or(isNull(personalCalendars.leaseUntil), lt(personalCalendars.leaseUntil, sql`now()`))))
     .returning();
   return row ?? null;
+}
+
+/**
+ * Nastaví kalendář v seznamu kalendářů uživatele a uloží výsledek jako strojový kód: runtime logy nejsou
+ * vždy dostupné, důvod odmítnutí od Googlu tak zůstane k přečtení v databázi.
+ */
+async function configure(db: Executor, api: PersonalCalendarApi, userId: string, calendarId: string) {
+  const { setup, failures } = await api.configureCalendar(calendarId);
+  const setupCode = [setup, ...failures].join("|").slice(0, 200);
+  await setState(db, userId, { setupCode });
+  if (setup !== "full") await audit(db, userId, `calendar.personal.setup_${setup}`, "user", userId);
 }
 
 async function setState(db: Executor, userId: string, values: Partial<typeof personalCalendars.$inferInsert>) {
@@ -242,17 +259,23 @@ export async function syncPersonalCalendar(db: Db, userId: string, deps: Persona
     if (calendarId && !row.syncedAt) {
       // Čerstvý souhlas stejného účtu: kalendář, který Wiki založila dřív, se použije znovu. Smazal-li ho
       // uživatel, založí se nový. Uživatel o propojení právě požádal, stav „smazán“ by tu nedával smysl.
-      if (await api.calendarExists(calendarId)) await api.configureCalendar(calendarId);
+      if (await api.calendarExists(calendarId)) await configure(db, api, userId, calendarId);
       else {
         await db.delete(personalCalendarEntries).where(eq(personalCalendarEntries.userId, userId));
         await setState(db, userId, { calendarId: null });
         calendarId = null;
       }
     }
+    else if (calendarId && row.eventFormat < EVENT_FORMAT) {
+      // Nová podoba akcí po nasazení: jednou za verzi se zkusí i nastavení kalendáře.
+      await configure(db, api, userId, calendarId);
+    }
+    // Zapnutí i vypnutí zkušebního režimu změní otisk všech akcí, takže se přepíšou s hostem nebo bez něj.
+    const guest = personalSelfInvite() ? row.accountEmail : undefined;
     for (let round = 0; round < MAX_ROUNDS; round += 1) {
       const started = clock();
       const since = new Date(started.getTime() - HISTORY_DAYS * 24 * 3600 * 1000);
-      const wanted = await desiredEvents(db, account.groups, since);
+      const wanted = await desiredEvents(db, account.groups, since, guest);
       const written = new Map(
         (await db.select().from(personalCalendarEntries).where(eq(personalCalendarEntries.userId, userId))).map((e) => [e.eventId, e]),
       );
@@ -267,12 +290,11 @@ export async function syncPersonalCalendar(db: Db, userId: string, deps: Persona
           calendarId = await api.insertCalendar();
           await setState(db, userId, { calendarId });
           await audit(db, userId, "calendar.personal.created", "user", userId);
-          const setup = await api.configureCalendar(calendarId);
-          if (setup !== "full") await audit(db, userId, `calendar.personal.setup_${setup}`, "user", userId);
+          await configure(db, api, userId, calendarId);
         }
         for (const [eventId, w] of changed) {
           const externalEventId = personalEventId(eventId);
-          const result = await api.putEvent(calendarId, externalEventId, w.data, written.has(eventId));
+          const result = await api.putEvent(calendarId, externalEventId, w.data, written.has(eventId), guest);
           if (result === "calendar_missing") {
             await db.delete(personalCalendarEntries).where(eq(personalCalendarEntries.userId, userId));
             await setState(db, userId, { status: "calendar_deleted", calendarId: null, errorCode: null });
@@ -284,11 +306,11 @@ export async function syncPersonalCalendar(db: Db, userId: string, deps: Persona
             .onConflictDoUpdate({ target: [personalCalendarEntries.userId, personalCalendarEntries.eventId], set: { dataHash: w.hash, updatedAt: new Date() } });
         }
         for (const entry of stale) {
-          await api.deleteEvent(calendarId, entry.externalEventId);
+          await api.deleteEvent(calendarId, entry.externalEventId, Boolean(guest));
           await db.delete(personalCalendarEntries).where(and(eq(personalCalendarEntries.userId, userId), eq(personalCalendarEntries.eventId, entry.eventId)));
         }
       }
-      await setState(db, userId, { syncedAt: started, errorCode: null });
+      await setState(db, userId, { syncedAt: started, errorCode: null, eventFormat: EVENT_FORMAT });
       const [after] = await db.select({ requested: personalCalendars.syncRequestedAt }).from(personalCalendars).where(whereUser(userId)).limit(1);
       if (!after?.requested || after.requested <= started) return "synced";
     }

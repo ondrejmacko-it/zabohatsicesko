@@ -19,7 +19,7 @@ import type { PersonalCalendarState } from "@/server/calendar/personal";
 import { legacyInviteCount } from "@/server/calendar/legacy-invites";
 import { loadCalendarStatus, loadPersonalCalendars } from "@/server/services/calendar-status";
 import { requireUser } from "@/server/auth/session";
-import { isLiveWiki, now } from "@/server/config";
+import { isLiveWiki, now, personalSelfInvite } from "@/server/config";
 import { canManageUsers } from "@/server/policy";
 import { listAccounts, type Account } from "@/server/services/users";
 
@@ -116,7 +116,11 @@ export default async function AdminPage() {
               <strong>Kalendář</strong>
               <span className="badge badge-ok">Osobní kalendáře</span>
               <span className="cal-status-rest">
-                Akce se zapisují do kalendáře „Vzdělávání ZBC“ v účtu Google každého člověka, podle jeho skupin. Pozvánky ani e-maily o pozvání se neposílají. Stav u každého je v seznamu Lidé.
+                Akce se zapisují do kalendáře „Vzdělávání ZBC“ v účtu Google každého člověka, podle jeho skupin.{" "}
+                {personalSelfInvite()
+                  ? "Zkušební režim upozornění: každý je hostem svých akcí a Google mu má poslat e-mail o nové, změněné a zrušené akci."
+                  : "Pozvánky ani e-maily o pozvání se neposílají."}{" "}
+                Stav u každého je v seznamu Lidé.
               </span>
             </p>
             {legacyInvites > 0 && (
@@ -150,19 +154,13 @@ export default async function AdminPage() {
             </details>
           </>
         )}
-      </section>
-
-      {live ? (
-        <p className="small muted">
-          <Link href="/vzdelavani/integrace">
-            Připojit Kalendář znovu nebo jiným účtem
+        {/* Tlačítko v kartě, jako ostatní akce Správy, ne volný odkaz pod ní. */}
+        <div className="row">
+          <Link className="btn btn-small" href="/vzdelavani/integrace">
+            {live ? "Připojit Kalendář znovu" : "Technické nastavení ukázky"}
           </Link>
-        </p>
-      ) : (
-        <p className="small muted">
-          <Link href="/vzdelavani/integrace">Technické nastavení ukázky</Link>
-        </p>
-      )}
+        </div>
+      </section>
     </>
   );
 }

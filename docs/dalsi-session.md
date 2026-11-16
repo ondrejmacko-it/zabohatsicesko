@@ -37,6 +37,7 @@ Nouzové zrušení zařízení hlavního správce (UI ho záměrně nenabízí) 
 `UPDATE trusted_devices SET revoked_at = now() WHERE id = '<id>'` (ID z dotazu na `trusted_devices` podle e-mailu).
 Platí od dalšího požadavku. Můžeš ho provést i ty přes Neon MCP, ale jen na výslovný pokyn uživatele.
 
+
 **Stav 16. 11. noc 2, audit (poslední):** #47, #48, #49 nebyly v `main` (ověřeno `git merge-base --is-ancestor`).
 Blok „Stav 16. 11. noc, notifikace“ je v předávce větve #49.
 * #47: text ve Správě podle `personalSelfInvite()`, lint/typy ok, vitest 202/202, e2e 788 ok + 30 přeskočeno.
@@ -50,6 +51,28 @@ Blok „Stav 16. 11. noc, notifikace“ je v předávce větve #49.
 * Při merge #49 a #50 se může střetnout tento soubor (obě větve sem přidávají blok), ponechat oba bloky.
 
 **Stav 16. 11. večer, připomínky (poslední):** #45 je v `main`. Propojení živě funguje (oba účty `active`). Google ale odmítá
+
+**Stav 16. 11. noc, notifikace (poslední):** relace skončila na limitu kontextu (200 tis.). #45 a #46 jsou v `main`,
+#46 je na Production od 19:41 UTC. Akce se ale naposledy přepsaly 19:39 UTC, takže připomínky z #46 v kalendářích nejsou.
+* Draft #47 `claude/vynuceny-prepis-akci`: migrace `0010` (`personal_calendars.event_format`, `setup_code`).
+  Úvod spustí přepis, když je `event_format < EVENT_FORMAT`, a jednou za verzi znovu zkusí `calendarList.patch`
+  ve 4 variantách. Výsledek se ukládá jako strojový kód do `setup_code` (dřív 404 prošla tiše). K tomu zkušební
+  režim `CALENDAR_PERSONAL_NOTIFY=self-invite` (výchozí vypnuto, uživatel ho zvolil: jen Google, nic externího):
+  host akce = účet účastníka, `sendUpdates=all`. Vitest 201/201 + nové testy, e2e v této větvi nespuštěné.
+* Draft #48 `claude/vstup-mobil`: bez „Použít jiný účet“ (i `?jiny=1`), karta uprostřed i na mobilu. e2e 788 ok.
+* Draft #49 `claude/unik-dat-a-design`: e2e `unik-dat.spec.ts` (HTML i RSC bez tajemství, člen max. 1 e-mail,
+  pravé tlačítko neblokované), Správa: „Připojit Kalendář znovu“ jako tlačítko v kartě. Kód: tokeny do klienta
+  nejdou, cookies HttpOnly, e-maily členů vidí jen správce (příjemci pozvánek).
+* **Další krok 1:** po merge #47 přečíst v Neonu (jen čtení) `select status, event_format, setup_code, synced_at from
+  personal_calendars` a podle `setup_code` určit důvod odmítnutí. Pak s uživatelem zapnout `self-invite`
+  (proměnná na Vercelu, Production, redeploy) a živě ověřit e-mail o nové/změněné/zrušené akci (Gmail i Spam).
+  Pozor na text ve Správě „Pozvánky ani e-maily o pozvání se neposílají“: v režimu self-invite neplatí, upravit.
+* **Další krok 2:** úkol 5, závěrečný audit `docs/audit-zaverecny.md`. Skript `node scripts/audit-screenshoty.mjs <repo> <výstup>` (běžící `node e2e/server.mjs`, sezení z `e2e/.auth`, adresáře role/ a host/ založit předem)
+  (role × 1280/390/360/320 × klíčové stránky, JPEG q60, kontrola posunu), ZIP ≤ 30 MB mimo repo, poslat přes SendUserFile.
+  Screenshotovat stav po sloučení #47–#49 (lokální integrační větev, nepushovat).
+
+**Stav 16. 11. večer, připomínky (předchozí):** #45 je v `main`. Propojení živě funguje (oba účty `active`). Google ale odmítá
+
 `calendarList.patch` (audit `setup_none`), takže kalendář nemá výchozí připomínky ani e-mailová upozornění. Draft PR
 z větve `claude/pripominky-v-akcich`: připomínky přímo v každé akci (e-mail den předem, oznámení 30 min), přepis všech
 akcí při dalším přihlášení nebo zveřejnění. Lint/typy/vitest cíleně ok, celé e2e v této větvi nespuštěné.
