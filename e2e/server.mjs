@@ -24,6 +24,8 @@ const liveEnv = {
   LOGIN_MODE: "google-test",
   CALENDAR_MODE: "google-test",
   CALENDAR_ATTENDEES: "audience",
+  // Osobní kalendáře účastníků, stejně jako ostrá Wiki po zapnutí na Vercelu.
+  CALENDAR_DELIVERY: "personal",
   APP_URL: `http://localhost:${LIVE_PORT}`,
   GOOGLE_OAUTH_CLIENT_ID: "e2e-falesny-klient.apps.googleusercontent.com",
   GOOGLE_OAUTH_CLIENT_SECRET: "e2e-falesne-tajemstvi",

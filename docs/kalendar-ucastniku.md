@@ -41,9 +41,29 @@ Hotové serverové jádro, **vypnuté** (výchozí `CALENDAR_DELIVERY=invites`, 
   nezapisují do `primary` (vazby se jen označí za zpracované).
 * Testy `tests/kalendar-osobni.test.ts` (napodobený HTTP).
 
-**Chybí před zapnutím:** UI stavu (Úvod, Plán, sloupec ve Správě, tlačítko), úklid 27 pozvánek z `primary` správce
-(jen události s `zbcKey`, `sendUpdates=none`, tlačítko ve Správě), spouštěč při otevření Úvodu, štítek
-„Návrh, do Kalendáře zatím nejde“, e2e. Pak nastavit `CALENDAR_DELIVERY=personal` přes API Vercelu.
+**Doplněno 16. 11. (draft PR, větev `claude/kalendar-ucastniku-ui`):**
+* UI stavu: `PersonalCalendarStatus` na Úvodu a v Plánu (ne v náhledu očima kolegy). Stavy a jedna akce
+  přes `/api/google/prihlaseni?kalendar=osobni`: nepropojeno / odmítnuto „Propojit Kalendář“, odvoláno
+  „Propojit znovu“, smazaný kalendář „Vytvořit kalendář znovu“; aktivní = účet, čas poslední aktualizace
+  a poznámka o e-mailové připomínce den předem; přechodná chyba = „Zkusí se znovu“ bez akce.
+  V režimu `personal` Plán neukazuje upozornění na propojení kalendáře správce.
+* Správa: u každého aktivního účtu řádek se stavem Kalendáře (`personalCalendarStates`), sekce Kalendář místo
+  pozvánek popisuje osobní kalendáře.
+* Spouštěč: Úvod položí jeden dotaz `personalSyncNeeded` (chyba, nezapsaná změna, nový kalendář, odebraný účet)
+  a jen tehdy spustí `after(() => syncPersonalCalendars(db))`.
+* Úklid starých pozvánek (`src/server/calendar/legacy-invites.ts`, tlačítko ve Správě s počtem a potvrzením):
+  jen správce, jen v režimu `personal`, zámek na každé vazbě (druhý klik nic nezdvojí), GET z Googlu ověří
+  `zbcKey`, mazání se `sendUpdates=none`. Vazba se přepne (`externalEventId` null, synchronizováno). Spárovaná
+  cizí událost se nemaže, jen se započte a vazba se od ní odpojí. Přechodná chyba nechá vazbu na další pokus.
+  Pozor: kdyby se Wiki vrátila do režimu `invites`, akce s odpojenou cizí událostí by při další změně dostala
+  novou pozvánku vedle té cizí.
+* Štítek u návrhů: okno akce „Návrh, do Kalendáře zatím nejde“, legenda, nápověda u štítku „Návrh“ v seznamu.
+* Testy: `tests/kalendar-uklid.test.ts` (oprávnění, jen `zbcKey`, idempotence, souběh, výpadek, stavy UI,
+  spouštěč), `e2e/ostra-wiki.spec.ts` (ostrá Wiki běží v e2e s `CALENDAR_DELIVERY=personal`: tlačítko bez
+  zařízení vede na vstup, první přihlášení správce žádá jen `calendar.app.created`). Přihlášený stav ostré Wiki
+  e2e neověří (vyžaduje skutečný Google), proto jsou stavy UI pokryté ve vitestu a živým ověřením.
+
+**Zbývá:** nastavit `CALENDAR_DELIVERY=personal` (Production) na Vercelu a živé ověření.
 
 ## Upozornění e-mailem od Googlu (ověřeno v dokumentaci 16. 11., živě ne)
 

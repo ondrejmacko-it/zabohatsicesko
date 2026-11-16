@@ -122,6 +122,38 @@ export async function requestPersonalSync(db: Executor, userIds?: readonly strin
     .where(userIds ? and(where, inArray(personalCalendars.userId, [...userIds])) : where);
 }
 
+/**
+ * Je co dohánět? Aktivní kalendář po přechodné chybě, se změnou novější než poslední zápis, ještě nikdy
+ * nezapsaný, nebo kalendář účtu, který už není aktivní (úklid). Jeden levný dotaz bez volání Googlu,
+ * proto ho smí položit každé otevření Úvodu.
+ */
+export async function personalSyncNeeded(db: Executor): Promise<boolean> {
+  if (!personalDelivery()) return false;
+  const [row] = await db
+    .select({ userId: personalCalendars.userId })
+    .from(personalCalendars)
+    .leftJoin(users, eq(users.id, personalCalendars.userId))
+    .where(
+      and(
+        eq(personalCalendars.orgId, config.orgId),
+        or(
+          and(
+            eq(personalCalendars.status, "active"),
+            or(
+              isNotNull(personalCalendars.errorCode),
+              isNull(personalCalendars.syncedAt),
+              gt(personalCalendars.syncRequestedAt, personalCalendars.syncedAt),
+            ),
+          ),
+          isNull(users.id),
+          ne(users.status, "active"),
+        ),
+      ),
+    )
+    .limit(1);
+  return Boolean(row);
+}
+
 const hashOf = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex").slice(0, 32);
 export const personalEventId = (eventId: string) => eventIdForKey(`personal:${config.orgId}:${eventId}`);
 

@@ -8,11 +8,16 @@ import {
 import { GROUP_LABELS, ROLE_LABELS, USER_STATUS_LABELS } from "@/lib/labels";
 import { formatDate, formatDayMonth, toDateKey } from "@/lib/time";
 import type { Role } from "@/lib/types";
+import { ActionForm } from "@/components/ActionForm";
+import { cleanupLegacyInvitesAction } from "@/features/sprava/actions";
 import {
   CalendarStatusLine,
   InviteRecipients,
 } from "@/features/vzdelavani/components/CalendarStatusLine";
-import { loadCalendarStatus } from "@/server/services/calendar-status";
+import { personalCalendarLabel } from "@/features/vzdelavani/components/PersonalCalendarStatus";
+import type { PersonalCalendarState } from "@/server/calendar/personal";
+import { legacyInviteCount } from "@/server/calendar/legacy-invites";
+import { loadCalendarStatus, loadPersonalCalendars } from "@/server/services/calendar-status";
 import { requireUser } from "@/server/auth/session";
 import { isLiveWiki, now } from "@/server/config";
 import { canManageUsers } from "@/server/policy";
@@ -24,9 +29,11 @@ export default async function AdminPage() {
   const user = await requireUser();
   // Stejná odpověď jako neexistující stránka: bez oprávnění se o správě nic nedozví.
   if (!canManageUsers(user)) notFound();
-  const [accounts, calendar] = await Promise.all([
+  const [accounts, calendar, personal, legacyInvites] = await Promise.all([
     listAccounts(user),
     loadCalendarStatus(user),
+    loadPersonalCalendars(user),
+    legacyInviteCount(user),
   ]);
   // Jedna role pro plánování a správu. Starší hodnota „organizer“ se už nepřiděluje, pravidla ji berou stejně.
   const roles: Role[] = ["admin", "member"];
@@ -72,6 +79,7 @@ export default async function AdminPage() {
             <AccountHead
               account={a}
               live={live}
+              personal={personal}
               actions={
                 !a.primary && (a.editable || live) ? (
                   <AccountActions
@@ -102,11 +110,46 @@ export default async function AdminPage() {
         id="pozvanky-kalendare"
       >
         <h2 id="pozvanky">Kalendář</h2>
-        <CalendarStatusLine status={calendar} now={now()} />
-        <details>
-          <summary className="small">Kdo dostane pozvánky do Kalendáře</summary>
-          <InviteRecipients status={calendar} />
-        </details>
+        {personal ? (
+          <>
+            <p className="cal-status" role="status">
+              <strong>Kalendář</strong>
+              <span className="badge badge-ok">Osobní kalendáře</span>
+              <span className="cal-status-rest">
+                Akce se zapisují do kalendáře „Vzdělávání ZBC“ v účtu Google každého člověka, podle jeho skupin. Pozvánky ani e-maily o pozvání se neposílají. Stav u každého je v seznamu Lidé.
+              </span>
+            </p>
+            {legacyInvites > 0 && (
+              <div className="cal-status cal-status-warn" data-testid="stare-pozvanky">
+                <span className="cal-status-main">
+                  <strong>Staré pozvánky: {legacyInvites}</strong>
+                  <span className="cal-status-rest">
+                    Z dřívějška jsou v kalendáři {calendar.connection?.accountEmail ?? "správce"}. Účastník by akci viděl dvakrát. Wiki smaže jen pozvánky, které sama založila, a hostům nepošle žádný e-mail.
+                  </span>
+                </span>
+                <ActionForm
+                  action={cleanupLegacyInvitesAction}
+                  label="Uklidit staré pozvánky"
+                  pendingLabel="Uklízím…"
+                  small
+                  confirm={{
+                    title: "Uklidit staré pozvánky",
+                    text: `Wiki ověří ${legacyInvites} událostí přímo u Googlu a smaže ty, které sama založila. Hosté nedostanou e-mail. Události, které založil někdo jiný a jen jste je spárovali, zůstanou beze změny. Akce zůstanou v osobních kalendářích.`,
+                    confirmLabel: "Smazat staré pozvánky",
+                  }}
+                />
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            <CalendarStatusLine status={calendar} now={now()} />
+            <details>
+              <summary className="small">Kdo dostane pozvánky do Kalendáře</summary>
+              <InviteRecipients status={calendar} />
+            </details>
+          </>
+        )}
       </section>
 
       {live ? (
@@ -147,10 +190,13 @@ function AccountHead({
   account: a,
   actions,
   live = false,
+  personal = null,
 }: {
   account: Account;
   actions: React.ReactNode;
   live?: boolean;
+  /** Stav osobních kalendářů, jen v režimu `CALENDAR_DELIVERY=personal`. */
+  personal?: Map<string, PersonalCalendarState> | null;
 }) {
   return (
     <div className="spread">
@@ -177,6 +223,7 @@ function AccountHead({
                 ? `Účet Google svázán${a.lastLoginAt ? `, naposledy ${formatDate(toDateKey(a.lastLoginAt))}` : ""}`
                 : "Pozvánka čeká na první přihlášení"}
         </p>
+        {personal && a.status === "active" && <p className="item-meta">{personalCalendarLabel(personal.get(a.id))}</p>}
       </div>
       <div className="account-side">
         {a.status === "active" && a.origin !== "demo" && !a.googleLinked ? (

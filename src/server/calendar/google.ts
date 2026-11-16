@@ -110,7 +110,7 @@ export class GoogleCalendar implements CalendarProvider {
   }
 
   private async request(
-    method: "GET" | "POST" | "PATCH",
+    method: "GET" | "POST" | "PATCH" | "DELETE",
     calendarId: string,
     path: string,
     init: { query?: Record<string, string>; body?: unknown; ifMatch?: string } = {},
@@ -164,6 +164,18 @@ export class GoogleCalendar implements CalendarProvider {
   async get(calendarId: string, eventId: string): Promise<ExternalEvent | null> {
     const event = await this.getRaw(calendarId, eventId);
     return event ? toExternal(event) : null;
+  }
+
+  /** Stav události před úklidem: založila ji Wiki? `null` = v kalendáři už není. */
+  async inspect(calendarId: string, eventId: string): Promise<{ createdByWiki: boolean } | null> {
+    const event = await this.getRaw(calendarId, eventId);
+    if (!event || event.status === "cancelled") return null;
+    return { createdByWiki: Boolean(event.extendedProperties?.private?.[KEY_PROPERTY]) };
+  }
+
+  /** Smaže událost bez e-mailu hostům (`sendUpdates=none`). Už smazaná (404, 410) je v pořádku. */
+  async remove(calendarId: string, eventId: string): Promise<void> {
+    await this.request("DELETE", calendarId, `/${encodeURIComponent(eventId)}`, { query: { sendUpdates: "none" } });
   }
 
   async findByKey(calendarId: string, key: string): Promise<ExternalEvent | null> {
