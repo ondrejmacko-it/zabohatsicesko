@@ -1,5 +1,5 @@
 // Screenshoty závěrečného auditu: role × šířky × klíčové stránky, plus kontrola vodorovného posunu.
-const { chromium } = require('playwright');
+import { chromium } from 'playwright';
 const [,, repo, out] = process.argv;
 const roles = ['spravce', 'vedouci', 'ucastnikFp', 'ucastnikRm'];
 const widths = [[1280, 800], [390, 844], [360, 740], [320, 640]];

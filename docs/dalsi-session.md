@@ -52,7 +52,7 @@ Platí od dalšího požadavku. Můžeš ho provést i ty přes Neon MCP, ale je
   personal_calendars` a podle `setup_code` určit důvod odmítnutí. Pak s uživatelem zapnout `self-invite`
   (proměnná na Vercelu, Production, redeploy) a živě ověřit e-mail o nové/změněné/zrušené akci (Gmail i Spam).
   Pozor na text ve Správě „Pozvánky ani e-maily o pozvání se neposílají“: v režimu self-invite neplatí, upravit.
-* **Další krok 2:** úkol 5, závěrečný audit `docs/audit-zaverecny.md`. Skript `node scripts/audit-screenshoty.cjs <repo> <výstup>` (běžící `node e2e/server.mjs`, sezení z `e2e/.auth`, adresáře role/ a host/ založit předem)
+* **Další krok 2:** úkol 5, závěrečný audit `docs/audit-zaverecny.md`. Skript `node scripts/audit-screenshoty.mjs <repo> <výstup>` (běžící `node e2e/server.mjs`, sezení z `e2e/.auth`, adresáře role/ a host/ založit předem)
   (role × 1280/390/360/320 × klíčové stránky, JPEG q60, kontrola posunu), ZIP ≤ 30 MB mimo repo, poslat přes SendUserFile.
   Screenshotovat stav po sloučení #47–#49 (lokální integrační větev, nepushovat).
 
