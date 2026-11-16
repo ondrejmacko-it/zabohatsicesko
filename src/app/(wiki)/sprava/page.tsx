@@ -150,19 +150,13 @@ export default async function AdminPage() {
             </details>
           </>
         )}
-      </section>
-
-      {live ? (
-        <p className="small muted">
-          <Link href="/vzdelavani/integrace">
-            Připojit Kalendář znovu nebo jiným účtem
+        {/* Tlačítko v kartě, jako ostatní akce Správy, ne volný odkaz pod ní. */}
+        <div className="row">
+          <Link className="btn btn-small" href="/vzdelavani/integrace">
+            {live ? "Připojit Kalendář znovu" : "Technické nastavení ukázky"}
           </Link>
-        </p>
-      ) : (
-        <p className="small muted">
-          <Link href="/vzdelavani/integrace">Technické nastavení ukázky</Link>
-        </p>
-      )}
+        </div>
+      </section>
     </>
   );
 }
