@@ -161,6 +161,8 @@ export async function personalSyncNeeded(db: Executor): Promise<boolean> {
   return Boolean(row);
 }
 
+/** Verze podoby zapsané akce. Zvýšení přepíše všechny akce v kalendářích (2 = připomínky přímo v akci). */
+const EVENT_FORMAT = 2;
 const hashOf = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex").slice(0, 32);
 export const personalEventId = (eventId: string) => eventIdForKey(`personal:${config.orgId}:${eventId}`);
 
@@ -191,7 +193,7 @@ async function desiredEvents(db: Executor, groups: readonly string[], since: Dat
     const snapshot = row.published as EventSnapshot;
     if (snapshot.status === "cancelled" || snapshot.type === "holiday" || !groups.includes(snapshot.audience)) continue;
     const data = desiredData(row.id, snapshot, withMinutes.has(row.id));
-    wanted.set(row.id, { data, hash: hashOf({ s: data.summary, d: data.description, a: data.startsAt, b: data.endsAt }) });
+    wanted.set(row.id, { data, hash: hashOf({ v: EVENT_FORMAT, s: data.summary, d: data.description, a: data.startsAt, b: data.endsAt }) });
   }
   return wanted;
 }

@@ -37,7 +37,22 @@ Nouzové zrušení zařízení hlavního správce (UI ho záměrně nenabízí) 
 `UPDATE trusted_devices SET revoked_at = now() WHERE id = '<id>'` (ID z dotazu na `trusted_devices` podle e-mailu).
 Platí od dalšího požadavku. Můžeš ho provést i ty přes Neon MCP, ale jen na výslovný pokyn uživatele.
 
-**Stav 16. 11. oprava kalendáře (poslední):** #44 je v `main`, `CALENDAR_DELIVERY=personal` je na Vercelu zapnuté.
+**Stav 16. 11. večer, připomínky (poslední):** #45 je v `main`. Propojení živě funguje (oba účty `active`). Google ale odmítá
+`calendarList.patch` (audit `setup_none`), takže kalendář nemá výchozí připomínky ani e-mailová upozornění. Draft PR
+z větve `claude/pripominky-v-akcich`: připomínky přímo v každé akci (e-mail den předem, oznámení 30 min), přepis všech
+akcí při dalším přihlášení nebo zveřejnění. Lint/typy/vitest cíleně ok, celé e2e v této větvi nespuštěné.
+* **Další krok 1 (uživatel říká „klíčové“):** e-mail o nové, změněné a zrušené akci. Google ho u vlastního kalendáře
+  nepošle. Navrhnout uživateli (nejdřív se zeptat, větší změna):
+  (a) Wiki posílá e-maily sama přes poskytovatele (např. Resend, tajemství přidá uživatel, doména/odesílatel),
+      souhrn změn za akci, odhlášení, logy bez obsahu;
+  (b) zpět k pozvánkám (`invites`), kde Google e-maily posílá, ale je to dnešní problém s pozvánkami;
+  (c) zjistit důvod 403 `calendarList.patch` z logu Vercelu (uživatel: Vercel → projekt → Logs → filtr
+      `google.personal` → kód `configure_full_http_403_…`) a podle něj zapnout aspoň ranní přehled.
+  Nejdřív (c), protože je zadarmo, a souběžně se rozhodnout mezi (a) a (b).
+* **Další krok 2–4:** únik dat do klienta, jednotný design (role × 1280/390/360/320), závěrečný audit
+  `docs/audit-zaverecny.md` se screenshoty v jednom ZIPu ≤ 30 MB mimo repo. Každý v samostatné relaci (limit kontextu).
+
+**Stav 16. 11. oprava kalendáře (předchozí):** #44 je v `main`, `CALENDAR_DELIVERY=personal` je na Vercelu zapnuté.
 Živé propojení selhalo: 403 na `calendarList.patch` se tvářilo jako odvolání, ID kalendáře se neuložilo a každý pokus
 založil další „Vzdělávání ZBC“. Draft PR z větve `claude/oprava-osobniho-kalendare` (base `main`): oprava (ID hned po
 založení, 403 ≠ odvolání, znovupoužití kalendáře, první zápis v callbacku), lidské texty stavu, „Celý plán“ v hlavičce

@@ -102,6 +102,18 @@ vzniklé před opravou musí uživatel smazat ručně.
   zapsat“, další běh nezaloží druhý kalendář), opakované propojení (existující kalendář znovu použit, smazaný
   nahrazen jedním novým).
 
+## Živě 16. 11. 19:30 po #45: propojení funguje, upozornění ne
+
+* Oba účty `active`, kalendář uložený, akce zapsané. Audit `calendar.personal.setup_none` u obou: Google odmítl
+  `calendarList.patch` i bez `notificationSettings` (přesný důvod jen v logu Vercelu). Kalendář tedy nemá výchozí
+  připomínky, upozornění ani ranní přehled a akce s `useDefault` neměly žádnou připomínku.
+* Oprava (větev `claude/pripominky-v-akcich`): připomínky přímo v akci (`reminders.overrides`: e-mail den předem,
+  oznámení 30 min předem), verze podoby akce `EVENT_FORMAT = 2` přepíše akce při nejbližším spouštěči
+  (přihlášení, zveřejnění změny).
+* **E-mail o nové, změněné nebo zrušené akci Google v tomto modelu nepošle** (organizátorem je sám uživatel,
+  viz níže). Bez `calendarList.patch` nechodí ani ranní přehled. Pokud jsou tato upozornění nutná, musí je posílat
+  Wiki sama (návrh v `docs/dalsi-session.md`, rozhodne uživatel).
+
 ## Upozornění e-mailem od Googlu (ověřeno v dokumentaci 16. 11., živě ne)
 
 * Discovery dokument Calendar API (revize 20261111): `calendarList.patch` i `calendars.insert/delete` povoluje
