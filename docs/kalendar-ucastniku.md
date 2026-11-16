@@ -23,7 +23,13 @@ a ruší“. Wiki vytvoří účastníkovi kalendář „Vzdělávání ZBC“ v
 Rozsah `calendar.app.created` dovolí jen kalendáře, které Wiki sama vytvořila. Do ostatních kalendářů
 uživatele Wiki nevidí.
 
-## Klasifikace rozsahu: neověřeno
+## Klasifikace rozsahu: ověřeno 16. 11. večer
+
+Uživatel přidal `calendar.app.created` v konzoli projektu `zbc-vzdelavani-test` a Google ho zařadil mezi
+**non-sensitive scopes**: žádné varování o neověřené aplikaci, žádný limit 100. Nový požadavek: e-mailová
+upozornění o nových, změněných a zrušených událostech přímo od Googlu (prověřit `calendarList.notificationSettings`).
+
+### Původní poznámka
 
 Oficiální stránka Googlu (`developers.google.com/workspace/calendar/api/auth`) se z prostředí relace
 nenačetla (síť ji blokuje) a veřejné zdroje si odporují: jeden projekt uvádí, že konzole řadí
