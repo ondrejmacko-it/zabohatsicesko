@@ -45,9 +45,10 @@ export type LoginStart = { url: string; cookieValue: string };
 export type CalendarIntent = "ask" | "later" | "skip";
 /**
  * Komu smí přihlášení patřit (ostrá Wiki). `device`: jen účtu, kterému patří důvěryhodné zařízení
- * z cookie. `bootstrap`: jen adrese ze zaváděcího seznamu správců (pojistka proti zamčení).
+ * z cookie. `invite`: jen účtu z dosud nepoužité pozvánky (zařízení vznikne až po přihlášení).
+ * `bootstrap`: jen adrese ze zaváděcího seznamu správců (pojistka proti zamčení).
  */
-export type LoginScope = { kind: "device"; deviceId: string; userId: string } | { kind: "bootstrap" };
+export type LoginScope = { kind: "device"; deviceId: string; userId: string } | { kind: "invite"; userId: string } | { kind: "bootstrap" };
 export type LoginOptions = { calendar?: CalendarIntent; loginHint?: string; scope?: LoginScope };
 
 /**
@@ -72,7 +73,7 @@ export function beginLogin(cfg: GoogleLoginConfig, nowSec = Math.floor(Date.now(
     prompt: withCalendar ? "consent" : "select_account",
     ...(withCalendar ? { access_type: "offline", include_granted_scopes: "false" } : {}),
     // Nápověda účtu jen tam, kde je účet jistý: souhlas správce s Kalendářem, nebo zařízení z pozvánky.
-    ...(options.loginHint && (withCalendar || options.scope?.kind === "device") ? { login_hint: options.loginHint } : {}),
+    ...(options.loginHint && (withCalendar || options.scope?.kind === "device" || options.scope?.kind === "invite") ? { login_hint: options.loginHint } : {}),
     state,
     nonce,
     code_challenge: createHash("sha256").update(verifier).digest("base64url"),
@@ -109,6 +110,7 @@ function parseScope(value: unknown): LoginScope | undefined {
   if (scope.kind === "device" && typeof scope.deviceId === "string" && typeof scope.userId === "string") {
     return { kind: "device", deviceId: scope.deviceId, userId: scope.userId };
   }
+  if (scope.kind === "invite" && typeof scope.userId === "string") return { kind: "invite", userId: scope.userId };
   return undefined;
 }
 
@@ -330,7 +332,7 @@ export async function completeLogin(
 }
 
 /**
- * Účet pro přihlášení v ostré Wiki. Se zařízením jen jeho vlastník: už svázaný účet Google musí patřit
+ * Účet pro přihlášení v ostré Wiki. Se zařízením nebo pozvánkou jen jejich vlastník: už svázaný účet Google musí patřit
  * jemu, nový musí mít přesně adresu z pozvánky. Bez zařízení jen adresa ze zaváděcího seznamu.
  */
 async function scopedAccount(
@@ -342,7 +344,8 @@ async function scopedAccount(
   name: string | null,
 ): Promise<string | { failure: LoginFailure; code: string }> {
   if (!scope) return { failure: "not_allowed", code: "no_device" };
-  if (scope.kind === "device") {
+  // Pozvánka i zařízení pouští jen přesně jeden účet Wiki. Cizí účet Google pozvánku nespotřebuje.
+  if (scope.kind === "device" || scope.kind === "invite") {
     if (existingUserId) return existingUserId === scope.userId ? existingUserId : { failure: "wrong_account", code: "wrong_account" };
     const [target] = await db
       .select({ id: users.id, email: users.email })

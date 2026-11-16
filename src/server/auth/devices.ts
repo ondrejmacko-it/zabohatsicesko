@@ -8,10 +8,11 @@ import { loginInvites, trustedDevices, users } from "@/server/db/schema";
 // Přihlášení do ostré Wiki jen přes pozvánku na jedno zařízení.
 //
 // 1. Správce vytvoří odkaz `/vstup#<token>`. Token má 256 bitů, v DB je jen jeho otisk (HMAC).
-// 2. Prohlížeč pošle token POSTem (fragment se na server sám neposílá). Server pozvánku jedním
-//    podmíněným UPDATE spotřebuje a založí zařízení. Prohlížeč dostane HttpOnly cookie `<id>.<tajemství>`,
-//    v DB je opět jen otisk tajemství.
-// 3. Jen se zařízením server nabídne a dokončí přihlášení Googlem, a to jen pro účet z pozvánky.
+// 2. Prohlížeč pošle token POSTem (fragment se na server sám neposílá). Server jen ověří platnost (nic
+//    nezapisuje) a uloží token do krátké HttpOnly cookie `zbc_invite`. Otevření odkazu pozvánku nespálí.
+// 3. S platnou pozvánkou (nebo zařízením) server nabídne přihlášení Googlem, a to jen pro účet z pozvánky.
+//    Teprve úspěšné přihlášení pozvaným účtem pozvánku jedním podmíněným UPDATE spotřebuje a založí
+//    zařízení. Prohlížeč dostane HttpOnly cookie `<id>.<tajemství>`, v DB je opět jen otisk tajemství.
 //    Session nese ID zařízení, takže zneplatnění zařízení odhlásí hned.
 
 export const INVITE_TTL_DAYS = 7;
@@ -111,13 +112,51 @@ export async function revokeInvites(tx: Executor, actorId: string, userId: strin
   return revoked.length;
 }
 
-export type ClaimResult = { ok: true; cookieValue: string; userId: string } | { ok: false };
+export type ClaimResult = { ok: true; cookieValue: string; userId: string; deviceId: string } | { ok: false };
+
+/** Cookie s tokenem pozvánky mezi otevřením odkazu a návratem z Googlu. Token jinam nejde (DB má jen otisk). */
+export const INVITE_COOKIE = config.isProduction ? "__Host-zbc_invite" : "zbc_invite";
+export const inviteCookieOptions = {
+  httpOnly: true,
+  secure: config.isProduction,
+  // Lax: cookie musí dorazit i při návratu z Googlu (navigace nejvyšší úrovně metodou GET).
+  sameSite: "lax" as const,
+  path: "/",
+  maxAge: 30 * 60,
+};
+
+export type PendingInvite = { userId: string; email: string };
+
+/**
+ * Platná pozvánka bez zápisu: nepoužitá, nezneplatněná, nevypršelá, pro aktivní účet. Otevření odkazu
+ * (i cizím člověkem) ji proto nespálí. Spotřebuje ji až `claimInvite` po přihlášení pozvaným účtem.
+ */
+export async function checkInvite(db: Executor, token: string | undefined, now = new Date()): Promise<PendingInvite | null> {
+  if (!isInviteToken(token)) return null;
+  const [row] = await db
+    .select({ userId: loginInvites.userId, email: users.email, status: users.status })
+    .from(loginInvites)
+    .innerJoin(users, eq(users.id, loginInvites.userId))
+    .where(
+      and(
+        eq(loginInvites.orgId, config.orgId),
+        eq(users.orgId, config.orgId),
+        eq(loginInvites.tokenHash, digest("invite", token)),
+        isNull(loginInvites.usedAt),
+        isNull(loginInvites.revokedAt),
+        gt(loginInvites.expiresAt, now),
+      ),
+    )
+    .limit(1);
+  return row && row.status === "active" ? { userId: row.userId, email: row.email } : null;
+}
 
 /**
  * Spotřebuje odkaz a založí zařízení. Podmíněný UPDATE … RETURNING pustí ze dvou souběžných
  * pokusů jen jeden. Prošlý, použitý nebo zneplatněný odkaz i účet bez přístupu vrací stejnou chybu.
+ * `userId` je účet, který se právě přihlásil Googlem: pozvánka jiného účtu zůstane nedotčená.
  */
-export async function claimInvite(tx: Executor, token: string, label: string, now = new Date()): Promise<ClaimResult> {
+export async function claimInvite(tx: Executor, token: string, label: string, now = new Date(), userId?: string): Promise<ClaimResult> {
   if (!isInviteToken(token)) return { ok: false };
   const [invite] = await tx
     .update(loginInvites)
@@ -129,6 +168,7 @@ export async function claimInvite(tx: Executor, token: string, label: string, no
         isNull(loginInvites.usedAt),
         isNull(loginInvites.revokedAt),
         gt(loginInvites.expiresAt, now),
+        ...(userId ? [eq(loginInvites.userId, userId)] : []),
       ),
     )
     .returning({ id: loginInvites.id, userId: loginInvites.userId });
@@ -139,7 +179,7 @@ export async function claimInvite(tx: Executor, token: string, label: string, no
   const { id, cookieValue } = await insertDevice(tx, invite.userId, label, now);
   await tx.update(loginInvites).set({ deviceId: id }).where(eq(loginInvites.id, invite.id));
   await audit(tx, invite.userId, "invite.used", "device", id);
-  return { ok: true, cookieValue, userId: invite.userId };
+  return { ok: true, cookieValue, userId: invite.userId, deviceId: id };
 }
 
 // ——— Zařízení ———

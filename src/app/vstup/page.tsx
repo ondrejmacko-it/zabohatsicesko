@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { cookies } from "next/headers";
-import { DEVICE_COOKIE, findDevice, maskEmail } from "@/server/auth/devices";
+import { DEVICE_COOKIE, INVITE_COOKIE, checkInvite, findDevice, maskEmail } from "@/server/auth/devices";
 import { listPersonas } from "@/server/auth/personas";
 import { getDb } from "@/server/db/client";
 import { InviteClaim } from "./InviteClaim";
@@ -67,17 +67,27 @@ function GateShell({ title, children }: { title: string; children: React.ReactNo
 }
 
 /**
- * Ostrá Wiki: přihlášení Googlem jen z důvěryhodného zařízení (po použití pozvánky). Bez něj neutrální
+ * Ostrá Wiki: přihlášení Googlem jen z důvěryhodného zařízení, nebo s otevřenou platnou pozvánkou. Jinak neutrální
  * stránka bez tlačítka. Pozvánku z fragmentu adresy zpracuje `InviteClaim`.
  */
 async function LiveGate({ googleResult, bootstrap }: { googleResult: string; bootstrap: boolean }) {
   const googleError = GOOGLE_RESULTS[googleResult];
   const isPending = googleResult === "ceka-na-schvaleni";
-  const device = await findDevice(await getDb(), (await cookies()).get(DEVICE_COOKIE)?.value);
+  const db = await getDb();
+  const jar = await cookies();
+  const known = await findDevice(db, jar.get(DEVICE_COOKIE)?.value);
+  // Otevřená, ještě nepoužitá pozvánka: tlačítko Google se ukáže, pozvánku spotřebuje až přihlášení.
+  const invite = known ? null : await checkInvite(db, jar.get(INVITE_COOKIE)?.value);
+  const device = known ?? invite;
   if (!device && !bootstrap) {
     return (
       <GateShell title="Firemní Wiki">
         <p className="page-sub">Do Wiki se vstupuje přes osobní pozvánku. Odkaz vám pošle správce.</p>
+        {googleError && !isPending && (
+          <p className="form-error" role="alert">
+            {googleError}
+          </p>
+        )}
         <InviteClaim />
       </GateShell>
     );

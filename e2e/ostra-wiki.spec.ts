@@ -42,6 +42,17 @@ test.describe("ostrá Wiki", () => {
     expect(response.headers().location).toContain("/vstup");
   });
 
+  test("neplatný odkaz pozvánky nezaloží zařízení ani cookie pozvánky", async ({ request }) => {
+    const response = await request.post(`${live}/api/pozvanka`, {
+      headers: { origin: live, "content-type": "application/json" },
+      data: { token: "A".repeat(43) },
+    });
+    expect(response.status()).toBe(400);
+    const cookies = response.headers()["set-cookie"] ?? "";
+    expect(cookies).not.toContain("zbc_device");
+    expect(cookies).not.toContain("zbc_invite");
+  });
+
   test("ukázkový vstup nejde obejít ani přes formulář", async ({ request }) => {
     const response = await request.get(`${live}/vstup/pozvanka?pozvanka=e2e-pristupovy-kod`, { maxRedirects: 0 });
     expect(response.headers()["set-cookie"] ?? "").not.toContain("zbc_gate");

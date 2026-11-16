@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
 import { hashKey, withinRateLimit } from "@/server/audit";
-import { DEVICE_COOKIE, findDevice, inviteOnlyLogin } from "@/server/auth/devices";
+import { DEVICE_COOKIE, INVITE_COOKIE, checkInvite, findDevice, inviteOnlyLogin } from "@/server/auth/devices";
 import { beginLogin, type LoginOptions, type LoginScope } from "@/server/auth/google-login";
 import { needsCalendarConnection } from "@/server/calendar/google-auth";
 import { config, googleLoginConfig } from "@/server/config";
@@ -29,7 +29,7 @@ async function calendarRequestFor(db: Executor, hintedUserId: string | null): Pr
 
 // Začátek přihlášení Google identitou. Jen v nakonfigurovaném testovacím režimu.
 // `?jiny=1` nabídne výběr účtu bez ohledu na minulé přihlášení, `?kalendar=ne` přihlásí bez žádosti o Kalendář.
-// Ostrá Wiki pustí na Google jen prohlížeč s důvěryhodným zařízením (z pozvánky), nebo `?spravce=1`
+// Ostrá Wiki pustí na Google jen prohlížeč s důvěryhodným zařízením, s platnou pozvánkou v cookie, nebo `?spravce=1`
 // pro adresy ze zaváděcího seznamu správců. Přímé volání bez zařízení skončí na neutrální stránce vstupu.
 export async function GET(request: NextRequest) {
   const cfg = googleLoginConfig();
@@ -44,10 +44,16 @@ export async function GET(request: NextRequest) {
   let hintedUserId = decodeHint(request.cookies.get(HINT_COOKIE)?.value);
   if (inviteOnlyLogin()) {
     const device = await findDevice(db, request.cookies.get(DEVICE_COOKIE)?.value);
+    const invite = device ? null : await checkInvite(db, request.cookies.get(INVITE_COOKIE)?.value);
     if (device) {
       scope = { kind: "device", deviceId: device.id, userId: device.userId };
       loginHint = device.email;
       hintedUserId = device.userId;
+    } else if (invite) {
+      // Pozvánka zatím platí dál. Spotřebuje ji až callback, když se přihlásí právě tento účet.
+      scope = { kind: "invite", userId: invite.userId };
+      loginHint = invite.email;
+      hintedUserId = null;
     } else if (params.get("spravce") === "1" && cfg.bootstrapAdmins?.size) {
       scope = { kind: "bootstrap" };
     } else {
