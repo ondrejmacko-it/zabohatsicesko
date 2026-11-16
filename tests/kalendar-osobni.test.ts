@@ -103,6 +103,7 @@ describe("osobní kalendář", () => {
     for (const w of writes) {
       expect(w.url.searchParams.get("sendUpdates")).toBe("none");
       expect((w.body as { attendees?: unknown }).attendees).toBeUndefined();
+      if (w.method !== "DELETE") expect((w.body as { reminders: unknown }).reminders).toEqual({ useDefault: false, overrides: [{ method: "email", minutes: 1440 }, { method: "popup", minutes: 30 }] });
     }
     expect(await needsPersonalCalendar(db, participant.id)).toBe(false);
     // Druhý běh bez změn Google vůbec nevolá.

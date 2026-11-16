@@ -166,7 +166,9 @@ export class PersonalCalendarApi {
       start: { dateTime: data.startsAt.toISOString(), timeZone: TIME_ZONE },
       end: { dateTime: data.endsAt.toISOString(), timeZone: TIME_ZONE },
       status: "confirmed",
-      reminders: { useDefault: true },
+      // Připomínky přímo v akci: výchozí připomínky kalendáře Google přes `calendarList.patch` živě odmítá
+      // (audit `calendar.personal.setup_none`), zápis akce ale projde. Bez toho by akce neměla žádnou.
+      reminders: { useDefault: false, overrides: DEFAULT_REMINDERS.map((r) => ({ ...r })) },
       transparency: "opaque",
     };
     const base = `/calendars/${encodeURIComponent(calendarId)}/events`;
