@@ -44,25 +44,47 @@ export default async function GatePage({ searchParams }: { searchParams: Promise
   );
 }
 
-function GateShell({ title, children }: { title: string; children: React.ReactNode }) {
+function GateShell({ title, wide = false, children }: { title: string; wide?: boolean; children: React.ReactNode }) {
   return (
-    <>
+    <div className="gate-page">
       <header className="topbar">
         <div className="brand">
           <span className="brand-name">Firemní Wiki</span>
           <span className="brand-tagline">Za bohatší Česko – znalosti a procesy na jednom místě</span>
         </div>
       </header>
-      <main className="gate">
-        <div className="panel gate-panel">
-          <h1>{title}</h1>
+      <main className="gate-main">
+        <div className={`gate-card${wide ? " gate-card-wide" : ""}`}>
+          <div className="gate-title">
+            <span className="gate-mark" aria-hidden="true">
+              W
+            </span>
+            <div>
+              <p className="gate-eyebrow">Firemní Wiki</p>
+              <h1>{title}</h1>
+            </div>
+          </div>
           {children}
-          <p className="small">
-            <a href="/soukromi">Ochrana soukromí</a>
-          </p>
         </div>
+        <nav className="gate-foot" aria-label="Doplňující odkazy">
+          <a href="/soukromi">Ochrana soukromí</a>
+          <span aria-hidden="true">·</span>
+          <span>Za bohatší Česko</span>
+        </nav>
       </main>
-    </>
+    </div>
+  );
+}
+
+/** Oficiální barevné „G“ pro tlačítko přihlášení Googlem (podle pravidel značky Google). */
+function GoogleMark() {
+  return (
+    <svg viewBox="0 0 48 48" aria-hidden="true" focusable="false">
+      <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+      <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+    </svg>
   );
 }
 
@@ -81,8 +103,8 @@ async function LiveGate({ googleResult, bootstrap }: { googleResult: string; boo
   const device = known ?? invite;
   if (!device && !bootstrap) {
     return (
-      <GateShell title="Firemní Wiki">
-        <p className="page-sub">Do Wiki se vstupuje přes osobní pozvánku. Odkaz vám pošle správce.</p>
+      <GateShell title="Vstup do Wiki">
+        <p className="gate-lead">Do Wiki se vstupuje přes osobní pozvánku. Odkaz vám pošle správce.</p>
         {googleError && !isPending && (
           <p className="form-error" role="alert">
             {googleError}
@@ -92,29 +114,37 @@ async function LiveGate({ googleResult, bootstrap }: { googleResult: string; boo
       </GateShell>
     );
   }
+  const spravce = device ? "" : "&spravce=1";
   return (
-    <GateShell title="Přihlášení do Wiki">
-      {device && <p className="small muted">Přihlaste se účtem Google {maskEmail(device.email)}.</p>}
+    <GateShell title={known ? "Vítejte zpět" : "Vítejte ve Wiki"}>
+      <p className="gate-lead">Přihlaste se svým účtem Google. Plán vzdělávání, zápisy a témata na vás čekají na jednom místě.</p>
       {googleLoginConfig() ? (
-        <section className="stack gate-google" aria-label="Přihlášení účtem Google">
+        <section className="gate-google" aria-label="Přihlášení účtem Google">
           {googleError && (
             <p className={isPending ? "notice" : "form-error"} role={isPending ? "status" : "alert"}>
               {googleError}
             </p>
           )}
-          <div className="row">
-            {/* Odkaz, ne formulář: navigaci na Google nesmí blokovat CSP form-action. */}
-            <a className="btn btn-primary" href={device ? "/api/google/prihlaseni" : "/api/google/prihlaseni?spravce=1"}>
-              Přihlásit se účtem Google
-            </a>
+          {device && (
+            <p className="gate-account">
+              <span className="gate-avatar" aria-hidden="true">
+                {device.email.charAt(0).toUpperCase()}
+              </span>
+              <span>
+                {known ? "Toto zařízení zná účet" : "Pozvánka je pro účet"} <strong>{maskEmail(device.email)}</strong>
+              </span>
+            </p>
+          )}
+          {/* Odkaz, ne formulář: navigaci na Google nesmí blokovat CSP form-action. */}
+          <a className="btn btn-google" href={device ? "/api/google/prihlaseni" : "/api/google/prihlaseni?spravce=1"}>
+            <GoogleMark />
+            <span>Přihlásit se účtem Google</span>
+          </a>
+          <div className="gate-alt">
             {googleResult === "zruseno-kalendar" ? (
-              <a className="btn" href={`/api/google/prihlaseni?kalendar=ne${device ? "" : "&spravce=1"}`}>
-                Přihlásit se bez Kalendáře
-              </a>
+              <a href={`/api/google/prihlaseni?kalendar=ne${spravce}`}>Přihlásit se bez Kalendáře</a>
             ) : (
-              <a className="small" href={`/api/google/prihlaseni?jiny=1${device ? "" : "&spravce=1"}`}>
-                Použít jiný účet
-              </a>
+              <a href={`/api/google/prihlaseni?jiny=1${spravce}`}>Použít jiný účet</a>
             )}
           </div>
         </section>
@@ -123,6 +153,13 @@ async function LiveGate({ googleResult, bootstrap }: { googleResult: string; boo
           Přihlášení zatím není nastavené. Obraťte se na správce Wiki.
         </p>
       )}
+      <p className="gate-note">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true" focusable="false">
+          <rect x="3" y="7" width="10" height="7" rx="1.5" />
+          <path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" />
+        </svg>
+        <span>Vstup mají jen účty, které schválil správce Wiki. Heslo k účtu Google Wiki nikdy nevidí.</span>
+      </p>
     </GateShell>
   );
 }
@@ -133,8 +170,8 @@ async function DemoGate({ linkResult }: { linkResult: string }) {
   const gate = config.accessCode === null ? "local" : (await hasGatePass()) ? "invited" : "code";
   const linkError = LINK_RESULTS[linkResult];
   return (
-    <GateShell title="Ukázka modulu Vzdělávání">
-      <p className="page-sub">
+    <GateShell title="Ukázka modulu Vzdělávání" wide>
+      <p className="gate-lead">
         Prohlížíte ukázku s fiktivními daty.{" "}
         {calendarMode() === "google-test"
           ? attendeeSource() === "allowlist"

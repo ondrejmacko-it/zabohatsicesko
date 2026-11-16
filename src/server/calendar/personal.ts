@@ -61,6 +61,8 @@ export async function savePersonalGrant(
     calendarId: sameAccount ? previous.calendarId : null,
     status: "active" as const,
     errorCode: null,
+    // Prázdné `syncedAt` = čerstvý souhlas: první běh ověří, že uložený kalendář ještě existuje, a znovu ho nastaví.
+    syncedAt: null,
     syncRequestedAt: new Date(),
     updatedAt: new Date(),
   };
@@ -86,23 +88,28 @@ export type PersonalCalendarState = {
   syncedAt: string | null;
   /** Poslední zápis selhal přechodně, Wiki to zkusí znovu. */
   retrying: boolean;
+  /** Google zápis opakovaně odmítá (403), i když přístup platí. Pomůže propojit znovu. */
+  blocked: boolean;
 };
+
+const FORBIDDEN_PREFIX = "forbidden";
+
+function stateOf(row: typeof personalCalendars.$inferSelect): PersonalCalendarState {
+  const failing = row.status === "active" && row.errorCode !== null;
+  const blocked = failing && row.errorCode!.startsWith(FORBIDDEN_PREFIX);
+  return { status: row.status, accountEmail: row.accountEmail, syncedAt: row.syncedAt?.toISOString() ?? null, retrying: failing && !blocked, blocked };
+}
 
 export async function personalCalendarState(db: Executor, userId: string): Promise<PersonalCalendarState> {
   const [row] = await db.select().from(personalCalendars).where(whereUser(userId)).limit(1);
-  if (!row) return { status: "none", accountEmail: null, syncedAt: null, retrying: false };
-  return { status: row.status, accountEmail: row.accountEmail, syncedAt: row.syncedAt?.toISOString() ?? null, retrying: row.status === "active" && row.errorCode !== null };
+  if (!row) return { status: "none", accountEmail: null, syncedAt: null, retrying: false, blocked: false };
+  return stateOf(row);
 }
 
 /** Stav osobních kalendářů všech účtů pro Správu. Bez tokenů. */
 export async function personalCalendarStates(db: Executor): Promise<Map<string, PersonalCalendarState>> {
   const rows = await db.select().from(personalCalendars).where(eq(personalCalendars.orgId, config.orgId));
-  return new Map(
-    rows.map((row) => [
-      row.userId,
-      { status: row.status, accountEmail: row.accountEmail, syncedAt: row.syncedAt?.toISOString() ?? null, retrying: row.status === "active" && row.errorCode !== null },
-    ]),
-  );
+  return new Map(rows.map((row) => [row.userId, stateOf(row)]));
 }
 
 /** Má přihlášení požádat o osobní kalendář? Ne, když už platí, nebo ho uživatel odmítl (pak jen tlačítko). */
@@ -230,6 +237,16 @@ export async function syncPersonalCalendar(db: Db, userId: string, deps: Persona
       return "skipped";
     }
     let calendarId = row.calendarId;
+    if (calendarId && !row.syncedAt) {
+      // Čerstvý souhlas stejného účtu: kalendář, který Wiki založila dřív, se použije znovu. Smazal-li ho
+      // uživatel, založí se nový. Uživatel o propojení právě požádal, stav „smazán“ by tu nedával smysl.
+      if (await api.calendarExists(calendarId)) await api.configureCalendar(calendarId);
+      else {
+        await db.delete(personalCalendarEntries).where(eq(personalCalendarEntries.userId, userId));
+        await setState(db, userId, { calendarId: null });
+        calendarId = null;
+      }
+    }
     for (let round = 0; round < MAX_ROUNDS; round += 1) {
       const started = clock();
       const since = new Date(started.getTime() - HISTORY_DAYS * 24 * 3600 * 1000);
@@ -243,9 +260,13 @@ export async function syncPersonalCalendar(db: Db, userId: string, deps: Persona
 
       if (changed.length || stale.length || !calendarId) {
         if (!calendarId) {
-          calendarId = await api.createCalendar();
+          // ID se uloží hned po založení: cokoli dalšího může selhat a příští běh musí kalendář najít,
+          // jinak by každý pokus založil další kalendář „Vzdělávání ZBC“.
+          calendarId = await api.insertCalendar();
           await setState(db, userId, { calendarId });
           await audit(db, userId, "calendar.personal.created", "user", userId);
+          const setup = await api.configureCalendar(calendarId);
+          if (setup !== "full") await audit(db, userId, `calendar.personal.setup_${setup}`, "user", userId);
         }
         for (const [eventId, w] of changed) {
           const externalEventId = personalEventId(eventId);
@@ -278,9 +299,11 @@ export async function syncPersonalCalendar(db: Db, userId: string, deps: Persona
       await audit(db, userId, "calendar.personal.revoked", "user", userId);
       return "revoked";
     }
-    // Přechodná chyba: zkusí se při dalším spouštěči (zveřejnění, přihlášení, otevření Úvodu).
-    await setState(db, userId, { errorCode: error.code });
-    logError("calendar.personal", error.code);
+    // Přechodná chyba nebo 403 u jedné operace: token i kalendář zůstávají, zkusí se při dalším spouštěči
+    // (zveřejnění, přihlášení, otevření Úvodu). U 403 se uloží důvod od Googlu kvůli diagnostice.
+    const errorCode = error.code === "calendar_forbidden" ? `${FORBIDDEN_PREFIX}_${error.reason || "unknown"}` : error.code;
+    await setState(db, userId, { errorCode });
+    logError("calendar.personal", errorCode);
     return "retry";
   } finally {
     await db.update(personalCalendars).set({ leaseUntil: null }).where(whereUser(userId));

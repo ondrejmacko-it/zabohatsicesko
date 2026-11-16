@@ -64,11 +64,13 @@ export default async function HomePage() {
         </ul>
       </nav>
       <section className="section" aria-labelledby="nejblizsi">
-        <h2 id="nejblizsi">Nejbližší akce</h2>
+        <div className="spread section-head">
+          <h2 id="nejblizsi">Nejbližší akce</h2>
+          <Link className="btn btn-small" href="/vzdelavani/harmonogram">
+            Celý plán
+          </Link>
+        </div>
         <NextEventsList cards={upcoming} todayKey={toDateKey(now())} />
-        <p className="hint">
-          <Link href="/vzdelavani/harmonogram">Celý plán</Link>
-        </p>
       </section>
     </>
   );

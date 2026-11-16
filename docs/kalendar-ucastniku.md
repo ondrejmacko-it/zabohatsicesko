@@ -63,7 +63,44 @@ Hotové serverové jádro, **vypnuté** (výchozí `CALENDAR_DELIVERY=invites`, 
   zařízení vede na vstup, první přihlášení správce žádá jen `calendar.app.created`). Přihlášený stav ostré Wiki
   e2e neověří (vyžaduje skutečný Google), proto jsou stavy UI pokryté ve vitestu a živým ověřením.
 
-**Zbývá:** nastavit `CALENDAR_DELIVERY=personal` (Production) na Vercelu a živé ověření.
+**Stav:** `CALENDAR_DELIVERY=personal` je na Vercelu zapnuté, živé propojení ale selhalo (oprava níže).
+
+## Oprava propojení 16. 11. večer (větev `claude/oprava-osobniho-kalendare`)
+
+**Co se dělo živě:** po souhlasu u Googlu vznikl kalendář „Vzdělávání ZBC“ bez akcí a Wiki hned ukázala
+„Odpojeno · odvoláno“. Každý další pokus založil další kalendář.
+
+**Ověřeno z dat (Neon, jen čtení):** oba účty `revoked`, `calendar_id` prázdné, token smazaný. V `audit_log`
+4× `calendar.personal.connected` a do 7 s `calendar.personal.revoked`, ani jednou `calendar.personal.created`.
+Výjimka tedy vznikla v `createCalendar()` po úspěšném `calendars.insert`, tj. v `calendarList.patch`
+(jiná volání tam nejsou). `request()` mapoval každé 403 kromě limitů na `calendar_revoked`, `configureCalendar`
+ho poslal dál a ID kalendáře se neuložilo. **Přesný důvod 403 od Googlu neověřen:** runtime logy Vercelu
+z relace číst nejdou (MCP 403, CLI zakázané). Nově se důvod ukládá do `personal_calendars.error_code`
+(`forbidden_<reason>`) a do auditu (`calendar.personal.setup_basic|setup_none`), takže příště je vidět v DB.
+
+**Rozsah `calendar.app.created` podle discovery dokumentu (revize 20261111):** povoluje `calendars.insert/get/
+patch/delete`, `calendarList.get/patch/update/delete`, `events.insert/get/list/update/patch/delete`.
+**Nepovoluje `calendarList.list`**, takže Wiki neumí najít kalendáře, jejichž ID si neuložila. Duplicity
+vzniklé před opravou musí uživatel smazat ručně.
+
+**Oprava:**
+* `insertCalendar()` jen založí kalendář. Sync uloží `calendarId` hned potom a teprve pak volá
+  `configureCalendar()`. Ta nikdy nevyhodí chybu: zkusí barvu, připomínky a e-mailová upozornění, při odmítnutí
+  totéž bez upozornění (`full` / `basic` / `none`).
+* 403 (mimo limity) = `calendar_forbidden` s důvodem: token i kalendář zůstanou, stav `active`,
+  `error_code = forbidden_<reason>`, další spouštěč to zkusí znovu. UI ukáže „Nedaří se zapsat“ s tlačítkem
+  „Propojit znovu“. `revoked` jen při `invalid_grant` při obnově tokenu, při 401 i po novém tokenu
+  a při nečitelném tokenu.
+* Nový souhlas stejného účtu nechá uložené `calendarId` a vynuluje `synced_at`. První běh ověří
+  `calendars.get`: existuje → použije se znovu a znovu se nastaví. Smazaný → záznamy zápisů se zahodí a založí se
+  právě jeden nový.
+* Callback přihlášení počká na první zápis přihlášeného uživatele nejvýš 6 s, zbytek doběhne v `after()`.
+  Úvod pak rovnou ukáže „Propojeno“.
+* Texty stavu (Úvod, Plán, Správa) přepsané lidsky. „Přístup skončil“ jen při skutečném odvolání.
+* Testy (`tests/kalendar-osobni.test.ts`): 403 na `calendarList.patch` (kalendář uložen, druhý pokus bez
+  upozornění, akce zapsány), 403 `insufficientPermissions` u akcí (token i kalendář zůstanou, stav „Nedaří se
+  zapsat“, další běh nezaloží druhý kalendář), opakované propojení (existující kalendář znovu použit, smazaný
+  nahrazen jedním novým).
 
 ## Upozornění e-mailem od Googlu (ověřeno v dokumentaci 16. 11., živě ne)
 

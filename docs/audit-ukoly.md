@@ -40,6 +40,9 @@ Hotovo: `npm audit` 0 zranitelností (15. 11.). CSP s nonce a Referrer-Policy `s
 * Kalendář účastníků bez pozvánek · serverové jádro sloučené (#43, vypnuté). UI stavu (Úvod, Plán, Správa), spouštěč
   na Úvodu, úklid starých pozvánek a štítek u návrhů v draftu z větve `claude/kalendar-ucastniku-ui`. Zapnutí
   `CALENDAR_DELIVERY=personal` na Vercelu a živé ověření čekají (`docs/kalendar-ucastniku.md`).
+* Osobní kalendář: živé propojení 16. 11. selhalo (403 na `calendarList.patch` se tvářilo jako odvolání, ID
+  kalendáře se neuložilo, každý pokus založil další). Oprava ve větvi `claude/oprava-osobniho-kalendare`,
+  podrobnosti v `docs/kalendar-ucastniku.md`, „Oprava propojení 16. 11. večer“. Úvod: „Celý plán“ v hlavičce sekce.
 * Jednotný design a kontrola úniku dat do klienta · neuděláno.
 
 ## Mimo rozsah teď

@@ -22,24 +22,32 @@ const when = (iso: string) => {
 export function personalCalendarView(state: PersonalCalendarState): PersonalCalendarView {
   switch (state.status) {
     case "active":
+      if (state.blocked)
+        return {
+          tone: "warn",
+          badge: "Nedaří se zapsat",
+          text: "Google zatím nedovolil zapsat akce do kalendáře „Vzdělávání ZBC“. Wiki to zkouší dál. Když to vydrží, propojte Kalendář znovu.",
+          action: "Propojit znovu",
+        };
       if (state.retrying)
-        return { tone: "warn", badge: "Zkusí se znovu", text: "Poslední zápis do Kalendáře se nepodařil. Wiki ho zopakuje sama, nic dělat nemusíte.", action: null };
+        return { tone: "warn", badge: "Zkusí se znovu", text: "Poslední změnu se do Kalendáře nepodařilo zapsat. Wiki to zkusí znovu sama, nic dělat nemusíte.", action: null };
       return {
         tone: "ok",
         badge: "Propojeno",
-        text: `Akce se zapisují do kalendáře „Vzdělávání ZBC“ v účtu ${state.accountEmail ?? ""}. ${
-          state.syncedAt ? `Naposledy aktualizováno ${when(state.syncedAt)}.` : "Kalendář se právě připravuje."
-        } Připomínka chodí e-mailem den před akcí.`,
+        text: `Akce najdete v kalendáři „Vzdělávání ZBC“ (${state.accountEmail ?? "váš účet Google"}). ${
+          state.syncedAt ? `Aktualizováno ${when(state.syncedAt)}.` : "Akce se tam objeví během chvilky."
+        } Den před akcí přijde připomínka e-mailem.`,
         action: null,
       };
     case "revoked":
-      return { tone: "alert", badge: "Odpojeno", text: "Přístup ke Kalendáři byl u Googlu odvolán. Nové akce ani změny se do Kalendáře nepropíšou.", action: "Propojit znovu" };
+      // Jen skutečné odvolání (Google odmítl obnovit přístup). Jednotlivé odmítnuté zápisy jsou „Nedaří se zapsat“.
+      return { tone: "alert", badge: "Odpojeno", text: "Přístup Wiki k vašemu Google Kalendáři skončil. Nové akce ani změny se tam neobjeví.", action: "Propojit znovu" };
     case "calendar_deleted":
-      return { tone: "alert", badge: "Kalendář smazán", text: "Kalendář „Vzdělávání ZBC“ byl v Google Kalendáři smazán. Akce se do něj nepropíšou.", action: "Vytvořit kalendář znovu" };
+      return { tone: "alert", badge: "Kalendář smazán", text: "Kalendář „Vzdělávání ZBC“ jste v Google Kalendáři smazali, akce se do něj už nezapisují.", action: "Vytvořit znovu" };
     case "declined":
-      return { tone: "warn", badge: "Nepropojeno", text: "Při přihlášení jste přístup ke Kalendáři nepovolili. Akce uvidíte jen ve Wiki.", action: "Propojit Kalendář" };
+      return { tone: "warn", badge: "Nepropojeno", text: "Při přihlášení jste Kalendář nepovolili. Akce najdete jen tady ve Wiki.", action: "Propojit Kalendář" };
     default:
-      return { tone: "warn", badge: "Nepropojeno", text: "Akce zatím nejsou ve vašem Google Kalendáři. Wiki pro ně založí samostatný kalendář „Vzdělávání ZBC“.", action: "Propojit Kalendář" };
+      return { tone: "warn", badge: "Nepropojeno", text: "Akce můžete mít i ve svém Google Kalendáři. Wiki pro ně založí samostatný kalendář „Vzdělávání ZBC“.", action: "Propojit Kalendář" };
   }
 }
 
@@ -66,12 +74,14 @@ export function PersonalCalendarStatus({ state }: { state: PersonalCalendarState
 
 /** Krátký stav pro řádek účtu ve Správě. */
 export function personalCalendarLabel(state: PersonalCalendarState | undefined): string {
-  if (!state || state.status === "none") return "Kalendář nepropojen";
+  if (!state || state.status === "none") return "Kalendář: nepropojen";
+  const account = state.accountEmail ? ` (${state.accountEmail})` : "";
   if (state.status === "active") {
-    if (state.retrying) return `Kalendář: zápis se zopakuje (${state.accountEmail ?? ""})`;
-    return `Kalendář propojen (${state.accountEmail ?? ""})${state.syncedAt ? `, aktualizováno ${when(state.syncedAt)}` : ""}`;
+    if (state.blocked) return `Kalendář: Google zápis odmítá${account}`;
+    if (state.retrying) return `Kalendář: zápis se zopakuje${account}`;
+    return `Kalendář: propojen${account}${state.syncedAt ? `, aktualizováno ${when(state.syncedAt)}` : ", připravuje se"}`;
   }
-  if (state.status === "revoked") return "Kalendář odpojen u Googlu";
-  if (state.status === "calendar_deleted") return "Kalendář „Vzdělávání ZBC“ smazán";
-  return "Kalendář odmítnut při přihlášení";
+  if (state.status === "revoked") return "Kalendář: přístup skončil";
+  if (state.status === "calendar_deleted") return "Kalendář: smazán v Googlu";
+  return "Kalendář: nepovolen při přihlášení";
 }

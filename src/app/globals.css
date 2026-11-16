@@ -344,6 +344,16 @@ a.nav-item:hover {
   font-size: 19px;
 }
 
+/* Hlavička sekce s nadpisem a jednou akcí vpravo (např. „Celý plán“). */
+.section-head {
+  margin-bottom: 14px;
+}
+
+.section-head > h2 {
+  margin: 0;
+  font-size: 19px;
+}
+
 .item-card {
   display: block;
   padding: 14px 18px;
@@ -873,22 +883,213 @@ body > .dialog[open]:has(~ .dialog[open]) {
   gap: 18px;
 }
 
+/* ——— Vstupní stránka ——— */
+
+.gate-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: radial-gradient(1200px 520px at 50% -180px, var(--ochre-soft), transparent 70%), var(--page);
+}
+
+.gate-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 40px 16px 32px;
+}
+
+.gate-card {
+  width: 100%;
+  max-width: 440px;
+  padding: 30px 32px 24px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(35, 35, 35, 0.04), 0 12px 32px -12px rgba(35, 35, 35, 0.18);
+}
+
+.gate-card-wide {
+  max-width: 560px;
+}
+
+/* Značka vlevo, štítek a nadpis vedle ní: jeden čistý řádek bez odsazení. */
+.gate-title {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.gate-mark {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: var(--ochre-soft);
+  color: var(--ochre-dark);
+  font-family: var(--font-serif);
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.gate-eyebrow {
+  margin: 0 0 2px;
+  color: var(--ochre-dark);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.gate-title h1 {
+  font-size: 28px;
+  line-height: 1.15;
+}
+
+.gate-lead {
+  margin: 0 0 22px;
+  color: var(--ink-soft);
+  font-size: 15px;
+  line-height: 1.55;
+}
+
 .gate-google {
-  margin-top: 24px;
-  gap: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
-.gate-google h2 {
+.gate-google > p {
   margin: 0;
-  font-size: 1rem;
 }
 
-.gate-google h2:last-child {
-  margin-top: 18px;
+.gate-account {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--band);
+  color: var(--ink-soft);
+  font-size: 14px;
+  overflow-wrap: anywhere;
 }
 
-.gate-google + .gate-form {
-  margin-top: 10px;
+.gate-account strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.gate-avatar {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--beige-strong);
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.btn-google {
+  width: 100%;
+  min-height: 48px;
+  gap: 12px;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(35, 35, 35, 0.06);
+}
+
+.btn-google:hover {
+  background: var(--band);
+}
+
+.btn-google svg {
+  flex: none;
+  width: 20px;
+  height: 20px;
+}
+
+.gate-alt {
+  display: flex;
+  justify-content: center;
+}
+
+.gate-alt a {
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  color: var(--ochre-dark);
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.gate-alt a:hover {
+  text-decoration: underline;
+}
+
+.gate-note {
+  display: flex;
+  gap: 10px;
+  margin: 22px 0 0;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.gate-note svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  color: var(--sage);
+}
+
+.gate-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 14px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.gate-foot a {
+  color: var(--muted);
+}
+
+@media (max-width: 480px) {
+  .gate-main {
+    justify-content: flex-start;
+    padding-top: 24px;
+  }
+
+  .gate-card {
+    padding: 24px 20px 20px;
+  }
+
+  .gate-title h1 {
+    font-size: 24px;
+  }
+}
+
+.gate-lead + .gate-form {
+  margin-top: 0;
 }
 
 .persona-list {
