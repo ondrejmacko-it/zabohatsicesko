@@ -37,6 +37,19 @@ Nouzové zrušení zařízení hlavního správce (UI ho záměrně nenabízí) 
 `UPDATE trusted_devices SET revoked_at = now() WHERE id = '<id>'` (ID z dotazu na `trusted_devices` podle e-mailu).
 Platí od dalšího požadavku. Můžeš ho provést i ty přes Neon MCP, ale jen na výslovný pokyn uživatele.
 
+**Stav 16. 11. večer (poslední):** relace skončila na limitu kontextu (200 tis.).
+* Draft [#41](https://github.com/ondrejmacko-it/zabohatsicesko/pull/41) `claude/uklid-readme`: README (tabulka příkazů), souhrn auditu, zjištění 16. 11., návrh `docs/kalendar-ucastniku.md`.
+* Draft PR `claude/pozvanka-po-prihlaseni` (úkol 2): pozvánka se spotřebuje až po přihlášení pozvaným účtem
+  (`checkInvite` bez zápisu, cookie `zbc_invite` 30 min, scope `invite`, `claimInvite(..., userId)` v callbacku).
+  Lint, typy, 184/184 vitest. Stav e2e je v popisu PR.
+* **Další krok 1 (hlavní):** implementovat Kalendář účastníků podle `docs/kalendar-ucastniku.md` (varianta a,
+  `calendar.app.created`, vlastní kalendář „Vzdělávání ZBC“, bez pozvánek). Nejdřív se zeptat, kam konzole
+  zařadila rozsah (necitlivý/citlivý), krok 1 v tom souboru.
+* **Další krok 2:** úkol 3 (krátká kontrola, že tokeny a cizí data nejdou do klienta ani HTML; žádné blokování
+  pravého tlačítka), úkol 4 (jednotný design, začít odkazem „Připojit Kalendář znovu nebo jiným účtem“ ve Správě →
+  tlačítko v kartě; projít role a šířky 1280/390/360/320). Obojí zatím neuděláno.
+* Pozor: e2e ve zvláštním worktree potřebuje `cp -al node_modules` (symlink Turbopack odmítne).
+
 **Stav 16. 11. (poslední, jen zjištění, kód beze změn):** #39 (PR 7) a #40 (PR 8) jsou sloučené v `main` (`7c72b91`)
 a nasazené na https://zbc-vzdelavani-demo.vercel.app (ostrá Wiki, Neon `zbc-wiki-produkce`, projekt `bitter-breeze-02749976`).
 Uživatel ověřil hlavičky (nosniff, X-Frame-Options DENY, Referrer-Policy same-origin). Relace skončila na limitu kontextu
