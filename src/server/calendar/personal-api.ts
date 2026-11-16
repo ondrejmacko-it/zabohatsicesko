@@ -27,6 +27,7 @@ export const NOTIFICATIONS = ["eventCreation", "eventChange", "eventCancellation
 
 export type PersonalApiOptions = { clientId: string; clientSecret: string; fetchImpl?: FetchLike };
 
+const INVALID_GRANT = "invalidgrant";
 const TRANSIENT_403 = new Set(["rateLimitExceeded", "userRateLimitExceeded", "quotaExceeded", "backendError"]);
 /** Důvod od Googlu zkrácený na bezpečný strojový kód (jen písmena a číslice). */
 const safeReason = (reason: string) => reason.replace(/[^A-Za-z0-9]/g, "").slice(0, 40);
@@ -68,7 +69,8 @@ export class PersonalCalendarApi {
       throw new CalendarError("calendar_unavailable", true);
     }
     const body = (await response.json().catch(() => ({}))) as { access_token?: string; error?: string };
-    if (response.status === 400 && body.error === "invalid_grant") throw new CalendarError("calendar_revoked", false);
+    // Důvod `invalid_grant` odliší skutečné odvolání od 401 u jedné operace (viz `configureCalendar`).
+    if (response.status === 400 && body.error === "invalid_grant") throw new CalendarError("calendar_revoked", false, INVALID_GRANT);
     if (response.status !== 200 || !body.access_token) {
       logError("google.personal", body.error ?? `token_http_${response.status}`);
       throw new CalendarError("calendar_unavailable", response.status >= 500 || response.status === 429);
@@ -96,7 +98,8 @@ export class PersonalCalendarApi {
       if (response.status === 401 && attempt === 0) continue;
       const body: unknown = response.status === 204 ? null : await response.json().catch(() => null);
       if (response.ok || [404, 409, 410].includes(response.status)) return { status: response.status, body };
-      const reason = safeReason((body as { error?: { errors?: Array<{ reason?: string }> } } | null)?.error?.errors?.[0]?.reason ?? "");
+      const error = (body as { error?: { status?: string; errors?: Array<{ reason?: string }> } } | null)?.error;
+      const reason = safeReason(error?.errors?.[0]?.reason || error?.status || "");
       logError("google.personal", `http_${response.status}${reason ? `_${reason}` : ""}`);
       // 401 i po čerstvém tokenu = token neplatí. Skutečné odvolání pozná už obnova tokenu (`invalid_grant`).
       if (response.status === 401) throw new CalendarError("calendar_revoked", false, reason);
@@ -127,32 +130,71 @@ export class PersonalCalendarApi {
   }
 
   /**
-   * Nastaví položku v seznamu kalendářů uživatele: připomínky, e-mailová upozornění a barvu. Zkouší se od
-   * nejúplnějšího nastavení po nejmenší, aby šlo poznat, kterou část Google odmítá. Nic z toho není
-   * podmínkou zápisu akcí, proto chyba nikdy nevyletí ven. Vrací i strojový kód každého neúspěchu
-   * (`full:403_insufficientPermissions`), který se uloží do `personal_calendars.setup_code` kvůli diagnostice.
+   * Ověří, že přístup u Googlu pořád platí (obnova tokenu). Bez změn akcí synchronizace Google nevolá,
+   * a odvolání v účtu Google by tak Wiki nepoznala. `calendar_revoked` = uživatel přístup odebral.
+   */
+  async verifyAccess(): Promise<void> {
+    await this.accessToken(true);
+  }
+
+  /**
+   * Položka kalendáře v seznamu kalendářů uživatele (`calendarList.get`). Říká, jestli kalendář v Google
+   * Kalendáři vlevo vůbec je a jestli je zaškrtnutý. `null` = v seznamu chybí (404).
+   */
+  async listEntry(calendarId: string): Promise<{ selected: boolean; hidden: boolean; resource: Record<string, unknown> } | null> {
+    const { status, body } = await this.request("GET", `/users/me/calendarList/${encodeURIComponent(calendarId)}`);
+    if (status !== 200 || !body || typeof body !== "object") return null;
+    const resource = body as Record<string, unknown>;
+    return { selected: resource.selected === true, hidden: resource.hidden === true, resource };
+  }
+
+  /**
+   * Nastaví položku v seznamu kalendářů uživatele: viditelnost, připomínky, e-mailová upozornění a barvu.
+   * Nejdřív `calendarList.get` (je kalendář v seznamu, je zaškrtnutý?), pak `calendarList.update` s celou
+   * položkou, jak Google doporučuje místo `patch`, a teprve potom `patch` od nejúplnějšího nastavení po
+   * nejmenší, aby šlo poznat, kterou část Google odmítá. Nic z toho není podmínkou zápisu akcí, proto chyba
+   * nikdy nevyletí ven (kromě skutečného odvolání při obnově tokenu). Vrací strojový kód každého kroku
+   * (`list:200_hidden`, `full:401_authError`), který se uloží do `personal_calendars.setup_code`.
    */
   async configureCalendar(calendarId: string): Promise<{ setup: CalendarSetup; failures: string[] }> {
     const path = `/users/me/calendarList/${encodeURIComponent(calendarId)}`;
+    // Kalendář musí být v Google Kalendáři vidět: zaškrtnutý a ne skrytý.
+    const visible = { selected: true, hidden: false };
     const reminders = { defaultReminders: DEFAULT_REMINDERS };
     const notifications = { notificationSettings: { notifications: NOTIFICATIONS } };
-    const attempts: Array<[string, CalendarSetup, Record<string, unknown>, boolean]> = [
-      ["full", "full", { ...CALENDAR_COLORS, ...reminders, ...notifications }, true],
-      ["nocolor", "full", { ...reminders, ...notifications }, false],
-      ["basic", "basic", { ...CALENDAR_COLORS, ...reminders }, true],
-      ["reminders", "basic", reminders, false],
-    ];
     const failures: string[] = [];
-    for (const [label, setup, body, colors] of attempts) {
+    const code = (error: unknown) => {
+      if (!(error instanceof CalendarError)) throw error;
+      // Obnova tokenu `invalid_grant` = přístup odvolán, dál nemá smysl nic zkoušet.
+      if (error.code === "calendar_revoked" && error.reason === INVALID_GRANT) throw error;
+      const status = error.code === "calendar_revoked" ? "401" : error.code === "calendar_forbidden" ? "403" : "err";
+      return `${status}${error.reason ? `_${error.reason}` : ""}`;
+    };
+
+    let entry: Awaited<ReturnType<PersonalCalendarApi["listEntry"]>> = null;
+    try {
+      entry = await this.listEntry(calendarId);
+      failures.push(entry ? `list:200${entry.hidden ? "_hidden" : ""}${entry.selected ? "" : "_unselected"}` : "list:404");
+    } catch (error) {
+      failures.push(`list:${code(error)}`);
+    }
+
+    type Attempt = [string, CalendarSetup, "PUT" | "PATCH", Record<string, unknown>, boolean];
+    const update: Attempt[] = entry ? [["update", "full", "PUT", { ...entry.resource, ...visible, ...CALENDAR_COLORS, ...reminders, ...notifications }, true]] : [];
+    const attempts: Attempt[] = [
+      ...update,
+      ["full", "full", "PATCH", { ...visible, ...CALENDAR_COLORS, ...reminders, ...notifications }, true],
+      ["nocolor", "full", "PATCH", { ...visible, ...reminders, ...notifications }, false],
+      ["basic", "basic", "PATCH", { ...visible, ...CALENDAR_COLORS, ...reminders }, true],
+      ["reminders", "basic", "PATCH", { ...visible, ...reminders }, false],
+    ];
+    for (const [label, setup, method, body, colors] of attempts) {
       try {
-        const { status } = await this.request("PATCH", path, { query: colors ? { colorRgbFormat: "true" } : {}, body });
+        const { status } = await this.request(method, path, { query: colors ? { colorRgbFormat: "true" } : {}, body });
         if (status === 200) return { setup, failures };
         failures.push(`${label}:${status}`);
       } catch (error) {
-        if (!(error instanceof CalendarError)) throw error;
-        // Odvolaný token nemá smysl zkoušet dál, synchronizace ho pozná u první akce.
-        if (error.code === "calendar_revoked") return { setup: "none", failures: [...failures, `${label}:401`] };
-        failures.push(`${label}:${error.code === "calendar_forbidden" ? "403" : "err"}${error.reason ? `_${error.reason}` : ""}`);
+        failures.push(`${label}:${code(error)}`);
       }
       logError("google.personal", `configure_${failures.at(-1)}`);
     }

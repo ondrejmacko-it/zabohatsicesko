@@ -5,6 +5,7 @@ import { Icon, type IconName } from "@/components/Icon";
 import { PersonalCalendarStatus } from "@/features/vzdelavani/components/PersonalCalendarStatus";
 import { NextEventsList } from "@/features/vzdelavani/components/Schedule";
 import { toDateKey } from "@/lib/time";
+import { logError } from "@/server/audit";
 import { requireUser } from "@/server/auth/session";
 import { personalSyncNeeded, syncPersonalCalendars } from "@/server/calendar/personal";
 import { now } from "@/server/config";
@@ -15,17 +16,26 @@ import { nextEventsFor } from "@/server/services/events";
 
 /** Kolik nejbližších akcí úvod ukáže. Celý měsíc je v Plánu. */
 const NEXT_ROWS = 3;
+/** Jak dlouho Úvod čeká na zápis do osobního kalendáře, než stránku pošle se stavem, jaký je. */
+const SYNC_WAIT_MS = 2500;
 
 type ModuleCard = { href: string; icon: IconName; title: string; text: string };
 
 export default async function HomePage() {
   const user = await requireUser();
-  const [upcoming, personal] = await Promise.all([nextEventsFor(user, NEXT_ROWS), loadPersonalCalendar(user)]);
-  // Osobní kalendáře doženou zmeškaný zápis (přechodná chyba Googlu, nový účet) při otevření Úvodu.
-  // Zjištění je jeden dotaz do databáze, Google se volá až na pozadí po odeslání stránky.
+  const [upcoming, initial] = await Promise.all([nextEventsFor(user, NEXT_ROWS), loadPersonalCalendar(user)]);
+  let personal = initial;
+  // Osobní kalendáře doženou zmeškaný zápis (přechodná chyba Googlu, nový účet) a jednou za čas ověří, že
+  // přístup u Googlu platí. Zjištění je jeden dotaz do databáze. Na výsledek stránka počká nejvýš chvilku,
+  // aby hned ukázala skutečný stav (např. „Kalendář odpojen“), zbytek doběhne na pozadí.
   if (personal) {
     const db = await getDb();
-    if (await personalSyncNeeded(db)) after(() => syncPersonalCalendars(db));
+    if (await personalSyncNeeded(db)) {
+      const run = syncPersonalCalendars(db).catch(() => logError("calendar.personal", "home_sync_failed"));
+      await Promise.race([run, new Promise((resolve) => setTimeout(resolve, SYNC_WAIT_MS))]);
+      after(() => run);
+      personal = await loadPersonalCalendar(user);
+    }
   }
   // Správa je jen pro toho, kdo smí spravovat lidi. Ostatním karta nic neříká, proto ji nevidí.
   const modules: ModuleCard[] = [

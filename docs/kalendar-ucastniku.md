@@ -176,6 +176,59 @@ Pozor: zapnutí změní otisk všech akcí, takže se všechny akce účastníka
 **Vypnutí:** Settings → Environment Variables → u `CALENDAR_PERSONAL_NOTIFY` klikni na **⋯** → **Remove**,
 pak Redeploy jako výše. Akce se znovu přepíšou bez hosta.
 
+## Po merge #47: 401 na `calendarList.patch` a odvolání (16. 11. noc, větev `claude/oprava-kalendare-401`)
+
+**Živě (Neon, jen čtení, 21:30 UTC):** účet 1 `active`, `event_format=2`, `setup_code=none|full:401`, 20 zapsaných akcí.
+Účet 2 `revoked` (uživatel odebral přístup v účtu Google), také `none|full:401`.
+
+**Co z toho plyne:**
+* Akce v Googlu jsou: záznam v `personal_calendar_entries` vzniká jen po odpovědi 200 na `events.insert/update`
+  do kalendáře „Vzdělávání ZBC“. Tiché selhání zápisu to není. Jestli je kalendář v seznamu a zaškrtnutý, se
+  zatím nevědělo (Wiki to nezjišťovala), proto nově `calendarList.get` (viz níže).
+* 401 přišlo jen na `calendarList.patch`, a to dvakrát (podruhé s čerstvým tokenem, kterým pak prošly všechny
+  akce). Kód ale 401 v nastavení kalendáře vzal jako odvolání, skončil po první variantě (`full`) a důvod od
+  Googlu zahodil. Ostatní varianty (bez barvy, bez upozornění) se tak nikdy nezkusily.
+* Dokumentace Googlu (ověřeno 16. 11.): `calendarList.patch` i `calendarList.update` rozsah
+  `calendar.app.created` povoluje (stránka metody i discovery dokument rev. 20261111). 401 = „Invalid
+  Credentials“ (`authError`). Omezení `notificationSettings` na hlavní kalendář dokumentace neuvádí.
+  U `patch` Google doporučuje „get followed by an update“. **Přesný důvod 401 od Googlu ověřený není**
+  (runtime logy Vercelu z relace nejdou). Po opravě se uloží do `setup_code`.
+* Odvolání: Wiki bez změny akcí Google nevolala, takže odebrání přístupu poznala až náhodou (21:26:51) a do
+  té doby ukazovala „Propojeno“.
+
+**Oprava:**
+* `configureCalendar`: nejdřív `calendarList.get` (kód `list:200`, `list:200_hidden_unselected`, `list:404`),
+  pak `calendarList.update` s celou položkou, pak `patch` od úplné po nejmenší variantu. Každé nastavení má
+  `selected: true, hidden: false`, takže se kalendář vlevo v Google Kalendáři zobrazí a zaškrtne.
+  401 (i po novém tokenu) se zapíše s důvodem (`full:401_authError`) a pokračuje se další variantou.
+  Skončí se jen při skutečném odvolání (`invalid_grant` při obnově tokenu).
+* `EVENT_FORMAT = 3`: po nasazení Úvod znovu spustí nastavení kalendáře a přepis všech akcí.
+* Kontrola odvolání: Úvod spustí běh i bez změn, když je poslední běh starší než 10 minut. Běh bez změn
+  jen obnoví token. Úvod na výsledek počká nejvýš 2,5 s, takže hned ukáže „Kalendář odpojen“.
+* Texty: stav `revoked` = „Kalendář odpojen“ a tlačítko „Připojit Kalendář znovu“
+  (`/api/google/prihlaseni?kalendar=osobni`) na Úvodu a v Plánu. Ve Správě je u řádku účtu „Kalendář
+  odpojen…“ a v sekci Kalendář vlastní stav správce s tímtéž tlačítkem. Za kolegu připojit nejde.
+* Nové připojení po odvolání: callback uloží nový token, stav `active`, kalendář stejného účtu se ověří
+  (`calendars.get`) a použije znovu. Akce se nepřidávají podruhé (test „odvolání … bez duplicit“).
+
+**Kde kalendář najdeš v Google Kalendáři (Windows, prohlížeč):**
+1. Otevři https://calendar.google.com a přihlas se účtem, kterým ses přihlásil do Wiki.
+2. Když nevidíš levý panel, klikni vlevo nahoře na **☰** (Hlavní nabídka).
+3. V levém panelu najdi sekci **Moje kalendáře** a rozbal ji šipkou vedle názvu.
+4. Najdi **Vzdělávání ZBC**. Zaškrtávátko vedle něj musí být zaškrtnuté (tmavě zelená barva).
+5. Nahoře vpravo přepni zobrazení na **Měsíc** a šipkami přejdi na měsíc, ve kterém je akce z Plánu Wiki.
+6. Když v seznamu **Vzdělávání ZBC** není: klikni vpravo nahoře na **⚙** → **Nastavení**. Vlevo v části
+   **Nastavení mých kalendářů** hledej **Vzdělávání ZBC**. Je-li tam, vrať se zpět, kalendář je jen skrytý.
+   Po nasazení opravy ho Wiki sama zobrazí a zaškrtne (stačí otevřít Úvod Wiki).
+
+**Po merge a nasazení (relace, jen čtení):**
+`select status, event_format, setup_code, error_code, synced_at from personal_calendars`
+* `event_format = 3` a `setup_code` začíná `full`: upozornění jsou nastavená, ověř e-mail o nové akci.
+* `event_format = 2`: přepis neproběhl, uživatel otevře Úvod (přihlášený), počká minutu a stiskne F5.
+* `setup_code` = `none|list:…|update:401_…|full:401_…|…`: Google odmítá nastavení kalendáře a e-mailová
+  upozornění od Googlu nepůjdou. Zbývá self-invite (kroky v části „Po merge #47“), zapnutí potvrdí uživatel.
+* Výsledek se zapíše sem.
+
 ## Živě 16. 11. 19:30 po #45: propojení funguje, upozornění ne
 
 * Oba účty `active`, kalendář uložený, akce zapsané. Audit `calendar.personal.setup_none` u obou: Google odmítl
