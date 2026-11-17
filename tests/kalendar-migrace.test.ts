@@ -16,6 +16,8 @@ const ENV = {
   GOOGLE_CALENDAR_ID: "primary",
   GOOGLE_ALLOWED_CALENDAR_IDS: "primary",
   GOOGLE_ALLOWED_ATTENDEES: "a@example.com",
+  // Režim organizátora bez známého účtu organizátora konfiguraci nepovolí (pojistka z #57).
+  GOOGLE_ORGANIZER_EMAIL: "organizator@example.com",
   TOKEN_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString("base64"),
   APP_URL: "https://wiki.example.invalid",
 };

@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import { ActionForm, ActionMessage } from "@/components/ActionForm";
 import { Modal } from "@/components/Modal";
 import { submitKeepingValues } from "@/features/shared/keep-values";
+import type { InviteMode } from "@/lib/invite-mode";
 import { GROUP_LABELS } from "@/lib/labels";
 import { addDays, formatDayMonth, formatEventTime, shiftMonth, toDateKey, weekdayShort } from "@/lib/time";
 import { GROUPS, type Group } from "@/lib/types";
@@ -11,7 +12,6 @@ import type { MonthDraft } from "@/server/services/events";
 import { generateMonthAction, publishMonthAction, type ActionResult } from "../actions";
 
 /** Jak se zveřejnění propíše do Kalendáře. Určuje jen text přehledu dopadu. */
-export type InviteMode = "simulation" | "allowlist" | "audience" | "disconnected";
 
 type Props = {
   monthKey: string;
@@ -54,7 +54,7 @@ export function PrepareMonthDialog(props: Props) {
         )}
       </button>
       {!open && state?.ok && <ActionMessage state={state} />}
-      <Modal open={open} title={`Připravit měsíc: ${props.monthName}`} onRequestClose={() => setOpen(false)} wide>
+      <Modal open={open} title={`Připravit měsíc: ${props.monthName}`} onRequestClose={() => setOpen(false)} wide="extra">
         <div className="stack">
           <section className="prepare-step" aria-labelledby="prepare-fill">
             <h3 id="prepare-fill">1. Doplnit termíny</h3>
@@ -124,6 +124,7 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
   const chosen = drafts.filter((d) => picked.has(d.id));
   const incomplete = chosen.filter((d) => missing(d).length > 0).length;
   const gapCount = drafts.filter((d) => missing(d).length > 0).length;
+  const clashCount = drafts.filter((d) => d.clash).length;
   const [allowIncomplete, setAllowIncomplete] = useState(false);
   const audiences = [...new Set(chosen.map((d) => current(d).audience))];
   const invited = new Set(audiences.flatMap((g) => recipients[g].map((r) => r.email)));
@@ -163,6 +164,11 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
                       {weekdayShort(dateKey)} {formatDayMonth(dateKey)} · {formatEventTime(start, new Date(d.endsAt), false)}
                     </span>
                     {missing(d).length > 0 && <span className="publish-gap">Chybí {missing(d).join(" a ")}</span>}
+                    {d.clash && (
+                      <span className="publish-clash">
+                        {d.clash === "group" ? "Stejná skupina má ve stejný čas jinou akci" : "Stejní lidé mají ve stejný den nebo čas jinou akci"}
+                      </span>
+                    )}
                   </span>
                 </label>
                 <input type="hidden" name="row" value={d.id} />
@@ -208,7 +214,7 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
   }
 
   return (
-    <form action={action} onSubmit={submitKeepingValues(action)} onInput={(e) => readFilled(e.currentTarget)} onChange={(e) => readFilled(e.currentTarget)} className="stack">
+    <form action={action} onSubmit={submitKeepingValues(action)} onKeyDown={ignoreEnter} onInput={(e) => readFilled(e.currentTarget)} onChange={(e) => readFilled(e.currentTarget)} className="stack">
       <input type="hidden" name="month" value={monthKey} />
       <datalist id="publish-topics">
         {topics.map((topic) => (
@@ -221,6 +227,8 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
           {gapCount === 0
             ? "Všechny návrhy mají téma i vedoucího."
             : `${plural(gapCount, "návrh nemá", "návrhy nemají", "návrhů nemá")} téma nebo vedoucího. Doplňte je u termínu, nebo zveřejněte bez nich.`}
+          {clashCount > 0 &&
+            ` ${plural(clashCount, "návrh se kryje", "návrhy se kryjí", "návrhů se kryje")} s jinou akcí. Posuňte datum, změňte skupinu, nebo ho nezveřejňujte.`}
         </p>
         {group("Pravidelné termíny", "Předvybrané ke zveřejnění. Datum, skupinu, téma i vedoucího můžete změnit.", drafts.filter((d) => d.fromTemplate))}
         {group("Další návrhy", "Zveřejní se jen ty, které zaškrtnete.", drafts.filter((d) => !d.fromTemplate))}
@@ -249,7 +257,7 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
             {/* Hodnota je počet, který správce potvrzuje. Server zveřejnění odmítne, když nesedí. */}
             <input type="checkbox" name="allowIncomplete" value={incomplete} checked={allowIncomplete} onChange={(e) => setAllowIncomplete(e.target.checked)} />
             <span>
-              Zveřejnit i {plural(incomplete, "termín", "termíny", "termínů")} bez tématu nebo vedoucího. Pozvánky odejdou hned, téma a vedoucího jde
+              Zveřejnit i {plural(incomplete, "termín", "termíny", "termínů")} bez tématu nebo vedoucího. Pozvánky se odešlou až po zveřejnění, téma a vedoucího jde
               doplnit později.
             </span>
           </label>
@@ -269,6 +277,12 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
       </div>
     </form>
   );
+}
+
+/** Enter v poli formulář neodešle: první tlačítko je Zveřejnit a to musí být vždy vědomá volba. */
+function ignoreEnter(event: React.KeyboardEvent<HTMLFormElement>) {
+  const target = event.target as HTMLElement;
+  if (event.key === "Enter" && target instanceof HTMLInputElement) event.preventDefault();
 }
 
 function ChangeDraftsNote({ count }: { count: number }) {
