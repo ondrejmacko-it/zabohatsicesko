@@ -2186,6 +2186,29 @@ p.cal-status {
   gap: 8px;
 }
 
+/* Měsíc uprostřed mezi zobrazením a akcemi správce. Když se nevejdou, akce přejdou na další řádek vpravo. */
+@media (min-width: 761px) {
+  .schedule-toolbar > .month-nav {
+    margin-inline: auto;
+  }
+}
+
+.schedule-toolbar .month-title {
+  min-width: 0;
+}
+
+@media (min-width: 1100px) {
+  .schedule-toolbar {
+    gap: 10px 12px;
+  }
+}
+
+.plan-preview-pick {
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
 .plan-filters {
   display: flex;
   flex-wrap: wrap;
@@ -2687,4 +2710,25 @@ p.cal-status {
 
 .invitees[open] > summary {
   margin-bottom: 4px;
+}
+
+/* ——— Vybrat návrhy: seznam s výběrem ——— */
+.draft-pick-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.draft-pick {
+  align-items: flex-start;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--draft);
+}
+
+.draft-pick:has(input:checked) {
+  border-color: var(--ochre);
 }

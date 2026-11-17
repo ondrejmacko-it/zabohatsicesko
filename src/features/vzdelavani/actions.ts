@@ -20,6 +20,7 @@ import {
   cancelEvent,
   createEvent,
   deleteDraft,
+  deleteDrafts,
   discardDraftChanges,
   generateMonth,
   publishDrafts,
@@ -324,6 +325,20 @@ export async function publishMonthAction(_prev: ActionResult | null, formData: F
     if (!published.length) return { ok: false, error: `Nic se nezveřejnilo.${skippedNote(skipped)}` };
     const count = `${published.length} ${published.length === 1 ? "akce" : published.length < 5 ? "akce" : "akcí"}`;
     return { ok: true, message: `Zveřejněno ve Wiki: ${count}. ${await inviteNote(user, published.length > 1)}${skippedNote(skipped)}` };
+  });
+}
+
+/** Okno Vybrat návrhy v Plánu: smaže vybrané návrhy (`pick` + `rev-<id>`). Server ověří každý znovu. */
+export async function deleteDraftsAction(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
+  return run(async (user) => {
+    const ids = z.array(z.string().min(1).max(80)).min(1).max(100).safeParse(formData.getAll("pick"));
+    if (!ids.success) return { ok: false, error: "Vyberte aspoň jeden návrh." };
+    const items = ids.data.map((id) => ({ id, revision: z.coerce.number().int().positive().parse(formData.get(`rev-${id}`)) }));
+    const { deleted, skipped } = await deleteDrafts(user, items);
+    const note = skipped ? ` ${skipped} ${skipped === 1 ? "návrh mezitím někdo změnil, zůstal" : "návrhy mezitím někdo změnil, zůstaly"}.` : "";
+    if (!deleted.length) return { ok: false, error: `Nic se nesmazalo.${note}` };
+    const count = `${deleted.length} ${deleted.length === 1 ? "návrh" : deleted.length < 5 ? "návrhy" : "návrhů"}`;
+    return { ok: true, message: `Smazáno: ${count}. Nic se neodeslalo.${note}` };
   });
 }
 
