@@ -22,11 +22,17 @@ session_01HpUiru5P4yB2SxRCiVSjHt. Uživatel dal plné právo pokračovat bez pta
   Screenshoty prohlédnuté (ostrá Správa přes lokální `next start` s fiktivním správcem: skript ve scratchpadu, v repu není;
   Témata-archiv, Zápisy, `/vstup` 390/1280).
 
+* **E2E U08 opraveno v #65** (44df29e): `pristupnost.spec.ts` počítal se starým dialogem akce (před jednotným editorem z #63):
+  „Název“ → „Název akce“, „Uložit návrh“ → „Uložit jako návrh“, na počítači je v řádku Typ + Pro koho a Datum + Od (dřív Typ + Datum).
+  Úplné e2e na e0f2c65: 913 passed / 42 skipped / 5 failed (jen U08). Na #63 a #64 samotných tyto testy dál padají (oprava jen v #65,
+  do jejich větví se nepushuje bez svolení). Úplné e2e na 44df29e: **918 passed / 42 skipped (záměrně jen jeden projekt) / 0 failed**.
+
 **Další kroky:**
-1. Výsledek úplného `npm run e2e` (běží/běžel na e0f2c65) dopsat do popisů #64 a #65; screenshoty 320–1920
-   (`scripts/audit-screenshoty.mjs`, prohlédnout), závěrečný report (passed/failed/skipped, simulace vs. živý test, otevřené body;
-   dlouhé nahrávky jen jako otevřený bod `docs/nahravky-moznosti.md`).
-2. Otevřené: výklad „3 nadbytečné věty na /vstup“ je můj (viz výše) – uvést v reportu, ať ho uživatel potvrdí.
+1. Screenshoty 320–1920 všech rolí (`node e2e/server.mjs` zvlášť, pak `node scripts/audit-screenshoty.mjs . <scratchpad>`,
+   prohlédnout zmenšené montáže), případné drobné opravy, pak závěrečný report uživateli (passed/failed/skipped, simulace vs.
+   živý test, otevřené body; dlouhé nahrávky jen jako otevřený bod `docs/nahravky-moznosti.md`).
+2. Otevřené: výklad „3 nadbytečné věty na /vstup“ je můj (viz výše) – uvést v reportu, ať ho uživatel potvrdí; U08 na #63/#64
+   (navrhnout cherry-pick 44df29e, nebo sloučit až s #65).
 
 Kontext limit: na začátku čti jen tento blok, README a měněné soubory.
 
