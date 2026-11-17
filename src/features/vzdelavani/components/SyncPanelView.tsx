@@ -29,7 +29,11 @@ export function SyncPanelView({ eventId, sync }: { eventId: string; sync: SyncPa
         : "Zatím bez pozvánky"
       : sync.status === "none"
         ? "Návrh se do Kalendáře neposílá"
-        : SYNC_STATUS_LABELS[sync.status];
+        : sync.status === "synced" && sync.external?.cancelled
+          ? "Zrušeno i v Kalendáři"
+          : sync.status === "pending" && sync.personal
+            ? "Zapisuje se do kalendářů"
+            : SYNC_STATUS_LABELS[sync.status];
   // Když jsou v Kalendáři kandidáti ke spárování, je hlavní krok párování a nová pozvánka jde do nabídky.
   const createInMenu = sync.status === "unlinked" && sync.candidates.length > 0;
   const simulationTools = sync.mode === "simulation" && sync.status === "synced" && Boolean(sync.externalId);
@@ -39,12 +43,19 @@ export function SyncPanelView({ eventId, sync }: { eventId: string; sync: SyncPa
     />
   );
 
-  return (
+  // Funkční synchronizace běžného správce nezajímá: panel je sbalený. Otevřený je jen tam, kde je potřeba zásah.
+  const needsAction =
+    sync.status === "attention" ||
+    Boolean(sync.conflict) ||
+    sync.calendarUnavailable ||
+    (sync.status === "unlinked" && (sync.candidates.length > 0 || sync.unlinkedReason === "lookalike"));
+
+  const panel = (
     <section className="section" aria-labelledby="kalendar">
       <div className="spread">
         <h2 id="kalendar">Google Kalendář</h2>
         <span className="row">
-          <span className="badge badge-outline">{sync.mode === "simulation" ? "simulace" : sync.attendeeSource === "allowlist" ? "test Google · jen testovací příjemci" : "test Google · publikum akce"}</span>
+          <span className="badge badge-outline">{sync.personal ? "osobní kalendáře" : sync.mode === "simulation" ? "simulace" : sync.attendeeSource === "allowlist" ? "test Google · jen testovací příjemci" : "test Google · publikum akce"}</span>
           <span className={statusBadge} role="status">
             {statusLabel}
           </span>
@@ -61,6 +72,9 @@ export function SyncPanelView({ eventId, sync }: { eventId: string; sync: SyncPa
         </span>
       </div>
 
+      {sync.personal && (
+        <p className="small">Akce se zapisuje kolegům do jejich kalendářů. Pozvánky ani e-maily se neposílají.</p>
+      )}
       {sync.calendarUnavailable && (
         <p className="notice notice-danger">
           {sync.calendarErrorCode === "calendar_revoked" || sync.calendarErrorCode === "calendar_not_configured" ? (
@@ -156,7 +170,9 @@ export function SyncPanelView({ eventId, sync }: { eventId: string; sync: SyncPa
             )}
             <dt>Oznámení</dt>
             <dd>
-              {sync.mode === "google-test"
+              {sync.personal
+                ? "neposílají se (osobní kalendáře)"
+                : sync.mode === "google-test"
                 ? "Wiki žádá Google o oznámení pozvaným při každé změně. Doručení Google nehlásí."
                 : sync.notifications.length
                   ? sync.notifications.map((n) => `${NOTIFICATION[n.kind] ?? n.kind} (${n.recipients})`).join(" · ")
@@ -167,5 +183,12 @@ export function SyncPanelView({ eventId, sync }: { eventId: string; sync: SyncPa
         </details>
       )}
     </section>
+  );
+  if (needsAction) return panel;
+  return (
+    <details className="fold tech-fold">
+      <summary>Technické informace</summary>
+      {panel}
+    </details>
   );
 }

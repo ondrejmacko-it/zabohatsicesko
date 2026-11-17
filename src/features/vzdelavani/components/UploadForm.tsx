@@ -31,7 +31,7 @@ export function UploadForm({ eventId, eventLabel, replacing }: { eventId: string
       </label>
       {/* Přepis je v této verzi ukázka: umí jen jednu známou nahrávku. UI to musí říct dřív, než vedoucí něco nahraje. */}
       <p className="notice">
-        Přepis je zatím jen ukázka a návrh zápisu vytvoří jen z ukázkové nahrávky.{" "}
+        Automatický přepis zatím umí jen jednu ukázkovou nahrávku. Z nahrávky skutečné schůzky zápis nevznikne.{" "}
         <a href="/demo/testovaci-nahravka.wav" download>
           Stáhnout ukázkovou nahrávku
         </a>

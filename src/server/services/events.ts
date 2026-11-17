@@ -5,7 +5,7 @@ import { addDays, fromPragueLocal, isoWeekday, monthOf, monthRange, toDateKey, t
 import type { EventType, Group, PlanStatus, SyncStatus } from "@/lib/types";
 import { audit } from "@/server/audit";
 import { targetCalendarId } from "@/server/calendar/target";
-import { config, now } from "@/server/config";
+import { config, now, personalDelivery } from "@/server/config";
 import { getDb, type Executor } from "@/server/db/client";
 import {
   calendarLinks,
@@ -70,7 +70,8 @@ function toCard(
   const organizer = isOrganizer(viewer);
   const isPublic = row.published !== null;
   let syncStatus: EventCard["syncStatus"] = null;
-  if (organizer && isPublic && view.type !== "holiday") syncStatus = link?.syncStatus ?? "unlinked";
+  // Osobní kalendáře nemají pozvánku k akci: chybějící vazba tu neznamená, že něco chybí.
+  if (organizer && isPublic && view.type !== "holiday") syncStatus = link?.syncStatus ?? (personalDelivery() ? "synced" : "unlinked");
   const last = row.published;
   const moved = organizer && last !== null && row.status !== "cancelled" && (last.startsAt !== view.startsAt || last.endsAt !== view.endsAt);
 

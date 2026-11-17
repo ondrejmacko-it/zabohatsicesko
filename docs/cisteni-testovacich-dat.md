@@ -62,6 +62,22 @@ schválení.
 
 Volitelně před krokem 2 vytvořit v Neonu snapshot / větev produkce jako zálohu (nedestruktivní).
 
+## Před čištěním: ověřit režim Kalendáře a dopad na každou akci (doplněno 17. 11. 2026)
+
+Stav: **jen návrh, nic neprovedeno.** Na stránce Správa je režim osobních kalendářů (`CALENDAR_DELIVERY=personal`).
+V tomto režimu Wiki pozvánky ani e-maily neposílá: zrušení akce se jen promítne do kalendářů „Vzdělávání ZBC“
+u propojených uživatelů (`syncPersonalCalendars`) a vazby v `calendar_links` se označí za zpracované
+(`markLinksDelivered`). Starší vazby z doby režimu organizátora ale mohou mít `external_event_id` na pozvánku
+v kalendáři organizátora. Ta by se v osobním režimu nezrušila a v Google by zůstala.
+
+Před každou operací, pouze read-only:
+1. Ověřit skutečné proměnné produkce (Vercel, Production): `CALENDAR_MODE`, `CALENDAR_DELIVERY`, `CALENDAR_ATTENDEES`, `CALENDAR_PERSONAL_NOTIFY`.
+2. Pro každou ze 6 zveřejněných akcí přečíst `calendar_links` (`external_event_id`, `calendar_id`, `sync_status`)
+   a zjistit, kdo má propojený osobní kalendář (`personal_calendars`).
+3. Do tabulky zapsat pro každou akci: vazba ano/ne, kalendář, očekávaný dopad (osobní kalendáře / pozvánka
+   organizátora / nic) a zda může odejít e-mail (při `CALENDAR_PERSONAL_NOTIFY=self-invite` ano, vlastníkovi).
+4. Teprve potom schválení uživatele a provedení přes UI.
+
 ## Otevřené otázky pro uživatele
 
 * Které z akcí výše jsou testovací celé (zrušit), a u kterých jen opravit téma?

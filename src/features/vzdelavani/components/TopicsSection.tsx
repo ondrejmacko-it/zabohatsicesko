@@ -2,23 +2,22 @@ import { InterestButton, ProposeTopicDialog, RestoreTopicButton, TopicManage } f
 import { GROUP_LABELS } from "@/lib/labels";
 import { formatDayMonth } from "@/lib/time";
 import { GROUPS, type Group } from "@/lib/types";
-import { interestedLabel, isRecommendable } from "@/server/domain/topics";
+import { interestedLabel, mostWantedIds, sortByInterest } from "@/server/domain/topics";
 import { isOrganizer, type Viewer } from "@/server/policy";
 import { listArchivedTopics, listTopicInterested, listTopics } from "@/server/services/topics";
 
-/** Kolik nenaplánovaných témat z čela pořadí dostane štítek Doporučené. */
-const RECOMMENDED_COUNT = 3;
-
-/** Témata jako jeden přehledný seznam řádků. Doporučená jsou nahoře se štítkem, správa je v nabídce u každého řádku. */
+/** Témata jako jeden přehledný seznam řádků podle zájmu. Nejžádanější mají štítek, správa je v nabídce u každého řádku. */
 export async function TopicsSection({ user }: { user: Viewer }) {
   const organizer = isOrganizer(user);
-  const [topics, archived, interested] = await Promise.all([
+  const [ranked, archived, interested] = await Promise.all([
     listTopics(user),
     listArchivedTopics(user),
     // Jména zájemců smí vidět jen správce, ostatním server pošle jen počet.
     organizer ? listTopicInterested(user) : null,
   ]);
-  const recommended = new Set(topics.filter(isRecommendable).slice(0, RECOMMENDED_COUNT).map((t) => t.id));
+  // Server vrací jen témata, která uživatel smí vidět, a bez archivu. Pořadí plánování (`rankTopics`) se tu nepoužívá.
+  const topics = sortByInterest(ranked);
+  const mostWanted = mostWantedIds(topics);
   const groups = GROUPS.filter((g) => organizer || user.groups.includes(g)) as Group[];
   const label = (g: string) => GROUP_LABELS[g as Group] ?? g;
 
@@ -41,11 +40,11 @@ export async function TopicsSection({ user }: { user: Viewer }) {
           {topics.map((t) => {
             const names = interested?.get(t.id) ?? [];
             return (
-              <li key={t.id} className={recommended.has(t.id) ? "topic-row topic-recommended" : "topic-row"}>
+              <li key={t.id} className={mostWanted.has(t.id) ? "topic-row topic-wanted" : "topic-row"}>
                 <div className="topic-main">
                   <p className="item-title">
                     <span id={`tema-${t.id}`}>{t.name}</span>
-                    {recommended.has(t.id) && <span className="badge badge-ochre topic-badge">Doporučené</span>}
+                    {mostWanted.has(t.id) && <span className="badge badge-ok topic-badge">Nejžádanější</span>}
                   </p>
                   <p className="item-meta">
                     {label(t.audience)} · {t.lastHeld ? `naposledy ${formatDayMonth(t.lastHeld)}` : "zatím neproběhlo"}

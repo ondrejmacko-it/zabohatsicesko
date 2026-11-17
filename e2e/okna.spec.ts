@@ -188,7 +188,7 @@ test.describe("okna správce", () => {
     await page.getByRole("link", { name: /Nedokončené zápisy/ }).click();
     const picker = dialog(page, "Nedokončené zápisy");
     await expect(picker).toBeVisible();
-    await expect(picker.getByText(/Odpovědný: /).first()).toBeVisible();
+    await expect(picker.getByText(/Vede: |Vedoucí neurčen/).first()).toBeVisible();
     await expectNoHorizontalScroll(page);
     await page.keyboard.press("Escape");
     await expect(page).toHaveURL(/\/vzdelavani\/zapisy$/);

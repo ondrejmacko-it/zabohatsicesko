@@ -58,6 +58,27 @@ export const TOPIC_DRIVEN_TYPES: ReadonlySet<EventType> = new Set<EventType>(["e
 
 /** Téma se hodí k akci stejného publika, téma pro všechny ke každé akci. */
 /** Doporučit jde jen nenaplánované téma, o které projevil zájem aspoň jeden člověk. */
+/**
+ * Pořadí seznamu Témat: podle počtu zájemců sestupně, při shodě abecedně a podle ID (stabilní).
+ * Jen prezentace. Plánování a předvyplňování termínů dál používá `rankTopics`.
+ */
+export function sortByInterest<T extends Pick<TopicStat, "id" | "name" | "interestCount">>(topics: readonly T[]): T[] {
+  return [...topics].sort((a, b) => b.interestCount - a.interestCount || collator.compare(a.name, b.name) || a.id.localeCompare(b.id));
+}
+
+/** Kolik témat z čela seznamu dostane štítek Nejžádanější. */
+export const MOST_WANTED_COUNT = 3;
+
+/** Nejžádanější témata: první tři podle zájmu, jen ta s aspoň jedním zájemcem. */
+export function mostWantedIds(topics: readonly Pick<TopicStat, "id" | "name" | "interestCount">[]): Set<string> {
+  return new Set(
+    sortByInterest(topics)
+      .filter((t) => t.interestCount > 0)
+      .slice(0, MOST_WANTED_COUNT)
+      .map((t) => t.id),
+  );
+}
+
 export function isRecommendable(topic: { interestCount: number; nextPlanned?: string | null }): boolean {
   return topic.interestCount > 0 && !topic.nextPlanned;
 }

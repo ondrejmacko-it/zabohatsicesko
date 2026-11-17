@@ -8,8 +8,8 @@ import { Icon } from "@/components/Icon";
 import { Todo, missingText } from "@/components/Todo";
 import { RecordingSection } from "@/features/vzdelavani/components/RecordingSection";
 import { SyncPanelView } from "@/features/vzdelavani/components/SyncPanelView";
-import { badgeClass, primaryStatus, statusAdvice } from "@/features/vzdelavani/status";
-import { GROUP_LABELS, PLAN_STATUS_LABELS, TYPE_LABELS } from "@/lib/labels";
+import { badgeClass, detailBadges, statusAdvice } from "@/features/vzdelavani/status";
+import { GROUP_LABELS, TYPE_LABELS } from "@/lib/labels";
 import { safeDecode } from "@/lib/params";
 import { formatDate, formatEventWhen, monthOf, toDateKey } from "@/lib/time";
 import { requireUser } from "@/server/auth/session";
@@ -43,7 +43,6 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
   const start = new Date(card.startsAt);
   const dayKey = toDateKey(start);
   const title = card.topicTitle ? `${card.label}: ${card.topicTitle}` : card.label;
-  const status = primaryStatus(card);
   const advice = statusAdvice(card);
   // Úpravy akce jsou jen v okně akce v Plánu. Tahle stránka nese nahrávku, zápis a stav v Kalendáři.
   const editable = organizer && detail.form && card.planStatus !== "cancelled" && card.type !== "holiday";
@@ -75,13 +74,11 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
           {card.label !== TYPE_LABELS[card.type] && <p className="eyebrow">{TYPE_LABELS[card.type]}</p>}
           <h2 className="detail-title">{title}</h2>
           <div className="row detail-badges">
-            {(!status || !status.label.startsWith(PLAN_STATUS_LABELS[card.planStatus])) && (
-              <span className={card.planStatus === "published" ? "badge badge-ok" : card.planStatus === "cancelled" ? "badge badge-danger" : "badge badge-outline"}>
-                {PLAN_STATUS_LABELS[card.planStatus]}
+            {detailBadges(card).map((badge) => (
+              <span key={badge.label} className={badgeClass(badge.tone)}>
+                {badge.label}
               </span>
-            )}
-            {status && status.label !== PLAN_STATUS_LABELS[card.planStatus] && <span className={badgeClass(status.tone)}>{status.label}</span>}
-            {card.past && card.planStatus === "published" && <span className="badge">Proběhlo</span>}
+            ))}
           </div>
           {organizer && advice && <p className="small muted status-advice">{advice}</p>}
         </div>
@@ -104,6 +101,13 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
           )}
         </div>
       </div>
+
+      {/* Zrušení a jeho důvod patří nahoru: je to to hlavní, co kolega o akci potřebuje vědět. */}
+      {card.planStatus === "cancelled" && (
+        <p className="notice notice-danger cancel-notice">
+          <strong>Akce je zrušená.</strong> {detail.cancelReason ? `Důvod: ${detail.cancelReason}` : "Důvod nebyl uveden."}
+        </p>
+      )}
 
       {organizer && card.unpublishedChanges && (
         <div className="notice spread">
@@ -145,12 +149,6 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
             <>
               <dt>Kdo zkontroluje zápis</dt>
               <dd>{detail.reviewerName}</dd>
-            </>
-          )}
-          {detail.cancelReason && card.planStatus === "cancelled" && (
-            <>
-              <dt>Důvod zrušení</dt>
-              <dd>{detail.cancelReason}</dd>
             </>
           )}
         </dl>

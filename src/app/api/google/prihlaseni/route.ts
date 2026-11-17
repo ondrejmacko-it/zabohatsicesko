@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
 import { hashKey, withinRateLimit } from "@/server/audit";
 import { DEVICE_COOKIE, INVITE_COOKIE, checkInvite, findDevice, inviteOnlyLogin } from "@/server/auth/devices";
-import { beginLogin, type LoginOptions, type LoginScope } from "@/server/auth/google-login";
+import { beginLogin, typedLoginHint, type LoginOptions, type LoginScope } from "@/server/auth/google-login";
 import { needsCalendarConnection } from "@/server/calendar/google-auth";
 import { needsPersonalCalendar } from "@/server/calendar/personal";
 import { config, googleCalendarConfig, googleLoginConfig, personalDelivery } from "@/server/config";
@@ -59,11 +59,13 @@ export async function GET(request: NextRequest) {
       hintedUserId = device.userId;
     } else if (invite) {
       // Pozvánka zatím platí dál. Spotřebuje ji až callback, když se přihlásí právě tento účet.
+      // Adresu z pozvánky Google nedostane: nové zařízení nesmí prozradit ani předvyplnit, komu pozvánka patří.
       scope = { kind: "invite", userId: invite.userId };
-      loginHint = invite.email;
+      loginHint = typedLoginHint(params.get("email"));
       hintedUserId = null;
     } else if (params.get("spravce") === "1" && cfg.bootstrapAdmins?.size) {
       scope = { kind: "bootstrap" };
+      loginHint = typedLoginHint(params.get("email"));
     } else {
       const back = NextResponse.redirect(new URL("/vstup", request.nextUrl), 303);
       back.headers.set("Cache-Control", "no-store");

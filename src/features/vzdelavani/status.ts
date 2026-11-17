@@ -18,6 +18,31 @@ export function primaryStatus(card: EventCard): { label: string; tone: Tone } | 
 }
 
 /**
+ * Životní stav akce pro detail: vždy právě jeden štítek, aby byl stav vidět i bez barvy.
+ * Zrušení má přednost před vším (i před svátkem a proběhnutím), návrh před proběhnutím.
+ */
+export function lifecycleStatus(card: EventCard): { label: string; tone: Tone } {
+  if (card.planStatus === "cancelled") return { label: "Zrušeno", tone: "danger" };
+  if (card.type === "holiday") return { label: "Svátek", tone: "neutral" };
+  if (card.planStatus === "draft") return { label: "Návrh", tone: "draft" };
+  if (card.past) return { label: "Proběhlo", tone: "neutral" };
+  return { label: "Zveřejněno", tone: "ok" };
+}
+
+/**
+ * Štítky v hlavičce detailu: životní stav a nejvýš jeden doplněk, který něco znamená (rozpracovaná změna,
+ * chyba Kalendáře, mimořádnost). Zrušená akce a svátek doplněk nemají. Běžící synchronizace štítek nemá.
+ */
+export function detailBadges(card: EventCard): Array<{ label: string; tone: Tone }> {
+  const badges = [lifecycleStatus(card)];
+  if (card.planStatus === "cancelled" || card.type === "holiday") return badges;
+  if (card.syncStatus === "attention") badges.push({ label: "Kalendář k opravě", tone: "danger" });
+  else if (card.unpublishedChanges) badges.push({ label: "Návrh změny", tone: "ochre" });
+  else if (card.extraordinary) badges.push({ label: "Mimořádná", tone: "neutral" });
+  return badges;
+}
+
+/**
  * Jediný štítek karty v Plánu: stav, který něco znamená. Synchronizace, která běží sama, štítek nemá.
  * Chybějící údaje ukazuje zvlášť decentní indikátor (`missingDetails`), ne další štítky.
  */
@@ -45,7 +70,7 @@ export function statusAdvice(card: EventCard): string | null {
   if (card.planStatus === "cancelled" || card.type === "holiday") return null;
   // Chybějící téma a vedoucího ukazují samotná pole („Doplňte téma“), rada je neopakuje.
   if (card.planStatus === "draft") return "Kolegové návrh zatím nevidí.";
-  if (card.syncStatus === "attention") return "Pozvánka v Kalendáři neodpovídá Wiki. Oprava je v části Google Kalendář.";
+  if (card.syncStatus === "attention") return "Kalendář neodpovídá Wiki, je potřeba oprava.";
   // Rozpracovaný návrh změny má v detailu vlastní upozornění s tlačítky.
   if (card.unpublishedChanges) return null;
   if (card.syncStatus === "pending") return "Změna se posílá do Kalendáře.";

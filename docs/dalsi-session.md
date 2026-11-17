@@ -1,5 +1,27 @@
 # Prompt pro další session
 
+**POSLEDNÍ OPRAVY UX, PŘIHLÁŠENÍ A ZÁPISŮ (17. 11. 2026, relace session_01HpUirxUSjYc9wbogeZGpqN, větev `claude/focused-tesla-cw2jdt` z main 80513a1).**
+Rozhodnutí uživatele: e-mail ověřit až po Googlu (bez předkontroly), „Nejžádanější“ nahrazuje „Doporučené“, sekundární řazení
+abecedně + ID, ruční zápis jen jako návrh (`docs/rucni-zapis-navrh.md`).
+* (1) Přihlášení: nové zařízení zobrazí prázdné pole E-mail (`src/app/vstup/GoogleStart.tsx`, navigace přes `location`
+  kvůli CSP). Route nebere `invite.email`, jen ručně zadanou adresu jako `login_hint` (`typedLoginHint`). Nové zařízení se
+  souhlasem ke Kalendáři posílá `prompt=select_account consent`. Ověření identity, PKCE, stav i vazba pozvánky beze změny.
+  Testy: `tests/prvni-prihlaseni.test.ts`, e2e „nové zařízení: prázdné pole E-mail“.
+* (2) Témata: `sortByInterest` a `mostWantedIds` v `src/server/domain/topics.ts` (jen prezentace, `rankTopics` pro plánování
+  beze změny), zelený štítek a pozadí, ostatní řádky teplé `--beige`.
+* (3) Kalendář: místo tlačítka „Stav v Kalendáři“ jen „Opravit v Kalendáři“ při chybě, jinak tichý odkaz „Technické
+  informace“. Panel v detailu je sbalený, pokud není potřeba zásah. Osobní režim: `SyncPanel.personal`, chybějící vazba
+  = „synced“ (bez nabídky pozvánky s e-mailem), text „Pozvánky ani e-maily se neposílají“.
+* (4) Zrušené akce: `lifecycleStatus` + `detailBadges` (dřív stránka detailu u zrušené akce neukázala žádný štítek),
+  nahoře upozornění s důvodem. Testy `tests/stav-akce.test.ts`.
+* (5) Zápisy: bez „Otevřít celou akci“, „Vedoucí neurčen“ + správci „Přiřadit vedoucího“ (Plán s otevřenou akcí), kratší
+  texty, výměna nahrávky sbalená, když zápis existuje. Text u nahrávání: přepis umí jen ukázkovou nahrávku.
+* (7) `docs/cisteni-testovacich-dat.md`: doplněn postup ověření režimu a vazeb pro každou akci. **Nic neprovedeno.**
+* Ověřeno: lint, tsc, unit 299/299, build OK. E2E: viz popis PR. **Neověřeno:** screenshoty na více šířkách, plné e2e,
+  bod 6 (drobnosti) prošel jen částečně (pořadí tlačítek, fokus po zavření nekontrolován).
+**Další krok:** prohlédnout screenshoty (Témata, detail zrušené akce, /vstup?spravce=1, okno zápisu) na 390/1280,
+projít bod 6, plné `npm run e2e`, draft PR připravit k revizi. Read-only ověření 6 akcí podle doc (7) až s pokynem.
+
 **BODY 1–3 (17. 11. 2026, relace session_01HpUiryLTnYTDVdKXExXTxz, větev `claude/awesome-dijkstra-yc1boc`).**
 * (1) Okna akcí hotová (a27f734): bez nápovědy pod „Pro koho“ (`GROUP_HINTS` smazané), bez kroku Kontrola v Přidat
   akci, příjemci pozvánky jen tlumený sbalený řádek (0 příjemců = krátká poznámka, u proběhlé akce nic), návrh bez

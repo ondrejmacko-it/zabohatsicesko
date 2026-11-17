@@ -30,6 +30,18 @@ test.describe("ostrá Wiki", () => {
     await expectNoHorizontalScroll(page);
   });
 
+  test("nové zařízení: prázdné pole E-mail, žádný předvyplněný účet", async ({ page }) => {
+    await page.goto(`${live}/vstup?spravce=1`);
+    await settle(page);
+    const email = page.getByLabel("E-mail");
+    await expect(email).toHaveValue("");
+    await expect(page.getByText(/Toto zařízení zná účet|Pozvánka je pro účet/)).toHaveCount(0);
+    // Bez adresy se na Google nepokračuje, prohlížeč pole vyžaduje.
+    await page.getByRole("button", { name: /Google/ }).click();
+    await expect(page).toHaveURL(/\/vstup/);
+    await expectNoHorizontalScroll(page);
+  });
+
   test("ochrana soukromí je veřejná a běží bez chyb", async ({ page }) => {
     const response = await page.goto(`${live}/soukromi`);
     expect(response?.status()).toBe(200);

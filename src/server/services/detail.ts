@@ -5,7 +5,7 @@ import { audienceAttendees } from "@/server/calendar/attendees";
 import { CalendarError, type ExternalEvent } from "@/server/calendar/provider";
 import { listNotifications } from "@/server/calendar/simulated";
 import { calendarProvider, looksLikeSameInvite, pairingCandidates } from "@/server/calendar/sync";
-import { attendeeSource, calendarMode, config, now, type AttendeeSource, type CalendarMode } from "@/server/config";
+import { attendeeSource, calendarMode, config, now, personalDelivery, type AttendeeSource, type CalendarMode } from "@/server/config";
 import { getDb } from "@/server/db/client";
 import { calendarLinks, users, type ManagedFields } from "@/server/db/schema";
 import { calendarSummary, snapshotOf, type EventRow } from "@/server/domain/snapshot";
@@ -48,6 +48,8 @@ export function formValuesOf(snapshot: EventSnapshot): EventFormValues {
 
 export type SyncPanel = {
   mode: CalendarMode;
+  /** Režim osobních kalendářů: akce se zapisuje kolegům do jejich kalendářů, pozvánky ani e-maily se neposílají. */
+  personal: boolean;
   /** Vazba míří na jeden výskyt opakované události. */
   seriesInstance: boolean;
   status: "pending" | "synced" | "attention" | "unlinked" | "none";
@@ -80,8 +82,10 @@ async function syncPanel(viewer: Viewer, row: EventRow): Promise<SyncPanel | nul
   const mode = calendarMode();
   const panel: SyncPanel = {
     mode,
+    personal: personalDelivery(),
     seriesInstance: Boolean(link?.recurringEventId),
-    status: !row.published ? "none" : (link?.syncStatus ?? "unlinked"),
+    // Osobní kalendáře pozvánku k akci nezakládají, chybějící vazba proto není „bez pozvánky“.
+    status: !row.published ? "none" : (link?.syncStatus ?? (personalDelivery() ? "synced" : "unlinked")),
     errorCode: link?.errorCode ?? null,
     conflict: null,
     externalId: link?.externalEventId ?? null,
