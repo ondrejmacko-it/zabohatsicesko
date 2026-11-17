@@ -5,7 +5,8 @@ import { EVENT_FORMAT, PERSONAL_SCOPE, needsPersonalCalendar, personalSyncNeeded
 import { calendarDelivery, config } from "@/server/config";
 import { personalCalendarView } from "@/features/vzdelavani/components/PersonalCalendarStatus";
 import { statusAdvice } from "@/features/vzdelavani/status";
-import { calendarLinks, personalCalendarEntries, personalCalendars, users } from "@/server/db/schema";
+import { calendarLinks, events, personalCalendarEntries, personalCalendars, users } from "@/server/db/schema";
+import type { EventSnapshot } from "@/lib/types";
 import { getEventDetail } from "@/server/services/detail";
 import { getEventCard } from "@/server/services/events";
 import { PUBLISHED_RM, lead, organizer, participant, resetDemo } from "./helpers";
@@ -404,7 +405,7 @@ describe("stav akce v osobním režimu", () => {
     expect(sync.external).toBeNull();
     expect(sync.legacyInviteId).toBeNull();
     // Bez propojených kalendářů není zapsáno nikde a nikdo není „v chybě“.
-    expect(sync.personalDelivery).toMatchObject({ expected: true, written: 0, failing: [], waiting: 0 });
+    expect(sync.personalDelivery).toMatchObject({ expected: true, written: 0, current: 0, outdated: 0, missing: 0, failing: [] });
     expect(sync.personalDelivery!.notConnected).toBe(sync.personalDelivery!.audience);
 
     const found = await getEventCard(organizer, PUBLISHED_RM);
@@ -424,6 +425,8 @@ describe("stav akce v osobním režimu", () => {
     expect(calls).toBe(0);
     const delivery = detail.sync!.personalDelivery!;
     expect(delivery.written).toBe(1);
+    // Otisk „h“ neodpovídá současné podobě akce: zapsáno je, ale zastarale.
+    expect(delivery).toMatchObject({ current: 0, outdated: 1, missing: 0 });
     expect(delivery.failing).toEqual([{ name: expect.any(String), reason: "blocked" }]);
     expect(delivery.notConnected).toBe(delivery.audience - 2);
     expect(delivery.lastSyncedAt).toBe("2026-11-10T07:00:00.000Z");
@@ -431,6 +434,39 @@ describe("stav akce v osobním režimu", () => {
     await db.insert(personalCalendars).values(personalRow(participant.id));
     await db.insert(personalCalendarEntries).values({ userId: participant.id, eventId: PUBLISHED_RM, externalEventId: "y", dataHash: "h" });
     expect((await detailWithoutGoogle()).detail.sync!.personalDelivery!.written).toBe(1);
+  });
+
+  test("změna termínu před synchronizací: zápis je zastaralý, po synchronizaci znovu aktuální", async () => {
+    await db.delete(personalCalendars);
+    await db.delete(personalCalendarEntries);
+    await savePersonalGrant(db, organizer.id, { ...grant, accountEmail: "organizator@example.com" });
+    expect(await syncPersonalCalendar(db, organizer.id, { fetchImpl: fakeGoogle().fetchImpl, clock })).toBe("synced");
+    const fresh = (await detailWithoutGoogle()).detail.sync!.personalDelivery!;
+    expect(fresh).toMatchObject({ written: 1, current: 1, outdated: 0, missing: 0, failing: [] });
+
+    const [event] = await db.select({ published: events.published }).from(events).where(eq(events.id, PUBLISHED_RM));
+    const original = event!.published as EventSnapshot;
+    const shift = (iso: string) => new Date(new Date(iso).getTime() + 3600_000).toISOString();
+    await db.update(events).set({ published: { ...original, startsAt: shift(original.startsAt), endsAt: shift(original.endsAt) } }).where(eq(events.id, PUBLISHED_RM));
+    try {
+      const stale = await detailWithoutGoogle();
+      expect(stale.calls).toBe(0);
+      expect(stale.detail.sync!.personalDelivery).toMatchObject({ written: 1, current: 0, outdated: 1, missing: 0 });
+
+      const google = fakeGoogle();
+      expect(await syncPersonalCalendar(db, organizer.id, { fetchImpl: google.fetchImpl, clock })).toBe("synced");
+      expect(google.calls.some((c) => c.method === "PUT" && c.url.pathname.includes("/events"))).toBe(true);
+      expect((await detailWithoutGoogle()).detail.sync!.personalDelivery).toMatchObject({ written: 1, current: 1, outdated: 0 });
+    } finally {
+      await db.update(events).set({ published: original }).where(eq(events.id, PUBLISHED_RM));
+    }
+  });
+
+  test("propojený kalendář bez zápisu akce je chybějící, ne zapsaný", async () => {
+    await db.delete(personalCalendars);
+    await db.delete(personalCalendarEntries);
+    await db.insert(personalCalendars).values(personalRow(organizer.id));
+    expect((await detailWithoutGoogle()).detail.sync!.personalDelivery).toMatchObject({ written: 0, current: 0, outdated: 0, missing: 1, failing: [] });
   });
 
   test("starší pozvánka organizátora je jen historická informace, Google se nevolá", async () => {

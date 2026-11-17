@@ -51,18 +51,27 @@ function PersonalSyncView({ sync }: { sync: SyncPanel }) {
         <dl className="dl">
           <dt>Publikum</dt>
           <dd>{people(delivery.audience)}</dd>
-          <dt>{delivery.expected ? "Zapsáno" : "Ještě v kalendářích"}</dt>
-          <dd>
-            {delivery.expected
-              ? `do ${delivery.written} z ${delivery.audience} osobních kalendářů`
-              : delivery.written > 0
-                ? `${delivery.written}, zrušená akce se odebere při dalším srovnání`
-                : "nikde, zrušená akce je odebraná"}
-          </dd>
-          {delivery.waiting > 0 && (
+          {delivery.expected ? (
             <>
-              <dt>Čeká na zápis</dt>
-              <dd>{delivery.waiting}</dd>
+              <dt>Aktuálně zapsáno</dt>
+              <dd>{`do ${delivery.current} z ${delivery.audience} osobních kalendářů`}</dd>
+              {delivery.outdated > 0 && (
+                <>
+                  <dt>Starší podoba akce</dt>
+                  <dd>{delivery.outdated}, čeká na aktualizaci při další synchronizaci</dd>
+                </>
+              )}
+              {delivery.missing > 0 && (
+                <>
+                  <dt>Ještě nezapsáno</dt>
+                  <dd>{delivery.missing}, zapíše se při další synchronizaci</dd>
+                </>
+              )}
+            </>
+          ) : (
+            <>
+              <dt>Ještě v kalendářích</dt>
+              <dd>{delivery.written > 0 ? `${delivery.written}, zrušená akce se odebere při další synchronizaci` : "nikde, zrušená akce je odebraná"}</dd>
             </>
           )}
           {delivery.notConnected > 0 && (
@@ -71,13 +80,13 @@ function PersonalSyncView({ sync }: { sync: SyncPanel }) {
               <dd>{people(delivery.notConnected)} (nepropojeno nebo odmítnuto)</dd>
             </>
           )}
-          <dt>Poslední srovnání</dt>
-          <dd>{delivery.lastSyncedAt ? new Date(delivery.lastSyncedAt).toLocaleString("cs-CZ", { timeZone: "Europe/Prague", dateStyle: "short", timeStyle: "short" }) : "zatím žádné"}</dd>
+          <dt>Poslední běh synchronizace kalendářů</dt>
+          <dd>{delivery.lastSyncedAt ? new Date(delivery.lastSyncedAt).toLocaleString("cs-CZ", { timeZone: "Europe/Prague", dateStyle: "short", timeStyle: "short" }) : "zatím žádný"}</dd>
         </dl>
       )}
       {failing.length > 0 && (
         <div className="notice notice-danger">
-          <p>Nepodařilo se zapsat do kalendáře:</p>
+          <p>Synchronizace kalendáře selhává:</p>
           <ul>
             {failing.map((f) => (
               <li key={f.name}>
