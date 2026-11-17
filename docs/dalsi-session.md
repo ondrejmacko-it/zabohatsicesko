@@ -16,7 +16,22 @@ kroky pro mě piš úplně, pod sebe, s přesnými kliky (Windows, PowerShell).
   `GOOGLE_OAUTH_PUBLISHED=1` (nastaveno 15. 11., platí od dalšího nasazení Production).
 * Úkoly z auditu jsou v `docs/audit-ukoly.md`. Audit ZIP stačí přiložit, jen když je potřeba `textove-upravy.csv`.
 
-**Stav 18. 11. odpoledne, Kalendář pozastaven, začíná UX (poslední):** obě opravy Kalendáře jsou hotové jako drafty.
+**Stav 18. 11. večer, PR C1 rozpracovaný (poslední):** větev `claude/ux-uvod-plan`, commit „PR C1 (rozpracováno)“.
+Lint, tsc a `npm test` 238/238 prošly. **Neověřeno:** `npm run build` mimo e2e server a `npm run e2e`, PR zatím není.
+* Hotovo: Úvod bez Moduly, vypnutého hledání a úspěšného stavu Kalendáře (`PersonalCalendarStatus` vrací null bez akce).
+  Pozvánky bez odpovědi = jeden úkol v „Čeká na vás“ (`src/features/vzdelavani/invitations.ts`, test `tests/ukoly-uvod.test.ts`),
+  `InvitesCard` smazaná, `TaskRow` má volitelné `href`, `newTab`, `urgent`. Plán: karty název + téma + čas + `cardBadges`
+  (`status.ts`), legenda pryč, jeden řádek nástrojů, stav měsíce jako štítky `PlanFilters` (`group` „Čeká na vás v tomto
+  měsíci“), typ a pohled jako malé selecty, vlastní úkoly v `<details class="plan-tasks">`. e2e upravené: `domu-ukoly.spec.ts`,
+  `pristupnost.spec.ts` (štítky místo panelu). Skript `scripts/audit-screenshoty.mjs` umí `ROLE`, `SIRKY`, `STRANKY`.
+* **Další krok:** (1) prohlédnout screenshoty `uvod`/`plan`/`plan-seznam` na 320, 390, 768, 1024 pro správce a FP
+  (zkontrolovat zalomení řádku nástrojů na 768–1024 a štítky v seznamu na 320), opravit. (2) Účastníkovi skrýt v navigaci
+  neaktivní „Správa systému“ (`Sidebar.tsx`, dnes šedá kulisa). (3) `npm run e2e` na pozadí (porty uvolnit `fuser -k 3310/tcp 3311/tcp`),
+  opravit pády. (4) Draft PR C1 do `main` podle šablony. Pak C2, C3, D.
+* Otevřené pro uživatele: kulisy shellu ukázky („Moje role“, „Jak pracujeme“, Dokumenty) nechávám, ostrá Wiki je nemá.
+  V kartách Plánu nechávám téma (bez něj by se čtyři „Trénink poradců“ nedaly rozlišit), vedoucí je až v náhledu.
+
+**Stav 18. 11. odpoledne, Kalendář pozastaven, začíná UX (předchozí):** obě opravy Kalendáře jsou hotové jako drafty.
 * #56 (PR B, `claude/kalendar-migrace-dry-run`, base přepnut na `main`): `removePersonalCalendar` při odmítnutém smazání
   (kromě 404) nechá token i řádek ve stavu `removal_failed` + `error_code`, `retireWikiCalendars` vrací `{ removed, failed }`,
   inventura `removalFailed`, migrace `0012` jen rozšíří CHECK. Lint, tsc, test 241/241, build. Popis PR aktualizovaný.
