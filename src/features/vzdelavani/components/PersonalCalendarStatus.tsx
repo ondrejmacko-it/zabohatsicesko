@@ -58,9 +58,13 @@ export function personalCalendarView(state: PersonalCalendarState): PersonalCale
   }
 }
 
-/** Řádek se stavem pro Úvod a Plán. Na náhled očima kolegy se nepoužívá. */
+/**
+ * Řádek pro Úvod a Plán, jen když Kalendář chce zásah (propojit, připojit znovu). Funkční propojení
+ * ani opakovaný pokus, který Wiki vyřeší sama, se neukazují. Na náhled očima kolegy se nepoužívá.
+ */
 export function PersonalCalendarStatus({ state }: { state: PersonalCalendarState }) {
   const view = personalCalendarView(state);
+  if (!view.action) return null;
   const toneClass = view.tone === "alert" ? " cal-status-alert" : view.tone === "warn" ? " cal-status-warn" : "";
   return (
     <div className={`cal-status${toneClass}`} role={view.tone === "alert" ? "alert" : "status"} data-testid="osobni-kalendar">

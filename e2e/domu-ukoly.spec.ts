@@ -9,7 +9,10 @@ test.describe("Úvod: Čeká na vás", () => {
     const tasks = page.getByRole("region", { name: /Čeká na vás/ });
     const next = page.getByRole("region", { name: "Nejbližší akce" });
     await expect(tasks).toBeVisible();
-    await expect(tasks.getByRole("link", { name: "Celý plán" })).toBeVisible();
+    // „Celý plán“ jen jednou, u nejbližších akcí. Úvod nemá bloky Moduly ani vypnuté hledání.
+    await expect(page.getByRole("link", { name: "Celý plán" })).toHaveCount(1);
+    await expect(page.getByRole("heading", { name: "Moduly" })).toHaveCount(0);
+    await expect(page.getByRole("main").getByRole("textbox")).toHaveCount(0);
     await expect(next.getByRole("link", { name: "Celý plán" })).toBeVisible();
     const [t, n] = [(await tasks.boundingBox())!, (await next.boundingBox())!];
     const width = page.viewportSize()!.width;

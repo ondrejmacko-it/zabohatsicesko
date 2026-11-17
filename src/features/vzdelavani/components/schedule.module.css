@@ -189,24 +189,37 @@
   border-color: var(--line-strong);
 }
 
-.event :global(.badge) {
+/* Štítky stavu pod kartou, víc štítků se zalomí. */
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
   margin-top: 4px;
+}
+
+.badges :global(.badge) {
+  margin: 0;
+}
+
+/* Téma je součást názvu akce: hned pod ním, menší a nejvýš na dva řádky. */
+.topic {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--ink-soft);
+  font-size: 13px;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.line {
+  color: var(--muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
 }
 
 .title {
   font-weight: 600;
-}
-
-.line {
-  color: var(--ink);
-}
-
-.cancelled {
-  color: var(--ochre-dark);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
 }
 
 .regular {
@@ -237,44 +250,6 @@
 .event.draft:hover,
 .agendaEvent.draft:hover {
   border-color: var(--ochre);
-}
-
-.swatch.draft {
-  border-left-width: 4px;
-}
-
-/* Popisek údaje je vedlejší, hodnota hlavní. */
-.key {
-  color: var(--ink-soft);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 18px;
-  margin: 12px 0 0;
-  padding: 0;
-  color: var(--muted);
-  font-size: 12px;
-  list-style: none;
-}
-
-.legend li {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.swatch {
-  display: inline-block;
-  width: 14px;
-  height: 14px;
-  border: 1px solid var(--line-strong);
-  border-radius: 3px;
 }
 
 /* ——— Agenda ——— */
@@ -378,7 +353,7 @@
   min-width: 0;
 }
 
-.agendaMain .line {
+.agendaMain .topic {
   font-size: 14px;
 }
 
@@ -397,8 +372,8 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .agendaEvent :global(.badge) {
-    justify-self: start;
+  .agendaEvent .badges {
+    margin-top: 0;
   }
 
   .agendaWeekBlock {

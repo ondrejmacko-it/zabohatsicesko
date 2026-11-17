@@ -18,6 +18,23 @@ export function primaryStatus(card: EventCard): { label: string; tone: Tone } | 
 }
 
 /**
+ * Štítky karty v Plánu: jen stav, který něco znamená. Synchronizace, která běží sama, štítek nemá.
+ * Správce navíc vidí, co chybí (téma, vedoucí). Kolega chybějící údaje neřeší, proto je nevidí.
+ */
+export function cardBadges(card: EventCard, managing: boolean): { label: string; tone: Tone }[] {
+  if (card.planStatus === "cancelled") return [{ label: "Zrušeno", tone: "danger" }];
+  if (card.type === "holiday") return [];
+  const badges: { label: string; tone: Tone }[] = [];
+  if (card.planStatus === "draft") badges.push({ label: "Návrh", tone: "draft" });
+  else if (card.unpublishedChanges) badges.push({ label: "Návrh změny", tone: "ochre" });
+  if (card.syncStatus === "attention") badges.push({ label: "Kalendář k opravě", tone: "danger" });
+  if (managing && !card.topicTitle) badges.push({ label: "Bez tématu", tone: "outline" });
+  if (managing && !card.leadName) badges.push({ label: "Bez vedoucího", tone: "outline" });
+  if (card.extraordinary && badges.length === 0) badges.push({ label: "Mimořádná", tone: "neutral" });
+  return badges;
+}
+
+/**
  * Co má správce u daného stavu udělat. Účastník a vedoucí mají své úkoly v Přehledu,
  * proto pro ně (syncStatus je null a návrhy nevidí) vrací null.
  */

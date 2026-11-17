@@ -62,17 +62,18 @@ test.describe("U05 Plán na telefonu", () => {
     await context.close();
   });
 
-  test("správce má krok měsíce mezi úkoly viditelnými bez rozbalení", async ({ browser }, testInfo) => {
+  test("správce má stav měsíce jako štítky viditelné bez rozbalení", async ({ browser }, testInfo) => {
     test.skip(onlyOnce(testInfo.project.name));
     const context = await browser.newContext({ storageState: authFile("spravce"), viewport: { width: 390, height: 760 }, isMobile: true, hasTouch: true });
     const page = await context.newPage();
     await page.goto("/vzdelavani/harmonogram");
     await settle(page);
-    const tasks = page.getByRole("region", { name: /Čeká na vás/ });
-    await expect(tasks).toBeVisible();
-    const visibleLinks = tasks.locator(":scope > .brief-list a");
-    const hrefs = await visibleLinks.evaluateAll((nodes) => nodes.map((node) => node.getAttribute("href") ?? ""));
-    expect(hrefs.some((href) => href.includes("stav=")), `krok měsíce v ${hrefs.join(", ")}`).toBe(true);
+    const chips = page.getByRole("group", { name: "Čeká na vás v tomto měsíci" });
+    await expect(chips).toBeVisible();
+    const hrefs = await chips.getByRole("link").evaluateAll((nodes) => nodes.map((node) => node.getAttribute("href") ?? ""));
+    expect(hrefs.some((href) => href.includes("stav=")), `stav měsíce v ${hrefs.join(", ")}`).toBe(true);
+    const chipsTop = await chips.evaluate((node) => node.getBoundingClientRect().top);
+    expect(chipsTop, "štítky bez posunu").toBeLessThan(760);
     await expect(page.getByRole("region", { name: "Nejbližší akce" })).toHaveCount(0);
     await context.close();
   });

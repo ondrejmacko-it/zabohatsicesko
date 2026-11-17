@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { Icon } from "@/components/Icon";
-import { Todo, missingText } from "@/components/Todo";
 import { TYPE_LABELS } from "@/lib/labels";
 import {
   addDays,
@@ -15,7 +14,7 @@ import {
   weekdayShort,
 } from "@/lib/time";
 import type { EventCard } from "@/server/services/events";
-import { badgeClass, cardTone, primaryStatus } from "../status";
+import { badgeClass, cardBadges, cardTone, primaryStatus } from "../status";
 import styles from "./schedule.module.css";
 
 const COLUMNS = [
@@ -69,10 +68,27 @@ function GhostBlock({ card, hrefFor = pageHref }: { card: EventCard; hrefFor?: C
   );
 }
 
+/** Štítky stavu pod kartou. Bez štítků nic nevykreslí. */
+function Badges({ card, managing }: { card: EventCard; managing: boolean }) {
+  const badges = cardBadges(card, managing);
+  if (!badges.length) return null;
+  return (
+    <span className={styles.badges}>
+      {badges.map((b) => (
+        <span key={b.label} className={badgeClass(b.tone)}>
+          {b.label}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+// Karta v mřížce: název, téma (je součástí názvu akce), čas a jen nutné štítky. Vedoucího a podrobnosti
+// ukáže náhled po kliknutí.
 function EventBlock({ card, hrefFor = pageHref, managing = false, movable = false }: { card: EventCard; movable?: boolean } & Linking) {
-  const status = primaryStatus(card);
   const tone = cardTone(card);
   const isHoliday = card.type === "holiday";
+  const cancelled = card.planStatus === "cancelled";
   // Data pro přesun tažením čte `MoveDropZone`. Odkaz zůstává odkazem: klik i klávesnice otevřou náhled.
   const drag = movable
     ? { draggable: true, "data-move-id": card.id, "data-move-revision": card.revision ?? 0, "data-move-label": card.label, "data-move-from": dayOf(card) }
@@ -80,21 +96,9 @@ function EventBlock({ card, hrefFor = pageHref, managing = false, movable = fals
   return (
     <Link href={hrefFor(card)} scroll={false} className={`${styles.event} ${styles[tone]}`} {...drag}>
       <span className={styles.title}>{card.label}</span>
-      {card.planStatus === "cancelled" && <span className={styles.cancelled}>Zrušeno</span>}
-      {!isHoliday && card.planStatus !== "cancelled" && (
-        <>
-          <span className={styles.line}>{formatEventTime(new Date(card.startsAt), new Date(card.endsAt), card.allDay)}</span>
-          <span className={styles.line}>
-            <span className={styles.key}>Téma</span> {card.topicTitle ?? <Todo>{missingText(managing, "téma")}</Todo>}
-          </span>
-          <span className={styles.line}>
-            <span className={styles.key}>Vede</span> {card.leadName ?? <Todo>{missingText(managing, "vedoucího")}</Todo>}
-          </span>
-        </>
-      )}
-      {status && status.label !== "Zrušeno" && status.label !== "Svátek" && (
-        <span className={badgeClass(status.tone)}>{status.label}</span>
-      )}
+      {!isHoliday && !cancelled && card.topicTitle && <span className={styles.topic}>{card.topicTitle}</span>}
+      {!isHoliday && !cancelled && <span className={styles.line}>{formatEventTime(new Date(card.startsAt), new Date(card.endsAt), card.allDay)}</span>}
+      <Badges card={card} managing={managing} />
     </Link>
   );
 }
@@ -203,32 +207,6 @@ export function ScheduleGrid({
   );
 }
 
-export function Legend({ organizer }: { organizer: boolean }) {
-  return (
-    <ul className={styles.legend} aria-label="Legenda">
-      <li>
-        <span className={`${styles.swatch} ${styles.regular}`} /> běžná aktivita
-      </li>
-      <li>
-        <span className={`${styles.swatch} ${styles.extra}`} /> mimořádná akce místo pravidelné aktivity
-      </li>
-      <li>
-        <span className={`${styles.swatch} ${styles.muted}`} /> zrušeno nebo svátek
-      </li>
-      {organizer && (
-        <li>
-          <span className={`${styles.swatch} ${styles.draft}`} /> návrh, kolegové ho zatím nevidí a do Kalendáře zatím nejde
-        </li>
-      )}
-      {organizer && (
-        <li>
-          <Todo>doplnit…</Todo> údaj, který chybí
-        </li>
-      )}
-    </ul>
-  );
-}
-
 /** Chronologický seznam po týdnech a dnech. Výchozí pohled na úzkém displeji. */
 export function Agenda({
   monthKey,
@@ -269,7 +247,6 @@ export function Agenda({
                 </div>
                 <ul className={styles.agendaEvents}>
                   {(days.get(day) ?? []).map((card) => {
-                    const status = primaryStatus(card);
                     return (
                       <li key={card.id}>
                         <Link href={hrefFor(card)} scroll={false} className={`${styles.agendaEvent} ${styles[cardTone(card)]}`}>
@@ -278,14 +255,11 @@ export function Agenda({
                           </span>
                           <span className={styles.agendaMain}>
                             <span className={styles.title}>{card.label}</span>
-                            {card.type !== "holiday" && (
-                              <span className={styles.line}>
-                                {card.topicTitle ?? <Todo>{missingText(managing, "téma")}</Todo>} ·{" "}
-                                {card.leadName ?? <Todo>{missingText(managing, "vedoucího")}</Todo>}
-                              </span>
+                            {card.type !== "holiday" && card.planStatus !== "cancelled" && card.topicTitle && (
+                              <span className={styles.topic}>{card.topicTitle}</span>
                             )}
                           </span>
-                          {status && <span className={badgeClass(status.tone)}>{status.label}</span>}
+                          <Badges card={card} managing={managing} />
                         </Link>
                       </li>
                     );
