@@ -212,8 +212,8 @@ function AccountHead({
   personal?: Map<string, PersonalCalendarState> | null;
 }) {
   return (
-    <div className="spread">
-      <div>
+    <div className="spread account-head">
+      <div className="account-main">
         <p className="item-title">
           {a.name}
           {a.primary ? (
@@ -222,8 +222,9 @@ function AccountHead({
             !a.editable && a.status === "active" && <span className="small muted"> · váš účet</span>
           )}
         </p>
+        <p className="item-meta">{a.email}</p>
         <p className="item-meta">
-          {a.email} · {ROLE_LABELS[a.role]}
+          {ROLE_LABELS[a.role]}
           {a.groups.length > 0 &&
             ` · ${a.groups.map((g) => GROUP_LABELS[g]).join(", ")}`}
         </p>

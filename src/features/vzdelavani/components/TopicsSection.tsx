@@ -32,7 +32,10 @@ export async function TopicsSection({ user }: { user: Viewer }) {
         Navrhněte téma nebo dejte najevo zájem. Doporučená témata mají zájemce a dlouho neproběhla.{!organizer && " O zařazení do plánu rozhoduje správce."}
       </p>
       {topics.length === 0 ? (
-        <p className="muted">Zatím tu nejsou žádná témata. Navrhněte první.</p>
+        <div className="empty-state">
+          <p className="item-title">Zatím tu nejsou žádná témata.</p>
+          <p className="item-meta">Navrhněte první tlačítkem Navrhnout téma. Kolegové pak mohou dát najevo zájem.</p>
+        </div>
       ) : (
         <ul className="topic-list">
           {topics.map((t) => {
