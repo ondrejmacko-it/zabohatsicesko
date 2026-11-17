@@ -16,6 +16,11 @@ kroky pro mě piš úplně, pod sebe, s přesnými kliky (Windows, PowerShell).
   `GOOGLE_OAUTH_PUBLISHED=1` (nastaveno 15. 11., platí od dalšího nasazení Production).
 * Úkoly z auditu jsou v `docs/audit-ukoly.md`. Audit ZIP stačí přiložit, jen když je potřeba `textove-upravy.csv`.
 
+**Stav 17. 11. pozdě, schválený plán Kalendáře (poslední):** závazné zadání je `docs/plan-kalendar-pozvanky.md`
+(jeden organizátor s pozvánkami, RSVP, outbox, úklid osobního režimu, UX). #53 je v `main`, self-invite vypnutý.
+* **Další krok:** implementovat PR A ve větvi `claude/kalendar-pozvanky-organizator` podle plánu, pak PR B, C1, C2, D.
+  Produkční přepnutí, pozvánky, mazání a destruktivní migrace jen po výslovném souhlasu uživatele.
+
 **Stav:** PR 4b část 2 je draft [#33](https://github.com/ondrejmacko-it/zabohatsicesko/pull/33) z větve
 `claude/vibrant-ritchie-d100a3` (úvod s kartami, záložky Plán | Zápisy | Témata, Plán bez řádku Kalendáře,
 Správa na 320/360 px). Uživatel ho mergne sám.
