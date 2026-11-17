@@ -2169,6 +2169,13 @@ p.cal-status {
 
 .plan-selects {
   margin-left: auto;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.plan-selects .select {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .pill-count {
@@ -2249,7 +2256,13 @@ p.cal-status {
 }
 
 @media (max-width: 760px) {
-  .organizer-actions,
+  .organizer-actions {
+    margin-left: 0;
+  }
+}
+
+/* Když se filtry zalomí pod štítky, mají začínat vlevo, ne viset osamoceně vpravo. */
+@media (max-width: 1100px) {
   .plan-selects {
     margin-left: 0;
   }

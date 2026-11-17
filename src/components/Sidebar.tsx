@@ -21,8 +21,8 @@ type Props = { badge: number; canManageUsers: boolean; pendingRequests: number; 
 
 export function Sidebar({ badge, canManageUsers, pendingRequests, live }: Props) {
   const pathname = usePathname();
-  // Správa je jen pro toho, kdo ji smí používat. Ostatním zůstává jako neaktivní položka shellu.
-  const shell = [...ITEMS, canManageUsers ? ADMIN : { label: ADMIN.label, icon: ADMIN.icon }];
+  // Správa se ukazuje jen tomu, kdo ji smí používat. Ostatním by byla jen neaktivní položka bez účelu.
+  const shell = canManageUsers ? [...ITEMS, ADMIN] : ITEMS;
   const items = live ? shell.filter((item) => item.href) : shell;
   const counts = { education: badge, admin: pendingRequests };
   return (

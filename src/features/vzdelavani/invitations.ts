@@ -15,7 +15,7 @@ export function invitationTask(view: InvitationsView | null): TaskRow | null {
   return {
     key: "pozvanky",
     title: open.length === 1 ? "Odpovězte na pozvánku" : `Odpovězte na pozvánky (${open.length})`,
-    detail: `${open.length === 1 ? "" : "Nejbližší: "}${nearest}. Odpověď v e-mailu nebo v Google Kalendáři, případně hledejte ve Spamu.`,
+    detail: `${open.length === 1 ? "" : "Nejbližší: "}${nearest}. Odpovězte v e-mailu s pozvánkou nebo v Google Kalendáři.`,
     // Vyhledávání podle odesílatele včetně Spamu. Odkaz na konkrétní zprávu Wiki nezná. V simulaci odkaz není.
     ...(view.organizerEmail ? { href: gmailSearchHref(view.organizerEmail), action: "Otevřít Gmail", external: true, newTab: true } : {}),
     urgent: open.some((item) => item.urgent),
