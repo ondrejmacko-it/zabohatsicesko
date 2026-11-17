@@ -1,5 +1,15 @@
 # Prompt pro další session
 
+**OVĚŘENÍ PŘED PŘEDÁNÍM HOTOVO (18. 11. 2026, relace session_01HpUiruuQL3xe1DCLQTCGbo).**
+* CI #67 zelené (oba joby + citlivé cesty). #63/#64/#65 padají jen na plném `npm audit` (picomatch, dev), vyřeší sloučení #67.
+* Popisy #63 (U08 v 1127481) a #64 (U08 hotové, pořadí sloučení) aktualizované.
+* Kombinace #63+#64+#65 (`claude/final-zapisy-temata`): lint, tsc, unit **272/272** (+2 testy souběhu hromadného mazání
+  v `tests/pevne-svatky.test.ts`, commit 1c99f77), build OK, úplné e2e **918 passed / 42 skipped / 0 failed**.
+* Screenshoty 328 (5 rolí + host × 8 šířek) bez vodorovného posunu; prohlédnuté montáže správce 320/1280/1920, role 390,
+  vstup 360, RM 768. Nové nálezy: žádné.
+* Finální report uživateli odeslán. **Další krok:** nic bez pokynu uživatele. Sloučení: #67 → #63 → (merge main do #64, CI)
+  #64 → (merge main do #65, CI) #65. Otevřené zůstávají přepis dlouhých nahrávek a ostrý Google Kalendář.
+
 **FINÁLNÍ SJEDNOCENÍ PŘED PŘEDÁNÍM (18. 11. 2026) – navazuje na FINAL POLISH níže.**
 Uživatel 18. 11. potvrdil: všechny 3 věty z `/vstup` pryč (už se neptat). Schválil rozdělení auditu a přenos U08 do #63.
 Zákazy: nemergovat do `main`, nepřepínat produkční Kalendář, nerozesílat pozvánky, nemazat produkční data, neměnit tajemství,
