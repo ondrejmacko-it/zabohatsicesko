@@ -20,12 +20,12 @@ kroky pro mě piš úplně, pod sebe, s přesnými kliky (Windows, PowerShell).
 * **C3 = draft [#61](https://github.com/ondrejmacko-it/zabohatsicesko/pull/61)** (`claude/ux-temata-sprava`, stojí na #60). Úplné e2e
   899 passed / 36 skipped (záměrně jen jeden projekt) / 0 failed, unit 265/265, lint, tsc, build. Po sloučení #60 sloučit
   `origin/main` do C3 (bez force).
-* **PR D (`claude/ux-zaverecny-audit`, z C3, PR zatím NENÍ):** úplný audit 328 screenshotů (8 šířek × 5 rolí) bez vodorovného
+* **PR D = draft [#62](https://github.com/ondrejmacko-it/zabohatsicesko/pull/62)** (`claude/ux-zaverecny-audit`, stojí na #61; e2e 899/36 skip/0 fail, unit 265, build): úplný audit 328 screenshotů (8 šířek × 5 rolí) bez vodorovného
   posunu. Opraveno: nepoužité styly pryč; navigace na ≤380 px „Správa“ (zbytek názvu jen pro čtečku); rada „nemá pozvánku v
   Kalendáři“ jen u neproběhlé akce a bez odkazu „níže“; Integrace bez technických pojmů; 404 ve stejném rámci jako `/vstup`
   (`src/components/GateShell.tsx`); na tabletu skrytý podtitulek značky.
-* **Další krok:** dokončit úplné e2e na D, draft PR D do `main` (stojí na #61), pak velké závěrečné shrnutí uživateli
-  (všechny relace, #56–#61 + D, screenshoty desktop/mobil přes SendUserFile, produkční kroky).
+* **Hotovo, závěrečné shrnutí odeslané.** Další krok: po sloučení #60 → #61 → #62 vždy sloučit `origin/main` do další
+  větve (bez force), sledovat CI. Nic dalšího bez pokynu uživatele.
 * CI na `main` nemá běhy (workflow běží jen na PR), dřívější „červené main“ proto ověřit nejde; příčina byla opravená v #60.
 
 **Stav 17. 11. odpoledne, #60 ověřené, C3 rozpracované (předchozí):** #56–#59 sloučené v `main`.
