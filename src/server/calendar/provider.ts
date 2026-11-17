@@ -18,9 +18,19 @@ export type ExternalEvent = ManagedEventData & {
   originalStartTime?: Date | null;
   /** Pozvánku založila tato Wiki (nese její klíč). Taková nikdy není „cizí“ kandidát na duplicitu. */
   createdByWiki?: boolean;
+  /** Pozvánka má nastavené soukromí hostů (`GUEST_PRIVACY`). Neznámé u simulace = bráno jako nastavené. */
+  guestsPrivate?: boolean;
 };
 
 export type GuestChange = { add: SimAttendee[]; remove: readonly string[] };
+
+/** Jedna stránka změn z `events.list`. Hosté nesou odpověď (RSVP). */
+export type ChangePage = {
+  events: Array<{ id: string; cancelled: boolean; attendees: SimAttendee[] }>;
+  nextPageToken: string | null;
+  /** Vyplněný na poslední stránce. Uloží se pro příští přírůstkovou synchronizaci. */
+  nextSyncToken: string | null;
+};
 
 export type CalendarErrorCode =
   | "calendar_unavailable"
@@ -69,4 +79,9 @@ export interface CalendarProvider {
   patch(calendarId: string, eventId: string, data: ManagedEventData, guests?: GuestChange): Promise<ExternalEvent>;
   /** Kandidáti na spárování v daném dni (pražský čas). */
   listBetween(calendarId: string, from: Date, to: Date): Promise<ExternalEvent[]>;
+  /**
+   * Změny událostí pro čtení odpovědí. Bez `syncToken` úplný výpis, jinak jen změny od minula.
+   * Jen čtení. Neplatný token (Google 410) hlásí `null`, volající pak spustí úplnou synchronizaci.
+   */
+  listChanges(calendarId: string, syncToken: string | null, pageToken: string | null): Promise<ChangePage | null>;
 }

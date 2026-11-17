@@ -264,7 +264,7 @@ describe("adaptér Google Kalendáře (napodobené HTTP)", () => {
     expect(await forced(503)).toBe("calendar_unavailable:transient");
     expect(await forced(429)).toBe("calendar_unavailable:transient");
     expect(await forced(403, "rateLimitExceeded")).toBe("calendar_unavailable:transient");
-    expect(await forced(403, "forbidden")).toBe("calendar_revoked:permanent");
+    expect(await forced(403, "forbidden")).toBe("calendar_forbidden:permanent");
     expect(await forced(400)).toBe("calendar_unavailable:permanent");
     expect(await calendar.get(CALENDAR, "neexistuje")).toBeNull();
     expect(await errorCode(calendar.patch(CALENDAR, "neexistuje", data()))).toBe("calendar_missing:permanent");

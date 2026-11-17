@@ -132,7 +132,7 @@ describe("úklid starých pozvánek", () => {
   });
 
   test("v režimu pozvánek se nic neuklízí", async () => {
-    process.env.CALENDAR_DELIVERY = "invites";
+    process.env.CALENDAR_DELIVERY = "organizer";
     try {
       expect(await legacyInviteCount(admin)).toBe(0);
       await expect(cleanupLegacyInvites(admin)).rejects.toBeInstanceOf(DomainError);
