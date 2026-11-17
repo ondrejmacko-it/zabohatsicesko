@@ -6,7 +6,9 @@ import { monthTasks, type MonthSummary, type PlanState } from "../status";
 /** Kolik úkolů se vejde bez rozbalení. */
 export const TOP_ROWS = 3;
 
-export type TaskRow = Pick<JourneyTask, "key" | "title" | "detail" | "href" | "action" | "external">;
+/** Úkol bez `href` nemá tlačítko (např. pozvánka v simulaci). `newTab`: odkaz mimo Wiki (Gmail). */
+export type TaskRow = Pick<JourneyTask, "key" | "title" | "detail" | "external"> &
+  Partial<Pick<JourneyTask, "href" | "action">> & { newTab?: boolean; urgent?: boolean };
 
 /**
  * Úkoly diváka a krok měsíce správce v jednom pořadí. Krok měsíce je hlavní práce správce, proto
@@ -29,13 +31,13 @@ export function orderTasks(
 
 function TaskItem({ task, readOnly }: { task: TaskRow; readOnly: boolean }) {
   return (
-    <li className="brief-row">
+    <li className="brief-row" data-urgent={task.urgent || undefined}>
       <span className="brief-main">
         <span className="item-title">{task.title}</span>
         <span className="item-meta">{task.detail}</span>
       </span>
-      {readOnly ? null : task.external ? (
-        <a className="btn btn-small btn-primary" href={task.href}>
+      {readOnly || !task.href ? null : task.external ? (
+        <a className="btn btn-small btn-primary" href={task.href} {...(task.newTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}>
           {task.action}
         </a>
       ) : (
@@ -55,7 +57,6 @@ export function TasksCard({
   tasks,
   title = "Čeká na vás",
   readOnly = false,
-  planHref,
   hidden,
   className = "section tasks-card",
 }: {
@@ -63,8 +64,6 @@ export function TasksCard({
   title?: string;
   /** Náhled očima jiného: úkoly jen ke čtení, bez tlačítek. */
   readOnly?: boolean;
-  /** Odkaz „Celý plán“ v hlavičce (Úvod). V Plánu chybí, uživatel už v něm je. */
-  planHref?: string;
   /** Kolik úkolů skryl filtr Plánu a kam vede jeho zrušení. */
   hidden?: { count: number; resetHref: string };
   className?: string;
@@ -78,11 +77,6 @@ export function TasksCard({
           {title}
           {tasks.length > 0 && <span className="count-badge">{tasks.length}</span>}
         </h2>
-        {planHref && (
-          <Link className="btn btn-small" href={planHref}>
-            Celý plán
-          </Link>
-        )}
       </div>
       {tasks.length === 0 ? (
         <p className="muted">Vybranému filtru neodpovídá žádný úkol.</p>

@@ -12,9 +12,9 @@ import { EventDialog } from "@/features/vzdelavani/components/EventDialog";
 import { PersonalCalendarStatus } from "@/features/vzdelavani/components/PersonalCalendarStatus";
 import { EventPeek } from "@/features/vzdelavani/components/EventPeek";
 import { PrepareMonthDialog, type InviteMode, type PairingItem } from "@/features/vzdelavani/components/PrepareMonthDialog";
-import { PlanFilters } from "@/features/vzdelavani/components/PlanFilters";
-import { Agenda, Legend, NextEventsList, ScheduleGrid } from "@/features/vzdelavani/components/Schedule";
-import { TasksCard, orderTasks } from "@/features/vzdelavani/components/TasksCard";
+import { PlanFilters, type StateChip } from "@/features/vzdelavani/components/PlanFilters";
+import { Agenda, NextEventsList, ScheduleGrid } from "@/features/vzdelavani/components/Schedule";
+import { TasksCard } from "@/features/vzdelavani/components/TasksCard";
 import { TemplateDialog } from "@/features/vzdelavani/components/TemplateDialog";
 import { PLAN_STATES, filterCards, monthSummary } from "@/features/vzdelavani/status";
 import styles from "@/features/vzdelavani/components/schedule.module.css";
@@ -108,50 +108,41 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   const newDate = addDay ?? (monthOf(todayKey) === monthKey ? todayKey : `${monthKey}-01`);
   const emptyText = filtering ? "Filtru v tomto měsíci neodpovídá žádná akce." : undefined;
 
-  // Stav měsíce patří správci mezi úkoly: odkaz zúží harmonogram na termíny, kterých se týká.
-  // Počty ve filtru Stav jsou za celý měsíc, úkoly měsíce respektují vybraný typ akce.
+  // Co v měsíci čeká na správce: štítky nad harmonogramem, klik plán zúží (znovu klik filtr zruší).
   const summary = managing && monthKey >= monthOf(todayKey) ? monthSummary(monthCards, monthKey) : null;
-  const taskSummary = summary && type ? monthSummary(filterCards(monthCards, monthKey, { type }), monthKey) : summary;
-  const ownTasks = viewerTasks.filter((task) => !state && (!type || task.eventType === type));
-  const hiddenTasks = viewerTasks.length - ownTasks.length;
-  const tasks = orderTasks(ownTasks, taskSummary, monthKey, (stav) => `${link({ stav })}#mesic`, state);
+  const chips: StateChip[] = summary
+    ? [
+        { state: "doplnit" as const, label: "Chybí údaje", count: summary.toComplete },
+        { state: "navrhy" as const, label: "Ke zveřejnění", count: summary.toPublish },
+      ]
+        .filter((chip) => chip.count > 0)
+        .map((chip) => ({ ...chip, href: `${link({ stav: chip.state === state ? undefined : chip.state })}#mesic` }))
+    : [];
+  // Vlastní úkoly diváka (záznam, zápis…) jsou v Plánu sbalené do jednoho řádku. Celé jsou na Úvodu.
+  const tasks = viewerTasks;
   // Kdo nemá úkoly ani neplánuje, uvidí na telefonu nejdřív nejbližší akci (měsíční seznam začíná prvním dnem).
   const nextEvent = !managing && tasks.length === 0 ? await nearestEvent(viewer, monthKey === monthOf(todayKey) ? monthCards : []) : null;
+  const thisMonth = monthOf(todayKey);
   return (
     <>
       <AutoRefresh active={syncing} />
       {peekId && <EventPeek key={peekId} user={user} eventId={peekId} preview={preview} previewKey={current.jako} closeHref={link({})} />}
-      <div className="plan-filter-bar">
-    {(previewOptions || types.length > 1) && (
-      <PlanFilters
-        key={`${params.jako ?? ""}|${type ?? ""}|${state ?? ""}`}
-        keep={Object.fromEntries(Object.entries({ mesic: monthKey, pohled: current.pohled }).filter((e): e is [string, string] => Boolean(e[1])))}
-        types={types}
-        type={type}
-        preview={previewOptions && { ...previewOptions, value: preview ? (params.jako ?? "") : "" }}
-        states={summary && summary.planned ? { summary, value: state } : null}
-        resetHref={filtering || preview ? link({ jako: undefined, typ: undefined, stav: undefined }) : null}
-      />
-    )}
-    {preview && (
-      <p className="notice" role="status">
-        Pohled: <strong>{preview.label}</strong> · jen ke čtení. <Link href={link({ jako: undefined })}>Zpět do správy plánu</Link>
-      </p>
-    )}
-      </div>
+      {preview && (
+        <p className="notice plan-preview" role="status">
+          Pohled: <strong>{preview.label}</strong> · jen ke čtení. <Link href={link({ jako: undefined })}>Zpět na můj pohled</Link>
+        </p>
+      )}
       {/* V režimu osobních kalendářů se do kalendáře správce nezapisuje, jeho propojení Plán nehlídá. */}
       {calendar && !personal && <CalendarAlert status={calendar} now={now()} />}
       {personal && <PersonalCalendarStatus state={personal} />}
-      {/* Prázdná karta úkolů nic neříká, proto se bez úkolů skryje. Filtr, který úkoly schoval, ji nechá. */}
-      {(tasks.length > 0 || hiddenTasks > 0) && (
-        <div className="plan-top">
-          <TasksCard
-            tasks={tasks}
-            title={preview ? "Úkoly v náhledu" : undefined}
-            readOnly={Boolean(preview)}
-            hidden={{ count: hiddenTasks, resetHref: link({ typ: undefined, stav: undefined }) }}
-          />
-        </div>
+      {tasks.length > 0 && (
+        <details className="plan-tasks">
+          <summary>
+            {preview ? "Úkoly v náhledu" : "Čeká na vás"}
+            <span className="count-badge">{tasks.length}</span>
+          </summary>
+          <TasksCard tasks={tasks} title={preview ? "Úkoly v náhledu" : undefined} readOnly={Boolean(preview)} className="tasks-card" />
+        </details>
       )}
 
       {nextEvent && (
@@ -161,31 +152,33 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
         </section>
       )}
       <section className="section" aria-labelledby="mesic">
-        <div className="spread schedule-toolbar">
-          <div className="row">
-            <Link className="btn" href={link({ mesic: shiftMonth(monthKey, -1) })} aria-label="Předchozí měsíc">
+        <div className="schedule-toolbar">
+          <div className="row month-nav">
+            <Link className="btn btn-icon" href={link({ mesic: shiftMonth(monthKey, -1) })} aria-label="Předchozí měsíc">
               <Icon name="chevronLeft" />
             </Link>
             <h2 id="mesic" className="month-title">
               {formatMonth(monthKey)}
             </h2>
-            <Link className="btn" href={link({ mesic: shiftMonth(monthKey, 1) })} aria-label="Další měsíc">
+            <Link className="btn btn-icon" href={link({ mesic: shiftMonth(monthKey, 1) })} aria-label="Další měsíc">
               <Icon name="chevronRight" />
             </Link>
-            <div className="row view-toggle" role="group" aria-label="Zobrazení">
-              <Link className="pill" href={link({ pohled: undefined })} aria-current={!listView ? "page" : undefined}>
-                Měsíc
+            {monthKey !== thisMonth && (
+              <Link className="btn btn-small btn-quiet" href={link({ mesic: thisMonth })}>
+                Dnes
               </Link>
-              <Link className="pill" href={link({ pohled: "seznam" })} aria-current={listView ? "page" : undefined}>
-                Seznam
-              </Link>
-            </div>
+            )}
+          </div>
+          <div className="row view-toggle" role="group" aria-label="Zobrazení">
+            <Link className="pill" href={link({ pohled: undefined })} aria-current={!listView ? "page" : undefined}>
+              Měsíc
+            </Link>
+            <Link className="pill" href={link({ pohled: "seznam" })} aria-current={listView ? "page" : undefined}>
+              Seznam
+            </Link>
           </div>
           {managing && (
-            <div className="row">
-              <Menu label="Nástroje správce" className="organizer-tools">
-                <TemplateDialog slots={template} />
-              </Menu>
+            <div className="row organizer-actions">
               {monthDrafts && calendar && (
                 <PrepareMonthDialog
                   monthKey={monthKey}
@@ -223,9 +216,22 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
                 invite={calendar}
                 planDays={activeSlots.map((s) => s.isoWeekday)}
               />
+              <Menu label="Nástroje správce" iconOnly className="organizer-tools">
+                <TemplateDialog slots={template} />
+              </Menu>
             </div>
           )}
         </div>
+        <PlanFilters
+          key={`${params.jako ?? ""}|${type ?? ""}`}
+          keep={Object.fromEntries(Object.entries({ mesic: monthKey, pohled: current.pohled, stav: state }).filter((e): e is [string, string] => Boolean(e[1])))}
+          types={types}
+          type={type}
+          preview={previewOptions && { ...previewOptions, value: preview ? (params.jako ?? "") : "" }}
+          chips={chips}
+          state={state}
+          resetHref={filtering ? link({ typ: undefined, stav: undefined }) : null}
+        />
 
         {summary && !summary.planned && (
           <div className="notice month-summary-empty">
@@ -255,7 +261,6 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
               ) : (
                 <ScheduleGrid monthKey={monthKey} cards={cards} todayKey={todayKey} slotTimes={slotTimes} hrefFor={peekHref} managing={managing} />
               )}
-              <Legend organizer={managing} />
             </div>
             <div className={styles.mobileOnly}>
               <Agenda monthKey={monthKey} cards={cards} todayKey={todayKey} emptyText={emptyText} hrefFor={peekHref} managing={managing} />

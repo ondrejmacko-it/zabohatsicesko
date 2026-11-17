@@ -1,12 +1,10 @@
-import { isLiveWiki } from "@/server/config";
 import Link from "next/link";
 import { after } from "next/server";
-import { Icon, type IconName } from "@/components/Icon";
 import { RefreshOnReturn } from "@/components/RefreshOnReturn";
-import { InvitesCard } from "@/features/vzdelavani/components/InvitesCard";
 import { PersonalCalendarStatus } from "@/features/vzdelavani/components/PersonalCalendarStatus";
 import { NextEventsList } from "@/features/vzdelavani/components/Schedule";
 import { TasksCard, orderTasks } from "@/features/vzdelavani/components/TasksCard";
+import { invitationTask } from "@/features/vzdelavani/invitations";
 import { monthSummary } from "@/features/vzdelavani/status";
 import { monthOf, toDateKey } from "@/lib/time";
 import { logError } from "@/server/audit";
@@ -16,7 +14,7 @@ import { invitationsFor } from "@/server/calendar/rsvp";
 import { runWorkerIfDue } from "@/server/calendar/worker";
 import { now } from "@/server/config";
 import { getDb } from "@/server/db/client";
-import { canManageUsers, canPlan } from "@/server/policy";
+import { canPlan } from "@/server/policy";
 import { loadPersonalCalendar } from "@/server/services/calendar-status";
 import { listMonth, nextEventsFor } from "@/server/services/events";
 import { listTasks } from "@/server/services/journey";
@@ -26,8 +24,8 @@ const NEXT_ROWS = 3;
 /** Jak dlouho Úvod čeká na zápis do osobního kalendáře, než stránku pošle se stavem, jaký je. */
 const SYNC_WAIT_MS = 2500;
 
-type ModuleCard = { href: string; icon: IconName; title: string; text: string };
-
+// Úvod odpovídá na dvě otázky: co mě čeká a co mám udělat. Moduly jsou v navigaci, úspěšný stav
+// Kalendáře se neukazuje, jen problém, který chce zásah.
 export default async function HomePage() {
   const user = await requireUser();
   const monthKey = monthOf(toDateKey(now()));
@@ -42,9 +40,10 @@ export default async function HomePage() {
   // Režim organizátora: návštěva dožene frontu a odpovědi (nejvýš jednou za 5 minut), až po odeslání stránky.
   // Plánovač to dělá i bez návštěv, tady jde jen o čerstvější stav.
   after(() => runWorkerIfDue("visit"));
-  // Stejné úkoly jako v Plánu bez filtru: vlastní úkoly a správci krok aktuálního měsíce.
+  // Stejné úkoly jako v Plánu bez filtru: pozvánky bez odpovědi, vlastní úkoly a správci krok aktuálního měsíce.
   const summary = monthCards ? monthSummary(monthCards, monthKey) : null;
-  const tasks = orderTasks(own, summary, monthKey, (stav) => `/vzdelavani/harmonogram?stav=${stav}#mesic`);
+  const invite = invitationTask(invitations);
+  const tasks = orderTasks(invite ? [invite, ...own] : own, summary, monthKey, (stav) => `/vzdelavani/harmonogram?stav=${stav}#mesic`);
   let personal = initial;
   // Osobní kalendáře doženou zmeškaný zápis (přechodná chyba Googlu, nový účet) a jednou za čas ověří, že
   // přístup u Googlu platí. Zjištění je jeden dotaz do databáze. Na výsledek stránka počká nejvýš chvilku,
@@ -58,48 +57,12 @@ export default async function HomePage() {
       personal = await loadPersonalCalendar(user);
     }
   }
-  // Správa je jen pro toho, kdo smí spravovat lidi. Ostatním karta nic neříká, proto ji nevidí.
-  const modules: ModuleCard[] = [
-    { href: "/vzdelavani/harmonogram", icon: "education", title: "Vzdělávání", text: "Plán akcí, zápisy z proběhlých akcí a témata." },
-    ...(canManageUsers(user)
-      ? [{ href: "/sprava", icon: "settings" as const, title: "Správa systému", text: "Lidé, přístupy, zařízení a propojení Kalendáře." }]
-      : []),
-  ];
   return (
     <>
       <h1>Vítejte, {user.name}.</h1>
       {personal && <PersonalCalendarStatus state={personal} />}
-      {invitations && invitations.items.length > 0 && (
-        <>
-          <InvitesCard view={invitations} />
-          <RefreshOnReturn />
-        </>
-      )}
-      {/* Hledání je kulisa ukázky, ostrá Wiki neaktivní pole neukazuje. */}
-      {!isLiveWiki() && (
-        <input
-          className="search-field"
-          placeholder="Vyhledávání ve Wiki je mimo rozsah ukázky."
-          aria-label="Vyhledávání ve Wiki je mimo rozsah ukázky"
-          disabled
-        />
-      )}
-      <nav className="section" aria-labelledby="moduly">
-        <h2 id="moduly">Moduly</h2>
-        <ul className="module-cards">
-          {modules.map((m) => (
-            <li key={m.href}>
-              <Link className="item-card module-card" href={m.href}>
-                <Icon name={m.icon} />
-                <span>
-                  <span className="item-title">{m.title}</span>
-                  <span className="item-meta">{m.text}</span>
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </nav>
+      {/* Odpověď na pozvánku se dává v Gmailu, po návratu do okna se úkol obnoví. */}
+      {invite && <RefreshOnReturn />}
       <div className={tasks.length > 0 ? "home-columns" : undefined}>
         <section className="section" aria-labelledby="nejblizsi">
           <div className="spread section-head">
@@ -110,7 +73,7 @@ export default async function HomePage() {
           </div>
           <NextEventsList cards={upcoming} todayKey={toDateKey(now())} />
         </section>
-        <TasksCard tasks={tasks} planHref="/vzdelavani/harmonogram" />
+        <TasksCard tasks={tasks} />
       </div>
     </>
   );

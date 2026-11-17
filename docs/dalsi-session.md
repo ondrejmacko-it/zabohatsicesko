@@ -16,6 +16,38 @@ kroky pro mě piš úplně, pod sebe, s přesnými kliky (Windows, PowerShell).
   `GOOGLE_OAUTH_PUBLISHED=1` (nastaveno 15. 11., platí od dalšího nasazení Production).
 * Úkoly z auditu jsou v `docs/audit-ukoly.md`. Audit ZIP stačí přiložit, jen když je potřeba `textove-upravy.csv`.
 
+**Stav 18. 11. večer, PR C1 rozpracovaný (poslední):** větev `claude/ux-uvod-plan`, commit „PR C1 (rozpracováno)“.
+Lint, tsc a `npm test` 238/238 prošly. **Neověřeno:** `npm run build` mimo e2e server a `npm run e2e`, PR zatím není.
+* Hotovo: Úvod bez Moduly, vypnutého hledání a úspěšného stavu Kalendáře (`PersonalCalendarStatus` vrací null bez akce).
+  Pozvánky bez odpovědi = jeden úkol v „Čeká na vás“ (`src/features/vzdelavani/invitations.ts`, test `tests/ukoly-uvod.test.ts`),
+  `InvitesCard` smazaná, `TaskRow` má volitelné `href`, `newTab`, `urgent`. Plán: karty název + téma + čas + `cardBadges`
+  (`status.ts`), legenda pryč, jeden řádek nástrojů, stav měsíce jako štítky `PlanFilters` (`group` „Čeká na vás v tomto
+  měsíci“), typ a pohled jako malé selecty, vlastní úkoly v `<details class="plan-tasks">`. e2e upravené: `domu-ukoly.spec.ts`,
+  `pristupnost.spec.ts` (štítky místo panelu). Skript `scripts/audit-screenshoty.mjs` umí `ROLE`, `SIRKY`, `STRANKY`.
+* **Další krok:** (1) prohlédnout screenshoty `uvod`/`plan`/`plan-seznam` na 320, 390, 768, 1024 pro správce a FP
+  (zkontrolovat zalomení řádku nástrojů na 768–1024 a štítky v seznamu na 320), opravit. (2) Účastníkovi skrýt v navigaci
+  neaktivní „Správa systému“ (`Sidebar.tsx`, dnes šedá kulisa). (3) `npm run e2e` na pozadí (porty uvolnit `fuser -k 3310/tcp 3311/tcp`),
+  opravit pády. (4) Draft PR C1 do `main` podle šablony. Pak C2, C3, D.
+* Otevřené pro uživatele: kulisy shellu ukázky („Moje role“, „Jak pracujeme“, Dokumenty) nechávám, ostrá Wiki je nemá.
+  V kartách Plánu nechávám téma (bez něj by se čtyři „Trénink poradců“ nedaly rozlišit), vedoucí je až v náhledu.
+
+**Stav 18. 11. odpoledne, Kalendář pozastaven, začíná UX (předchozí):** obě opravy Kalendáře jsou hotové jako drafty.
+* #56 (PR B, `claude/kalendar-migrace-dry-run`, base přepnut na `main`): `removePersonalCalendar` při odmítnutém smazání
+  (kromě 404) nechá token i řádek ve stavu `removal_failed` + `error_code`, `retireWikiCalendars` vrací `{ removed, failed }`,
+  inventura `removalFailed`, migrace `0012` jen rozšíří CHECK. Lint, tsc, test 241/241, build. Popis PR aktualizovaný.
+* #57 (`claude/kalendar-ucet-organizatora` z `main`): `GOOGLE_ORGANIZER_EMAIL` (povinná v režimu organizátora, jinak
+  `googleCalendarConfig()` = null, fronta stojí, Integrace ukáže proměnnou), callback porovná ověřený e-mail z ID tokenu
+  (`aud`, `email_verified`), nesoulad = token zneplatněn, nic neuloženo, Integrace „jiny-ucet“; přihlášení správce se
+  v režimu organizátora na Kalendář neptá, `login_hint` = organizátor. Lint, tsc, test 238/238, build. e2e ne (simulace).
+* **Další krok: PR C1** ve větvi `claude/ux-uvod-plan` (z `main`, zatím jen tento soubor). Úvod `src/app/(wiki)/page.tsx`:
+  pryč blok Moduly a `PersonalCalendarStatus` ve stavu ok (ukazovat jen warn/alert), nejbližší akce a úkoly vedle sebe
+  (`home-columns` vždy, pod sebou na mobilu). Pak Plán. Nejdřív výchozí screenshoty: e2e server `node e2e/server.mjs`
+  (porty 3310/3311), přihlášení `e2e/.auth/<role>.json` z `e2e/prihlaseni.setup.ts`, skript `scripts/audit-screenshoty.mjs`
+  (rozšířit šířky na 320–1920 a role o nového uživatele a bez oprávnění), screenshoty jen do scratchpadu.
+* Otevřené: nic blokujícího. Ověřit (jen čtením názvů/hodnot nesecretních proměnných), že produkce má `CALENDAR_DELIVERY=personal`
+  (PR #57 to předpokládá).
+
+**Stav 18. 11., ZMĚNA PRIORIT (předchozí):** #55 (PR A) je sloučené v `main` (849f139). #56 (PR B, větev
 **Stav 18. 11., ZMĚNA PRIORIT (poslední):** #55 (PR A) je sloučené v `main` (849f139). #56 (PR B, větev
 `claude/kalendar-migrace-dry-run`) zůstává draft. Nejvyšší priorita uživatele je teď **finální UX/UI a obsah celé Wiki**.
 Kalendář: jen dvě opravy, pak pozastavit.
@@ -131,25 +163,6 @@ Nouzové zrušení zařízení hlavního správce (UI ho záměrně nenabízí) 
 `UPDATE trusted_devices SET revoked_at = now() WHERE id = '<id>'` (ID z dotazu na `trusted_devices` podle e-mailu).
 Platí od dalšího požadavku. Můžeš ho provést i ty přes Neon MCP, ale jen na výslovný pokyn uživatele.
 
-
-**Stav 17. 11., oznámení a zdvojení (poslední):** #51 a #52 jsou v `main`, Production = `main` e39a666.
-#53 (`claude/domu-ceka-na-vas`) NENÍ v `main`. Build selhal na zdvojených deklaracích v `src/app/(wiki)/page.tsx`
-po sloučení s `main`, opraveno commitem 4a914c1 (lint, typy, vitest 212/212, build ok, e2e viz PR #53).
-* Neon (jen čtení): oba osobní kalendáře `active`, `event_format = 3`, `setup_code` =
-  `none|list:401_authError|full:…|nocolor:…|basic:…|reminders:401_authError`, takže `calendarList` s rozsahem
-  `calendar.app.created` nejde vůbec. `calendar_links` 45 vazeb, žádná s událostí v kalendáři správce (úklid hotový).
-* Vercel Production: `CALENDAR_DELIVERY=personal`. `CALENDAR_PERSONAL_NOTIFY` bylo `self-invite`, 17. 11. na pokyn
-  uživatele přepnuto na `off` (platí od dalšího nasazení Production, tj. po dalším merge).
-* **Proč nechodí e-mail ani oznámení:** Wiki zapisuje akce účtem uživatele do jeho vlastního kalendáře a Google
-  neposílá upozornění tomu, kdo změnu udělal. U self-invite je host i vlastník tentýž účet, proto `sendUpdates=all`
-  nepošle nic. **Zdvojení** = self-invite: akce v „Vzdělávání ZBC“ + kopie jako nezodpovězená pozvánka v primárním
-  kalendáři (dutý kroužek). Po nasazení se změní otisk (`g: null`), `PUT` bez `attendees` hosta odstraní.
-* **Další krok 1:** po nejbližším nasazení Production uživatel otevře Úvod, po 10 min znovu. Ověřit v Neonu
-  `select max(updated_at) from personal_calendar_entries` (novější než nasazení) a u uživatele, že dutá kopie zmizela.
-  Kdyby zůstala, smazat ji ručně v hlavním kalendáři (jen kopie, žlutá akce v „Vzdělávání ZBC“ zůstává).
-* **Další krok 2 (čeká na uživatele, „pošlu pak dál, co a jak“):** volba cesty pro e-maily o nové, změněné a zrušené
-  akci: Gmail SMTP z Wiki s heslem aplikace (doporučeno, bez domény), Resend (bez domény jen na adresu majitele),
-  nebo zpět na pozvánky (`CALENDAR_DELIVERY=invites`). Nic neimplementovat bez souhlasu.
 
 **Stav 16. 11. noc 3, kalendář 401 (poslední):** #47–#50 jsou v `main`. Draft [#51](https://github.com/ondrejmacko-it/zabohatsicesko/pull/51) z větve `claude/oprava-kalendare-401`:
 `calendarList.get` → `update` → `patch` varianty, 401 už neukončí nastavení (důvod do `setup_code`), `selected/hidden`,

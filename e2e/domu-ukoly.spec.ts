@@ -9,7 +9,10 @@ test.describe("Úvod: Čeká na vás", () => {
     const tasks = page.getByRole("region", { name: /Čeká na vás/ });
     const next = page.getByRole("region", { name: "Nejbližší akce" });
     await expect(tasks).toBeVisible();
-    await expect(tasks.getByRole("link", { name: "Celý plán" })).toBeVisible();
+    // „Celý plán“ jen jednou, u nejbližších akcí. Úvod nemá bloky Moduly ani vypnuté hledání.
+    await expect(page.getByRole("link", { name: "Celý plán" })).toHaveCount(1);
+    await expect(page.getByRole("heading", { name: "Moduly" })).toHaveCount(0);
+    await expect(page.getByRole("main").getByRole("textbox")).toHaveCount(0);
     await expect(next.getByRole("link", { name: "Celý plán" })).toBeVisible();
     const [t, n] = [(await tasks.boundingBox())!, (await next.boundingBox())!];
     const width = page.viewportSize()!.width;
@@ -23,14 +26,19 @@ test.describe("Úvod: Čeká na vás", () => {
   });
 });
 
-test.describe("Úvod bez úkolů", () => {
+// Prázdný blok úkolů se nevykreslí (TasksCard vrací null). Účastník RM v ukázce
+// nemá vlastní úkoly, jen pozvánky bez odpovědi, a ty jsou jeden souhrnný úkol místo zvláštního bloku.
+test.describe("Úvod účastníka", () => {
   test.use({ storageState: authFile("ucastnikRm") });
 
-  test("bez úkolů se blok skryje", async ({ page }) => {
+  test("pozvánky bez odpovědi jsou jediný úkol", async ({ page }) => {
     await page.goto("/");
     await settle(page);
     await expect(page.getByRole("heading", { name: "Nejbližší akce" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: /Čeká na vás/ })).toHaveCount(0);
+    const tasks = page.locator("section", { has: page.getByRole("heading", { name: /Čeká na vás/ }) });
+    await expect(tasks.getByRole("listitem")).toHaveCount(1);
+    await expect(tasks.getByText(/^Odpovězte na pozvánk/)).toBeVisible();
+    await expect(page.getByText(/Moduly|Kalendář propojen/)).toHaveCount(0);
     await expectNoHorizontalScroll(page);
   });
 });

@@ -416,17 +416,6 @@ a.item-card:hover {
   gap: 10px;
 }
 
-.search-field {
-  width: 100%;
-  margin-top: 18px;
-  padding: 12px 16px;
-  border: 1px solid var(--line-strong);
-  border-radius: 8px;
-  background: var(--surface);
-  color: var(--muted);
-  font-size: 15px;
-}
-
 /* ——— Tlačítka a odznaky ——— */
 
 .btn {
@@ -1597,8 +1586,7 @@ details > summary {
   .select,
   .textarea,
   .persona-select,
-  .sidebar-search,
-  .search-field {
+  .sidebar-search {
     font-size: 16px;
   }
 
@@ -1686,11 +1674,6 @@ details > summary {
   }
 }
 
-/* Plán: úkoly nad harmonogramem. */
-.plan-top {
-  display: block;
-}
-
 .count-badge {
   display: inline-block;
   min-width: 24px;
@@ -1745,6 +1728,11 @@ details > summary {
 
 .brief-row .btn {
   flex: none;
+}
+
+/* Úkol s termínem do 7 dní (pozvánka bez odpovědi): červený okraj, ne celá plocha. */
+.brief-row[data-urgent] {
+  border-left: 3px solid var(--danger);
 }
 
 a.brief-link:hover {
@@ -1817,18 +1805,6 @@ a.brief-link:hover {
 
 .month-summary-empty {
   margin-bottom: 12px;
-}
-
-.plan-filters {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 12px;
-  margin: 0 0 14px;
-}
-
-.plan-filters .field {
-  min-width: 200px;
 }
 
 .minutes-month-title {
@@ -1964,10 +1940,6 @@ a.brief-link:hover {
 }
 
 /* ——— Zarovnání: prvky v jednom řádku mají stejnou výšku ——— */
-.plan-filters .btn {
-  min-height: 40px;
-}
-
 .schedule-toolbar,
 .schedule-toolbar > .row {
   align-items: center;
@@ -1982,23 +1954,6 @@ a.brief-link:hover {
 .schedule-toolbar .month-title {
   margin: 0;
   line-height: 36px;
-}
-
-/* Filtry Plánu jsou nad celou stránkou: mění oba horní bloky i harmonogram. */
-.plan-filter-bar {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-bottom: 20px;
-}
-
-.plan-filter-bar:empty {
-  display: none;
-}
-
-.plan-filter-bar .plan-filters,
-.plan-filter-bar .notice {
-  margin: 0;
 }
 
 .brief-main .item-title .badge {
@@ -2182,9 +2137,135 @@ p.cal-status {
   font-size: 15px;
 }
 
-.plan-filter-bar + .cal-status,
-.cal-status + .plan-top {
-  margin-top: 14px;
+/* ——— Plán: jeden řádek nástrojů, pod ním štítky stavu a malé filtry ——— */
+.schedule-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+}
+
+.month-nav {
+  gap: 4px;
+}
+
+.organizer-actions {
+  margin-left: auto;
+  gap: 8px;
+}
+
+.plan-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: 0 0 14px;
+}
+
+.plan-chips,
+.plan-selects {
+  gap: 8px;
+}
+
+.plan-selects {
+  margin-left: auto;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.plan-selects .select {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.pill-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px 4px 12px;
+  font-size: 13px;
+}
+
+.pill-number {
+  min-width: 22px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--ochre-soft);
+  color: var(--ochre-dark);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.pill-count[aria-current="true"] {
+  border-color: var(--ochre);
+  background: var(--ochre);
+  color: #fff;
+}
+
+.pill-count[aria-current="true"] .pill-number {
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+}
+
+.select-small {
+  width: auto;
+  max-width: 100%;
+  min-height: 34px;
+  padding-block: 4px;
+  font-size: 14px;
+}
+
+/* Tiché tlačítko: vedlejší akce bez rámečku (Dnes, Zrušit filtr). */
+.btn-quiet {
+  border-color: transparent;
+  background: transparent;
+}
+
+.btn-quiet:hover {
+  border-color: var(--line-strong);
+}
+
+/* Úkoly v Plánu: sbalené do jednoho řádku, celé jsou na Úvodu. */
+.plan-tasks {
+  margin-bottom: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.plan-tasks > summary {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.plan-tasks > .tasks-card {
+  padding: 0 16px 14px;
+}
+
+.plan-tasks .tasks-card .section-head {
+  display: none;
+}
+
+.plan-preview,
+.plan-preview + .cal-status {
+  margin-bottom: 14px;
+}
+
+@media (max-width: 760px) {
+  .organizer-actions {
+    margin-left: 0;
+  }
+}
+
+/* Když se filtry zalomí pod štítky, mají začínat vlevo, ne viset osamoceně vpravo. */
+@media (max-width: 1100px) {
+  .plan-selects {
+    margin-left: 0;
+  }
 }
 
 .recipients-table th[scope="row"] {
@@ -2380,34 +2461,6 @@ p.cal-status {
 .account-actions {
   flex-wrap: nowrap;
   gap: 6px;
-}
-
-/* Úvod: karty modulů vedle sebe, na úzkém displeji pod sebou. */
-.module-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
-  gap: 12px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.module-card {
-  display: flex;
-  height: 100%;
-  gap: 12px;
-  align-items: flex-start;
-}
-
-.module-card > svg {
-  flex: none;
-  margin-top: 3px;
-  color: var(--ochre-dark);
-}
-
-.module-card .item-title,
-.module-card .item-meta {
-  display: block;
 }
 
 /* Úzký telefon (320 px): tabulky se vejdou bez vodorovného posunu. */
