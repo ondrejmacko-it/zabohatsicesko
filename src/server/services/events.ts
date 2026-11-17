@@ -482,6 +482,8 @@ export type MonthDraft = {
   leadId: string | null;
   /** Návrh na místě z týdenní šablony (základ měsíce). Ostatní návrhy přidal někdo ručně navíc. */
   fromTemplate: boolean;
+  /** Souběh s jinou akcí v měsíci: „group“ = stejná skupina ve stejný čas, „shared“ = stejní lidé ve stejný den nebo čas. */
+  clash: "group" | "shared" | null;
 };
 
 /** Podmínka hromadného zveřejnění: budoucí, nikdy nezveřejněný návrh akce v daném měsíci. */
@@ -507,6 +509,20 @@ export async function listMonthDrafts(viewer: Viewer, monthKey: string): Promise
   const db = await getDb();
   const { start, end } = monthRange(monthKey);
   const rows = await db.select().from(events).where(monthDraftFilter(monthKey)).orderBy(asc(events.startsAt), asc(events.id));
+  // Stejné pravidlo jako při doplňování termínů: správce vidí souběh i u návrhů, které už v plánu jsou.
+  const others = await db
+    .select({ id: events.id, startsAt: events.startsAt, endsAt: events.endsAt, audience: events.audience, type: events.type })
+    .from(events)
+    .where(and(eq(events.orgId, config.orgId), ne(events.status, "cancelled"), eq(events.allDay, false), lt(events.startsAt, end), gt(events.endsAt, start)));
+  const clashOf = (row: EventRow): MonthDraft["clash"] => {
+    if (row.type === "holiday" || row.allDay) return null;
+    const occupants: Occupant[] = others.filter((o) => o.id !== row.id).map((o) => ({ ...o, dateKey: toDateKey(o.startsAt) }));
+    const verdict = slotConflict(
+      { start: row.startsAt, end: row.endsAt, audience: row.audience, type: row.type, dateKey: toDateKey(row.startsAt) },
+      occupants,
+    );
+    return verdict === "skip" ? "group" : verdict === "warn" ? "shared" : null;
+  };
   const [changes] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(events)
@@ -531,6 +547,7 @@ export async function listMonthDrafts(viewer: Viewer, monthKey: string): Promise
       topicTitle: row.topicTitle,
       leadId: row.leadId,
       fromTemplate: row.generationKey !== null,
+      clash: clashOf(row),
     })),
     changeDrafts: changes?.count ?? 0,
   };

@@ -9,7 +9,8 @@ type Props = {
   /** Zavření křížkem, Esc, klikem mimo nebo tlačítkem. Komponenta rodiče může zavření odmítnout (neuložené změny). */
   onRequestClose: () => void;
   children: React.ReactNode;
-  wide?: boolean;
+  /** „extra“: okno se seznamem řádků (Připravit měsíc), na desktopu se vejde řádek s více poli vedle sebe. */
+  wide?: boolean | "extra";
   /** Rodič si rozepsané změny hlídá sám (dialog akce), okno se proto na nic neptá. */
   selfGuarded?: boolean;
 };
@@ -70,7 +71,7 @@ export function Modal({ open, title, onRequestClose, children, wide, selfGuarded
   return createPortal(
     <dialog
       ref={ref}
-      className={wide ? "dialog dialog-wide" : "dialog"}
+      className={wide === "extra" ? "dialog dialog-wide dialog-extra" : wide ? "dialog dialog-wide" : "dialog"}
       aria-labelledby={titleId}
       onCancel={(event) => {
         // Esc v okně otevřeném z tohoto okna patří jen tomu vnořenému.

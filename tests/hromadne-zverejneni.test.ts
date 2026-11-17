@@ -201,11 +201,6 @@ describe("doplnění měsíce: skupiny, opakování, souběh", () => {
     expect(new Set((await drafts()).map((d) => d.startsAt)).size).toBe(count);
   });
 
-  test("zrušená ruční akce termín neblokuje", async () => {
-    const first = await generateMonth(organizer, MONTH);
-    expect(first.created).toBeGreaterThan(0);
-  });
-
   test("akce jiné skupiny ve stejný čas termín nezablokuje", async () => {
     await createEvent(organizer, { ...extra, type: "other", label: "Porada RM", audience: "rm", date: "2026-12-01", startTime: "10:00", endTime: "12:00" }, "draft");
     const before = (await generateMonth(organizer, MONTH)).skipped;

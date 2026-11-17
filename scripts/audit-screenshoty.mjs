@@ -33,7 +33,7 @@ const hostPages = [['vstup-ukazka', 'http://localhost:3310/vstup'], ['vstup-ostr
       await ctx.close();
     }
     for (const [w, h] of widths) {
-      const ctx = await b.newContext({ viewport: { width: w, height: h }, storageState: state });
+      const ctx = await b.newContext({ viewport: { width: w, height: h }, storageState: state, locale: 'cs-CZ' });
       const p = await ctx.newPage();
       for (const [name, path] of list) {
         await p.goto(path.startsWith('http') ? path : 'http://localhost:3310' + path, { waitUntil: 'networkidle' });

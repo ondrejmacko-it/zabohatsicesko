@@ -71,6 +71,32 @@ test.describe("okna správce", () => {
     await expectNoHorizontalScroll(page);
   });
 
+  test("Připravit měsíc: Enter v poli nic nezveřejní @desktop", async ({ page }) => {
+    await page.goto("/vzdelavani/harmonogram");
+    await settle(page);
+    await page.getByRole("button", { name: /^Připravit měsíc/ }).click();
+    const prepare = dialog(page, /Připravit měsíc:/);
+    const topic = prepare.getByLabel(/^Téma: /).first();
+    await topic.focus();
+    await page.keyboard.press("Enter");
+    await page.waitForTimeout(300);
+    await expect(prepare).toBeVisible();
+    await expect(prepare.getByText(/Zveřejněno|Nic se nezveřejnilo/)).toHaveCount(0);
+  });
+
+  test("Uložený návrh akce potvrdí, co se stalo, i po zavření okna @desktop", async ({ page }) => {
+    await page.goto("/vzdelavani/harmonogram");
+    await settle(page);
+    await page.getByRole("button", { name: "Přidat akci" }).click();
+    const opened = dialog(page, "Přidat akci");
+    await opened.getByLabel("Typ").selectOption("other");
+    await opened.getByLabel("Název", { exact: true }).fill("Návštěva partnera z e2e");
+    await opened.getByLabel("Datum").fill("2027-06-15");
+    await opened.getByRole("button", { name: "Uložit návrh" }).click();
+    await page.waitForURL(/\/vzdelavani\/akce\//);
+    await expect(page.getByRole("status").filter({ hasText: "Návrh je uložený. Kolegové ho zatím nevidí, nic se neodeslalo." })).toBeVisible();
+  });
+
   test("Pravidelný týden z Nástrojů správce", async ({ page }) => {
     await page.goto("/vzdelavani/harmonogram");
     await settle(page);
