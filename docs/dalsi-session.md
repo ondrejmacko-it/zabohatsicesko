@@ -13,22 +13,20 @@ session_01HpUiru5P4yB2SxRCiVSjHt. Uživatel dal plné právo pokračovat bez pta
   **oprava chyby**: „Zpět“ v potvrzovací liště odeslal formulář (React znovu použil tlačítko) – lišty mají `key` (i `EventDialog`),
   po Zpět se fokus vrátí; výběr návrhů se při zavření neptá na rozepsané změny. E2e okna/plán (1280, 1920, 320) prošly, unit 270/270,
   screenshoty 320–1920 lišty prohlédnuté (bez vodorovného posunu).
-* **Větev `claude/final-zapisy-temata`** (stojí na #64, PR zatím NENÍ, commit 3c0eeb7): `/vstup` bez 3 vět (slogan „Plán…na jednom
-  místě“, „Heslo… nikdy nevidí“, notice „Pozvánka je ověřená…“ v ukázce); Zápisy: okno „Nedokončené zápisy“ (správce) / „Moje zápisy
-  k dokončení“ (vedoucí), u akce „Odpovědný: jméno“; seed `publishedMinutes` (ev-11-6, RM: nahrávka 1 s ticha, úloha, zveřejněný zápis,
-  `src/server/seed.ts` `insertPublishedMinutes`), e2e čtenáře RM „Zobrazit zápis“ z okna akce (`e2e/zapisy.spec.ts`), unit testy
-  `recordings`/`journey` filtrují na vlastní akci; Témata: záhlaví „Navrhněte téma nebo podpořte návrh kolegů.“, archiv jako karty
-  s Obnovit (`.topic-archived`). Cílené e2e (zapisy, okna, stranky; 1280 + 320) 203 passed / 1 skipped / 0 failed, unit 270/270,
-  lint, tsc. **Neověřeno:** screenshot archivu témat a `/vstup`.
+* **Draft PR [#65](https://github.com/ondrejmacko-it/zabohatsicesko/pull/65) „Final C“** (`claude/final-zapisy-temata`, base main,
+  stojí na #64, sledovaný): `/vstup` bez 3 vět (slogan „Plán…na jednom místě“, „Heslo… nikdy nevidí“, notice „Pozvánka je
+  ověřená…“ v ukázce); Zápisy: okno „Nedokončené zápisy“ / „Moje zápisy k dokončení“, „Odpovědný: jméno“, seed zveřejněného
+  zápisu ev-11-6; Témata: archiv jako karty s Obnovit; **Správa** (e0f2c65): menu účtu Upravit přístup… / skupina „Přihlašování
+  se zařízeními“ (Nový odkaz pro další zařízení, Zneplatnit čekající odkaz, Odhlásit <zařízení>… po řádcích) / Odebrat přístup…;
+  zařízení v kartě po řádcích (`accessLines`); panel Kalendář jednotná stavba v obou režimech. Lint, tsc, unit 270/270, build OK.
+  Screenshoty prohlédnuté (ostrá Správa přes lokální `next start` s fiktivním správcem: skript ve scratchpadu, v repu není;
+  Témata-archiv, Zápisy, `/vstup` 390/1280).
 
 **Další kroky:**
-1. Na `claude/final-zapisy-temata`: Správa (menu účtu: Upravit přístup / Přihlašování se zařízeními po řádcích / Odebrat přístup;
-   sjednotit panel Kalendář), revize textů; screenshot Témata (archiv), `/vstup`, Zápisy 390/1280. Pak draft PR „Final C: vstup,
-   zápisy, témata, správa“ (base main, v popisu: stojí na #64) a subscribe.
-2. Nakonec: lint, tsc, `npm test`, build, úplné `npm run e2e` (před ním ukonči `node e2e/server.mjs` a `next start`, jinak běží starý
-   build), screenshoty 320–1920 (`scripts/audit-screenshoty.mjs`, prohlédnout), závěrečný report (passed/failed/skipped, simulace vs.
-   živý test, otevřené body; dlouhé nahrávky jen jako otevřený bod `docs/nahravky-moznosti.md`). Výsledky dopsat do popisů #64 a C.
-3. Otevřené: výklad „3 nadbytečné věty na /vstup“ je můj (viz výše) – uvést v reportu, ať ho uživatel potvrdí.
+1. Výsledek úplného `npm run e2e` (běží/běžel na e0f2c65) dopsat do popisů #64 a #65; screenshoty 320–1920
+   (`scripts/audit-screenshoty.mjs`, prohlédnout), závěrečný report (passed/failed/skipped, simulace vs. živý test, otevřené body;
+   dlouhé nahrávky jen jako otevřený bod `docs/nahravky-moznosti.md`).
+2. Otevřené: výklad „3 nadbytečné věty na /vstup“ je můj (viz výše) – uvést v reportu, ať ho uživatel potvrdí.
 
 Kontext limit: na začátku čti jen tento blok, README a měněné soubory.
 
