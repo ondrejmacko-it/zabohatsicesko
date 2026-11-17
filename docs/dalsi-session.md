@@ -16,7 +16,24 @@ kroky pro mě piš úplně, pod sebe, s přesnými kliky (Windows, PowerShell).
   `GOOGLE_OAUTH_PUBLISHED=1` (nastaveno 15. 11., platí od dalšího nasazení Production).
 * Úkoly z auditu jsou v `docs/audit-ukoly.md`. Audit ZIP stačí přiložit, jen když je potřeba `textove-upravy.csv`.
 
-**Stav 17. 11. večer, C2 doplněné, C3 rozpracované (poslední):** uživatel poslal podrobné zadání „Dokončení UX/UI: C2 → C3 → D“
+**Stav 17. 11. pozdě večer, C2 dokončené jako nový draft PR (poslední):** #56, #57, #58, #59 jsou **sloučené v `main`** (#59 na d2d0a9d).
+Zbytek C2 je ve větvi `claude/ux-formular-akce` (sloučený `origin/main`, merge d2554bd) jako nový draft PR do `main` („PR C2b“, číslo v GitHubu).
+* Hotovo v C2b: `slotConflict` (6d3a6d5); `MonthDraft.clash` v `listMonthDrafts` + štítek `.publish-clash` a věta v kroku „2. Zkontrolovat“;
+  Enter v Připravit měsíc nic neodešle (`ignoreEnter`); okno `Modal wide="extra"` (1120 px, návrh na jednom řádku od ~800 px);
+  pravdivé hlášky po uložení/zveřejnění (`src/lib/invite-mode.ts`: simulace / čeká na Kalendář / testovací adresy / odesílá se)
+  a `FlashMessage` v `(wiki)/layout.tsx` (potvrzení přežije zavření dialogu a přesměrování); testy `tests/doplneni-mesice-scenare.test.ts`
+  (svátek, smazaný a přesunutý termín, zveřejněná a zrušená akce, souběh), e2e `okna.spec.ts` (Enter, potvrzení návrhu).
+  Lint, tsc, `npm test` 254/254, cílené e2e `okna`+`pristupnost` (1280, 320) 62 passed / 3 skipped (desktop testy na telefonu).
+  **Neověřeno: úplné e2e** (zastaveno kvůli limitu kontextu) – spustit na začátku další relace a výsledek zapsat do popisu PR C2b.
+* Screenshoty dialogů prohlédnuté (390, 1280): formulář, souhrn chyb („Doplňte nebo opravte: Název“), potvrzení dopadu i chyba
+  „Nezveřejněno, chybí téma… hodnoty zůstaly“ odpovídají chování. Skript: `node <scratchpad>/dialogy.mjs` není v repu; použij
+  `scripts/audit-screenshoty.mjs` (teď s `locale: 'cs-CZ'`). Návrh 30 termínů: na desktopu ~75 px na řádek, na telefonu delší seznam
+  se svislým posunem v okně a pevnými tlačítky dole – přijatelné, bez wizardu.
+* **Další krok: C3** ve větvi `claude/ux-temata-sprava` (commit 5d56e60 na d2d0a9d): `git merge origin/claude/ux-formular-akce` (bez force),
+  pak body C3 níže, draft PR C3 do `main`. Pak PR D a velké závěrečné shrnutí (viz zadání uživatele v promptu).
+* Vyčištění testovacích témat („Test“, „Něco“, „Ahoj“): jen návrh uživateli (archivovat přes Témata → Správa), produkční DB nečíst ani neměnit.
+
+**Stav 17. 11. večer, C2 doplněné, C3 rozpracované (předchozí):** uživatel poslal podrobné zadání „Dokončení UX/UI: C2 → C3 → D“
 (platí nadále, shrnutí níže). Kalendář, #56 a #57 stranou.
 * **C2** (`claude/ux-formular-akce`, draft #59, base `main`, stojí na #58): navíc commity d2d0a9d (Připravit měsíc na celou šířku,
   „Chybí téma a vedoucí“ u termínu místo souhrnného seznamu, texty bez „šablona“) a 6d3a6d5 (`slotConflict` v `domain/generation.ts`:
