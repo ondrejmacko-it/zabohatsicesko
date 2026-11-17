@@ -195,6 +195,16 @@ termíny“ = `generateMonthAction`, přehled mezer a stavu párování z `month
 a skupina, „Uložit změny“ a „Zveřejnit“), vitest pro `publishDrafts` (datum mimo měsíc, minulost, uložení bez
 zveřejnění nic neodešle) a e2e okna. Pak PR 8 podle `docs/audit-ukoly.md`.
 
+**Stav 17. 11., PRIORITA: oznámení nechodí:** uživatel hlásí, že na ostré Wiki nepřišlo ŽÁDNÉ oznámení ani e-mail
+o nové akci ani o změnách. Akce v Google Kalendáři jsou (kalendář „Vzdělávání ZBC“ i druhá, „dutá“ kopie,
+tj. zřejmě duplicitní zápis přes pozvánku/self-invite). Draft #52 (Plán) a #53 (Úvod) čekají. U #53 hlásí Vercel
+„Deployment has failed“ (preview, zjistit příčinu přes Vercel MCP `get_deployment` / build logy).
+* Postup: ověřit, zda je #51 v `main`; Neon jen čtení `select status, event_format, setup_code, error_code,
+  synced_at from personal_calendars`; zjistit hodnotu `CALENDAR_PERSONAL_NOTIFY` na Vercelu (Production, jen název/
+  nesecretní hodnota); vysvětlit uživateli, proč Google e-mail nepošle (vlastní kalendář přes API e-mail neposílá,
+  `sendUpdates` platí jen pro hosty), navrhnout a s jeho souhlasem nasadit spolehlivou cestu: self-invite, nebo
+  e-maily z Wiki (Resend apod.). Duplicitní akce v kalendáři vyšetřit (dvě kopie každé akce).
+
 **Stav 16. 11. noc 4, Plán a Úvod (poslední):** #51 (`claude/oprava-kalendare-401`) zatím NENÍ v `main`
 (ověřeno `git merge-base --is-ancestor`), čtení Neonu proto čeká. Blok „Stav 16. 11. noc 3“ je v předávce větve #51.
 * Draft PR z `claude/plan-pridani-a-presun`: „+“ na dni v měsíčním Plánu (`?den=`), přesun tažením s potvrzením,
