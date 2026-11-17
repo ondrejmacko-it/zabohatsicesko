@@ -12,7 +12,7 @@ test.describe("Zápisy: od nahrávky ke zveřejnění @desktop", () => {
     const dialog = page.getByRole("dialog", { name: /Trénink poradců/ });
     await expect(dialog.getByRole("status").filter({ hasText: "Čeká na nahrávku" })).toBeVisible();
     // UI předem říká, že přepis je jen ukázka, a nabízí ukázkovou nahrávku přímo u nahrávání.
-    await expect(dialog).toContainText("Přepis je zatím jen ukázka");
+    await expect(dialog).toContainText("Automatický přepis zatím umí jen jednu ukázkovou nahrávku");
     await expect(dialog.getByRole("link", { name: "Stáhnout ukázkovou nahrávku" })).toBeVisible();
 
     await dialog.getByLabel("Soubor s nahrávkou").setInputFiles("public/demo/testovaci-nahravka.wav");

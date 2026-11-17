@@ -5,7 +5,7 @@ import { addDays, fromPragueLocal, isoWeekday, monthOf, monthRange, toDateKey, t
 import type { EventType, Group, PlanStatus, SyncStatus } from "@/lib/types";
 import { audit } from "@/server/audit";
 import { targetCalendarId } from "@/server/calendar/target";
-import { config, now } from "@/server/config";
+import { config, now, personalDelivery } from "@/server/config";
 import { getDb, type Executor } from "@/server/db/client";
 import {
   calendarLinks,
@@ -36,8 +36,11 @@ export type EventCard = {
   unpublishedChanges: boolean;
   extraordinary: boolean;
   past: boolean;
-  /** Jen pro správce. „unlinked“ = zveřejněná akce zatím bez vazby na pozvánku. */
-  syncStatus: SyncStatus | "unlinked" | null;
+  /**
+   * Jen pro správce. „unlinked“ = zveřejněná akce zatím bez vazby na pozvánku. „personal“ = osobní režim:
+   * pozvánka organizátora se nevede a karta o doručení do osobních kalendářů nic netvrdí (evidence je v detailu).
+   */
+  syncStatus: SyncStatus | "unlinked" | "personal" | null;
   /** Jen pro správce: zveřejněný termín, pokud ho rozpracovaný návrh přesouvá jinam. */
   movedFrom: { startsAt: string; endsAt: string; allDay: boolean } | null;
   /** Jen pro správce: verze akce, kterou přesun tažením posílá serveru jako kontrolu souběhu. */
@@ -70,7 +73,8 @@ function toCard(
   const organizer = isOrganizer(viewer);
   const isPublic = row.published !== null;
   let syncStatus: EventCard["syncStatus"] = null;
-  if (organizer && isPublic && view.type !== "holiday") syncStatus = link?.syncStatus ?? "unlinked";
+  // Osobní režim: vazba ani její chybění nic nedokazují (`markLinksDelivered` ji jen označí za zpracovanou).
+  if (organizer && isPublic && view.type !== "holiday") syncStatus = personalDelivery() ? "personal" : (link?.syncStatus ?? "unlinked");
   const last = row.published;
   const moved = organizer && last !== null && row.status !== "cancelled" && (last.startsAt !== view.startsAt || last.endsAt !== view.endsAt);
 

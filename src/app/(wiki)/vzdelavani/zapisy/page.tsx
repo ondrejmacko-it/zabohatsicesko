@@ -46,7 +46,8 @@ export default async function MinutesPage({ searchParams }: { searchParams: Sear
     {peekId ? (
       <MinutesPeek key={peekId} user={user} eventId={peekId} closeHref={link()} />
     ) : (
-      canAdd && params.pridat === "1" && <AddMinutesPicker title={missingTitle} items={missing.items} hrefFor={(id) => link({ zapis: id })} closeHref={link()} />
+      canAdd && params.pridat === "1" && <AddMinutesPicker title={missingTitle} items={missing.items} hrefFor={(id) => link({ zapis: id })} closeHref={link()}
+        assignHref={isOrganizer(user) ? (item) => `/vzdelavani/harmonogram?mesic=${item.startsAt.slice(0, 7)}&akce=${encodeURIComponent(item.eventId)}` : undefined} />
     )}
     <section className="section" aria-labelledby="zapisy">
       <div className="spread">

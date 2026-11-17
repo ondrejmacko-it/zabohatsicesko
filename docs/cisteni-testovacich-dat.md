@@ -62,6 +62,46 @@ schválení.
 
 Volitelně před krokem 2 vytvořit v Neonu snapshot / větev produkce jako zálohu (nedestruktivní).
 
+## Před čištěním: ověřit režim Kalendáře a dopad na každou akci (doplněno 17. 11. 2026)
+
+Stav: **jen návrh, nic neprovedeno.** Na stránce Správa je režim osobních kalendářů (`CALENDAR_DELIVERY=personal`).
+V tomto režimu Wiki pozvánky ani e-maily neposílá: zrušení akce se jen promítne do kalendářů „Vzdělávání ZBC“
+u propojených uživatelů (`syncPersonalCalendars`) a vazby v `calendar_links` se označí za zpracované
+(`markLinksDelivered`). Starší vazby z doby režimu organizátora ale mohou mít `external_event_id` na pozvánku
+v kalendáři organizátora. Ta by se v osobním režimu nezrušila a v Google by zůstala.
+
+Před každou operací, pouze read-only:
+1. Ověřit skutečné proměnné produkce (Vercel, Production): `CALENDAR_MODE`, `CALENDAR_DELIVERY`, `CALENDAR_ATTENDEES`, `CALENDAR_PERSONAL_NOTIFY`.
+2. Pro každou ze 6 zveřejněných akcí přečíst `calendar_links` (`external_event_id`, `calendar_id`, `sync_status`)
+   a zjistit, kdo má propojený osobní kalendář (`personal_calendars`).
+3. Do tabulky zapsat pro každou akci: vazba ano/ne, kalendář, očekávaný dopad (osobní kalendáře / pozvánka
+   organizátora / nic) a zda může odejít e-mail (při `CALENDAR_PERSONAL_NOTIFY=self-invite` ano, vlastníkovi).
+4. Teprve potom schválení uživatele a provedení přes UI.
+
+## Read-only inventura 6 akcí a režimu Kalendáře (17. 11. 2026, večer)
+
+Jen jeden `SELECT` v Neon `zbc-wiki-produkce` (výchozí větev) a výpis proměnných projektu Vercel
+`zbc-vzdelavani-demo` bez dešifrování. Nic se neměnilo, žádné tokeny ani osobní údaje (jen počty).
+
+**Režim Kalendáře (Production):** `CALENDAR_MODE=google-test`, `CALENDAR_ATTENDEES=audience` (obě čitelné),
+`CALENDAR_DELIVERY` a `CALENDAR_PERSONAL_NOTIFY` jsou uložené jako šifrované, hodnota se nečetla. Nepřímý
+důkaz osobního režimu z databáze: všechny vazby jsou `synced` bez pozvánky organizátora (podpis
+`markLinksDelivered`) a existují záznamy `personal_calendar_entries`. Preview: `simulation`.
+
+| Akce (ID) | Téma | Začátek (UTC) | Stav | Publikum | Vazba | Pozvánka organizátora | Osobní zápisy |
+|---|---|---|---|---|---|---|---|
+| ev-acc43d67… | Ahoj | 2026-11-17 08:00 | zveřejněno | Všichni | synced | ne | 2 |
+| ev-7bf7ae02… | Něco | 2026-12-11 07:30 | zveřejněno | FP | synced | ne | 1 |
+| ev-2d718009… | Test | 2026-12-18 07:30 | zveřejněno | RM | synced | ne | 0 |
+| ev-31d566c5… | Ahoj | 2027-01-08 07:30 | zveřejněno | RM | synced | ne | 0 |
+| ev-239d56fe… | Ahojda | 2027-01-15 07:30 | zveřejněno | FP | synced | ne | 1 |
+| ev-9b32a6c1… | Tos | 2027-01-29 07:30 | zveřejněno | FP | synced | ne | 1 |
+
+Dopad zrušení přes UI: žádná akce nemá pozvánku organizátora, takže nikomu nepřijde storno pozvánky.
+Čtyři akce mají záznam v osobních kalendářích (celkem 5 zápisů), ty Wiki při další synchronizaci odebere
+(při zapnutém `CALENDAR_PERSONAL_NOTIFY=self-invite` by Google dotčeným poslal e-mail o zrušení, hodnota
+se neověřovala). Akce „Ahoj“ 17. 11. už proběhla. **Nic neprovedeno, čeká na schválení.**
+
 ## Otevřené otázky pro uživatele
 
 * Které z akcí výše jsou testovací celé (zrušit), a u kterých jen opravit téma?

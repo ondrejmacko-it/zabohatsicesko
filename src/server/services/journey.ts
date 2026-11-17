@@ -143,7 +143,7 @@ const MINUTES_TASKS: Record<Exclude<RecordingProgress, "published">, { detail: s
   none: { detail: "Proběhla a nemá zápis. Připraví se z nahrávky.", action: "Nahrát nahrávku" },
   processing: { detail: "Nahrávka se přepisuje. Návrh zápisu bude za chvíli ke kontrole.", action: "Zobrazit stav" },
   failed: { detail: "Přepis nahrávky se nepovedl. Zkuste ho znovu.", action: "Zkusit přepis znovu" },
-  unsupported: { detail: "Tento soubor ukázka nepřepíše. Nahrajte ukázkovou nahrávku.", action: "Vybrat jinou nahrávku" },
+  unsupported: { detail: "Ukázkový přepis tento soubor nepřepíše, umí jen ukázkovou nahrávku.", action: "Vybrat jinou nahrávku" },
   draft: { detail: "Návrh zápisu čeká na kontrolu a zveřejnění.", action: "Zkontrolovat zápis" },
 };
 

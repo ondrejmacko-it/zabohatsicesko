@@ -9,6 +9,7 @@ import { InviteClaim } from "./InviteClaim";
 import { hasGatePass } from "@/server/auth/gate";
 import { attendeeSource, calendarMode, config, googleLoginConfig, isLiveWiki } from "@/server/config";
 import { GateForm } from "./GateForm";
+import { GoogleStart } from "./GoogleStart";
 import { GateShell } from "@/components/GateShell";
 
 export const metadata: Metadata = { title: "Vstup" };
@@ -21,7 +22,7 @@ const GOOGLE_RESULTS: Record<string, string> = {
   zruseno: "Přihlášení účtem Google bylo zrušeno.",
   "zruseno-kalendar": "Přihlášení se souhlasem ke Kalendáři bylo zrušeno. Můžete to zkusit znovu, nebo se přihlásit bez Kalendáře a propojit ho později z Plánu.",
   "nepodarilo-se": "Přihlášení účtem Google se nepodařilo dokončit. Zkuste to prosím znovu.",
-  "jiny-ucet": "Tento účet Google k pozvánce nepatří. Přihlaste se účtem, na který vás správce pozval.",
+  "jiny-ucet": "Tento účet k pozvánce nepatří. Zkontrolujte adresu a zkuste to znovu.",
 };
 
 /** Hlášky pro stránku bez platné pozvánky, kde tlačítko Google chybí. Ostatní platí beze změny. */
@@ -96,7 +97,7 @@ async function LiveGate({ googleResult, bootstrap }: { googleResult: string; boo
   const spravce = device ? "" : "&spravce=1";
   return (
     <GateShell title={known ? "Vítejte zpět" : "Vítejte ve Wiki"}>
-      <p className="gate-lead">Přihlaste se svým účtem Google.</p>
+      <p className="gate-lead">{known ? "Přihlaste se svým účtem Google." : "Zadejte pracovní e-mail a přihlaste se přes Google."}</p>
       {googleLoginConfig() ? (
         <section className="gate-google" aria-label="Přihlášení účtem Google">
           {googleError && (
@@ -104,21 +105,29 @@ async function LiveGate({ googleResult, bootstrap }: { googleResult: string; boo
               {googleError}
             </p>
           )}
-          {device && (
-            <p className="gate-account">
-              <span className="gate-avatar" aria-hidden="true">
-                {device.email.charAt(0).toUpperCase()}
-              </span>
-              <span>
-                {known ? "Toto zařízení zná účet" : "Pozvánka je pro účet"} <strong>{maskEmail(device.email)}</strong>
-              </span>
-            </p>
+          {/* Účet ukazuje jen důvěryhodné zařízení. Nové zařízení s pozvánkou adresu nezná, uživatel ji zadá sám. */}
+          {known ? (
+            <>
+              <p className="gate-account">
+                <span className="gate-avatar" aria-hidden="true">
+                  {known.email.charAt(0).toUpperCase()}
+                </span>
+                <span>
+                  Toto zařízení zná účet <strong>{maskEmail(known.email)}</strong>
+                </span>
+              </p>
+              {/* Odkaz, ne formulář: navigaci na Google nesmí blokovat CSP form-action. */}
+              <a className="btn btn-google" href="/api/google/prihlaseni">
+                <GoogleMark />
+                <span>Přihlásit se účtem Google</span>
+              </a>
+            </>
+          ) : (
+            <GoogleStart href={invite ? "/api/google/prihlaseni" : "/api/google/prihlaseni?spravce=1"}>
+              <GoogleMark />
+              <span>Pokračovat přes Google</span>
+            </GoogleStart>
           )}
-          {/* Odkaz, ne formulář: navigaci na Google nesmí blokovat CSP form-action. */}
-          <a className="btn btn-google" href={device ? "/api/google/prihlaseni" : "/api/google/prihlaseni?spravce=1"}>
-            <GoogleMark />
-            <span>Přihlásit se účtem Google</span>
-          </a>
           {/* Jiný účet se vybírá přímo v okně Googlu, druhý odkaz by dělal totéž co hlavní tlačítko. */}
           {googleResult === "zruseno-kalendar" && (
             <div className="gate-alt">

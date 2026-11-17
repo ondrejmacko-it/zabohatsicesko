@@ -11,7 +11,7 @@ const STATE_TEXT: Record<MissingMinutesItem["state"], string> = {
   none: "bez nahrávky",
   processing: "nahrávka se přepisuje",
   failed: "přepis se nepovedl",
-  unsupported: "soubor nejde přepsat",
+  unsupported: "ukázkový přepis soubor nepřepíše",
   draft: "návrh čeká na kontrolu",
 };
 
@@ -37,15 +37,10 @@ export async function MinutesPeek({ user, eventId, closeHref }: { user: Viewer; 
     <RouteModal title={title} closeHref={closeHref} wide>
       <p className="eyebrow peek-eyebrow">
         {day} · {TYPE_LABELS[card.type]} · {GROUP_LABELS[card.audience]}
-        {detail.leadName ? ` · Vede: ${detail.leadName}` : ""}
+        {` · ${detail.leadName ? `Vede: ${detail.leadName}` : "Vedoucí neurčen"}`}
       </p>
       <div className="peek-section">
         <RecordingSection eventId={card.id} eventLabel={`${title} · ${day}`} panel={detail.recording} />
-      </div>
-      <div className="dialog-actions peek-actions">
-        <Link className="btn" href={`/vzdelavani/akce/${encodeURIComponent(card.id)}?odkud=zapisy`}>
-          Otevřít celou akci
-        </Link>
       </div>
     </RouteModal>
   );
@@ -55,7 +50,20 @@ export async function MinutesPeek({ user, eventId, closeHref }: { user: Viewer; 
  * Okno „Nedokončené zápisy“ (správce, všechny) nebo „Moje zápisy k dokončení“ (vedoucí): proběhlé akce,
  * kterým zápis chybí. U každé je odpovědná osoba. Výběr akce otevře její zápis ve stejném okně.
  */
-export function AddMinutesPicker({ title, items, hrefFor, closeHref }: { title: string; items: MissingMinutesItem[]; hrefFor: (eventId: string) => string; closeHref: string }) {
+export function AddMinutesPicker({
+  title,
+  items,
+  hrefFor,
+  closeHref,
+  assignHref,
+}: {
+  title: string;
+  items: MissingMinutesItem[];
+  hrefFor: (eventId: string) => string;
+  closeHref: string;
+  /** Jen správce: kam vede přiřazení vedoucího akci, která ho nemá. */
+  assignHref?: (item: MissingMinutesItem) => string;
+}) {
   return (
     <RouteModal title={title} closeHref={closeHref}>
       {items.length === 0 ? (
@@ -65,7 +73,7 @@ export function AddMinutesPicker({ title, items, hrefFor, closeHref }: { title: 
         </div>
       ) : (
         <>
-          <p className="hint">Vyberte proběhlou akci. Nahrajete k ní záznam, zápis se z něj připraví sám a vy ho zkontrolujete a zveřejníte.</p>
+          <p className="hint">Vyberte akci a dokončete její zápis.</p>
           <ul className="brief-list picker-list">
             {items.map((item) => {
               const body = (
@@ -73,7 +81,7 @@ export function AddMinutesPicker({ title, items, hrefFor, closeHref }: { title: 
                   <span className="brief-main">
                     <span className="item-title">{item.title}</span>
                     <span className="item-meta">
-                      {formatDate(toDateKey(new Date(item.startsAt)))} · {STATE_TEXT[item.state]} · Odpovědný: {item.leadName ?? "vedoucí akce"}
+                      {formatDate(toDateKey(new Date(item.startsAt)))} · {STATE_TEXT[item.state]} · {item.leadName ? `Vede: ${item.leadName}` : "Vedoucí neurčen"}
                     </span>
                   </span>
                   <span className={item.canHandle ? "btn btn-small btn-primary" : "btn btn-small"} aria-hidden="true">
@@ -90,6 +98,11 @@ export function AddMinutesPicker({ title, items, hrefFor, closeHref }: { title: 
                   >
                     {body}
                   </Link>
+                  {!item.leadName && assignHref && (
+                    <Link className="small picker-assign" href={assignHref(item)}>
+                      Přiřadit vedoucího
+                    </Link>
+                  )}
                 </li>
               );
             })}

@@ -188,6 +188,26 @@ export const EVENT_FORMAT = 3;
 const hashOf = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex").slice(0, 32);
 export const personalEventId = (eventId: string) => eventIdForKey(`personal:${config.orgId}:${eventId}`);
 
+/** Akce, ke kterým je zveřejněný zápis z platné nahrávky. Volitelně jen pro vybrané akce. */
+async function eventsWithMinutes(db: Executor, eventIds?: readonly string[]): Promise<Set<string>> {
+  const published = eq(minutes.status, "published");
+  const rows = await db
+    .select({ eventId: minutes.eventId })
+    .from(minutes)
+    .innerJoin(recordings, and(eq(recordings.id, minutes.recordingId), isNull(recordings.supersededAt)))
+    .where(eventIds ? and(published, inArray(minutes.eventId, [...eventIds])) : published);
+  return new Set(rows.map((m) => m.eventId));
+}
+
+/**
+ * Podoba akce v osobním kalendáři a její otisk. Jediné místo, kde otisk vzniká: synchronizace podle něj
+ * pozná, co přepsat, a detail akce podle něj pozná, zda zapsaná podoba ještě odpovídá Wiki.
+ */
+function desiredEntry(eventId: string, snapshot: EventSnapshot, withMinutes: boolean, guest: string | undefined) {
+  const data = desiredData(eventId, snapshot, withMinutes);
+  return { data, hash: hashOf({ v: EVENT_FORMAT, g: guest ?? null, s: data.summary, d: data.description, a: data.startsAt, b: data.endsAt }) };
+}
+
 /** Akce, které mají být v kalendáři uživatele: zveřejněné, nezrušené, ne svátky, z jeho skupin, nedávné a budoucí. */
 async function desiredEvents(db: Executor, groups: readonly string[], since: Date, guest: string | undefined) {
   const rows = await db
@@ -201,21 +221,12 @@ async function desiredEvents(db: Executor, groups: readonly string[], since: Dat
         gt(sql`(${events.published}->>'endsAt')::timestamptz`, sql`${since.toISOString()}::timestamptz`),
       ),
     );
-  const withMinutes = new Set(
-    (
-      await db
-        .select({ eventId: minutes.eventId })
-        .from(minutes)
-        .innerJoin(recordings, and(eq(recordings.id, minutes.recordingId), isNull(recordings.supersededAt)))
-        .where(eq(minutes.status, "published"))
-    ).map((m) => m.eventId),
-  );
-  const wanted = new Map<string, { data: ReturnType<typeof desiredData>; hash: string }>();
+  const withMinutes = await eventsWithMinutes(db);
+  const wanted = new Map<string, ReturnType<typeof desiredEntry>>();
   for (const row of rows) {
     const snapshot = row.published as EventSnapshot;
     if (snapshot.status === "cancelled" || snapshot.type === "holiday" || !groups.includes(snapshot.audience)) continue;
-    const data = desiredData(row.id, snapshot, withMinutes.has(row.id));
-    wanted.set(row.id, { data, hash: hashOf({ v: EVENT_FORMAT, g: guest ?? null, s: data.summary, d: data.description, a: data.startsAt, b: data.endsAt }) });
+    wanted.set(row.id, desiredEntry(row.id, snapshot, withMinutes.has(row.id), guest));
   }
   return wanted;
 }
@@ -413,4 +424,86 @@ export async function markLinksDelivered(db: Executor, eventId?: string): Promis
     .update(calendarLinks)
     .set({ syncStatus: "synced", syncedRevision: sql`coalesce((select ${events.publishedRevision} from ${events} where ${events.id} = ${calendarLinks.eventId}), ${calendarLinks.syncedRevision})`, errorCode: null, attempts: 0, updatedAt: new Date() })
     .where(eventId ? eq(calendarLinks.eventId, eventId) : ne(calendarLinks.syncStatus, "synced"));
+}
+
+/** Důvod, proč účet z publika akci v osobním kalendáři nemá nebo mít nemusí. */
+export type PersonalFailure = "retrying" | "blocked" | "revoked" | "calendar_deleted";
+
+/**
+ * Co o zápisu jedné akce do osobních kalendářů skutečně víme. Jediný důkaz zápisu je záznam
+ * v `personal_calendar_entries`, který vzniká až po úspěšné odpovědi Googlu. Jeho otisk se porovná
+ * s otiskem současné podoby akce (`desiredEntry`), takže zápis před změnou termínu se nepočítá jako aktuální.
+ * Stav vazby `calendar_links` v osobním režimu nic nedokazuje (`markLinksDelivered` ji jen označí za zpracovanou).
+ */
+export type PersonalEventDelivery = {
+  /** Akce má v kalendářích být (zveřejněná a nezrušená). U zrušené akce se záznamy naopak odebírají. */
+  expected: boolean;
+  /** Aktivní účty z publika akce. */
+  audience: number;
+  /** Účty z publika, které mají akci v kalendáři zapsanou (v jakékoli podobě). */
+  written: number;
+  /** Zapsaná podoba odpovídá současné akci. */
+  current: number;
+  /** Zapsaná podoba je starší (změna termínu, názvu, zápisu) a čeká na aktualizaci. */
+  outdated: number;
+  /** Propojený kalendář bez chyby, do kterého akce ještě zapsaná není. */
+  missing: number;
+  /** Účty z publika bez propojeného osobního kalendáře (nepropojeno nebo odmítnuto). */
+  notConnected: number;
+  /** Účty z publika, u kterých synchronizace selhává. Jen jména, bez e-mailů a kódů chyb. */
+  failing: Array<{ name: string; reason: PersonalFailure }>;
+  /** Poslední běh synchronizace osobního kalendáře někoho z publika (celého kalendáře, ne této akce). */
+  lastSyncedAt: string | null;
+};
+
+export async function personalEventDelivery(db: Executor, eventId: string, snapshot: EventSnapshot): Promise<PersonalEventDelivery> {
+  const people = (
+    await db
+      .select({ id: users.id, name: users.name, groups: users.groups })
+      .from(users)
+      .where(and(eq(users.orgId, config.orgId), eq(users.status, "active")))
+  ).filter((u) => u.groups.includes(snapshot.audience));
+  const ids = people.map((u) => u.id);
+  const calendars = ids.length
+    ? new Map((await db.select().from(personalCalendars).where(and(eq(personalCalendars.orgId, config.orgId), inArray(personalCalendars.userId, ids)))).map((r) => [r.userId, r]))
+    : new Map<string, typeof personalCalendars.$inferSelect>();
+  const entries = ids.length
+    ? new Map(
+        (
+          await db
+            .select({ userId: personalCalendarEntries.userId, dataHash: personalCalendarEntries.dataHash })
+            .from(personalCalendarEntries)
+            .where(and(eq(personalCalendarEntries.eventId, eventId), inArray(personalCalendarEntries.userId, ids)))
+        ).map((e) => [e.userId, e.dataHash]),
+      )
+    : new Map<string, string>();
+  const expected = snapshot.status !== "cancelled" && snapshot.type !== "holiday";
+  const withMinutes = expected && entries.size ? (await eventsWithMinutes(db, [eventId])).has(eventId) : false;
+  const selfInvite = personalSelfInvite();
+  const result: PersonalEventDelivery = { expected, audience: people.length, written: entries.size, current: 0, outdated: 0, missing: 0, notConnected: 0, failing: [], lastSyncedAt: null };
+  for (const person of people) {
+    const row = calendars.get(person.id);
+    const hash = entries.get(person.id);
+    if (expected && hash !== undefined) {
+      // Host je součástí otisku: zkušební pozvánka sobě mění podobu zápisu stejně jako při synchronizaci.
+      const guest = selfInvite ? (row?.accountEmail ?? undefined) : undefined;
+      if (hash === desiredEntry(eventId, snapshot, withMinutes, guest).hash) result.current += 1;
+      else result.outdated += 1;
+    }
+    if (!row || row.status === "declined") {
+      result.notConnected += 1;
+      continue;
+    }
+    if (row.status === "revoked" || row.status === "calendar_deleted") {
+      result.failing.push({ name: person.name, reason: row.status });
+      continue;
+    }
+    if (row.status !== "active") continue;
+    const state = stateOf(row);
+    if (state.blocked || state.retrying) result.failing.push({ name: person.name, reason: state.blocked ? "blocked" : "retrying" });
+    else if (expected && hash === undefined) result.missing += 1;
+    if (row.syncedAt && (!result.lastSyncedAt || row.syncedAt.toISOString() > result.lastSyncedAt)) result.lastSyncedAt = row.syncedAt.toISOString();
+  }
+  result.failing.sort((a, b) => a.name.localeCompare(b.name, "cs"));
+  return result;
 }

@@ -3,9 +3,10 @@ import { toDateKey, toTimeKey } from "@/lib/time";
 import type { EventSnapshot, EventType, Group, SimAttendee } from "@/lib/types";
 import { audienceAttendees } from "@/server/calendar/attendees";
 import { CalendarError, type ExternalEvent } from "@/server/calendar/provider";
+import { personalEventDelivery, type PersonalEventDelivery } from "@/server/calendar/personal";
 import { listNotifications } from "@/server/calendar/simulated";
 import { calendarProvider, looksLikeSameInvite, pairingCandidates } from "@/server/calendar/sync";
-import { attendeeSource, calendarMode, config, now, type AttendeeSource, type CalendarMode } from "@/server/config";
+import { attendeeSource, calendarMode, config, now, personalDelivery, type AttendeeSource, type CalendarMode } from "@/server/config";
 import { getDb } from "@/server/db/client";
 import { calendarLinks, users, type ManagedFields } from "@/server/db/schema";
 import { calendarSummary, snapshotOf, type EventRow } from "@/server/domain/snapshot";
@@ -48,9 +49,15 @@ export function formValuesOf(snapshot: EventSnapshot): EventFormValues {
 
 export type SyncPanel = {
   mode: CalendarMode;
+  /** Režim osobních kalendářů: akce se zapisuje kolegům do jejich kalendářů, pozvánky ani e-maily se neposílají. */
+  personal: boolean;
   /** Vazba míří na jeden výskyt opakované události. */
   seriesInstance: boolean;
-  status: "pending" | "synced" | "attention" | "unlinked" | "none";
+  /**
+   * Stav pozvánky v kalendáři organizátora. „personal“ = osobní režim: pozvánka organizátora se nevede
+   * a jeden souhrnný stav by nic nedokazoval, skutečnou evidenci nese `personalDelivery`.
+   */
+  status: "pending" | "synced" | "attention" | "unlinked" | "none" | "personal";
   errorCode: string | null;
   conflict: { external: ManagedFields; wiki: ManagedFields } | null;
   externalId: string | null;
@@ -68,18 +75,50 @@ export type SyncPanel = {
    * „lookalike“ podobná cizí pozvánka zastavila automatiku, „automatic“ pozvánku založí fronta,
    * „past“ proběhlá akce se už nezakládá, „unavailable“ Kalendář teď neodpovídá nebo není propojený.
    */
-  unlinkedReason: "lookalike" | "automatic" | "past" | "unavailable" | null;
+  unlinkedReason: "lookalike" | "automatic" | "past" | "unavailable" | "cancelled" | null;
+  /** Jen osobní režim a zveřejněná akce: co o zápisu do osobních kalendářů skutečně víme. */
+  personalDelivery: PersonalEventDelivery | null;
+  /** Jen osobní režim: starší pozvánka v kalendáři organizátora z doby před osobními kalendáři (jen informace). */
+  legacyInviteId: string | null;
 };
+
+/**
+ * Osobní režim: diagnostika vychází jen z evidence osobních kalendářů. Kalendář organizátora se nevolá,
+ * nepáruje se a nová pozvánka se nenabízí. Případná starší vazba se ukáže jen jako historická informace.
+ */
+async function personalSyncPanel(db: Awaited<ReturnType<typeof getDb>>, row: EventRow, legacyInviteId: string | null): Promise<SyncPanel> {
+  return {
+    mode: calendarMode(),
+    personal: true,
+    seriesInstance: false,
+    status: row.published ? "personal" : "none",
+    errorCode: null,
+    conflict: null,
+    externalId: null,
+    external: null,
+    calendarUnavailable: false,
+    calendarErrorCode: null,
+    notifications: [],
+    candidates: [],
+    inviteeCount: 0,
+    attendeeSource: "audience",
+    unlinkedReason: null,
+    personalDelivery: row.published ? await personalEventDelivery(db, row.id, row.published) : null,
+    legacyInviteId,
+  };
+}
 
 async function syncPanel(viewer: Viewer, row: EventRow): Promise<SyncPanel | null> {
   if (!isOrganizer(viewer) || row.type === "holiday") return null;
   const db = await getDb();
   const [link] = await db.select().from(calendarLinks).where(eq(calendarLinks.eventId, row.id)).limit(1);
+  if (personalDelivery()) return personalSyncPanel(db, row, link?.externalEventId ?? null);
   // Neplatná sestava hostů zastaví až synchronizaci, panel kvůli ní nespadne.
   const invitees = await audienceAttendees(db, row.audience).catch(() => []);
   const mode = calendarMode();
   const panel: SyncPanel = {
     mode,
+    personal: false,
     seriesInstance: Boolean(link?.recurringEventId),
     status: !row.published ? "none" : (link?.syncStatus ?? "unlinked"),
     errorCode: link?.errorCode ?? null,
@@ -93,6 +132,8 @@ async function syncPanel(viewer: Viewer, row: EventRow): Promise<SyncPanel | nul
     attendeeSource: mode === "google-test" ? attendeeSource() : "audience",
     inviteeCount: invitees.length,
     unlinkedReason: null,
+    personalDelivery: null,
+    legacyInviteId: null,
   };
   let rawCandidates: ExternalEvent[] = [];
   try {
@@ -111,7 +152,7 @@ async function syncPanel(viewer: Viewer, row: EventRow): Promise<SyncPanel | nul
           at: n.createdAt.toISOString(),
         }));
       }
-    } else if (!link && row.published) {
+    } else if (!link && row.published && row.published.status !== "cancelled") {
       rawCandidates = await pairingCandidates(viewer, row.id);
       panel.candidates = rawCandidates.map((c) => ({
         id: c.id,
@@ -128,7 +169,10 @@ async function syncPanel(viewer: Viewer, row: EventRow): Promise<SyncPanel | nul
   if (panel.status === "unlinked" && row.published) {
     const published = row.published;
     const target = { startsAt: new Date(published.startsAt), endsAt: new Date(published.endsAt), summary: calendarSummary(published) };
-    panel.unlinkedReason = panel.calendarUnavailable
+    // Zrušená akce pozvánku nedostane, nabídka založení ani párování nedává smysl.
+    panel.unlinkedReason = published.status === "cancelled"
+      ? "cancelled"
+      : panel.calendarUnavailable
       ? "unavailable"
       : target.startsAt <= now()
         ? "past"

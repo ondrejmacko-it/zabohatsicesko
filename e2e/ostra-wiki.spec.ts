@@ -30,6 +30,44 @@ test.describe("ostrá Wiki", () => {
     await expectNoHorizontalScroll(page);
   });
 
+  test("nové zařízení: prázdné pole E-mail, žádný předvyplněný účet", async ({ page }) => {
+    await page.goto(`${live}/vstup?spravce=1`);
+    await settle(page);
+    const email = page.getByLabel("E-mail");
+    await expect(email).toHaveValue("");
+    await expect(page.getByText(/Toto zařízení zná účet|Pozvánka je pro účet/)).toHaveCount(0);
+    // Bez adresy se na Google nepokračuje, prohlížeč pole vyžaduje.
+    await page.getByRole("button", { name: /Google/ }).click();
+    await expect(page).toHaveURL(/\/vstup/);
+    await expectNoHorizontalScroll(page);
+  });
+
+  test("ručně zadaný e-mail není v žádné URL Wiki, Google ho dostane jen jako login_hint", async ({ page }) => {
+    const typed = "zadany.spravce@gmail.test";
+    const variants = [typed, encodeURIComponent(typed), typed.replace("@", "%40")];
+    const wikiUrls: string[] = [];
+    page.on("request", (request) => {
+      const url = request.url();
+      if (new URL(url).hostname === "localhost") wikiUrls.push(url);
+    });
+    // Google se nevolá: navigaci na accounts.google.com zachytí test a odpoví prázdnou stránkou.
+    let google: URL | null = null;
+    await page.route("https://accounts.google.com/**", async (route) => {
+      google = new URL(route.request().url());
+      await route.fulfill({ status: 200, contentType: "text/html", body: "<!doctype html><title>Google</title>" });
+    });
+    await page.goto(`${live}/vstup?spravce=1`);
+    await settle(page);
+    await page.getByLabel("E-mail").fill(typed);
+    await page.getByRole("button", { name: /Google/ }).click();
+    await page.waitForURL(/accounts\.google\.com/);
+    expect(google).not.toBeNull();
+    expect(google!.searchParams.get("login_hint")).toBe(typed);
+    expect(google!.searchParams.get("prompt")).toContain("select_account");
+    expect(wikiUrls.some((u) => u.includes("/api/google/prihlaseni"))).toBe(true);
+    for (const url of wikiUrls) for (const v of variants) expect(url, url).not.toContain(v);
+  });
+
   test("ochrana soukromí je veřejná a běží bez chyb", async ({ page }) => {
     const response = await page.goto(`${live}/soukromi`);
     expect(response?.status()).toBe(200);

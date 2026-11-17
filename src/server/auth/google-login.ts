@@ -54,6 +54,15 @@ export type LoginScope = { kind: "device"; deviceId: string; userId: string } | 
 export type LoginOptions = { calendar?: CalendarIntent; loginHint?: string; scope?: LoginScope };
 
 /**
+ * Adresa, kterou uživatel na novém zařízení sám zadal. Je jen nápověda pro výběr účtu u Googlu, nic neprokazuje:
+ * identitu i shodu s pozvánkou ověřuje callback z podepsaného ID tokenu. Neplatný tvar se tiše zahodí.
+ */
+export function typedLoginHint(value: string | null): string | undefined {
+  const email = value?.trim().toLowerCase() ?? "";
+  return email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : undefined;
+}
+
+/**
  * Připraví přesměrování na Google. Stav, nonce a PKCE ověřovač zůstávají v podepsané HttpOnly cookie
  * téhož prohlížeče, takže cizí odpověď od Googlu nejde podstrčit (login CSRF) ani přehrát.
  */
@@ -73,10 +82,12 @@ export function beginLogin(cfg: GoogleLoginConfig, nowSec = Math.floor(Date.now(
     scope: withCalendar ? `openid email profile ${calendarScope}` : "openid email profile",
     // Běžně vždy nabídnout výběr účtu, aby se tester nepřihlásil omylem jiným účtem z prohlížeče.
     // Se žádostí o Kalendář je účet známý: stačí souhlas, který je nutný pro obnovovací token.
-    prompt: withCalendar ? "consent" : "select_account",
+    // Nové zařízení (pozvánka, zaváděcí správce) vždy nabídne i výběr účtu, ať zadaná adresa nic nepředvybere natvrdo.
+    prompt: withCalendar ? (options.scope && options.scope.kind !== "device" ? "select_account consent" : "consent") : "select_account",
     ...(withCalendar ? { access_type: "offline", include_granted_scopes: "false" } : {}),
-    // Nápověda účtu jen tam, kde je účet jistý: souhlas správce s Kalendářem, nebo zařízení z pozvánky.
-    ...(options.loginHint && (withCalendar || options.scope?.kind === "device" || options.scope?.kind === "invite") ? { login_hint: options.loginHint } : {}),
+    // Nápověda účtu: účet důvěryhodného zařízení, známý správce se souhlasem ke Kalendáři, nebo adresa, kterou
+    // uživatel na novém zařízení sám zadal (route ji nikdy nebere z pozvánky). Výběr účtu Google nepotlačuje.
+    ...(options.loginHint && (withCalendar || options.scope) ? { login_hint: options.loginHint } : {}),
     state,
     nonce,
     code_challenge: createHash("sha256").update(verifier).digest("base64url"),

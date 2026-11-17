@@ -1,5 +1,82 @@
 # Prompt pro další session
 
+**#69 UZAVŘENO K REVIZI (17. 11. 2026, relace session_01HpUirvm4JFbBXo1Yy6bER1, větev `claude/focused-tesla-cw2jdt`).**
+Body (0)–(7) zadání níže hotové. Merge dělá uživatel.
+* (0) ac3ce6d: `personalEventDelivery` rozlišuje `current` / `outdated` / `missing` / `failing`, otisk přes
+  sdílené `desiredEntry` + `eventsWithMinutes` (stejné jako `desiredEvents`), bez Google API. Popisek „Poslední běh
+  synchronizace kalendářů“. Regresní testy v `tests/kalendar-osobni.test.ts` (změna termínu před/po sync, chybějící zápis).
+* (1)–(3) Screenshoty 6 šířek × 8 obrazovek (vstup 3311, Témata, zrušená akce detail+okno, Kalendář simulace i osobní
+  režim přes lokální instanci 3312, Zápisy + okno) prohlédnuté, bez vodorovného posunu. Sonda klávesnice: Enter/Esc,
+  fokus zpět na spouštěč (Zápisy, Navrhnout téma, menu tématu), okno z adresy nechá fokus na stránce (záměr), prázdný
+  a neplatný e-mail na vstupu zastaví nativní validace. Opravy: zrušená akce nenabízí „Vytvořit novou pozvánku“ ani
+  párování (server `requestNewInvite`/`pairWithExisting` odmítá), u zrušené akce „zatím neurčeno“ místo „doplnit…“,
+  okno Nedokončené zápisy pod 520 px tlačítko pod textem (f168660).
+* (4) `docs/cisteni-testovacich-dat.md`: tabulka 6 akcí (jen SELECT) + režim. `CALENDAR_DELIVERY` je šifrovaná, nečetla
+  se; osobní režim doložen nepřímo z DB. Nic nezměněno.
+* (5) lint OK, tsc OK, unit 310/310, build OK, celé e2e 932 passed / 42 skipped / 0 failed (5,3 min).
+**Další krok:** nic bez pokynu. Uživatel: merge #69, pak případně schválit čištění dat podle doc.
+
+**ZADÁNÍ UŽIVATELE PRO UZAVŘENÍ #69 (17. 11. 2026, po 9c4bac1, CI na 9c4bac1 zelené).** Pokračovat na větvi
+`claude/focused-tesla-cw2jdt`, PR #69, nic od začátku. Zákazy: žádný redesign, nová funkce, merge do `main`, úprava
+produkčních dat, skutečné Google pozvánky ani změny konfigurace.
+* (0) OPRAVA: `personalEventDelivery()` (`src/server/calendar/personal.ts`) počítá každý záznam `personalCalendarEntries`
+  jako zapsaný bez ověření `dataHash`. Rozlišit: aktuální zápis / zastaralý (čeká na aktualizaci) / chybějící / chyba
+  synchronizace. Otisk musí vznikat STEJNOU logikou jako `desiredEvents()` (obsah akce, `EVENT_FORMAT`, `guest` =
+  `personalSelfInvite() ? accountEmail : undefined`, zápis z publikovaného zápisu `withMinutes`). Žádný duplicitní
+  algoritmus: vytáhnout z `desiredEvents` sdílenou funkci (např. `desiredEntry(row, withMinutes, guest)` → {data, hash}
+  a `eventsWithMinutes(db)`), použít v obou místech. Bez volání Google API. Popisek „Poslední srovnání“ v
+  `PersonalSyncView` (`SyncPanelView.tsx`) neprokazuje aktuálnost akce: přejmenovat/upravit (např. „Poslední běh
+  synchronizace kalendářů“) nebo odstranit. Regresní test v `tests/kalendar-osobni.test.ts`: zápis po sync = aktuální,
+  změna termínu akce před sync = zastaralý, po `syncPersonalCalendar` = znovu aktuální.
+* (1) screenshoty 320/390/768/1280/1600/1920 skutečně prohlédnout: přihlášení (ostrá 3311 `/vstup?spravce=1`), Témata,
+  zrušená akce (detail + okno), diagnostika Kalendáře, Nedokončené zápisy + okno. (2)+(3) tab/klávesnice, pořadí tlačítek,
+  návrat fokusu po zavření oken, chování při chybě. Opravit jen nalezené.
+* (4) read-only inventura 6 akcí z `docs/cisteni-testovacich-dat.md` v Neon produkce (jen SELECT, bez tokenů a osobních
+  údajů) + režim Kalendáře (CALENDAR_MODE/DELIVERY/ATTENDEES/PERSONAL_NOTIFY) přes Vercel bez dešifrování → tabulka do doc.
+* (5) znovu: dotčené testy, lint, typecheck, unit, build, CELÉ e2e. (6) popis PR #69 podle `.github/pull_request_template.md`
+  s nejnovějšími výsledky + finální report sem. (7) subscribe na PR, zelené CI na posledním commitu → Ready for review.
+  Merge dělá uživatel.
+
+**OPRAVY PŘED MERGE #69 (17. 11. 2026, relace session_01HpUirux5ZWx5eUkrUCJ17V, větev `claude/focused-tesla-cw2jdt`).**
+Uživatel opravy schválil, pokračovat bez ptaní až do ověřeného PR. Merge dělá uživatel.
+* HOTOVO (commit 2b57702, pushnuto): (1)+(2) osobní režim Kalendáře podle evidence: `syncStatus: "personal"` na kartě
+  (`events.ts`), `statusAdvice` → null; `SyncPanel.status "personal"` + `personalDelivery` (`personalEventDelivery` v
+  `src/server/calendar/personal.ts`: publikum, zapsáno z `personal_calendar_entries`, čeká, nepropojeno, chyby po lidech)
+  a `legacyInviteId`; `personalSyncPanel` v `detail.ts` nevolá Google, nepáruje, nenabízí pozvánku. `SyncPanelView`:
+  `PersonalSyncView`. Testy v `tests/kalendar-osobni.test.ts` (3) a `tests/google-calendar.test.ts` (2).
+  (3) `GoogleStart` posílá e-mail `fetch` POST (JSON, stejný původ, 403 jinak) na `/api/google/prihlaseni`, server vrátí
+  URL Googlu (login_hint), klient `location.assign`; GET e-mail z URL nečte; form `method="post"` (bez hydratace nic
+  neuteče do URL). Testy `tests/prvni-prihlaseni.test.ts` (10) + e2e „ručně zadaný e-mail není v žádné URL Wiki“.
+  (6) ukázkový přepis označen u návrhu zápisu, „Pracovní přepis (ukázka)“, `unsupported_fixture` texty (labels, journey, MinutesPeek).
+* Ověřeno na 2b57702: lint OK, typecheck OK, unit 307/307, build OK, CELÉ e2e 932 passed / 42 skipped / 0 failed (4,9 min).
+**Další krok (v tomto pořadí):** (b) screenshoty 320/390/768/1280/1600/1920 (Playwright, `node e2e/server.mjs`, ostrá instance port 3311 `/vstup?spravce=1`;
+ukázka 3310): Témata, zrušená akce detail+okno, technický detail Kalendáře, Nedokončené zápisy + okno; pořadí tlačítek,
+návrat fokusu, klávesnice, chyba; opravit jen nalezené. (c) bod 5: read-only inventura 6 akcí z `docs/cisteni-testovacich-dat.md`
+v Neon produkce (jen SELECT, bez tokenů) + proměnné CALENDAR_* přes Vercel bez dešifrování → tabulka do doc. NIC neměnit.
+(d) popis PR #69 podle šablony s důkazy, subscribe na PR, zelené CI, případně Ready for review. Zapsat sem stav.
+
+**POSLEDNÍ OPRAVY UX, PŘIHLÁŠENÍ A ZÁPISŮ (17. 11. 2026, relace session_01HpUirxUSjYc9wbogeZGpqN, větev `claude/focused-tesla-cw2jdt` z main 80513a1).**
+Rozhodnutí uživatele: e-mail ověřit až po Googlu (bez předkontroly), „Nejžádanější“ nahrazuje „Doporučené“, sekundární řazení
+abecedně + ID, ruční zápis jen jako návrh (`docs/rucni-zapis-navrh.md`).
+* (1) Přihlášení: nové zařízení zobrazí prázdné pole E-mail (`src/app/vstup/GoogleStart.tsx`, navigace přes `location`
+  kvůli CSP). Route nebere `invite.email`, jen ručně zadanou adresu jako `login_hint` (`typedLoginHint`). Nové zařízení se
+  souhlasem ke Kalendáři posílá `prompt=select_account consent`. Ověření identity, PKCE, stav i vazba pozvánky beze změny.
+  Testy: `tests/prvni-prihlaseni.test.ts`, e2e „nové zařízení: prázdné pole E-mail“.
+* (2) Témata: `sortByInterest` a `mostWantedIds` v `src/server/domain/topics.ts` (jen prezentace, `rankTopics` pro plánování
+  beze změny), zelený štítek a pozadí, ostatní řádky teplé `--beige`.
+* (3) Kalendář: místo tlačítka „Stav v Kalendáři“ jen „Opravit v Kalendáři“ při chybě, jinak tichý odkaz „Technické
+  informace“. Panel v detailu je sbalený, pokud není potřeba zásah. Osobní režim: `SyncPanel.personal`, chybějící vazba
+  = „synced“ (bez nabídky pozvánky s e-mailem), text „Pozvánky ani e-maily se neposílají“.
+* (4) Zrušené akce: `lifecycleStatus` + `detailBadges` (dřív stránka detailu u zrušené akce neukázala žádný štítek),
+  nahoře upozornění s důvodem. Testy `tests/stav-akce.test.ts`.
+* (5) Zápisy: bez „Otevřít celou akci“, „Vedoucí neurčen“ + správci „Přiřadit vedoucího“ (Plán s otevřenou akcí), kratší
+  texty, výměna nahrávky sbalená, když zápis existuje. Text u nahrávání: přepis umí jen ukázkovou nahrávku.
+* (7) `docs/cisteni-testovacich-dat.md`: doplněn postup ověření režimu a vazeb pro každou akci. **Nic neprovedeno.**
+* Ověřeno: lint, tsc, unit 299/299, build OK. E2E: viz popis PR. **Neověřeno:** screenshoty na více šířkách, plné e2e,
+  bod 6 (drobnosti) prošel jen částečně (pořadí tlačítek, fokus po zavření nekontrolován).
+**Další krok:** prohlédnout screenshoty (Témata, detail zrušené akce, /vstup?spravce=1, okno zápisu) na 390/1280,
+projít bod 6, plné `npm run e2e`, draft PR připravit k revizi. Read-only ověření 6 akcí podle doc (7) až s pokynem.
+
 **BODY 1–3 (17. 11. 2026, relace session_01HpUiryLTnYTDVdKXExXTxz, větev `claude/awesome-dijkstra-yc1boc`).**
 * (1) Okna akcí hotová (a27f734): bez nápovědy pod „Pro koho“ (`GROUP_HINTS` smazané), bez kroku Kontrola v Přidat
   akci, příjemci pozvánky jen tlumený sbalený řádek (0 příjemců = krátká poznámka, u proběhlé akce nic), návrh bez

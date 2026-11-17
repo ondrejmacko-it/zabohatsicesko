@@ -31,6 +31,8 @@ export async function EventPeek({ user, eventId, preview, previewKey, closeHref 
   const holiday = card.type === "holiday";
   const managing = isOrganizer(user) && !preview;
   const editable = managing && !holiday && detail.form && card.planStatus !== "cancelled";
+  // Zrušenou akci už nikdo nedoplňuje: chybějící údaj je jen „zatím neurčeno“, ne výzva.
+  const fillable = managing && card.planStatus !== "cancelled";
   const status = primaryStatus(card);
   // Návrh: pás už říká, že ho kolegové nevidí, a chybějící údaje jsou vidět přímo v prázdných polích.
   const advice = managing && card.planStatus !== "draft" ? statusAdvice(card) : null;
@@ -69,9 +71,12 @@ export async function EventPeek({ user, eventId, preview, previewKey, closeHref 
         )}
       </>
     );
+    // Funkční Kalendář se v okně neukazuje. Oprava je odkaz jen při chybě, technické informace jsou v nabídce.
     const links = card.past
       ? [{ href: `${fullHref}#nahravka`, label: "Nahrávka a zápis" }]
-      : [{ href: fullHref, label: "Stav v Kalendáři" }];
+      : card.syncStatus === "attention"
+        ? [{ href: `${fullHref}#kalendar`, label: "Opravit v Kalendáři" }]
+        : [{ href: fullHref, label: "Technické informace" }];
     return (
       <EventWindow
         title={card.label}
@@ -94,9 +99,11 @@ export async function EventPeek({ user, eventId, preview, previewKey, closeHref 
   const links = [
     ...(minutesReady ? [{ href: `/vzdelavani/zapisy?zapis=${encodeURIComponent(card.id)}`, label: "Zobrazit zápis" }] : []),
     ...(handlesRecording ? [{ href: `${fullHref}#nahravka`, label: "Nahrávka a zápis" }] : []),
-    // Zrušená akce: správce si na celé stránce ověří, že storno odešlo i do Kalendáře.
-    ...(managing && !holiday ? [{ href: fullHref, label: "Stav v Kalendáři" }] : []),
+    // Zrušení do Kalendáře nedošlo: správce dostane opravu. Jinak se technický stav v okně neukazuje.
+    ...(managing && !holiday && card.syncStatus === "attention" ? [{ href: `${fullHref}#kalendar`, label: "Opravit v Kalendáři" }] : []),
   ];
+  // Technické informace jsou pro správce jen tichý odkaz, nikdy hlavní tlačítko okna.
+  const technical = managing && !holiday && links.length === 0;
 
   return (
     <RouteModal title={card.label} closeHref={closeHref}>
@@ -112,11 +119,11 @@ export async function EventPeek({ user, eventId, preview, previewKey, closeHref 
           <>
             <div>
               <dt>Téma</dt>
-              <dd>{card.topicTitle ?? <Todo>{missingText(managing, "téma")}</Todo>}</dd>
+              <dd>{card.topicTitle ?? <Todo>{missingText(fillable, "téma")}</Todo>}</dd>
             </div>
             <div>
               <dt>Vede</dt>
-              <dd>{detail.leadName ?? <Todo>{missingText(managing, "vedoucího")}</Todo>}</dd>
+              <dd>{detail.leadName ?? <Todo>{missingText(fillable, "vedoucího")}</Todo>}</dd>
             </div>
           </>
         )}
@@ -126,6 +133,11 @@ export async function EventPeek({ user, eventId, preview, previewKey, closeHref 
         </div>
       </dl>
       {holiday && <p className="hint">Svátek je v plánu jen pro přehled. Nedá se přesunout ani upravit a do Kalendáře se neposílá.</p>}
+      {technical && (
+        <p className="small peek-tech">
+          <Link href={fullHref}>Technické informace</Link>
+        </p>
+      )}
       {links.length > 0 && (
         <div className="dialog-actions peek-actions">
           {links.map((link, index) => (

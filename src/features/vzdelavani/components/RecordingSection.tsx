@@ -93,7 +93,7 @@ export function RecordingSection({ eventId, eventLabel, panel }: { eventId: stri
         </span>
       </div>
       <p className="small muted">
-        Nahrávku a přepis vidí vedoucí akce, pověřený kontrolor a správce. Kolegové uvidí až zveřejněný zápis.
+        Kolegové uvidí až zveřejněný zápis.
       </p>
 
       {recording && (
@@ -133,25 +133,34 @@ export function RecordingSection({ eventId, eventLabel, panel }: { eventId: stri
                 <p className="notice">Kolegové zatím vidí zápis z původní nahrávky, dokud nezveřejníte tento.</p>
               )}
               <p className="notice">
-                Návrh zápisu vytvořený z přepisu. Doporučená šablona: {TEMPLATE_LABELS[minutes.detectedTemplate]}.
-                Zkontrolujte jej, opravte a zveřejněte.
+                Návrh z ukázkového přepisu (šablona {TEMPLATE_LABELS[minutes.detectedTemplate]}). Přepis je zatím jen demonstrace
+                nad ukázkovou nahrávkou, ne přepis skutečné schůzky. Zkontrolujte návrh a zveřejněte.
               </p>
               <MinutesEditor eventId={eventId} minutesId={minutes.id} version={minutes.version} content={minutes.content} />
             </>
           ) : (
             <>
-              <p className="notice notice-ok">Zápis je zveřejněný pro publikum akce. Vrátit ho do návrhu jde v nabídce ⋯ u nadpisu.</p>
+              <p className="notice notice-ok">Zveřejněno pro publikum akce.</p>
               <MinutesView content={minutes.content} />
             </>
           )}
           <details>
-            <summary>Pracovní přepis</summary>
+            <summary>Pracovní přepis (ukázka)</summary>
             <p className="transcript">{minutes.transcript}</p>
           </details>
         </div>
       )}
 
-      {state !== "processing" && <UploadForm eventId={eventId} eventLabel={eventLabel} replacing={recording !== null} />}
+      {/* Když už je zápis rozpracovaný, je hlavní krok úprava. Výměna nahrávky je sbalená. */}
+      {state !== "processing" &&
+        (minutes ? (
+          <details className="fold">
+            <summary>Nahradit nahrávku</summary>
+            <UploadForm eventId={eventId} eventLabel={eventLabel} replacing />
+          </details>
+        ) : (
+          <UploadForm eventId={eventId} eventLabel={eventLabel} replacing={recording !== null} />
+        ))}
     </section>
   );
 }

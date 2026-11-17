@@ -1840,12 +1840,14 @@ a.brief-link:hover {
 
 /* Na telefonu jde tlačítko úkolu pod text, jinak by text zbyl na úzký sloupec. */
 @media (max-width: 520px) {
-  li.brief-row {
+  li.brief-row,
+  .picker-list .brief-row {
     flex-wrap: wrap;
     gap: 8px;
   }
 
-  li.brief-row .brief-main {
+  li.brief-row .brief-main,
+  .picker-list .brief-row .brief-main {
     flex-basis: 100%;
   }
 }
@@ -1991,10 +1993,16 @@ a.brief-link:hover {
 .topic-list {
   margin: 0;
   padding: 0;
+  overflow: hidden;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
   list-style: none;
+}
+
+/* Aktivní témata mají jemné teplé podbarvení, nejžádanější decentně zelené. Archiv zůstává bílý. */
+.topic-list:not(.archived-topics) > .topic-row {
+  background: var(--beige);
 }
 
 .topic-row {
@@ -2009,9 +2017,10 @@ a.brief-link:hover {
   border-top: 1px solid var(--line);
 }
 
-/* Doporučené téma: jen okrový pruh vlevo a štítek, bez dalšího podbarvení. */
-.topic-row.topic-recommended {
-  box-shadow: inset 3px 0 0 var(--ochre);
+/* Nejžádanější téma: zelený pruh vlevo a jemně zelené pozadí. */
+.topic-list > .topic-row.topic-wanted {
+  background: color-mix(in srgb, var(--ok-soft) 70%, var(--surface));
+  box-shadow: inset 3px 0 0 var(--ok);
 }
 
 .topic-main {
@@ -2868,4 +2877,22 @@ p.cal-status {
 
 .invitees[open] > summary {
   margin-bottom: 4px;
+}
+
+/* Výběr zápisu: přiřazení vedoucího je tichý odkaz pod řádkem, ne další tlačítko. */
+.picker-assign {
+  display: inline-block;
+  margin: 0 0 8px 16px;
+}
+
+.peek-tech {
+  margin: 12px 0 0;
+}
+
+.tech-fold {
+  margin-top: 16px;
+}
+
+.cancel-notice {
+  margin: 0 0 16px;
 }
