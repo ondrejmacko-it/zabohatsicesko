@@ -9,7 +9,7 @@ import { EXTRAORDINARY_TYPES, GROUP_HINTS, GROUP_LABELS, TYPE_LABELS } from "@/l
 import { isoWeekday } from "@/lib/time";
 import { EVENT_TYPES, GROUPS } from "@/lib/types";
 import { defaultAudience } from "@/server/domain/generation";
-import { interestedLabel, topicFitsAudience } from "@/server/domain/topics";
+import { interestedLabel, isRecommendable, topicFitsAudience } from "@/server/domain/topics";
 import type { InviteRecipients } from "@/server/services/calendar-status";
 import type { EventFormValues } from "@/server/services/detail";
 import type { ChangeImpact } from "@/server/services/impact";
@@ -31,7 +31,7 @@ function fieldName(field: FormField): string {
 }
 
 export type Person = { id: string; name: string };
-export type TopicOption = { name: string; audience: string; reason: string; interestCount: number };
+export type TopicOption = { name: string; audience: string; reason: string; interestCount: number; nextPlanned?: string | null };
 
 type Props = {
   mode: "create" | "edit";
@@ -148,7 +148,7 @@ function EventForm({ mode, id, revision, initial, published, people, topics, inv
   };
   const weekday = /^\d{4}-\d{2}-\d{2}$/.test(values.date) ? isoWeekday(values.date) : null;
   const unusualDay = !isHoliday && planDays !== undefined && planDays.length > 0 && weekday !== null && !planDays.includes(weekday);
-  const suggestions = topics.filter((t) => topicFitsAudience(t.audience, values.audience)).slice(0, 3);
+  const suggestions = topics.filter((t) => isRecommendable(t) && topicFitsAudience(t.audience, values.audience)).slice(0, 3);
 
   useEffect(() => {
     if (!dirty) return;

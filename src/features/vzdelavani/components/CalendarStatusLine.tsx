@@ -15,6 +15,12 @@ const PROBLEMS: Record<NonNullable<CalendarStatus["problem"]>, string> = {
 };
 
 /** Jeden řádek se stavem Kalendáře pro správce: kdo je propojený, kam se zapisuje a kdo dostává pozvánky. */
+/** Platnost propojení Kalendáře končí do dvou dnů. */
+export function calendarExpiresSoon(expiresAt: string | null | undefined, now: Date): boolean {
+  if (!expiresAt) return false;
+  return Math.ceil((new Date(expiresAt).getTime() - now.getTime()) / DAY_MS) <= 2;
+}
+
 export function CalendarStatusLine({ status, now, detailed }: { status: CalendarStatus; now: Date; detailed?: boolean }) {
   if (status.mode === "simulation") {
     return (
@@ -41,8 +47,7 @@ export function CalendarStatusLine({ status, now, detailed }: { status: Calendar
       </div>
     );
   }
-  const daysLeft = connection.expiresAt ? Math.ceil((new Date(connection.expiresAt).getTime() - now.getTime()) / DAY_MS) : null;
-  const expiring = daysLeft !== null && daysLeft <= 2;
+  const expiring = calendarExpiresSoon(connection.expiresAt, now);
   const accounts = new Set(GROUPS.flatMap((g) => status.recipients[g].map((r) => r.email)));
   return (
     <div className={`cal-status${expiring ? " cal-status-warn" : ""}`} role="status">

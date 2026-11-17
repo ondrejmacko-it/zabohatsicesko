@@ -27,7 +27,7 @@ export function UploadForm({ eventId, eventLabel, replacing }: { eventId: string
           required
           onChange={(e) => setFile(e.target.files?.[0] ?? null)}
         />
-        <span className="field-hint">WAV, MP3 nebo M4A, nejvýš 4 MB a 15 minut. Soubor se uloží soukromě. Ukázkovou nahrávku najdete v nabídce ⋯ u nadpisu.</span>
+        <span className="field-hint">WAV, MP3 nebo M4A, nejvýš 4 MB a 15 minut. Soubor se uloží soukromě. Přepis je zatím jen ukázka: návrh zápisu vytvoří z ukázkové nahrávky (nabídka ⋯ u nadpisu), jiný soubor nepřepíše.</span>
       </label>
       {file && (
         <p className={tooLarge ? "notice notice-danger" : "notice"}>

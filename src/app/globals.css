@@ -344,6 +344,25 @@ a.nav-item:hover {
   font-size: 19px;
 }
 
+/* Správa: sbalený blok Kalendáře a technického stavu. Nadpis zůstává nadpisem i v souhrnu. */
+.admin-tech > summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  list-style-position: inside;
+}
+
+.admin-tech > summary h2 {
+  display: inline;
+  margin: 0;
+  font-size: 19px;
+}
+
+.admin-tech[open] > summary {
+  margin-bottom: 14px;
+}
+
 /* Hlavička sekce s nadpisem a jednou akcí vpravo (např. „Celý plán“). */
 .section-head {
   margin-bottom: 14px;
