@@ -1,5 +1,21 @@
 # Prompt pro další session
 
+**#69 UZAVŘENO K REVIZI (17. 11. 2026, relace session_01HpUirvm4JFbBXo1Yy6bER1, větev `claude/focused-tesla-cw2jdt`).**
+Body (0)–(7) zadání níže hotové. Merge dělá uživatel.
+* (0) 8e8a6bb… viz `git log`: `personalEventDelivery` rozlišuje `current` / `outdated` / `missing` / `failing`, otisk přes
+  sdílené `desiredEntry` + `eventsWithMinutes` (stejné jako `desiredEvents`), bez Google API. Popisek „Poslední běh
+  synchronizace kalendářů“. Regresní testy v `tests/kalendar-osobni.test.ts` (změna termínu před/po sync, chybějící zápis).
+* (1)–(3) Screenshoty 6 šířek × 8 obrazovek (vstup 3311, Témata, zrušená akce detail+okno, Kalendář simulace i osobní
+  režim přes lokální instanci 3312, Zápisy + okno) prohlédnuté, bez vodorovného posunu. Sonda klávesnice: Enter/Esc,
+  fokus zpět na spouštěč (Zápisy, Navrhnout téma, menu tématu), okno z adresy nechá fokus na stránce (záměr), prázdný
+  a neplatný e-mail na vstupu zastaví nativní validace. Opravy: zrušená akce nenabízí „Vytvořit novou pozvánku“ ani
+  párování (server `requestNewInvite`/`pairWithExisting` odmítá), u zrušené akce „zatím neurčeno“ místo „doplnit…“,
+  okno Nedokončené zápisy pod 520 px tlačítko pod textem.
+* (4) `docs/cisteni-testovacich-dat.md`: tabulka 6 akcí (jen SELECT) + režim. `CALENDAR_DELIVERY` je šifrovaná, nečetla
+  se; osobní režim doložen nepřímo z DB. Nic nezměněno.
+* (5) lint OK, tsc OK, unit 310/310, build OK, celé e2e 932 passed / 42 skipped / 0 failed (5,3 min).
+**Další krok:** nic bez pokynu. Uživatel: merge #69, pak případně schválit čištění dat podle doc.
+
 **ZADÁNÍ UŽIVATELE PRO UZAVŘENÍ #69 (17. 11. 2026, po 9c4bac1, CI na 9c4bac1 zelené).** Pokračovat na větvi
 `claude/focused-tesla-cw2jdt`, PR #69, nic od začátku. Zákazy: žádný redesign, nová funkce, merge do `main`, úprava
 produkčních dat, skutečné Google pozvánky ani změny konfigurace.
