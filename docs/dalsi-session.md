@@ -8,8 +8,10 @@
   Test/Něco/Ahoj/Ahojda/Tos/Ahojky (+ Tym A?) a 6 zveřejněných akcí s Kalendářem. **Nic nesmazáno, čeká na schválení.**
   Seed ukázky je profesionální a v ostré Wiki zakázaný, beze změny.
 * (3) lint, tsc, unit 279/279 OK; screenshoty 6 šířek prohlédnuté, #mesic 0 px od středu (320/390: −0,01 px),
-  bez vodorovného posunu. Kompletní e2e: viz PR.
-**Další krok:** výsledek kompletního e2e, draft PR do main, subscribe, zelené CI, shrnutí uživateli.
+  bez vodorovného posunu. Kompletní e2e 918 passed / 42 skipped / 0 failed (po opravě axe štítků filtrů, 9644b40).
+* Draft PR [#68](https://github.com/ondrejmacko-it/zabohatsicesko/pull/68) do main, CI zelené, Vercel preview Ready.
+**Další krok:** nic bez pokynu. Uživatel dá #68 Ready for review a sloučí. Čištění produkčních dat jen po schválení
+podle `docs/cisteni-testovacich-dat.md` (otázky tam).
 
 **URGENTNÍ UX/UI OPRAVY (17. 11. 2026, relace session_01HpUiryXvc6ixD5KrHNTanQ, větev `claude/awesome-dijkstra-yc1boc` z main 6eb778e).**
 Hotovo (jedna větev, bez PR – uživatel PR zatím nechtěl):
