@@ -23,7 +23,14 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm audit --audit-level=moderate
+      # Blokující: produkční závislosti bez jakékoli výjimky.
+      - name: Audit produkčních závislostí (blokuje merge)
+        run: npm audit --omit=dev --audit-level=moderate
+      # Blokující: všechny závislosti. Projde jen schválená a platná výjimka ze scripts/audit-vyjimky.json
+      # (GHSA-fc5q-39xc-vjpf, issue #66), ta se ukáže jako varování. Jiný nález od moderate i chyba auditu
+      # CI zastaví. Viz docs/bezpecnost-zavislosti.md.
+      - name: Plný audit se schválenými výjimkami (blokuje merge)
+        run: npx tsx scripts/audit-plny.ts
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
