@@ -2661,35 +2661,17 @@ p.cal-status {
   color: var(--ochre-dark);
 }
 
-/* Hosté pozvánky v dialogu akce: počet jako hlavní údaj, jména a vysvětlení tlumeně. */
-.invitees {
-  display: grid;
-  gap: 4px;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-}
-
-.invitees-head {
-  display: grid;
-  gap: 2px;
+/* Příjemci pozvánky v okně akce: jen tlumený sbalený řádek, jména až po rozbalení. */
+.invitees,
+.invitees-none {
   margin: 0;
+  font-size: 13px;
+  color: var(--muted);
 }
 
 .invitees-names {
   font-size: 13px;
   color: var(--muted);
-}
-
-.invitees-more {
-  display: inline;
-}
-
-.invitees-more summary {
-  display: inline;
-  margin-left: 4px;
-  cursor: pointer;
-  text-decoration: underline;
 }
 
 .suggestion-head {
@@ -2826,23 +2808,6 @@ p.cal-status {
 
 .form-step + .form-step {
   margin-top: 2px;
-}
-
-.form-review {
-  display: grid;
-  gap: 4px;
-  padding: 12px 16px;
-  border: 1px dashed var(--line-strong);
-  border-radius: var(--radius-sm);
-}
-
-.form-review h3 {
-  margin: 0 0 4px;
-  font-size: 15px;
-}
-
-.form-review p {
-  margin: 0;
 }
 
 .form-term {

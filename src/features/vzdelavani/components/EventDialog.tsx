@@ -6,8 +6,8 @@ import { ActionMessage } from "@/components/ActionForm";
 import { flash } from "@/components/FlashMessage";
 import { Icon } from "@/components/Icon";
 import { Modal } from "@/components/Modal";
-import { GROUP_HINTS, GROUP_LABELS, TYPE_LABELS } from "@/lib/labels";
-import { formatDate, isValidDateKey, isoWeekday } from "@/lib/time";
+import { GROUP_LABELS, TYPE_LABELS } from "@/lib/labels";
+import { isoWeekday } from "@/lib/time";
 import { EVENT_TYPES, GROUPS } from "@/lib/types";
 import { defaultAudience } from "@/server/domain/generation";
 import { interestedLabel, isRecommendable, topicFitsAudience } from "@/server/domain/topics";
@@ -119,7 +119,7 @@ export function EventWindow({ title, closeHref, intro, menu, ...props }: Omit<Fo
 /** Pole, jejichž změna zasáhne pozvané. Přesný dopad počítá a potvrzení ověřuje server. */
 const SIGNIFICANT: Array<keyof EventFormValues> = ["label", "topicTitle", "date", "endDate", "startTime", "endTime", "audience"];
 
-const WEEKDAY_NAMES = ["", "pondělí", "úterý", "středu", "čtvrtek", "pátek", "sobotu", "neděli"];
+const ON_WEEKDAY = ["", "V pondělí", "V úterý", "Ve středu", "Ve čtvrtek", "V pátek", "V sobotu", "V neděli"];
 
 const peopleCount = (n: number) => (n === 1 ? "1 člověka" : `${n} lidí`);
 
@@ -350,7 +350,6 @@ function EventForm({
           </option>
         ))}
       </select>
-      <span className="field-hint">{GROUP_HINTS[values.audience]}</span>
     </label>
   );
   const termFields = (
@@ -372,8 +371,7 @@ function EventForm({
       {termLocked && <p className="field-hint span-2">Akce už proběhla, termín zůstává.</p>}
       {unusualDay && !termLocked && (
         <p className="notice notice-danger span-2" role="alert">
-          <strong>Vybrali jste {WEEKDAY_NAMES[weekday!]}.</strong> V tento den se vzdělávání běžně nekoná, akce se ukáže jako řádek u svého týdne a v
-          Seznamu.
+          <strong>{ON_WEEKDAY[weekday!]} se vzdělávání běžně nekoná.</strong> V Plánu bude akce jako řádek pod týdnem.
         </p>
       )}
     </>
@@ -418,8 +416,6 @@ function EventForm({
     </details>
   );
 
-  const leadName = people.find((p) => p.id === values.leadId)?.name;
-  const when = values.startTime && values.endTime ? whenLabel(values, multiDay) : null;
   const busy = pending || checking;
   const publishLabel = published ? "Zveřejnit změny" : "Zveřejnit";
 
@@ -458,19 +454,6 @@ function EventForm({
             </div>
             {moreFields}
           </fieldset>
-          <section className="form-step form-review" aria-labelledby="kontrola-akce">
-            <h3 id="kontrola-akce">
-              <span className="step-no">3</span> Kontrola
-            </h3>
-            <p>
-              <strong>{values.label.trim() || TYPE_LABELS[values.type]}</strong>
-              {values.topicTitle.trim() && <>: {values.topicTitle.trim()}</>}
-            </p>
-            <p className="small">
-              {when ?? "Termín zatím není vyplněný"} · {GROUP_LABELS[values.audience]} · {leadName ? `Vede ${leadName}` : "bez vedoucího"}
-            </p>
-            {missing.length > 0 && <p className="small muted">Chybí {missing.join(" a ")}. Návrh jde uložit i tak, zveřejnění se zeptá.</p>}
-          </section>
         </>
       ) : (
         <fieldset className="form-main">
@@ -553,41 +536,32 @@ function EventForm({
   );
 }
 
-/** Termín pro souhrn: místní datum a čas tak, jak je správce zadal (bez převodu časové zóny prohlížeče). */
-function whenLabel(values: EventFormValues, multiDay: boolean): string | null {
-  if (!isValidDateKey(values.date)) return null;
-  const last = multiDay && values.endDate && isValidDateKey(values.endDate) && values.endDate !== values.date ? ` až ${formatDate(values.endDate)}` : "";
-  return `${formatDate(values.date)}${last}, ${values.startTime}–${values.endTime}`;
-}
-
 const SHOWN_GUESTS = 8;
 
 function guestCountLabel(count: number): string {
-  if (count === 0) return "Pozvánku nedostane nikdo";
   if (count === 1) return "1 příjemce pozvánky";
   if (count < 5) return `${count} příjemci pozvánky`;
   return `${count} příjemců pozvánky`;
 }
 
-/** Kdo dostane pozvánku podle vybraného publika. V testovacím režimu jen povolené adresy. */
+/**
+ * Kdo dostane pozvánku podle vybraného publika. Počet je jen sbalený řádek; bez příjemců stačí krátká
+ * poznámka, protože zveřejnění pak nikoho nepozve. V testovacím režimu jen povolené adresy.
+ */
 function InviteeList({ invite, audience }: { invite: InviteRecipients; audience: EventFormValues["audience"] }) {
   const guests = invite.recipients[audience];
-  const group = invite.audienceRecipients[audience];
+  if (guests.length === 0) return <p className="field-hint invitees-none">Ze skupiny {GROUP_LABELS[audience]} zatím pozvánku nedostane nikdo.</p>;
   const names = guests.map((g) => g.name || g.email);
   const shown = names.slice(0, SHOWN_GUESTS);
   const rest = names.slice(SHOWN_GUESTS);
   return (
     <details className="invitees" aria-live="polite">
-      <summary className="invitees-head">
-        <strong>{guestCountLabel(guests.length)}</strong>
-        {invite.attendeeSource === "allowlist" && <span className="field-hint">Testovací režim: jen povolené adresy, ne celá skupina ({group.length} lidí).</span>}
-      </summary>
-      {guests.length > 0 && (
-        <div className="invitees-names">
-          {shown.join(", ")}
-          {rest.length > 0 && <> a další {rest.length}</>}
-        </div>
-      )}
+      <summary className="invitees-head">{guestCountLabel(guests.length)}</summary>
+      <div className="invitees-names">
+        {shown.join(", ")}
+        {rest.length > 0 && <> a další {rest.length}</>}
+        {invite.attendeeSource === "allowlist" && <span className="field-hint"> · testovací režim, jen povolené adresy</span>}
+      </div>
     </details>
   );
 }

@@ -43,11 +43,9 @@ export function missingDetails(card: EventCard, managing: boolean): string[] {
  */
 export function statusAdvice(card: EventCard): string | null {
   if (card.planStatus === "cancelled" || card.type === "holiday") return null;
-  if (card.planStatus === "draft") {
-    const missing = [!card.topicTitle && "téma", !card.leadName && "vedoucí"].filter(Boolean).join(" a ");
-    return missing ? `Návrh vidíte jen vy. Chybí ${missing}.` : "Návrh vidíte jen vy.";
-  }
-  if (card.syncStatus === "attention") return "Pozvánka v Kalendáři neodpovídá Wiki. Opravu najdete níže v části Google Kalendář.";
+  // Chybějící téma a vedoucího ukazují samotná pole („Doplňte téma“), rada je neopakuje.
+  if (card.planStatus === "draft") return "Kolegové návrh zatím nevidí.";
+  if (card.syncStatus === "attention") return "Pozvánka v Kalendáři neodpovídá Wiki. Oprava je v části Google Kalendář.";
   // Rozpracovaný návrh změny má v detailu vlastní upozornění s tlačítky.
   if (card.unpublishedChanges) return null;
   if (card.syncStatus === "pending") return "Změna se posílá do Kalendáře.";
