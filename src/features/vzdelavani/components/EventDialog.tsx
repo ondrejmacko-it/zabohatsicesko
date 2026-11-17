@@ -369,7 +369,7 @@ function EventForm({
   );
   const moreFields = (
     <details className="more-settings" open={moreOpen} onToggle={(e) => setMoreOpen(e.currentTarget.open)}>
-      <summary>Další možnosti</summary>
+      <summary>Další údaje</summary>
       <div className="form-grid">
         {mode === "edit" && typeField}
         {!labelInMain && labelField}

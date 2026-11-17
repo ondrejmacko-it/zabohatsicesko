@@ -2633,9 +2633,10 @@ p.cal-status {
   grid-template-columns: minmax(0, 1.4fr) repeat(2, minmax(0, 1fr));
 }
 
-@media (max-width: 560px) {
-  .form-term {
-    grid-template-columns: minmax(0, 1fr);
+/* Na úzkém okně: datum přes celou šířku, Od a Do vedle sebe pod ním. */
+@container (min-width: 17rem) and (max-width: 34rem) {
+  .event-form .form-term > :first-child {
+    grid-column: 1 / -1;
   }
 }
 

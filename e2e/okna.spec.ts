@@ -90,10 +90,12 @@ test.describe("okna správce", () => {
     await page.getByRole("button", { name: "Přidat akci" }).click();
     const opened = dialog(page, "Přidat akci");
     await opened.getByLabel("Typ").selectOption("other");
-    await opened.getByLabel("Název", { exact: true }).fill("Návštěva partnera z e2e");
+    await opened.getByLabel("Název akce", { exact: true }).fill("Návštěva partnera z e2e");
     await opened.getByLabel("Datum").fill("2027-06-15");
-    await opened.getByRole("button", { name: "Uložit návrh" }).click();
-    await page.waitForURL(/\/vzdelavani\/akce\//);
+    await opened.getByRole("button", { name: "Uložit jako návrh" }).click();
+    // Nová akce se ukáže v Plánu v měsíci, kam patří. Žádná mezistránka.
+    await page.waitForURL(/\/vzdelavani\/harmonogram\?mesic=2027-06/);
+    await expect(opened).toBeHidden();
     await expect(page.getByRole("status").filter({ hasText: "Návrh je uložený. Kolegové ho zatím nevidí, nic se neodeslalo." })).toBeVisible();
   });
 
@@ -104,17 +106,24 @@ test.describe("okna správce", () => {
     await checkDialog(page, "Pravidelný týden");
   });
 
-  test("Upravit akci v detailu", async ({ page }) => {
+  test("Upravit akci z detailu otevře okno akce v Plánu", async ({ page }) => {
     await page.goto("/vzdelavani/akce/ev-11-5");
     await settle(page);
-    await page.getByRole("button", { name: "Upravit", exact: true }).click();
-    await checkDialog(page, "Upravit akci");
+    await page.getByRole("link", { name: "Upravit akci", exact: true }).click();
+    await expect(page).toHaveURL(/harmonogram\?mesic=2026-11&akce=ev-11-5/);
+    const win = dialog(page, "Setkání týmu");
+    await expect(win).toBeVisible();
+    // Proběhlá akce: údaje jdou opravit, termín zůstává.
+    await expect(win.getByLabel("Datum", { exact: true })).toHaveAttribute("readonly", "");
+    await expect(win.getByRole("button", { name: "Zveřejnit změny" })).toBeDisabled();
+    await expect(win.getByText("Podrobnosti akce")).toHaveCount(0);
+    await checkDialog(page, "Setkání týmu");
   });
 
   test("Zrušit akci z Dalších možností", async ({ page }) => {
-    await page.goto("/vzdelavani/akce/ev-11-5");
+    await page.goto("/vzdelavani/harmonogram?akce=ev-11-5");
     await settle(page);
-    await openMenuItem(page, page.getByRole("button", { name: "Další možnosti", exact: true }), "Zrušit akci…");
+    await openMenuItem(page, dialog(page, "Setkání týmu").getByRole("button", { name: "Další možnosti", exact: true }), "Zrušit akci…");
     await checkDialog(page, "Zrušit akci");
   });
 
