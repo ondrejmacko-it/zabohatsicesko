@@ -6,7 +6,9 @@ import {
   beginAuthorization,
   needsCalendarConnection,
   clearAccessTokenCache,
+  calendarLoginHint,
   completeAuthorization,
+  isAllowedCalendarAccount,
   connectionStatus,
   disconnect,
   storedAccessToken,
@@ -217,7 +219,11 @@ describe("adaptér Google Kalendáře (napodobené HTTP)", () => {
   });
 });
 
+const idTokenFor = (email: string, aud: string, verified = true) =>
+  `x.${Buffer.from(JSON.stringify({ email, email_verified: verified, aud })).toString("base64url")}.x`;
+
 const ENV = {
+  GOOGLE_ORGANIZER_EMAIL: "organizator.test@example.com",
   CALENDAR_MODE: "google-test",
   GOOGLE_OAUTH_CLIENT_ID: "test-client.apps.example",
   GOOGLE_OAUTH_CLIENT_SECRET: "test-client-secret",
@@ -306,16 +312,74 @@ describe("testovací režim Google Kalendáře ve Wiki (napodobené HTTP)", () =
 
   test("bez oprávnění ke Kalendáři nebo bez obnovovacího tokenu se nic neuloží", async () => {
     const db = await getDb();
+    const cfg = googleCalendarConfig()!;
+    const id_token = idTokenFor("organizator.test@example.com", cfg.clientId);
     const respond = (body: unknown) =>
       (async () => new Response(JSON.stringify(body), { status: 200 })) as unknown as typeof fetch;
     const input = { code: "valid-code", verifier: "v", userId: organizer.id };
-    const cfg = googleCalendarConfig()!;
-    expect(await completeAuthorization(db, cfg, input, respond({ access_token: "a", refresh_token: "r", scope: "openid email" }))).toBe("missing_scope");
+    expect(await completeAuthorization(db, cfg, input, respond({ access_token: "a", refresh_token: "r", scope: "openid email", id_token }))).toBe("missing_scope");
     expect(
-      await completeAuthorization(db, cfg, input, respond({ access_token: "a", scope: "https://www.googleapis.com/auth/calendar.events" })),
+      await completeAuthorization(db, cfg, input, respond({ access_token: "a", scope: "https://www.googleapis.com/auth/calendar.events", id_token })),
     ).toBe("no_refresh_token");
     expect(await completeAuthorization(db, cfg, { ...input, code: "spatny" })).toBe("exchange_failed");
     expect(await connectionStatus(db)).toBeNull();
+  });
+
+  test("propojit smí jen účet organizátora podle ověřeného ID tokenu, jiný účet se zneplatní a neuloží", async () => {
+    const db = await getDb();
+    const cfg = googleCalendarConfig()!;
+    const input = { code: "valid-code", verifier: "v", userId: organizer.id };
+    const revoked: string[] = [];
+    const respond = (body: Record<string, unknown>) =>
+      (async (url: URL | string, init?: RequestInit) => {
+        if (String(url).includes("/revoke")) {
+          revoked.push(new URLSearchParams(String(init?.body)).get("token") ?? "");
+          return new Response("{}", { status: 200 });
+        }
+        return new Response(JSON.stringify({ access_token: "a", refresh_token: "r-osobni", scope: "openid email https://www.googleapis.com/auth/calendar.events", ...body }), { status: 200 });
+      }) as unknown as typeof fetch;
+    // Osobní účet správce, neověřený e-mail, token pro jiného klienta, chybějící ID token.
+    for (const id_token of [
+      idTokenFor("spravce.osobni@example.com", cfg.clientId),
+      idTokenFor("organizator.test@example.com", cfg.clientId, false),
+      idTokenFor("organizator.test@example.com", "cizi-klient"),
+      undefined,
+    ]) {
+      expect(await completeAuthorization(db, cfg, input, respond({ id_token }))).toBe("wrong_account");
+    }
+    expect(revoked).toEqual(["r-osobni", "r-osobni", "r-osobni", "r-osobni"]);
+    expect(await connectionStatus(db)).toBeNull();
+    // Velikost písmen v adrese nehraje roli.
+    expect(await completeAuthorization(db, cfg, input, respond({ id_token: idTokenFor("Organizator.Test@Example.com", cfg.clientId) }))).toBe("connected");
+    expect((await connectionStatus(db))?.accountEmail).toBe("organizator.test@example.com");
+    await disconnect(db);
+  });
+
+  test("režim organizátora: osobní účet správce se při přihlášení nepropojí a Google nabídne účet organizátora", () => {
+    const cfg = googleCalendarConfig()!;
+    expect(isAllowedCalendarAccount(cfg, "spravce.osobni@example.com")).toBe(false);
+    expect(isAllowedCalendarAccount(cfg, null)).toBe(false);
+    expect(isAllowedCalendarAccount(cfg, "organizator.test@example.com")).toBe(true);
+    expect(calendarLoginHint(cfg, "spravce.osobni@example.com")).toBe("organizator.test@example.com");
+    // Osobní režim: kdo se přihlásil, propojuje svůj účet.
+    const personal = { ...cfg, organizerEmail: null };
+    expect(isAllowedCalendarAccount(personal, "spravce.osobni@example.com")).toBe(true);
+    expect(calendarLoginHint(personal, "spravce.osobni@example.com")).toBe("spravce.osobni@example.com");
+  });
+
+  test("bez GOOGLE_ORGANIZER_EMAIL v režimu organizátora konfigurace není úplná a pozvánky se neposílají", () => {
+    vi.stubEnv("GOOGLE_ORGANIZER_EMAIL", "");
+    expect(googleCalendarConfigProblems()).toEqual(["GOOGLE_ORGANIZER_EMAIL"]);
+    expect(googleCalendarConfig()).toBeNull();
+    vi.stubEnv("GOOGLE_ORGANIZER_EMAIL", "organizator");
+    expect(googleCalendarConfigProblems()).toEqual(["GOOGLE_ORGANIZER_EMAIL musí být celá adresa"]);
+    // Osobní režim adresu organizátora nepotřebuje.
+    vi.stubEnv("CALENDAR_DELIVERY", "personal");
+    vi.stubEnv("GOOGLE_ORGANIZER_EMAIL", "");
+    expect(googleCalendarConfigProblems()).toEqual([]);
+    expect(googleCalendarConfig()?.organizerEmail).toBeNull();
+    vi.stubEnv("CALENDAR_DELIVERY", "");
+    vi.stubEnv("GOOGLE_ORGANIZER_EMAIL", ENV.GOOGLE_ORGANIZER_EMAIL);
   });
 
   test("odvolaný přístup u Googlu odpojí integraci a synchronizace žádá znovupřipojení", async () => {

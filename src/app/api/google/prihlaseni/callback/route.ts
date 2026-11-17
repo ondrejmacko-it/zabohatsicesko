@@ -4,8 +4,8 @@ import { audit, logError } from "@/server/audit";
 import { DEVICE_COOKIE, INVITE_COOKIE, checkInvite, claimInvite, deviceCookieOptions, deviceLabel, findDevice, inviteCookieOptions, inviteOnlyLogin, registerBootstrapDevice, touchDevice } from "@/server/auth/devices";
 import { completeLogin, verifyLoginState, type LoginFailure } from "@/server/auth/google-login";
 import { PRIMARY_ADMIN_SESSION_TTL_SEC, SESSION_COOKIE, encodeSession, sessionCookieOptions } from "@/server/auth/session";
-import { config, googleLoginConfig, isPrimaryAdmin, personalDelivery } from "@/server/config";
-import { grantsCalendar, needsCalendarConnection, revokeToken, saveGrant } from "@/server/calendar/google-auth";
+import { config, googleCalendarConfig, googleLoginConfig, isPrimaryAdmin, personalDelivery } from "@/server/config";
+import { grantsCalendar, isAllowedCalendarAccount, needsCalendarConnection, revokeToken, saveGrant } from "@/server/calendar/google-auth";
 import { grantsPersonalCalendar, markPersonalDeclined, savePersonalGrant, syncPersonalCalendar, syncPersonalCalendars } from "@/server/calendar/personal";
 import { syncAfterReconnect } from "@/server/calendar/sync";
 import { getDb } from "@/server/db/client";
@@ -93,6 +93,10 @@ export async function GET(request: NextRequest) {
     const [account] = await db.select({ id: users.id, role: users.role, groups: users.groups, email: users.email }).from(users).where(and(eq(users.orgId, config.orgId), eq(users.id, result.userId))).limit(1);
     const plans = account ? canPlan(account) : false;
     const missing = await needsCalendarConnection(db, plans);
+    // Režim organizátora: přihlášení propojí Kalendář jen tehdy, když se přihlásil přímo účet organizátora
+    // (ověřený e-mail z podepsaného ID tokenu). Osobní účet správce se nepropojí ani automaticky nenabídne.
+    const calendarCfg = googleCalendarConfig();
+    const allowedAccount = calendarCfg ? isAllowedCalendarAccount(calendarCfg, grant?.accountEmail ?? account?.email.toLowerCase() ?? null) : false;
 
     // Správce dal souhlas ke Kalendáři už na přihlašovací obrazovce: propojení se uloží hned, bez dalšího kroku.
     // Nový souhlas vždy přepíše starý záznam, i kdyby starý ještě vypadal platně.
@@ -117,13 +121,13 @@ export async function GET(request: NextRequest) {
       await markPersonalDeclined(db, result.userId, account.email);
       if (grant && !plans) await revokeToken(grant.refreshToken);
     } else if (grant) {
-      if (plans && grantsCalendar(grant.scopes)) {
+      if (plans && allowedAccount && grantsCalendar(grant.scopes)) {
         await saveGrant(db, { ...grant, userId: result.userId });
         await audit(db, result.userId, "calendar.connected", "settings", "google-calendar");
         connected = true;
         after(() => syncAfterReconnect(db));
-      } else if (!plans) {
-        // Oprávnění od někoho, kdo plán nespravuje, Wiki nedrží.
+      } else if (!plans || !allowedAccount) {
+        // Oprávnění od někoho, kdo plán nespravuje, nebo od jiného účtu než organizátora Wiki nedrží.
         await revokeToken(grant.refreshToken);
       }
       // Správce, který rozsah Kalendáře odškrtl, se nezneplatňuje: zneplatnění u Googlu by shodilo
@@ -131,7 +135,7 @@ export async function GET(request: NextRequest) {
     }
     // Druhé automatické přesměrování jen tehdy, když o Kalendář ještě nikdo nežádal (první přihlášení
     // správce z tohoto prohlížeče). Po odmítnutí nebo výslovném „bez Kalendáře“ zůstává úkol na Plánu.
-    const connectNext = missing && !connected && pending.calendar === "later";
+    const connectNext = missing && !connected && allowedAccount && pending.calendar === "later";
     const response = finish(`${config.appUrl}${connectNext ? CONNECT_PATH : "/"}`);
     let deviceId: string | undefined;
     if (scope?.kind === "device") {
