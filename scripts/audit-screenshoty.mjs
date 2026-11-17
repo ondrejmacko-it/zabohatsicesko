@@ -10,7 +10,7 @@ const roles = pick('ROLE', [...Object.keys(PERSONAS), 'host']);
 const widths = pick('SIRKY', [[320, 640], [360, 740], [390, 844], [768, 1024], [1024, 768], [1280, 800], [1440, 900], [1920, 1080]], (w) => w[0]);
 const allPages = [['uvod', '/'], ['plan', '/vzdelavani/harmonogram'], ['plan-seznam', '/vzdelavani/harmonogram?pohled=seznam'], ['akce', '/vzdelavani/harmonogram?akce=ev-11-5'], ['zapisy', '/vzdelavani/zapisy'], ['temata', '/vzdelavani/temata'], ['moje-cesta', '/vzdelavani/moje-cesta'], ['cizi-akce', '/vzdelavani/akce/ev-11-5']];
 const adminPages = [['sprava', '/sprava'], ['integrace', '/vzdelavani/integrace']];
-const hostPages = [['vstup-ukazka', 'http://localhost:3310/vstup'], ['vstup-ostra', 'http://localhost:3311/vstup'], ['vstup-ostra-spravce', 'http://localhost:3311/vstup?spravce=1'], ['vstup-chyba', 'http://localhost:3311/vstup?chyba=google'], ['neexistuje', 'http://localhost:3310/neexistuje']];
+const hostPages = [['vstup-ukazka', 'http://localhost:3310/vstup'], ['vstup-ostra', 'http://localhost:3311/vstup'], ['vstup-ostra-spravce', 'http://localhost:3311/vstup?spravce=1'], ['vstup-nepovoleny', 'http://localhost:3311/vstup?google=ucet-neni-povoleny'], ['vstup-ceka', 'http://localhost:3311/vstup?spravce=1&google=ceka-na-schvaleni'], ['vstup-vyprselo', 'http://localhost:3311/vstup?spravce=1&google=neplatny-stav'], ['neexistuje', 'http://localhost:3310/neexistuje']];
 (async () => {
   const b = await chromium.launch();
   const issues = [];

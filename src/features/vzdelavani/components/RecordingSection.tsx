@@ -84,14 +84,12 @@ export function RecordingSection({ eventId, eventLabel, panel }: { eventId: stri
           <span className={STATE_BADGE[state]} role="status">
             {RECORDING_STATE_LABELS[state]}
           </span>
-          {/* Méně časté kroky jsou v nabídce, hlavní akce sekce (nahrát, zveřejnit) zůstávají na očích. */}
-          <Menu label="Další možnosti nahrávky" small iconOnly>
-            <a className="btn" href="/demo/testovaci-nahravka.wav" download>
-              Stáhnout ukázkovou nahrávku
-            </a>
-            {published && <hr className="menu-divider" />}
-            {published && withdraw}
-          </Menu>
+          {/* Vrácení do návrhu je méně častý a citlivý krok, proto je v nabídce, ne vedle hlavních akcí. */}
+          {published && (
+            <Menu label="Další možnosti zápisu" small iconOnly>
+              {withdraw}
+            </Menu>
+          )}
         </span>
       </div>
       <p className="small muted">

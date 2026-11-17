@@ -55,9 +55,6 @@ export default async function MinutesPage({ searchParams }: { searchParams: Sear
           </Link>
         )}
       </div>
-      <p className="lead-text">
-        Vyhledávejte ve zveřejněných zápisech.
-      </p>
 
       {all.length > 0 && (
         <form className="filter-bar" method="get" role="search">
@@ -112,11 +109,13 @@ export default async function MinutesPage({ searchParams }: { searchParams: Sear
 
       {filtered.length === 0 ? (
         <div className="empty-state">
-          <p className="item-title">{filtering ? "Tomuto hledání neodpovídá žádný zápis." : "Zatím tu není žádný zápis."}</p>
+          <p className="item-title">{filtering ? "Tomuto hledání neodpovídá žádný zápis." : "Zatím tu není žádný zveřejněný zápis."}</p>
           <p className="item-meta">
             {filtering
               ? "Zkuste jiné slovo nebo zrušte filtr."
-              : "Zápis se objeví, jakmile ho vedoucí po skončení akce zkontroluje a zveřejní. Uvidíte jen zápisy z akcí pro své skupiny."}
+              : canAdd && missing.items.length > 0
+                ? "Po skončení akce otevřete Zápisy k dokončení, doplňte zápis a zveřejněte ho. Účastníci ho pak najdou tady."
+                : "Zápis se objeví, jakmile ho vedoucí po skončení akce zveřejní. Uvidíte zápisy z akcí pro své skupiny."}
           </p>
         </div>
       ) : (

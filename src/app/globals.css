@@ -344,6 +344,45 @@ a.nav-item:hover {
   font-size: 19px;
 }
 
+/* Správa: sbalený blok Kalendáře a technického stavu. Nadpis zůstává nadpisem i v souhrnu. */
+.admin-tech > summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  list-style: none;
+  cursor: pointer;
+}
+
+/* Flex schová výchozí šipku souhrnu, proto vlastní. */
+.admin-tech > summary::-webkit-details-marker {
+  display: none;
+}
+
+.admin-tech > summary::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 0.15s;
+}
+
+.admin-tech[open] > summary::before {
+  transform: rotate(45deg);
+}
+
+.admin-tech > summary h2 {
+  display: inline;
+  margin: 0;
+  font-size: 19px;
+}
+
+.admin-tech[open] > summary {
+  margin-bottom: 14px;
+}
+
 /* Hlavička sekce s nadpisem a jednou akcí vpravo (např. „Celý plán“). */
 .section-head {
   margin-bottom: 14px;
@@ -1388,9 +1427,40 @@ details > summary {
     display: none;
   }
 
+  /* Celá šířka pod značkou: odznak, výběr role a tlačítka na jednom řádku místo čtyř pod sebou. */
   .account {
+    width: 100%;
+    flex-wrap: nowrap;
     justify-content: flex-start;
-    gap: 6px 8px;
+    gap: 6px;
+  }
+
+  .account > form.row {
+    flex: 1 1 auto;
+    min-width: 0;
+    flex-wrap: nowrap;
+    gap: 6px;
+  }
+
+  .account .persona-select {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: auto;
+  }
+
+  .persona-btn-detail {
+    display: none;
+  }
+
+  /* Odznak ukázky do řádku se značkou, ať má výběr role dost místa i na 320 px. */
+  .topbar {
+    position: relative;
+  }
+
+  .account .demo-badge {
+    position: absolute;
+    top: max(12px, calc(env(safe-area-inset-top) + 6px));
+    right: max(20px, env(safe-area-inset-right));
   }
 }
 
@@ -1400,8 +1470,7 @@ details > summary {
   max-width: 68ch;
 }
 
-.card-list,
-.plain-list {
+.card-list {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -1409,40 +1478,8 @@ details > summary {
   gap: 10px;
 }
 
-.plain-list {
-  margin-top: 14px;
-  gap: 6px;
-}
-
-/* Řádky dalších termínů: celý řádek je odkaz, bez podtržení, ať se dobře trefuje prstem. */
-.plain-list a {
-  display: block;
-  padding: 9px 12px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--band);
-  text-decoration: none;
-}
-
-.plain-list a:hover {
-  border-color: var(--line-strong);
-}
-
 .section > .spread:first-child {
   margin-bottom: 14px;
-}
-
-.task-card {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 14px 16px;
-  border: 1px solid var(--line-strong);
-  border-left: 4px solid var(--ochre);
-  border-radius: 10px;
-  background: var(--surface);
 }
 
 .empty-state {
@@ -1540,42 +1577,6 @@ details > summary {
 
 .mode-strip {
   margin-bottom: 12px;
-}
-
-/* Průvodce měsícem pro správce: tři kroky vedle sebe, na telefonu pod sebou. */
-.month-guide {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  margin: 12px 0 0;
-  padding: 0;
-  list-style: none;
-  counter-reset: krok;
-}
-.month-guide > li {
-  counter-increment: krok;
-  padding: 8px 12px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  font-size: 13px;
-}
-.month-guide > li.todo {
-  border-color: var(--ochre);
-}
-.month-guide-title {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  font-weight: 600;
-}
-.month-guide-title::before {
-  content: counter(krok) ".";
-}
-@media (max-width: 720px) {
-  .month-guide {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 
 .status-advice {
@@ -1828,10 +1829,6 @@ a.brief-link:hover {
 
 .topic-badge {
   margin-left: 8px;
-}
-
-.topic-reason {
-  display: block;
 }
 
 .archived-block {
@@ -2463,6 +2460,18 @@ p.cal-status {
 }
 
 /* Správa: stav účtu a akce vpravo v jedné ose s názvem účtu. */
+/* Na telefonu zůstane menu ⋯ vpravo nahoře u jména, text se zalomí vedle něj. */
+.account-head {
+  flex-wrap: nowrap;
+  align-items: flex-start;
+}
+
+.account-main {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+
 .account-side {
   display: flex;
   align-items: center;

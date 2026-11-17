@@ -57,6 +57,11 @@ export function rankTopics(stats: TopicStat[]): RankedTopic[] {
 export const TOPIC_DRIVEN_TYPES: ReadonlySet<EventType> = new Set<EventType>(["education-fp", "education-rm"]);
 
 /** Téma se hodí k akci stejného publika, téma pro všechny ke každé akci. */
+/** Doporučit jde jen nenaplánované téma, o které projevil zájem aspoň jeden člověk. */
+export function isRecommendable(topic: { interestCount: number; nextPlanned?: string | null }): boolean {
+  return topic.interestCount > 0 && !topic.nextPlanned;
+}
+
 export function topicFitsAudience(topicAudience: string, eventAudience: string): boolean {
   return topicAudience === eventAudience || topicAudience === "vsichni";
 }
@@ -76,7 +81,7 @@ export function suggestTopics(
   for (const slot of slots) {
     if (!TOPIC_DRIVEN_TYPES.has(slot.type)) continue;
     const topic = ranked.find(
-      (t) => t.interestCount > 0 && t.nextPlanned === null && !used.has(t.id) && topicFitsAudience(t.audience, slot.audience),
+      (t) => isRecommendable(t) && !used.has(t.id) && topicFitsAudience(t.audience, slot.audience),
     );
     if (!topic) continue;
     used.add(topic.id);

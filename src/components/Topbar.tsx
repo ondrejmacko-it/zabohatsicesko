@@ -35,7 +35,7 @@ export function Topbar({ user, personas }: { user: CurrentUser; personas: Person
               ))}
             </select>
             <button className="btn btn-small" type="submit">
-              Změnit ukázkovou roli
+              Změnit<span className="persona-btn-detail"> ukázkovou roli</span>
             </button>
           </form>
         )}

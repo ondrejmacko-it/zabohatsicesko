@@ -16,7 +16,29 @@ kroky pro mě piš úplně, pod sebe, s přesnými kliky (Windows, PowerShell).
   `GOOGLE_OAUTH_PUBLISHED=1` (nastaveno 15. 11., platí od dalšího nasazení Production).
 * Úkoly z auditu jsou v `docs/audit-ukoly.md`. Audit ZIP stačí přiložit, jen když je potřeba `textove-upravy.csv`.
 
-**Stav 17. 11. pozdě večer, C2 dokončené jako nový draft PR (poslední):** #56, #57, #58, #59 jsou **sloučené v `main`** (#59 na d2d0a9d).
+**Stav 17. 11. odpoledne, #60 ověřené, C3 rozpracované (poslední):** #56–#59 sloučené v `main`.
+* **#60 (PR C2b, `claude/ux-formular-akce`)**: hotové. Úplné e2e na ba4682e 891 passed / 33 skipped (záměrně jen na jednom
+  projektu) / 0 failed, unit 263/263, lint, build. Opraven test `tests/kalendar-migrace.test.ts` (chyběl
+  `GOOGLE_ORGANIZER_EMAIL` po #57; chování beze změny). Popis PR aktualizovaný, položka e2e zaškrtnutá.
+* **C3 (`claude/ux-temata-sprava`, pushnuté, PR zatím NENÍ)**: sloučený #60 (merge, bez force) + commit „C3: průchod zápisu…“:
+  ukázková nahrávka ke stažení přímo u nahrávání, pole souboru „Soubor s nahrávkou“ (dřív stejné jméno jako tlačítko),
+  nabídka ⋯ jen u zveřejněného zápisu; `/vstup` bez pozvánky má vlastní hlášky (`NO_INVITE_RESULTS`) a ukáže i
+  „Žádost o přístup je odeslaná“; telefon: odznak Ukázka v řádku se značkou, výběr role + „Změnit“ + Odhlásit v jednom řádku;
+  persona vedoucího „nahrává nahrávky“; integrace bez slova „token“. Nové e2e `e2e/zapisy.spec.ts` (vedoucí nahraje →
+  návrh → zveřejní; FP vidí, RM ne) a test hlášek nepozvaného účtu v `ostra-wiki.spec.ts`. Cílené e2e (zapisy, ostra-wiki,
+  okna; 1280 + 320) 74 passed / 2 skipped; unit 265/265; lint a tsc čisté. Audit skript má skutečné chybové stavy vstupu.
+* **Ověřeno screenshoty:** `/vstup` (ukázka, ostrá, správce, nepovolený, čeká, vypršelo) 390; Témata a Správa 390/1280
+  (Přidat přístup, menu u účtu, sbalený technický stav); RM na `/sprava`, `/vzdelavani/integrace` a cizí akci dostane 404.
+* **Další krok C3:** (1) prohlédnout přehled rolí 390 (vedoucí, FP, RM: úvod, plán, akce, zápisy, témata, moje cesta) –
+  pořiď znovu `ROLE=vedouci,ucastnikFp,ucastnikRm SIRKY=390,1280 node scripts/audit-screenshoty.mjs . <scratchpad>`,
+  zmenšené montáže; (2) Správa na telefonu: tlačítko ⋯ u karty člověka stojí samo na řádku (dát vpravo nahoru);
+  (3) prázdné stavy (Témata bez témat, Zápisy bez zápisů – ten je ověřený); (4) úplné `npm run e2e` z `/home/user/...`
+  hlavního checkoutu (ne worktree se symlinkem), pak draft PR C3 do `main` podle šablony (v popisu: stojí na #60).
+  Pak PR D a velké závěrečné shrnutí (zadání v promptu relace).
+* Vyčištění testovacích témat („Test“, „Něco“, „Ahoj“): jen návrh uživateli (archivovat přes Témata → ⋯ → Archivovat);
+  produkční DB nečíst ani neměnit. Duplicitní názvy server už odmítá (`DomainError("duplicate")`, bez ohledu na velikost písmen).
+
+**Stav 17. 11. pozdě večer, C2 dokončené jako nový draft PR (předchozí):** #56, #57, #58, #59 jsou **sloučené v `main`** (#59 na d2d0a9d).
 Zbytek C2 je ve větvi `claude/ux-formular-akce` (sloučený `origin/main`, merge d2554bd) jako nový draft PR do `main` („PR C2b“, číslo v GitHubu).
 * Hotovo v C2b: `slotConflict` (6d3a6d5); `MonthDraft.clash` v `listMonthDrafts` + štítek `.publish-clash` a věta v kroku „2. Zkontrolovat“;
   Enter v Připravit měsíc nic neodešle (`ignoreEnter`); okno `Modal wide="extra"` (1120 px, návrh na jednom řádku od ~800 px);

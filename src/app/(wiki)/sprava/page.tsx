@@ -12,9 +12,10 @@ import { ActionForm } from "@/components/ActionForm";
 import { cleanupLegacyInvitesAction } from "@/features/sprava/actions";
 import {
   CalendarStatusLine,
+  calendarExpiresSoon,
   InviteRecipients,
 } from "@/features/vzdelavani/components/CalendarStatusLine";
-import { PersonalCalendarStatus, personalCalendarLabel } from "@/features/vzdelavani/components/PersonalCalendarStatus";
+import { PersonalCalendarStatus, personalCalendarLabel, personalCalendarView } from "@/features/vzdelavani/components/PersonalCalendarStatus";
 import type { PersonalCalendarState } from "@/server/calendar/personal";
 import { legacyInviteCount } from "@/server/calendar/legacy-invites";
 import { workerHealth } from "@/server/calendar/worker";
@@ -44,6 +45,12 @@ export default async function AdminPage() {
   const pending = accounts.filter((a) => a.status === "pending");
   const others = accounts.filter((a) => a.status !== "pending");
   const live = isLiveWiki();
+  // Integrace a diagnostika jsou sbalené. Otevřou se samy, jen když něco vyžaduje zásah správce.
+  const ownCalendar = personal?.get(user.id);
+  const attention = personal
+    ? legacyInvites > 0 || Boolean(ownCalendar && personalCalendarView(ownCalendar).action)
+    : calendar.mode !== "simulation" && (!calendar.connection || calendarExpiresSoon(calendar.connection.expiresAt, now())) ||
+      Boolean(worker?.alerts.length);
 
   return (
     <>
@@ -108,12 +115,12 @@ export default async function AdminPage() {
         ))}
       </section>
 
-      <section
-        className="section stack"
-        aria-labelledby="pozvanky"
-        id="pozvanky-kalendare"
-      >
-        <h2 id="pozvanky">Kalendář</h2>
+      <details className="section admin-tech" id="pozvanky-kalendare" open={attention}>
+        <summary>
+          <h2 id="pozvanky">Kalendář a technický stav</h2>
+          {attention && <span className="badge badge-danger">Vyžaduje zásah</span>}
+        </summary>
+        <div className="stack">
         {personal ? (
           <>
             <p className="cal-status" role="status">
@@ -167,7 +174,8 @@ export default async function AdminPage() {
             {live ? "Připojit Kalendář znovu" : "Technické nastavení ukázky"}
           </Link>
         </div>
-      </section>
+        </div>
+      </details>
     </>
   );
 }
@@ -204,8 +212,8 @@ function AccountHead({
   personal?: Map<string, PersonalCalendarState> | null;
 }) {
   return (
-    <div className="spread">
-      <div>
+    <div className="spread account-head">
+      <div className="account-main">
         <p className="item-title">
           {a.name}
           {a.primary ? (
@@ -214,29 +222,32 @@ function AccountHead({
             !a.editable && a.status === "active" && <span className="small muted"> · váš účet</span>
           )}
         </p>
+        <p className="item-meta">{a.email}</p>
         <p className="item-meta">
-          {a.email} · {ROLE_LABELS[a.role]}
+          {ROLE_LABELS[a.role]}
           {a.groups.length > 0 &&
             ` · ${a.groups.map((g) => GROUP_LABELS[g]).join(", ")}`}
         </p>
-        <p className="item-meta">
-          {live && a.status === "active"
-            ? accessLine(a)
-            : a.origin === "demo"
-              ? "Fiktivní role ukázky"
+        {/* Fiktivní role ukázky druhý řádek nemají: že jde o ukázku, říká štítek v hlavičce. */}
+        {(live || a.origin !== "demo") && (
+          <p className="item-meta">
+            {live && a.status === "active"
+              ? accessLine(a)
               : a.googleLinked
                 ? `Účet Google svázán${a.lastLoginAt ? `, naposledy ${formatDate(toDateKey(a.lastLoginAt))}` : ""}`
                 : "Pozvánka čeká na první přihlášení"}
-        </p>
+          </p>
+        )}
         {personal && a.status === "active" && <p className="item-meta">{personalCalendarLabel(personal.get(a.id))}</p>}
       </div>
       <div className="account-side">
         {a.status === "active" && a.origin !== "demo" && !a.googleLinked ? (
           // Účet už platí, ale kolega se ještě nepřihlásil. „Aktivní“ by tu mátlo.
           <span className="badge badge-ochre">Pozvaný</span>
-        ) : (
+        ) : a.status === "active" ? null : (
+          // Aktivní je běžný stav, štítek dostane jen to, co se od něj liší.
           <span
-            className={`badge${a.status === "active" ? " badge-ok" : a.status === "pending" ? " badge-ochre" : " badge-danger"}`}
+            className={`badge${a.status === "pending" ? " badge-ochre" : " badge-danger"}`}
           >
             {USER_STATUS_LABELS[a.status]}
           </span>

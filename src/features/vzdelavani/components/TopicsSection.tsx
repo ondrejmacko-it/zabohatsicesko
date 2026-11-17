@@ -2,7 +2,7 @@ import { InterestButton, ProposeTopicDialog, RestoreTopicButton, TopicManage } f
 import { GROUP_LABELS } from "@/lib/labels";
 import { formatDayMonth } from "@/lib/time";
 import { GROUPS, type Group } from "@/lib/types";
-import { interestedLabel } from "@/server/domain/topics";
+import { interestedLabel, isRecommendable } from "@/server/domain/topics";
 import { isOrganizer, type Viewer } from "@/server/policy";
 import { listArchivedTopics, listTopicInterested, listTopics } from "@/server/services/topics";
 
@@ -18,7 +18,7 @@ export async function TopicsSection({ user }: { user: Viewer }) {
     // Jména zájemců smí vidět jen správce, ostatním server pošle jen počet.
     organizer ? listTopicInterested(user) : null,
   ]);
-  const recommended = new Set(topics.filter((t) => t.nextPlanned === null).slice(0, RECOMMENDED_COUNT).map((t) => t.id));
+  const recommended = new Set(topics.filter(isRecommendable).slice(0, RECOMMENDED_COUNT).map((t) => t.id));
   const groups = GROUPS.filter((g) => organizer || user.groups.includes(g)) as Group[];
   const label = (g: string) => GROUP_LABELS[g as Group] ?? g;
 
@@ -29,11 +29,13 @@ export async function TopicsSection({ user }: { user: Viewer }) {
         <ProposeTopicDialog groups={groups} />
       </div>
       <p className="lead-text">
-        Navrhněte téma nebo hlasujte pro jiné. Doporučená jsou ta, o která je největší zájem a dlouho neproběhla. O zařazení do plánu
-        rozhoduje správce.{organizer && " Kdo má o téma zájem, zjistíte kliknutím na počet zájemců."}
+        Navrhněte téma nebo dejte najevo zájem. Doporučená témata mají zájemce a dlouho neproběhla.{!organizer && " O zařazení do plánu rozhoduje správce."}
       </p>
       {topics.length === 0 ? (
-        <p className="muted">Zatím tu nejsou žádná témata. Navrhněte první.</p>
+        <div className="empty-state">
+          <p className="item-title">Zatím tu nejsou žádná témata.</p>
+          <p className="item-meta">Navrhněte první tlačítkem Navrhnout téma. Kolegové pak mohou dát najevo zájem.</p>
+        </div>
       ) : (
         <ul className="topic-list">
           {topics.map((t) => {
