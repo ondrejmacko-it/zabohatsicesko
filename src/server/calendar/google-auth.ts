@@ -108,17 +108,34 @@ async function tokenRequest(fetchImpl: FetchLike, params: Record<string, string>
   return { status: response.status, body };
 }
 
-/** E-mail z ID tokenu. Token přišel přímo od Googlu po TLS výměnou kódu, slouží jen k zobrazení účtu. */
-function emailFromIdToken(idToken: string | undefined): string | null {
+/**
+ * Ověřený e-mail z ID tokenu. Token přišel přímo z tokenového endpointu Googlu po TLS výměnou kódu
+ * (OpenID Connect 3.1.3.7 tu ověření podpisu nevyžaduje), proto stačí kontrola příjemce a `email_verified`.
+ * Jde o identitu, kterou Google skutečně přihlásil, ne o vstup uživatele.
+ */
+export function emailFromIdToken(idToken: string | undefined, clientId: string): string | null {
   try {
-    const payload = JSON.parse(Buffer.from(idToken?.split(".")[1] ?? "", "base64url").toString("utf8")) as { email?: unknown };
+    const payload = JSON.parse(Buffer.from(idToken?.split(".")[1] ?? "", "base64url").toString("utf8")) as { email?: unknown; email_verified?: unknown; aud?: unknown };
+    const audiences = Array.isArray(payload.aud) ? payload.aud : [payload.aud];
+    if (!audiences.includes(clientId) || payload.email_verified !== true) return null;
     return typeof payload.email === "string" ? payload.email.toLowerCase() : null;
   } catch {
     return null;
   }
 }
 
-export type ConnectResult = "connected" | "missing_scope" | "no_refresh_token" | "exchange_failed";
+/** Smí tento účet být propojením Kalendáře? V režimu organizátora jen účet z `GOOGLE_ORGANIZER_EMAIL`. */
+export const isAllowedCalendarAccount = (cfg: GoogleCalendarConfig, email: string | null): boolean =>
+  cfg.organizerEmail === null || (email !== null && email === cfg.organizerEmail);
+
+/**
+ * Účet, který Google nabídne při propojení Kalendáře. Režim organizátora: vždy účet organizátora, ne účet
+ * přihlášeného správce (jen nápověda, rozhoduje `isAllowedCalendarAccount` po výměně kódu).
+ */
+export const calendarLoginHint = (cfg: GoogleCalendarConfig, signedInEmail: string | undefined): string | undefined =>
+  cfg.organizerEmail ?? signedInEmail;
+
+export type ConnectResult = "connected" | "missing_scope" | "no_refresh_token" | "exchange_failed" | "wrong_account";
 
 /** Vymění autorizační kód a uloží šifrovaný obnovovací token. Přístupový token se neukládá. */
 export async function completeAuthorization(
@@ -139,13 +156,21 @@ export async function completeAuthorization(
     logError("google.oauth", body.error ?? `http_${status}`);
     return "exchange_failed";
   }
+  const accountEmail = emailFromIdToken(body.id_token, cfg.clientId);
+  // Jiný účet než organizátor (typicky osobní účet správce): oprávnění se neuloží a u Googlu se zneplatní,
+  // aby Wiki nedržela přístup ke kalendáři, do kterého nemá zapisovat.
+  if (!isAllowedCalendarAccount(cfg, accountEmail)) {
+    await revokeToken(body.refresh_token ?? body.access_token, fetchImpl);
+    logError("google.oauth", "wrong_account");
+    return "wrong_account";
+  }
   // Uživatel může na obrazovce souhlasu rozsah odškrtnout. Bez něj by integrace jen selhávala.
   if (!grantsCalendar(body.scope ?? "")) return "missing_scope";
   if (!body.refresh_token) return "no_refresh_token";
   await saveGrant(db, {
     refreshToken: body.refresh_token,
     scopes: body.scope ?? "",
-    accountEmail: emailFromIdToken(body.id_token) ?? "neznámý účet",
+    accountEmail: accountEmail ?? "neznámý účet",
     userId: input.userId,
   });
   return "connected";

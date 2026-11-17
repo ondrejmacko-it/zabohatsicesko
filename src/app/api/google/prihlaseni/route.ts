@@ -6,7 +6,7 @@ import { DEVICE_COOKIE, INVITE_COOKIE, checkInvite, findDevice, inviteOnlyLogin 
 import { beginLogin, type LoginOptions, type LoginScope } from "@/server/auth/google-login";
 import { needsCalendarConnection } from "@/server/calendar/google-auth";
 import { needsPersonalCalendar } from "@/server/calendar/personal";
-import { config, googleLoginConfig, personalDelivery } from "@/server/config";
+import { config, googleCalendarConfig, googleLoginConfig, personalDelivery } from "@/server/config";
 import { getDb, type Executor } from "@/server/db/client";
 import { userIdentities, users } from "@/server/db/schema";
 import { canPlan } from "@/server/policy";
@@ -28,6 +28,10 @@ async function calendarRequestFor(db: Executor, hintedUserId: string | null, sco
     .limit(1);
   if (!known || known.status !== "active") return {};
   if (await needsPersonalCalendar(db, known.id)) return { calendar: "personal", loginHint: known.email };
+  // Režim organizátora: Kalendář propojuje jen účet organizátora. Osobní účet správce se při přihlášení
+  // o Kalendář neptá, propojení jde přes Integrace (Google tam rovnou nabídne účet organizátora).
+  const organizer = googleCalendarConfig()?.organizerEmail;
+  if (organizer && known.email.toLowerCase() !== organizer) return {};
   return (await needsCalendarConnection(db, canPlan(known))) ? { calendar: "ask", loginHint: known.email } : {};
 }
 

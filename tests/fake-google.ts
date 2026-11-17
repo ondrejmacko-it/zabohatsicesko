@@ -15,6 +15,8 @@ export class FakeGoogle {
   forced: Array<{ status: number; body?: unknown }> = [];
   refreshTokens = new Set<string>();
   accessTokens = new Set<string>();
+  /** Účet, který Google při výměně kódu vrátí v ID tokenu (ověřený e-mail). */
+  accountEmail = "Organizator.Test@example.com";
   private counter = 0;
 
   calls = (method: string, part = "/calendar/") => this.requests.filter((r) => r.method === method && r.url.pathname.includes(part));
@@ -72,7 +74,8 @@ export class FakeGoogle {
         if (form.get("code") !== "valid-code" || !form.get("code_verifier")) return json(400, { error: "invalid_grant" });
         const refresh = `rt-${++this.counter}`;
         this.refreshTokens.add(refresh);
-        const idToken = `x.${Buffer.from(JSON.stringify({ email: "Organizator.Test@example.com" })).toString("base64url")}.x`;
+        const claims = { email: this.accountEmail, email_verified: true, aud: form.get("client_id") };
+        const idToken = `x.${Buffer.from(JSON.stringify(claims)).toString("base64url")}.x`;
         return json(200, {
           access_token: this.issueAccessToken(),
           refresh_token: refresh,
