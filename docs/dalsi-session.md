@@ -16,7 +16,24 @@ kroky pro mě piš úplně, pod sebe, s přesnými kliky (Windows, PowerShell).
   `GOOGLE_OAUTH_PUBLISHED=1` (nastaveno 15. 11., platí od dalšího nasazení Production).
 * Úkoly z auditu jsou v `docs/audit-ukoly.md`. Audit ZIP stačí přiložit, jen když je potřeba `textove-upravy.csv`.
 
-**Stav 18. 11. večer, PR C1 rozpracovaný (poslední):** větev `claude/ux-uvod-plan`, commit „PR C1 (rozpracováno)“.
+**Stav 17. 11. odpoledne, C1 a C2 jako drafty (poslední):** draft [#58](https://github.com/ondrejmacko-it/zabohatsicesko/pull/58)
+= PR C1 (`claude/ux-uvod-plan` → `main`), draft [#59](https://github.com/ondrejmacko-it/zabohatsicesko/pull/59) = PR C2
+(`claude/ux-formular-akce`, stojí na C1, base `main`, mergovat po #58). Obě: lint, tsc, test (C2 239/239), e2e zelené.
+* C1 navíc: Správa v navigaci jen pro oprávněné, filtry Plánu na 768–1100 vlevo a bez přetečení na 320, kontrast `.extra .line`,
+  e2e `domu-ukoly.spec.ts` (RM má jediný úkol = pozvánky).
+* C2: jiná akce bez výchozího názvu, pole Název nahoře (`labelInMain` v `EventDialog.tsx`), kratší texty, bez `notice-ok`.
+  Připravit měsíc: kroky „1. Doplnit termíny / 2. Zkontrolovat / 3. Zveřejnit“, `PairingOverview` a `pairing` smazané.
+  `generateMonth` přeskočí slot překrytý ruční akcí (test v `tests/hromadne-zverejneni.test.ts`).
+* **Neověřeno vizuálně:** screenshoty dialogů C2 (formulář akce, Připravit měsíc) na 320/390/1280 – udělat na začátku C3.
+* **Další krok: PR C3** nová větev `claude/ux-temata-sprava` z `claude/ux-formular-akce`. (1) Doporučovat jen témata s ≥1 zájemcem:
+  `TopicsSection.tsx:21` (`t.interestCount > 0`) a návrhy ve formuláři `EventDialog.tsx` (`suggestions`, filtr na `interestCount`),
+  zvážit i `suggestTopics` v `generateMonth`. (2) Návrh vyčištění testovacích názvů témat („Test“, „Něco“, „Ahoj“) jen jako
+  návrh uživateli, nic nemazat. (3) Správa: lidé, role, skupiny, přístupy, zařízení nahoře; integrace a diagnostika seskupené
+  a sbalené (sem případně přehled párování s Kalendářem). (4) Zápisy a nahrávky: stavy, prázdné stavy, přepis = demo.
+  (5) Přihlášení `/vstup`: první dojem a chybové stavy. Pak PR D (audit všech rolí a šířek) a velké shrnutí pro uživatele.
+* Otevřené pro uživatele: přehled párování s Kalendářem jsem z Připravit měsíc vyndal (diagnostika); pokud ho chce zpět, říct.
+
+**Stav 18. 11. večer, PR C1 rozpracovaný (předchozí):** větev `claude/ux-uvod-plan`, commit „PR C1 (rozpracováno)“.
 Lint, tsc a `npm test` 238/238 prošly. **Neověřeno:** `npm run build` mimo e2e server a `npm run e2e`, PR zatím není.
 * Hotovo: Úvod bez Moduly, vypnutého hledání a úspěšného stavu Kalendáře (`PersonalCalendarStatus` vrací null bez akce).
   Pozvánky bez odpovědi = jeden úkol v „Čeká na vás“ (`src/features/vzdelavani/invitations.ts`, test `tests/ukoly-uvod.test.ts`),

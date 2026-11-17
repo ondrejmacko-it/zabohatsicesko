@@ -99,6 +99,8 @@ test.describe("U08 dialog akce", () => {
     const typeBox = await opened.getByLabel("Typ").boundingBox();
     const dateBox = await opened.getByLabel("Datum").boundingBox();
     expect(dateBox!.y, "Datum pod Typem").toBeGreaterThan(typeBox!.y + typeBox!.height - 1);
+    // Jiná akce nemá výchozí název; vyplněný název nechá chybu jen na Datu.
+    await opened.getByLabel("Název", { exact: true }).fill("Návštěva partnera");
     await opened.getByLabel("Datum").fill("");
     const save = opened.getByRole("button", { name: "Uložit návrh" });
     await save.scrollIntoViewIfNeeded();

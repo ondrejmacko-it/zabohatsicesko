@@ -252,7 +252,7 @@ export async function generateMonthAction(_prev: ActionResult | null, formData: 
     const topicNote = withTopic
       ? ` U ${withTopic} ${withTopic === 1 ? "termínu" : "termínů"} je předvyplněné doporučené téma podle zájmu, před zveřejněním ho můžete změnit.`
       : "";
-    return { ok: true, message: `Doplněno ${places} ze šablony. Stávající akce zůstaly beze změny.${topicNote}` };
+    return { ok: true, message: `Doplněno ${places} podle Pravidelného týdne. Stávající akce zůstaly beze změny.${topicNote}` };
   });
 }
 

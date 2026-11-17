@@ -15,6 +15,8 @@ async function expectAddDialog(page: Page, day: string) {
   const dialog = page.getByRole("dialog", { name: "Přidat akci" });
   await expect(dialog).toBeVisible();
   await expect(dialog.getByLabel("Datum", { exact: true })).toHaveValue(day);
+  // Jiná akce nemá výchozí název, pole je nahoře a prázdné.
+  await expect(dialog.getByLabel("Název", { exact: true })).toHaveValue("");
   await expectNoHorizontalScroll(page);
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();

@@ -40,9 +40,10 @@ test.describe("okna správce", () => {
     await settle(page);
     await page.getByRole("button", { name: /^Připravit měsíc/ }).click();
     const prepare = dialog(page, /Připravit měsíc:/);
-    await expect(prepare.getByRole("heading", { name: "Termíny ze šablony" })).toBeVisible();
+    // Tři kroky v pořadí, bez diagnostiky Kalendáře.
+    await expect(prepare.getByRole("heading", { level: 3 })).toHaveText(["1. Doplnit termíny", "2. Zkontrolovat", "3. Zveřejnit"]);
     await expect(prepare.getByRole("button", { name: "Doplnit chybějící termíny" })).toBeVisible();
-    await expect(prepare.getByRole("heading", { name: "Mezery" })).toBeVisible();
+    await expect(prepare.getByText(/Párování|spárováno/)).toHaveCount(0);
 
     const date = prepare.getByLabel(/^Datum: /).first();
     const value = await date.inputValue();
@@ -54,7 +55,7 @@ test.describe("okna správce", () => {
     // Mezery se počítají živě z rozepsaného formuláře.
     const id = (await date.getAttribute("name"))!.replace("date-", "");
     const topic = prepare.locator(`[name="topic-${id}"]`);
-    const gap = prepare.locator(`.prepare-list li[data-draft="${id}"]`);
+    const gap = prepare.locator(`.publish-row[data-draft="${id}"] .publish-gap`);
     await topic.fill("");
     await expect(gap).toContainText("téma");
     await topic.fill("Téma z e2e testu");
