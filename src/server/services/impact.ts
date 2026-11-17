@@ -23,6 +23,8 @@ export type ChangeImpact = {
   changes: Array<{ field: string; from: string; to: string }>;
   guests: { add: string[]; remove: string[]; manual: string[] };
   notes: string[];
+  /** Kolik lidí dnes zveřejněnou akci vidí (skupina zveřejněné verze). Null, když seznam nejde sestavit. */
+  affected: number | null;
 };
 
 type Next = { summary: string; startsAt: Date; endsAt: Date; allDay: boolean; audience: Group };
@@ -92,7 +94,8 @@ export async function changeImpact(viewer: Viewer, eventId: string, input: Event
   const next = nextOf(input);
   if (!published || published.status === "cancelled" || !isSignificant(published, next)) return null;
 
-  const impact: ChangeImpact = { token: await tokenOf(db, row, next), changes: changesOf(published, input, next), guests: { add: [], remove: [], manual: [] }, notes: [] };
+  const impact: ChangeImpact = { token: await tokenOf(db, row, next), changes: changesOf(published, input, next), guests: { add: [], remove: [], manual: [] }, notes: [], affected: null };
+  impact.affected = await audienceAttendees(db, published.audience).then((list) => list.length, () => null);
   const audienceChanged = published.audience !== next.audience;
   if (audienceChanged) {
     impact.notes.push(

@@ -1,5 +1,50 @@
 # Prompt pro další session
 
+**FINAL POLISH (18. 11. 2026), rozpracováno ve větvi `claude/final-akce-navrhy` (z main 26bb1e2).** Úplné zadání
+„ZBČ WIKI · FINAL PRODUCT POLISH“ je v první zprávě relace session_01HpUiru5P4yB2SxRCiVSjHt; shrnutí priorit níže.
+Uživatel dal plné právo pokračovat bez ptaní, zakládat nové relace a připravit PR (merge do main dělá on).
+
+**Hotovo ve WIP commitu (neověřeno, tsc zatím NEPROJDE):**
+* Server: svátky pevné – `assertNotHoliday` v `events.ts` (createEvent, updateEvent, planMove, cancelEvent), kód
+  `holiday_locked` v `errors.ts`. UI: karta svátku v `Schedule.tsx` není `draggable`.
+* `impact.ts`: `ChangeImpact.affected` (počet lidí ve zveřejněné skupině) pro větu „Změníte termín akce pro 12 lidí.“
+* `EventDialog.tsx` přepsán na JEDNU implementaci: `EventDialog` (Přidat akci, 3 sekce 1 Akce / 2 Termín a vedení /
+  3 Kontrola v jednom okně) a `EventWindow` (okno akce pro správce, pole rovnou upravitelná, Další možnosti sbalené,
+  spodní lišta Uložit jako návrh / Zveřejnit | Zveřejnit změny, potvrzení neúplnosti i dopadu v liště: Zpět /
+  Potvrdit zveřejnění, štítky „změněno“). Prop `replace` a `primary` zrušeny, typ Svátek není v nabídce.
+
+**Další kroky (v tomto pořadí):**
+1. `EventPeek.tsx`: správce (ne náhled, ne zrušená) → `<EventWindow title intro={status band} menu={<EventMenu …>}`
+   s `termLocked={card.past}`; stav C (card.unpublishedChanges) v intro: krátká věta + `ActionForm discardChangesAction`
+   „Zahodit změny“. Zkrátit text návrhu na „Návrh · kolegové ho zatím nevidí“. Odstranit „Podrobnosti akce“ a
+   `MoveEventButton`; v menu odkaz „Nahrávka a zápis“ (proběhlá) / „Stav v Kalendáři“ na `/vzdelavani/akce/[id]`.
+   Čtenář: jen údaje + „Zobrazit zápis“ → `/vzdelavani/zapisy?zapis=<id>`, vedoucí proběhlé akce „Nahrávka a zápis“.
+   Svátek jen informačně. Server: v `updateEvent` odmítnout změnu termínu u proběhlé akce (`invalid_state`).
+2. Stránka `akce/[id]/page.tsx`: bez EventDialog/EventMenu/MoveEventButton, pro správce odkaz „Upravit akci“ →
+   `/vzdelavani/harmonogram?mesic=…&akce=id`; text „zveřejněte přes Upravit“ pryč. Smazat `MoveEventButton`
+   z `MoveEvent.tsx` (MoveDropZone zůstává). Harmonogram: `EventDialog` bez `mode`/`published` propů.
+3. Úvod `src/app/(wiki)/page.tsx`: `NextEventsList hrefFor` → `/?akce=id` a vykreslit `EventPeek` s closeHref `/`;
+   tlačítko „Zobrazit celý plán“ pod seznam. Filtr „Ke zveřejnění“ → „Návrhy“ (harmonogram/page.tsx chips).
+4. CSS (`globals.css`): `.changed-mark`, `.step-no`, `.form-step`, `.form-review`, `.form-term` (3 sloupce, na mobilu
+   1), `.confirm-bar`, `.event-actions` (menu vlevo, tlačítka vpravo), `.invitees` jako details.
+5. lint, typecheck, `npm test`, cílené e2e (okna, plan-planovani, klavesnice) – opravit testy na nové chování
+   (ne jen aby prošly), přidat unit test holiday_locked (update/move/create/cancel) a e2e svátek nejde táhnout.
+   Screenshoty 390/1280. Draft PR „Final A: jednotné okno akce a svátky“.
+6. Další PR: hromadný výběr v Plánu (Vybrat akce, Zveřejnit/Smazat vybrané návrhy přes `publishDrafts` a
+   `deleteDraft`, server ověřuje), horní lišta Plánu (Měsíc/Seznam vlevo, měsíce uprostřed, Přidat akci +
+   Připravit měsíc s Pravidelným týdnem vpravo, filtry ve 2. řádku, „Zobrazit jako“ s nápovědou „Ukáže, co vidí
+   vybraný kolega. Nic se nezmění.“).
+7. Další PR: `/vstup` bez 3 nadbytečných vět, Zápisy (Odpovědný: vedoucí, „Nedokončené zápisy“ / „Moje zápisy
+   k dokončení“, ukázkový zveřejněný zápis v `demo/seed.json`), Témata (záhlaví „Navrhněte téma nebo podpořte návrh
+   kolegů.“, archiv jako karty s Obnovit), Správa (menu účtu: Upravit přístup / Přihlašování se zařízeními po řádcích /
+   Odebrat přístup; sjednotit panel Kalendář), revize textů, vizuální kontrola 320–1920, úplné e2e, závěrečný report.
+   Dlouhé nahrávky jen jako otevřený bod (`docs/nahravky-moznosti.md`). Kalendář nepřepínat.
+
+Kontext limit: na začátku čti jen tento blok, README a měněné soubory.
+
+---
+
+
 Zkopíruj text níže jako první zprávu nové relace Claude Code (repo `ondrejmacko-it/zabohatsicesko`)
 a přilož audit ZIP `ZBC_Audit_balicek_2026-11-15.zip` (do repa nepatří).
 
