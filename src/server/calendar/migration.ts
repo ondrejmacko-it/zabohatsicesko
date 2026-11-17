@@ -22,7 +22,7 @@ export type MigrationInventory = {
   recipients: number;
   /** Akce bez pozvaných (skupina bez aktivních účtů). */
   eventsWithoutGuests: number;
-  personalCalendars: { total: number; active: number; withCalendar: number };
+  personalCalendars: { total: number; active: number; withCalendar: number; removalFailed: number };
   personalEntries: number;
   links: { total: number; withExternalEvent: number };
   /** Otisk počtů a dotčených uživatelů. Úklid ho vyžaduje, změna dat ho zneplatní. */
@@ -79,6 +79,7 @@ export async function migrationInventory(db: Executor): Promise<MigrationInvento
       total: calendars.length,
       active: calendars.filter((c) => c.status === "active").length,
       withCalendar: calendars.filter((c) => c.calendarId).length,
+      removalFailed: calendars.filter((c) => c.status === "removal_failed").length,
     },
     personalEntries: entries?.n ?? 0,
     links: { total: links?.total ?? 0, withExternalEvent: links?.withExternal ?? 0 },
@@ -90,7 +91,7 @@ export async function migrationInventory(db: Executor): Promise<MigrationInvento
 
 export type RetireResult =
   | { mode: "dry-run"; inventory: MigrationInventory; wouldRemove: number }
-  | { mode: "done"; removed: number };
+  | { mode: "done"; removed: number; failed: number };
 
 /**
  * Smaže kalendáře „Vzdělávání ZBC“, které Wiki založila v účtech uživatelů, zneplatní jejich tokeny a smaže
@@ -107,7 +108,13 @@ export async function retireWikiCalendars(
     throw new Error("Úklid odmítnut: otisk nesouhlasí se současnou inventurou. Spusťte inventuru znovu a nechte ji schválit.");
   }
   const rows = await db.select({ userId: personalCalendars.userId }).from(personalCalendars).where(eq(personalCalendars.orgId, config.orgId));
-  for (const { userId } of rows) await removePersonalCalendar(db, userId, { fetchImpl: options.fetchImpl });
-  await audit(db, null, "calendar.migration.retired", "org", config.orgId);
-  return { mode: "done", removed: rows.length };
+  let removed = 0;
+  let failed = 0;
+  for (const { userId } of rows) {
+    // Nepovedené smazání nechá řádek ve stavu `removal_failed` s tokenem, opakovaný úklid ho zkusí znovu.
+    if ((await removePersonalCalendar(db, userId, { fetchImpl: options.fetchImpl })) === "removed") removed += 1;
+    else failed += 1;
+  }
+  await audit(db, null, failed ? "calendar.migration.retired_partial" : "calendar.migration.retired", "org", config.orgId);
+  return { mode: "done", removed, failed };
 }

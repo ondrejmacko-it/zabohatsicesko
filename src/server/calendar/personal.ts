@@ -95,6 +95,8 @@ export type PersonalCalendarState = {
   retrying: boolean;
   /** Google zápis opakovaně odmítá (403), i když přístup platí. Pomůže propojit znovu. */
   blocked: boolean;
+  /** Kód chyby u nepovedeného smazání kalendáře (`removal_failed`). */
+  errorCode?: string | null;
 };
 
 const FORBIDDEN_PREFIX = "forbidden";
@@ -102,12 +104,19 @@ const FORBIDDEN_PREFIX = "forbidden";
 function stateOf(row: typeof personalCalendars.$inferSelect): PersonalCalendarState {
   const failing = row.status === "active" && row.errorCode !== null;
   const blocked = failing && row.errorCode!.startsWith(FORBIDDEN_PREFIX);
-  return { status: row.status, accountEmail: row.accountEmail, syncedAt: row.syncedAt?.toISOString() ?? null, retrying: failing && !blocked, blocked };
+  return {
+    status: row.status,
+    accountEmail: row.accountEmail,
+    syncedAt: row.syncedAt?.toISOString() ?? null,
+    retrying: failing && !blocked,
+    blocked,
+    errorCode: row.status === "removal_failed" ? row.errorCode : null,
+  };
 }
 
 export async function personalCalendarState(db: Executor, userId: string): Promise<PersonalCalendarState> {
   const [row] = await db.select().from(personalCalendars).where(whereUser(userId)).limit(1);
-  if (!row) return { status: "none", accountEmail: null, syncedAt: null, retrying: false, blocked: false };
+  if (!row) return { status: "none", accountEmail: null, syncedAt: null, retrying: false, blocked: false, errorCode: null };
   return stateOf(row);
 }
 
@@ -122,7 +131,7 @@ export async function needsPersonalCalendar(db: Executor, userId: string | null)
   if (!personalDelivery()) return false;
   if (!userId) return true;
   const [row] = await db.select({ status: personalCalendars.status }).from(personalCalendars).where(whereUser(userId)).limit(1);
-  return !row || row.status === "revoked" || row.status === "calendar_deleted";
+  return !row || row.status === "revoked" || row.status === "calendar_deleted" || row.status === "removal_failed";
 }
 
 /** Zařadí uživatele k synchronizaci. Bez argumentu všechny aktivní. */
@@ -248,8 +257,7 @@ export async function syncPersonalCalendar(db: Db, userId: string, deps: Persona
   try {
     const [account] = await db.select({ status: users.status, groups: users.groups }).from(users).where(and(eq(users.orgId, config.orgId), eq(users.id, userId))).limit(1);
     if (!account || account.status !== "active") {
-      await removePersonalCalendar(db, userId, deps);
-      return "removed";
+      return (await removePersonalCalendar(db, userId, deps)) === "removed" ? "removed" : "retry";
     }
     if (row.status !== "active") return "skipped";
     const refreshToken = openSecret(row.encryptedRefreshToken, tokenEncryptionKey(), secretContext(userId));
@@ -361,24 +369,42 @@ export async function syncPersonalCalendars(db: Db, deps: PersonalDeps = {}): Pr
 /**
  * Odebraný nebo vypnutý účet: smaže jeho kalendář „Vzdělávání ZBC“ (akce z Wiki mu nezůstanou),
  * zneplatní token u Googlu a smaže záznamy. Volá se pod zámkem ze synchronizace.
+ *
+ * Když Google smazání odmítne (cokoli kromě 404, to znamená „už smazaný“), token ani řádek se nemažou:
+ * řádek dostane stav `removal_failed` s kódem chyby a další běh to zkusí znovu. Jinak by kalendář zůstal
+ * v účtu uživatele a Wiki by o něm už nevěděla.
  */
-export async function removePersonalCalendar(db: Db, userId: string, deps: PersonalDeps): Promise<void> {
+export async function removePersonalCalendar(db: Db, userId: string, deps: PersonalDeps): Promise<"removed" | "failed"> {
   const [row] = await db.select().from(personalCalendars).where(whereUser(userId)).limit(1);
-  if (!row) return;
+  if (!row) return "removed";
   const refreshToken = row.encryptedRefreshToken ? openSecret(row.encryptedRefreshToken, tokenEncryptionKey(), secretContext(userId)) : null;
   if (refreshToken) {
-    const api = apiFor(refreshToken, deps);
-    try {
-      if (api && row.calendarId) await api.deleteCalendar(row.calendarId);
-    } catch (error) {
-      if (!(error instanceof CalendarError)) throw error;
-      // Kalendář zůstane v účtu, ale bez dalších změn. Token se zneplatní v každém případě.
-      logError("calendar.personal", `remove_${error.code}`);
+    if (row.calendarId) {
+      const api = apiFor(refreshToken, deps);
+      const errorCode = api ? await deleteCalendarCode(api, row.calendarId) : "config_missing";
+      if (errorCode) {
+        await setState(db, userId, { status: "removal_failed", errorCode });
+        logError("calendar.personal", `remove_${errorCode}`);
+        await audit(db, null, "calendar.personal.removal_failed", "user", userId);
+        return "failed";
+      }
     }
     await revokeToken(refreshToken, deps.fetchImpl);
   }
   await db.delete(personalCalendars).where(whereUser(userId));
   await audit(db, null, "calendar.personal.removed", "user", userId);
+  return "removed";
+}
+
+/** Smaže kalendář. `null` = smazaný (i dřív, 404), jinak kód chyby od Googlu. */
+async function deleteCalendarCode(api: PersonalCalendarApi, calendarId: string): Promise<string | null> {
+  try {
+    await api.deleteCalendar(calendarId);
+    return null;
+  } catch (error) {
+    if (!(error instanceof CalendarError)) throw error;
+    return error.code === "calendar_forbidden" ? `${FORBIDDEN_PREFIX}_${error.reason || "unknown"}` : error.code;
+  }
 }
 
 /** Zveřejněná akce v režimu osobních kalendářů: vazba se jen označí za zpracovanou, zápis jde do kalendářů uživatelů. */

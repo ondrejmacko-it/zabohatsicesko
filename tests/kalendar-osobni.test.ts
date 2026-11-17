@@ -37,6 +37,8 @@ type FakeOptions = {
   unauthorizedSetup?: number;
   /** Položka v seznamu kalendářů je skrytá a nezaškrtnutá. */
   listHidden?: boolean;
+  /** Smazání kalendáře odpoví 403 (úklid odebraného účtu). */
+  forbidDelete?: boolean;
 };
 const forbidden = (reason: string) => ({ error: { code: 403, errors: [{ reason }] } });
 
@@ -64,7 +66,7 @@ function fakeGoogle(opts: FakeOptions = {}) {
       if (failures-- > 0) return json(503, {});
       return init?.method === "DELETE" ? json(204, null) : json(200, { id: "x" });
     }
-    if (init?.method === "DELETE") return json(204, null);
+    if (init?.method === "DELETE") return opts.forbidDelete ? json(403, forbidden("forbidden")) : json(204, null);
     return json(404, {});
   }) as typeof fetch;
   return { calls, fetchImpl };
@@ -156,6 +158,14 @@ describe("osobní kalendář", () => {
     ]);
     expect([a, b].sort()).toEqual(["skipped", "synced"]);
     await db.update(users).set({ status: "disabled" }).where(eq(users.id, participant.id));
+    // Google smazání kalendáře odmítne: token zůstane, řádek čeká na další pokus.
+    const refused = fakeGoogle({ forbidDelete: true });
+    expect(await syncPersonalCalendar(db, participant.id, { fetchImpl: refused.fetchImpl, clock })).toBe("retry");
+    expect(refused.calls.some((c) => c.url.pathname === "/revoke")).toBe(false);
+    const [kept] = await db.select().from(personalCalendars).where(eq(personalCalendars.userId, participant.id));
+    expect(kept).toMatchObject({ status: "removal_failed", errorCode: "forbidden_forbidden" });
+    expect(kept!.encryptedRefreshToken).not.toBe("");
+    expect(await personalSyncNeeded(db)).toBe(true);
     const removal = fakeGoogle();
     expect(await syncPersonalCalendar(db, participant.id, { fetchImpl: removal.fetchImpl, clock })).toBe("removed");
     expect(removal.calls.some((c) => c.url.pathname === "/revoke")).toBe(true);

@@ -21,13 +21,16 @@ const ENV = {
 };
 const saved: Record<string, string | undefined> = {};
 
-function recordingFetch() {
+function recordingFetch(deleteStatus = 204) {
   const calls: Array<{ method: string; path: string }> = [];
   const fetchImpl = (async (input: URL | string, init?: RequestInit) => {
     const url = new URL(String(input));
     calls.push({ method: init?.method ?? "GET", path: url.pathname });
     if (url.pathname === "/token") return new Response(JSON.stringify({ access_token: "at", expires_in: 3600 }), { status: 200 });
-    if (init?.method === "DELETE") return new Response(null, { status: 204 });
+    if (init?.method === "DELETE") {
+      if (deleteStatus === 204) return new Response(null, { status: 204 });
+      return new Response(JSON.stringify({ error: { errors: [{ reason: deleteStatus === 403 ? "forbidden" : "backendError" }] } }), { status: deleteStatus });
+    }
     return new Response("{}", { status: 200 });
   }) as typeof fetch;
   return { calls, fetchImpl };
@@ -56,7 +59,7 @@ describe("přechod na organizátora", () => {
     const inventory = await migrationInventory(db);
     expect(inventory.futureEvents).toBeGreaterThan(0);
     expect(inventory.invitations).toBeGreaterThanOrEqual(inventory.recipients);
-    expect(inventory.personalCalendars).toEqual({ total: 1, active: 1, withCalendar: 1 });
+    expect(inventory.personalCalendars).toEqual({ total: 1, active: 1, withCalendar: 1, removalFailed: 0 });
     expect(inventory.fingerprint).toMatch(/^[0-9a-f]{12}$/);
     expect(JSON.stringify(inventory)).not.toContain("@");
     expect(await db.select().from(calendarLinks)).toEqual(linksBefore);
@@ -81,14 +84,45 @@ describe("přechod na organizátora", () => {
     expect(await db.select().from(personalCalendars)).toHaveLength(1);
   });
 
+  test("když Google smazání odmítne, token ani řádek se nemažou a další úklid to zopakuje", async () => {
+    process.env.CALENDAR_DELIVERY = "organizer";
+    const refused = recordingFetch(403);
+    const { fingerprint } = await migrationInventory(db);
+    expect(await retireWikiCalendars(db, { approvedFingerprint: fingerprint, fetchImpl: refused.fetchImpl })).toEqual({ mode: "done", removed: 0, failed: 1 });
+    expect(refused.calls).toContainEqual({ method: "DELETE", path: "/calendar/v3/calendars/cal-1" });
+    expect(refused.calls.some((c) => c.path === "/revoke")).toBe(false);
+    const [row] = await db.select().from(personalCalendars);
+    expect(row).toMatchObject({ status: "removal_failed", errorCode: "forbidden_forbidden", calendarId: "cal-1" });
+    expect(row!.encryptedRefreshToken).not.toBe("");
+    const after = await migrationInventory(db);
+    expect(after.personalCalendars.removalFailed).toBe(1);
+    expect(after.fingerprint).not.toBe(fingerprint);
+
+    const unavailable = recordingFetch(503);
+    expect(await retireWikiCalendars(db, { approvedFingerprint: after.fingerprint, fetchImpl: unavailable.fetchImpl })).toEqual({ mode: "done", removed: 0, failed: 1 });
+    expect((await db.select().from(personalCalendars))[0]).toMatchObject({ status: "removal_failed", errorCode: "calendar_unavailable" });
+  });
+
   test("se schváleným otiskem po přepnutí smaže kalendář Wiki a zneplatní token", async () => {
     process.env.CALENDAR_DELIVERY = "organizer";
     const google = recordingFetch();
     const { fingerprint } = await migrationInventory(db);
-    expect(await retireWikiCalendars(db, { approvedFingerprint: fingerprint, fetchImpl: google.fetchImpl })).toEqual({ mode: "done", removed: 1 });
+    expect(await retireWikiCalendars(db, { approvedFingerprint: fingerprint, fetchImpl: google.fetchImpl })).toEqual({ mode: "done", removed: 1, failed: 0 });
     expect(google.calls).toContainEqual({ method: "DELETE", path: "/calendar/v3/calendars/cal-1" });
     expect(google.calls.some((c) => c.path === "/revoke")).toBe(true);
     expect(await db.select().from(personalCalendars)).toHaveLength(0);
     expect((await migrationInventory(db)).fingerprint).not.toBe(fingerprint);
+  });
+
+  test("kalendář už smazaný v Googlu (404) je úspěch", async () => {
+    process.env.CALENDAR_DELIVERY = "personal";
+    await savePersonalGrant(db, participant.id, { refreshToken: "rt2", scopes: `openid email ${PERSONAL_SCOPE}`, accountEmail: "ucastnik@example.com" });
+    await db.update(personalCalendars).set({ calendarId: "cal-2" }).where(eq(personalCalendars.userId, participant.id));
+    process.env.CALENDAR_DELIVERY = "organizer";
+    const gone = recordingFetch(404);
+    const { fingerprint } = await migrationInventory(db);
+    expect(await retireWikiCalendars(db, { approvedFingerprint: fingerprint, fetchImpl: gone.fetchImpl })).toEqual({ mode: "done", removed: 1, failed: 0 });
+    expect(gone.calls.some((c) => c.path === "/revoke")).toBe(true);
+    expect(await db.select().from(personalCalendars)).toHaveLength(0);
   });
 });

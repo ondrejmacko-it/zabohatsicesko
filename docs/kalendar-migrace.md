@@ -11,9 +11,13 @@ Závazné zadání je [plan-kalendar-pozvanky.md](plan-kalendar-pozvanky.md), bo
     S otiskem smaže kalendáře „Vzdělávání ZBC“ v účtech uživatelů, zneplatní jejich tokeny a smaže řádky
     `personal_calendars`. Odmítne se, když běží `CALENDAR_DELIVERY=personal` (osobní režim by kalendáře
     založil znovu) nebo když otisk nesouhlasí se současnou inventurou (data se od schválení změnila).
+    Vrací `{ removed, failed }`. Když Google smazání kalendáře odmítne (cokoli kromě 404 = už smazaný),
+    token se neodvolá a řádek zůstane ve stavu `removal_failed` s `error_code`. Opakovaný úklid
+    (nová inventura, nový otisk) to zkusí znovu, nic se neztratí. Stejně se chová úklid vypnutého účtu v osobním režimu.
 - `scripts/kalendar-migrace.ts`: `inventura`, `smazat-kalendare` (dry-run), `smazat-kalendare --provest <otisk>`.
 - Testy `tests/kalendar-migrace.test.ts`: inventura nic nezapisuje a neobsahuje adresy, dry-run nevolá Google,
-  odmítnutí v osobním režimu a se špatným otiskem, úklid se schváleným otiskem.
+  odmítnutí v osobním režimu a se špatným otiskem, odmítnuté smazání (403, 503) nechá token i řádek, 404 je úspěch,
+  úklid se schváleným otiskem.
 
 ## Inventura produkce 17. 11. 2026 (jen čtení přes Neon SQL, počty)
 

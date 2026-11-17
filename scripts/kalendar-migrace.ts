@@ -17,6 +17,7 @@ async function main() {
     const result = await retireWikiCalendars(db, { approvedFingerprint: value });
     console.log(JSON.stringify(result, null, 2));
     if (result.mode === "dry-run") console.log("Dry-run: nic se nesmazalo.");
+    else if (result.failed) console.log("Část kalendářů Google smazat odmítl (stav removal_failed). Po nové inventuře lze úklid zopakovat.");
   } else {
     throw new Error("Použití: tsx scripts/kalendar-migrace.ts inventura | smazat-kalendare [--provest <otisk>]");
   }
