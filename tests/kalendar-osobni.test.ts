@@ -1,11 +1,14 @@
 import { eq } from "drizzle-orm";
-import { afterAll, beforeAll, describe, expect, test } from "vitest";
+import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
 import { beginLogin, verifyLoginState } from "@/server/auth/google-login";
 import { EVENT_FORMAT, PERSONAL_SCOPE, needsPersonalCalendar, personalSyncNeeded, personalCalendarState, savePersonalGrant, syncPersonalCalendar } from "@/server/calendar/personal";
-import { calendarDelivery } from "@/server/config";
+import { calendarDelivery, config } from "@/server/config";
 import { personalCalendarView } from "@/features/vzdelavani/components/PersonalCalendarStatus";
-import { personalCalendarEntries, personalCalendars, users } from "@/server/db/schema";
-import { participant, resetDemo } from "./helpers";
+import { statusAdvice } from "@/features/vzdelavani/status";
+import { calendarLinks, personalCalendarEntries, personalCalendars, users } from "@/server/db/schema";
+import { getEventDetail } from "@/server/services/detail";
+import { getEventCard } from "@/server/services/events";
+import { PUBLISHED_RM, lead, organizer, participant, resetDemo } from "./helpers";
 
 // Osobní kalendář „Vzdělávání ZBC“ s napodobeným HTTP Googlu: založení, zápis bez hostů, opakování,
 // odvolání a odebraný účet. Ostré adresy Googlu se nevolají.
@@ -357,5 +360,88 @@ describe("osobní kalendář", () => {
     const [row] = await db.select().from(personalCalendars).where(eq(personalCalendars.userId, participant.id));
     expect(row).toMatchObject({ status: "active", calendarId: "cal-1", errorCode: null });
     expect(await db.select().from(personalCalendarEntries).where(eq(personalCalendarEntries.userId, participant.id))).toHaveLength(entries.length);
+  });
+});
+
+describe("stav akce v osobním režimu", () => {
+  const personalRow = (userId: string, values: Partial<typeof personalCalendars.$inferInsert> = {}) => ({
+    userId,
+    orgId: config.orgId,
+    accountEmail: `${userId}@example.com`,
+    encryptedRefreshToken: "",
+    scopes: PERSONAL_SCOPE,
+    calendarId: "cal-1",
+    status: "active" as const,
+    syncedAt: new Date("2026-11-10T07:00:00Z"),
+    ...values,
+  });
+
+  async function detailWithoutGoogle() {
+    const fetchSpy = vi.fn(async () => new Response("{}", { status: 500 }));
+    vi.stubGlobal("fetch", fetchSpy);
+    try {
+      const detail = await getEventDetail(organizer, PUBLISHED_RM);
+      return { detail: detail!, calls: fetchSpy.mock.calls.length };
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  }
+
+  test("chybějící vazba: kalendář organizátora se nevolá, nenabízí se pozvánka ani párování, nic se netvrdí", async () => {
+    await db.delete(personalCalendars);
+    await db.delete(personalCalendarEntries);
+    await db.delete(calendarLinks).where(eq(calendarLinks.eventId, PUBLISHED_RM));
+    const { detail, calls } = await detailWithoutGoogle();
+    expect(calls).toBe(0);
+    const sync = detail.sync!;
+    expect(sync.personal).toBe(true);
+    expect(sync.status).toBe("personal");
+    expect(sync.status).not.toBe("synced");
+    expect(sync.candidates).toEqual([]);
+    expect(sync.unlinkedReason).toBeNull();
+    expect(sync.calendarUnavailable).toBe(false);
+    expect(sync.calendarErrorCode).toBeNull();
+    expect(sync.external).toBeNull();
+    expect(sync.legacyInviteId).toBeNull();
+    // Bez propojených kalendářů není zapsáno nikde a nikdo není „v chybě“.
+    expect(sync.personalDelivery).toMatchObject({ expected: true, written: 0, failing: [], waiting: 0 });
+    expect(sync.personalDelivery!.notConnected).toBe(sync.personalDelivery!.audience);
+
+    const found = await getEventCard(organizer, PUBLISHED_RM);
+    expect(found!.card.syncStatus).toBe("personal");
+    expect(statusAdvice(found!.card)).toBeNull();
+  });
+
+  test("evidence zápisu: zapsané kalendáře, čekající a chyby jednotlivých lidí zvlášť", async () => {
+    await db.delete(personalCalendars);
+    await db.delete(personalCalendarEntries);
+    await db.insert(personalCalendars).values([
+      personalRow(organizer.id),
+      personalRow(lead.id, { errorCode: "forbidden_insufficientPermissions" }),
+    ]);
+    await db.insert(personalCalendarEntries).values({ userId: organizer.id, eventId: PUBLISHED_RM, externalEventId: "x", dataHash: "h" });
+    const { detail, calls } = await detailWithoutGoogle();
+    expect(calls).toBe(0);
+    const delivery = detail.sync!.personalDelivery!;
+    expect(delivery.written).toBe(1);
+    expect(delivery.failing).toEqual([{ name: expect.any(String), reason: "blocked" }]);
+    expect(delivery.notConnected).toBe(delivery.audience - 2);
+    expect(delivery.lastSyncedAt).toBe("2026-11-10T07:00:00.000Z");
+    // Záznamy jiných akcí ani lidí mimo publikum se nepočítají.
+    await db.insert(personalCalendars).values(personalRow(participant.id));
+    await db.insert(personalCalendarEntries).values({ userId: participant.id, eventId: PUBLISHED_RM, externalEventId: "y", dataHash: "h" });
+    expect((await detailWithoutGoogle()).detail.sync!.personalDelivery!.written).toBe(1);
+  });
+
+  test("starší pozvánka organizátora je jen historická informace, Google se nevolá", async () => {
+    await db.delete(calendarLinks).where(eq(calendarLinks.eventId, PUBLISHED_RM));
+    await db.insert(calendarLinks).values({ eventId: PUBLISHED_RM, calendarId: "primary", externalEventId: "stara-pozvanka", syncedRevision: 1, syncStatus: "attention", errorCode: "calendar_unavailable", attempts: 3 });
+    const { detail, calls } = await detailWithoutGoogle();
+    expect(calls).toBe(0);
+    expect(detail.sync).toMatchObject({ status: "personal", legacyInviteId: "stara-pozvanka", errorCode: null, external: null, candidates: [] });
+    // Stará chyba vazby se v osobním režimu nehlásí jako chyba akce.
+    const found = await getEventCard(organizer, PUBLISHED_RM);
+    expect(found!.card.syncStatus).toBe("personal");
+    await db.delete(calendarLinks).where(eq(calendarLinks.eventId, PUBLISHED_RM));
   });
 });

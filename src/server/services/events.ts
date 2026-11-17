@@ -36,8 +36,11 @@ export type EventCard = {
   unpublishedChanges: boolean;
   extraordinary: boolean;
   past: boolean;
-  /** Jen pro správce. „unlinked“ = zveřejněná akce zatím bez vazby na pozvánku. */
-  syncStatus: SyncStatus | "unlinked" | null;
+  /**
+   * Jen pro správce. „unlinked“ = zveřejněná akce zatím bez vazby na pozvánku. „personal“ = osobní režim:
+   * pozvánka organizátora se nevede a karta o doručení do osobních kalendářů nic netvrdí (evidence je v detailu).
+   */
+  syncStatus: SyncStatus | "unlinked" | "personal" | null;
   /** Jen pro správce: zveřejněný termín, pokud ho rozpracovaný návrh přesouvá jinam. */
   movedFrom: { startsAt: string; endsAt: string; allDay: boolean } | null;
   /** Jen pro správce: verze akce, kterou přesun tažením posílá serveru jako kontrolu souběhu. */
@@ -70,8 +73,8 @@ function toCard(
   const organizer = isOrganizer(viewer);
   const isPublic = row.published !== null;
   let syncStatus: EventCard["syncStatus"] = null;
-  // Osobní kalendáře nemají pozvánku k akci: chybějící vazba tu neznamená, že něco chybí.
-  if (organizer && isPublic && view.type !== "holiday") syncStatus = link?.syncStatus ?? (personalDelivery() ? "synced" : "unlinked");
+  // Osobní režim: vazba ani její chybění nic nedokazují (`markLinksDelivered` ji jen označí za zpracovanou).
+  if (organizer && isPublic && view.type !== "holiday") syncStatus = personalDelivery() ? "personal" : (link?.syncStatus ?? "unlinked");
   const last = row.published;
   const moved = organizer && last !== null && row.status !== "cancelled" && (last.startsAt !== view.startsAt || last.endsAt !== view.endsAt);
 

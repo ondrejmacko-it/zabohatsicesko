@@ -22,7 +22,7 @@ import { getDb } from "@/server/db/client";
 import { calendarLinks, integrationCredentials, users } from "@/server/db/schema";
 import { calendarSummary, snapshotOf } from "@/server/domain/snapshot";
 import { openSecret, sealSecret } from "@/server/integrations/secret-box";
-import { formValuesOf } from "@/server/services/detail";
+import { formValuesOf, getEventDetail } from "@/server/services/detail";
 import { loadEventRow, updateEvent, type EventInput } from "@/server/services/events";
 import { inviteUser, updateAccess } from "@/server/services/users";
 import { listTasks } from "@/server/services/journey";
@@ -655,6 +655,31 @@ describe("testovací režim Google Kalendáře ve Wiki (napodobené HTTP)", () =
       expect(google.calls("PATCH").at(-1)!.body).not.toHaveProperty("attendees");
     } finally {
       vi.stubEnv("CALENDAR_ATTENDEES", "");
+    }
+  });
+
+  test("režim organizátora: chybějící vazba je „bez pozvánky“, nikdy „synchronizováno“", async () => {
+    await connect();
+    const db = await getDb();
+    await db.delete(calendarLinks).where(eq(calendarLinks.eventId, PUBLISHED_RM));
+    const detail = await getEventDetail(organizer, PUBLISHED_RM);
+    expect(detail!.sync).toMatchObject({ personal: false, status: "unlinked", personalDelivery: null, legacyInviteId: null });
+    expect(detail!.card.syncStatus).toBe("unlinked");
+  });
+
+  test("osobní režim: chybějící vazba nevolá kalendář organizátora ani nenabízí pozvánku", async () => {
+    await connect();
+    const db = await getDb();
+    await db.delete(calendarLinks).where(eq(calendarLinks.eventId, PUBLISHED_RM));
+    vi.stubEnv("CALENDAR_DELIVERY", "personal");
+    try {
+      const before = google.calls("GET").length + google.calls("POST").length;
+      const detail = await getEventDetail(organizer, PUBLISHED_RM);
+      expect(google.calls("GET").length + google.calls("POST").length).toBe(before);
+      expect(detail!.sync).toMatchObject({ personal: true, status: "personal", candidates: [], unlinkedReason: null, calendarUnavailable: false });
+      expect(detail!.card.syncStatus).toBe("personal");
+    } finally {
+      vi.stubEnv("CALENDAR_DELIVERY", "");
     }
   });
 });

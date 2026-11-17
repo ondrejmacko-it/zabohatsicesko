@@ -3,6 +3,7 @@ import { toDateKey, toTimeKey } from "@/lib/time";
 import type { EventSnapshot, EventType, Group, SimAttendee } from "@/lib/types";
 import { audienceAttendees } from "@/server/calendar/attendees";
 import { CalendarError, type ExternalEvent } from "@/server/calendar/provider";
+import { personalEventDelivery, type PersonalEventDelivery } from "@/server/calendar/personal";
 import { listNotifications } from "@/server/calendar/simulated";
 import { calendarProvider, looksLikeSameInvite, pairingCandidates } from "@/server/calendar/sync";
 import { attendeeSource, calendarMode, config, now, personalDelivery, type AttendeeSource, type CalendarMode } from "@/server/config";
@@ -52,7 +53,11 @@ export type SyncPanel = {
   personal: boolean;
   /** Vazba míří na jeden výskyt opakované události. */
   seriesInstance: boolean;
-  status: "pending" | "synced" | "attention" | "unlinked" | "none";
+  /**
+   * Stav pozvánky v kalendáři organizátora. „personal“ = osobní režim: pozvánka organizátora se nevede
+   * a jeden souhrnný stav by nic nedokazoval, skutečnou evidenci nese `personalDelivery`.
+   */
+  status: "pending" | "synced" | "attention" | "unlinked" | "none" | "personal";
   errorCode: string | null;
   conflict: { external: ManagedFields; wiki: ManagedFields } | null;
   externalId: string | null;
@@ -71,21 +76,51 @@ export type SyncPanel = {
    * „past“ proběhlá akce se už nezakládá, „unavailable“ Kalendář teď neodpovídá nebo není propojený.
    */
   unlinkedReason: "lookalike" | "automatic" | "past" | "unavailable" | null;
+  /** Jen osobní režim a zveřejněná akce: co o zápisu do osobních kalendářů skutečně víme. */
+  personalDelivery: PersonalEventDelivery | null;
+  /** Jen osobní režim: starší pozvánka v kalendáři organizátora z doby před osobními kalendáři (jen informace). */
+  legacyInviteId: string | null;
 };
+
+/**
+ * Osobní režim: diagnostika vychází jen z evidence osobních kalendářů. Kalendář organizátora se nevolá,
+ * nepáruje se a nová pozvánka se nenabízí. Případná starší vazba se ukáže jen jako historická informace.
+ */
+async function personalSyncPanel(db: Awaited<ReturnType<typeof getDb>>, row: EventRow, legacyInviteId: string | null): Promise<SyncPanel> {
+  return {
+    mode: calendarMode(),
+    personal: true,
+    seriesInstance: false,
+    status: row.published ? "personal" : "none",
+    errorCode: null,
+    conflict: null,
+    externalId: null,
+    external: null,
+    calendarUnavailable: false,
+    calendarErrorCode: null,
+    notifications: [],
+    candidates: [],
+    inviteeCount: 0,
+    attendeeSource: "audience",
+    unlinkedReason: null,
+    personalDelivery: row.published ? await personalEventDelivery(db, row.id, row.published) : null,
+    legacyInviteId,
+  };
+}
 
 async function syncPanel(viewer: Viewer, row: EventRow): Promise<SyncPanel | null> {
   if (!isOrganizer(viewer) || row.type === "holiday") return null;
   const db = await getDb();
   const [link] = await db.select().from(calendarLinks).where(eq(calendarLinks.eventId, row.id)).limit(1);
+  if (personalDelivery()) return personalSyncPanel(db, row, link?.externalEventId ?? null);
   // Neplatná sestava hostů zastaví až synchronizaci, panel kvůli ní nespadne.
   const invitees = await audienceAttendees(db, row.audience).catch(() => []);
   const mode = calendarMode();
   const panel: SyncPanel = {
     mode,
-    personal: personalDelivery(),
+    personal: false,
     seriesInstance: Boolean(link?.recurringEventId),
-    // Osobní kalendáře pozvánku k akci nezakládají, chybějící vazba proto není „bez pozvánky“.
-    status: !row.published ? "none" : (link?.syncStatus ?? (personalDelivery() ? "synced" : "unlinked")),
+    status: !row.published ? "none" : (link?.syncStatus ?? "unlinked"),
     errorCode: link?.errorCode ?? null,
     conflict: null,
     externalId: link?.externalEventId ?? null,
@@ -97,6 +132,8 @@ async function syncPanel(viewer: Viewer, row: EventRow): Promise<SyncPanel | nul
     attendeeSource: mode === "google-test" ? attendeeSource() : "audience",
     inviteeCount: invitees.length,
     unlinkedReason: null,
+    personalDelivery: null,
+    legacyInviteId: null,
   };
   let rawCandidates: ExternalEvent[] = [];
   try {

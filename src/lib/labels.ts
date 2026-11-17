@@ -77,7 +77,7 @@ export const ERROR_LABELS: Record<string, string> = {
   calendar_series_master: "Vazba míří na celou opakovanou sérii. Wiki mění jen jeden výskyt, spárujte konkrétní termín.",
   calendar_not_organizer: "Originál pozvánky vlastní jiný účet. Připojte účet, který pozvánku založil, nebo založte novou pozvánku.",
   calendar_not_configured: "Testovací režim Google Kalendáře nemá úplnou konfiguraci na serveru.",
-  unsupported_fixture: "Tento soubor ukázka nepřepíše. Použijte ukázkovou nahrávku.",
+  unsupported_fixture: "Přepis je zatím jen ukázka a umí jen ukázkovou nahrávku. Tento soubor nepřepíše.",
   transcription_unavailable: "Služba přepisu je dočasně nedostupná. Zkuste přepis znovu.",
   invalid_output: "Návrh zápisu neprošel kontrolou formátu. Zkuste přepis znovu.",
 };

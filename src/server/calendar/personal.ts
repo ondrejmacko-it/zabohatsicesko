@@ -414,3 +414,75 @@ export async function markLinksDelivered(db: Executor, eventId?: string): Promis
     .set({ syncStatus: "synced", syncedRevision: sql`coalesce((select ${events.publishedRevision} from ${events} where ${events.id} = ${calendarLinks.eventId}), ${calendarLinks.syncedRevision})`, errorCode: null, attempts: 0, updatedAt: new Date() })
     .where(eventId ? eq(calendarLinks.eventId, eventId) : ne(calendarLinks.syncStatus, "synced"));
 }
+
+/** Důvod, proč účet z publika akci v osobním kalendáři nemá nebo mít nemusí. */
+export type PersonalFailure = "retrying" | "blocked" | "revoked" | "calendar_deleted";
+
+/**
+ * Co o zápisu jedné akce do osobních kalendářů skutečně víme. Jediný důkaz zápisu je záznam
+ * v `personal_calendar_entries`, který vzniká až po úspěšné odpovědi Googlu. Stav vazby `calendar_links`
+ * v osobním režimu nic nedokazuje (`markLinksDelivered` ji jen označí za zpracovanou).
+ */
+export type PersonalEventDelivery = {
+  /** Akce má v kalendářích být (zveřejněná a nezrušená). U zrušené akce se záznamy naopak odebírají. */
+  expected: boolean;
+  /** Aktivní účty z publika akce. */
+  audience: number;
+  /** Účty z publika, kterým Wiki akci do osobního kalendáře zapsala. */
+  written: number;
+  /** Propojené kalendáře, které čekají na srovnání po poslední změně (zápis teprve proběhne). */
+  waiting: number;
+  /** Účty z publika bez propojeného osobního kalendáře (nepropojeno nebo odmítnuto). */
+  notConnected: number;
+  /** Účty z publika, u kterých zápis selhává. Jen jména, bez e-mailů a kódů chyb. */
+  failing: Array<{ name: string; reason: PersonalFailure }>;
+  /** Poslední úspěšné srovnání kalendáře někoho z publika. */
+  lastSyncedAt: string | null;
+};
+
+export async function personalEventDelivery(db: Executor, eventId: string, snapshot: EventSnapshot): Promise<PersonalEventDelivery> {
+  const people = (
+    await db
+      .select({ id: users.id, name: users.name, groups: users.groups })
+      .from(users)
+      .where(and(eq(users.orgId, config.orgId), eq(users.status, "active")))
+  ).filter((u) => u.groups.includes(snapshot.audience));
+  const ids = people.map((u) => u.id);
+  const calendars = ids.length
+    ? new Map((await db.select().from(personalCalendars).where(and(eq(personalCalendars.orgId, config.orgId), inArray(personalCalendars.userId, ids)))).map((r) => [r.userId, r]))
+    : new Map<string, typeof personalCalendars.$inferSelect>();
+  const written = ids.length
+    ? new Set(
+        (await db.select({ userId: personalCalendarEntries.userId }).from(personalCalendarEntries).where(and(eq(personalCalendarEntries.eventId, eventId), inArray(personalCalendarEntries.userId, ids)))).map(
+          (e) => e.userId,
+        ),
+      )
+    : new Set<string>();
+  const result: PersonalEventDelivery = {
+    expected: snapshot.status !== "cancelled" && snapshot.type !== "holiday",
+    audience: people.length,
+    written: written.size,
+    waiting: 0,
+    notConnected: 0,
+    failing: [],
+    lastSyncedAt: null,
+  };
+  for (const person of people) {
+    const row = calendars.get(person.id);
+    if (!row || row.status === "declined") {
+      result.notConnected += 1;
+      continue;
+    }
+    if (row.status === "revoked" || row.status === "calendar_deleted") {
+      result.failing.push({ name: person.name, reason: row.status });
+      continue;
+    }
+    if (row.status !== "active") continue;
+    const state = stateOf(row);
+    if (state.blocked || state.retrying) result.failing.push({ name: person.name, reason: state.blocked ? "blocked" : "retrying" });
+    else if (!row.syncedAt || (row.syncRequestedAt && row.syncRequestedAt > row.syncedAt)) result.waiting += 1;
+    if (row.syncedAt && (!result.lastSyncedAt || row.syncedAt.toISOString() > result.lastSyncedAt)) result.lastSyncedAt = row.syncedAt.toISOString();
+  }
+  result.failing.sort((a, b) => a.name.localeCompare(b.name, "cs"));
+  return result;
+}

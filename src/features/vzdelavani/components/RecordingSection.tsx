@@ -133,7 +133,8 @@ export function RecordingSection({ eventId, eventLabel, panel }: { eventId: stri
                 <p className="notice">Kolegové zatím vidí zápis z původní nahrávky, dokud nezveřejníte tento.</p>
               )}
               <p className="notice">
-                Návrh z přepisu (šablona {TEMPLATE_LABELS[minutes.detectedTemplate]}). Zkontrolujte ho a zveřejněte.
+                Návrh z ukázkového přepisu (šablona {TEMPLATE_LABELS[minutes.detectedTemplate]}). Přepis je zatím jen demonstrace
+                nad ukázkovou nahrávkou, ne přepis skutečné schůzky. Zkontrolujte návrh a zveřejněte.
               </p>
               <MinutesEditor eventId={eventId} minutesId={minutes.id} version={minutes.version} content={minutes.content} />
             </>
@@ -144,7 +145,7 @@ export function RecordingSection({ eventId, eventLabel, panel }: { eventId: stri
             </>
           )}
           <details>
-            <summary>Pracovní přepis</summary>
+            <summary>Pracovní přepis (ukázka)</summary>
             <p className="transcript">{minutes.transcript}</p>
           </details>
         </div>

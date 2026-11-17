@@ -11,7 +11,7 @@ const STATE_TEXT: Record<MissingMinutesItem["state"], string> = {
   none: "bez nahrávky",
   processing: "nahrávka se přepisuje",
   failed: "přepis se nepovedl",
-  unsupported: "soubor nejde přepsat",
+  unsupported: "ukázkový přepis soubor nepřepíše",
   draft: "návrh čeká na kontrolu",
 };
 

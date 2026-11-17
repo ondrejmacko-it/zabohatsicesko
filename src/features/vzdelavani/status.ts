@@ -74,6 +74,8 @@ export function statusAdvice(card: EventCard): string | null {
   // Rozpracovaný návrh změny má v detailu vlastní upozornění s tlačítky.
   if (card.unpublishedChanges) return null;
   if (card.syncStatus === "pending") return "Změna se posílá do Kalendáře.";
+  // Osobní režim: pozvánka organizátora se nevede a doručení kolegům karta netvrdí (evidence je v detailu).
+  if (card.syncStatus === "personal") return null;
   // U proběhlé akce už chybějící pozvánka nic neřeší, správce by jen zbytečně hledal opravu.
   if (card.syncStatus === "unlinked" && !card.past) return "Akce zatím nemá pozvánku v Kalendáři.";
   return null;

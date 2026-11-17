@@ -35,16 +35,18 @@ async function calendarRequestFor(db: Executor, hintedUserId: string | null, sco
   return (await needsCalendarConnection(db, canPlan(known))) ? { calendar: "ask", loginHint: known.email } : {};
 }
 
-// Začátek přihlášení Google identitou. Jen v nakonfigurovaném testovacím režimu.
-// `?kalendar=ne` přihlásí bez žádosti o Kalendář.
-// Ostrá Wiki pustí na Google jen prohlížeč s důvěryhodným zařízením, s platnou pozvánkou v cookie, nebo `?spravce=1`
-// pro adresy ze zaváděcího seznamu správců. Přímé volání bez zařízení skončí na neutrální stránce vstupu.
-export async function GET(request: NextRequest) {
+type LoginStartResult = { kind: "google"; url: string; cookieValue: string } | { kind: "gate"; url: URL } | { kind: "error"; status: number };
+
+/**
+ * Společný začátek přihlášení pro GET (odkazy bez e-mailu) i POST (ručně zadaná adresa).
+ * `typedEmail` přichází jen z těla POST: adresa se nikdy neobjeví v URL Wiki, historii ani v přístupových lozích.
+ */
+async function prepareLogin(request: NextRequest, typedEmail: string | null): Promise<LoginStartResult> {
   const cfg = googleLoginConfig();
-  if (!cfg) return new Response(null, { status: 404 });
+  if (!cfg) return { kind: "error", status: 404 };
   const db = await getDb();
   const ip = (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-  if (!(await withinRateLimit(db, `google-login:${hashKey(ip)}`, 20, 600))) return new Response(null, { status: 429 });
+  if (!(await withinRateLimit(db, `google-login:${hashKey(ip)}`, 20, 600))) return { kind: "error", status: 429 };
 
   const params = request.nextUrl.searchParams;
   let scope: LoginScope | undefined;
@@ -61,15 +63,13 @@ export async function GET(request: NextRequest) {
       // Pozvánka zatím platí dál. Spotřebuje ji až callback, když se přihlásí právě tento účet.
       // Adresu z pozvánky Google nedostane: nové zařízení nesmí prozradit ani předvyplnit, komu pozvánka patří.
       scope = { kind: "invite", userId: invite.userId };
-      loginHint = typedLoginHint(params.get("email"));
+      loginHint = typedLoginHint(typedEmail);
       hintedUserId = null;
     } else if (params.get("spravce") === "1" && cfg.bootstrapAdmins?.size) {
       scope = { kind: "bootstrap" };
-      loginHint = typedLoginHint(params.get("email"));
+      loginHint = typedLoginHint(typedEmail);
     } else {
-      const back = NextResponse.redirect(new URL("/vstup", request.nextUrl), 303);
-      back.headers.set("Cache-Control", "no-store");
-      return back;
+      return { kind: "gate", url: new URL("/vstup", request.nextUrl) };
     }
   }
   // `?kalendar=osobni`: tlačítko „Propojit Kalendář“ u uživatele (i po odmítnutí nebo odvolání).
@@ -80,8 +80,50 @@ export async function GET(request: NextRequest) {
         ? { calendar: "personal" }
         : await calendarRequestFor(db, hintedUserId, scope);
   const { url, cookieValue } = beginLogin(cfg, undefined, { ...calendar, ...(loginHint ? { loginHint } : {}), ...(scope ? { scope } : {}) });
-  const response = NextResponse.redirect(url);
-  response.cookies.set(LOGIN_COOKIE, cookieValue, loginCookieOptions);
+  return { kind: "google", url, cookieValue };
+}
+
+// Začátek přihlášení Google identitou. Jen v nakonfigurovaném testovacím režimu.
+// `?kalendar=ne` přihlásí bez žádosti o Kalendář.
+// Ostrá Wiki pustí na Google jen prohlížeč s důvěryhodným zařízením, s platnou pozvánkou v cookie, nebo `?spravce=1`
+// pro adresy ze zaváděcího seznamu správců. Přímé volání bez zařízení skončí na neutrální stránce vstupu.
+// GET nikdy nečte e-mail z URL: ručně zadaná adresa jde jen přes POST níže.
+export async function GET(request: NextRequest) {
+  const result = await prepareLogin(request, null);
+  if (result.kind === "error") return new Response(null, { status: result.status });
+  const response = NextResponse.redirect(result.url, result.kind === "gate" ? 303 : 307);
+  if (result.kind === "google") response.cookies.set(LOGIN_COOKIE, result.cookieValue, loginCookieOptions);
   response.headers.set("Cache-Control", "no-store");
+  return response;
+}
+
+const MAX_BODY = 1024;
+
+/**
+ * Nové zařízení s ručně zadanou adresou. Prohlížeč pošle `fetch` POST s JSON tělem, server připraví stav
+ * přihlášení (podepsaná HttpOnly cookie) a vrátí adresu Googlu, na kterou klient přejde přes `location`.
+ * Odeslání formuláře by CSP `form-action 'self'` při přesměrování na Google zablokovala.
+ * Jen JSON ze stejného původu: cizí stránka tento požadavek bez CORS preflightu poslat nemůže.
+ */
+export async function POST(request: NextRequest) {
+  const noStore = { "Cache-Control": "no-store" };
+  const origin = request.headers.get("origin");
+  if (!origin || origin !== request.nextUrl.origin || !request.headers.get("content-type")?.startsWith("application/json")) {
+    return NextResponse.json({ error: "forbidden" }, { status: 403, headers: noStore });
+  }
+  const raw = await request.text();
+  if (raw.length > MAX_BODY) return NextResponse.json({ error: "invalid" }, { status: 400, headers: noStore });
+  let email: string | null = null;
+  try {
+    const body: unknown = JSON.parse(raw);
+    if (body && typeof body === "object" && typeof (body as { email?: unknown }).email === "string") email = (body as { email: string }).email;
+  } catch {
+    return NextResponse.json({ error: "invalid" }, { status: 400, headers: noStore });
+  }
+  const result = await prepareLogin(request, email);
+  if (result.kind === "error") return NextResponse.json({ error: result.status === 429 ? "rate_limited" : "unavailable" }, { status: result.status, headers: noStore });
+  if (result.kind === "gate") return NextResponse.json({ url: "/vstup" }, { headers: noStore });
+  const response = NextResponse.json({ url: result.url }, { headers: noStore });
+  response.cookies.set(LOGIN_COOKIE, result.cookieValue, loginCookieOptions);
   return response;
 }

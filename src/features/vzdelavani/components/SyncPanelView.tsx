@@ -12,8 +12,98 @@ const NOTIFICATION: Record<string, string> = { created: "pozvánka odeslána", u
 const describe = (f: ManagedFields) =>
   `${f.summary} · ${formatDayMonth(toDateKey(new Date(f.startsAt)))} ${formatEventTime(new Date(f.startsAt), new Date(f.endsAt), false)}${f.cancelled ? " · zrušeno" : ""}`;
 
+const FAILURE: Record<NonNullable<SyncPanel["personalDelivery"]>["failing"][number]["reason"], string> = {
+  retrying: "zápis se nepovedl, Wiki to zkusí znovu",
+  blocked: "Google zápis odmítá",
+  revoked: "přístup ke kalendáři odvolán",
+  calendar_deleted: "kalendář smazán",
+};
+
+const people = (count: number) => `${count} ${count === 1 ? "člověk" : count >= 2 && count <= 4 ? "lidé" : "lidí"}`;
+
+/**
+ * Osobní režim: jen to, co Wiki skutečně ví ze záznamů o zápisu do osobních kalendářů. Žádný souhrnný
+ * stav „synchronizováno“, žádná pozvánka organizátora, párování ani e-maily. Chyby jsou zvlášť.
+ */
+function PersonalSyncView({ sync }: { sync: SyncPanel }) {
+  const delivery = sync.personalDelivery;
+  const failing = delivery?.failing ?? [];
+  const panel = (
+    <section className="section" aria-labelledby="kalendar">
+      <div className="spread">
+        <h2 id="kalendar">Google Kalendář</h2>
+        <span className="row">
+          <span className="badge badge-outline">osobní kalendáře</span>
+          {failing.length > 0 && (
+            <span className="badge badge-danger" role="status">
+              Chyba zápisu: {people(failing.length)}
+            </span>
+          )}
+          <a className="btn btn-small" href="/vzdelavani/integrace">
+            Technické nastavení
+          </a>
+        </span>
+      </div>
+      <p className="small">Akce se zapisuje kolegům do jejich vlastních kalendářů. Pozvánky ani e-maily se neposílají.</p>
+      {!delivery ? (
+        <p className="small muted">Návrh se do kalendářů nezapisuje.</p>
+      ) : (
+        <dl className="dl">
+          <dt>Publikum</dt>
+          <dd>{people(delivery.audience)}</dd>
+          <dt>{delivery.expected ? "Zapsáno" : "Ještě v kalendářích"}</dt>
+          <dd>
+            {delivery.expected
+              ? `do ${delivery.written} z ${delivery.audience} osobních kalendářů`
+              : delivery.written > 0
+                ? `${delivery.written}, zrušená akce se odebere při dalším srovnání`
+                : "nikde, zrušená akce je odebraná"}
+          </dd>
+          {delivery.waiting > 0 && (
+            <>
+              <dt>Čeká na zápis</dt>
+              <dd>{delivery.waiting}</dd>
+            </>
+          )}
+          {delivery.notConnected > 0 && (
+            <>
+              <dt>Bez osobního kalendáře</dt>
+              <dd>{people(delivery.notConnected)} (nepropojeno nebo odmítnuto)</dd>
+            </>
+          )}
+          <dt>Poslední srovnání</dt>
+          <dd>{delivery.lastSyncedAt ? new Date(delivery.lastSyncedAt).toLocaleString("cs-CZ", { timeZone: "Europe/Prague", dateStyle: "short", timeStyle: "short" }) : "zatím žádné"}</dd>
+        </dl>
+      )}
+      {failing.length > 0 && (
+        <div className="notice notice-danger">
+          <p>Nepodařilo se zapsat do kalendáře:</p>
+          <ul>
+            {failing.map((f) => (
+              <li key={f.name}>
+                {f.name} · {FAILURE[f.reason]}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {sync.legacyInviteId && (
+        <p className="small muted">Starší pozvánka v kalendáři správce z doby před osobními kalendáři (ID {sync.legacyInviteId}). Wiki ji už neaktualizuje.</p>
+      )}
+    </section>
+  );
+  if (failing.length > 0) return panel;
+  return (
+    <details className="fold tech-fold">
+      <summary>Technické informace</summary>
+      {panel}
+    </details>
+  );
+}
+
 /** Stav vazby na Google Kalendář pro správce. Simulace i testovací režim Googlu mají stejné rozhraní. */
 export function SyncPanelView({ eventId, sync }: { eventId: string; sync: SyncPanel }) {
+  if (sync.personal) return <PersonalSyncView sync={sync} />;
   const statusBadge =
     sync.status === "synced"
       ? "badge badge-ok"
@@ -31,8 +121,8 @@ export function SyncPanelView({ eventId, sync }: { eventId: string; sync: SyncPa
         ? "Návrh se do Kalendáře neposílá"
         : sync.status === "synced" && sync.external?.cancelled
           ? "Zrušeno i v Kalendáři"
-          : sync.status === "pending" && sync.personal
-            ? "Zapisuje se do kalendářů"
+          : sync.status === "personal"
+            ? "Osobní kalendáře"
             : SYNC_STATUS_LABELS[sync.status];
   // Když jsou v Kalendáři kandidáti ke spárování, je hlavní krok párování a nová pozvánka jde do nabídky.
   const createInMenu = sync.status === "unlinked" && sync.candidates.length > 0;
@@ -55,7 +145,7 @@ export function SyncPanelView({ eventId, sync }: { eventId: string; sync: SyncPa
       <div className="spread">
         <h2 id="kalendar">Google Kalendář</h2>
         <span className="row">
-          <span className="badge badge-outline">{sync.personal ? "osobní kalendáře" : sync.mode === "simulation" ? "simulace" : sync.attendeeSource === "allowlist" ? "test Google · jen testovací příjemci" : "test Google · publikum akce"}</span>
+          <span className="badge badge-outline">{sync.mode === "simulation" ? "simulace" : sync.attendeeSource === "allowlist" ? "test Google · jen testovací příjemci" : "test Google · publikum akce"}</span>
           <span className={statusBadge} role="status">
             {statusLabel}
           </span>
@@ -72,9 +162,6 @@ export function SyncPanelView({ eventId, sync }: { eventId: string; sync: SyncPa
         </span>
       </div>
 
-      {sync.personal && (
-        <p className="small">Akce se zapisuje kolegům do jejich kalendářů. Pozvánky ani e-maily se neposílají.</p>
-      )}
       {sync.calendarUnavailable && (
         <p className="notice notice-danger">
           {sync.calendarErrorCode === "calendar_revoked" || sync.calendarErrorCode === "calendar_not_configured" ? (
@@ -170,9 +257,7 @@ export function SyncPanelView({ eventId, sync }: { eventId: string; sync: SyncPa
             )}
             <dt>Oznámení</dt>
             <dd>
-              {sync.personal
-                ? "neposílají se (osobní kalendáře)"
-                : sync.mode === "google-test"
+              {sync.mode === "google-test"
                 ? "Wiki žádá Google o oznámení pozvaným při každé změně. Doručení Google nehlásí."
                 : sync.notifications.length
                   ? sync.notifications.map((n) => `${NOTIFICATION[n.kind] ?? n.kind} (${n.recipients})`).join(" · ")
