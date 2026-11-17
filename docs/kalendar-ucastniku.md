@@ -310,3 +310,13 @@ Google třídu nezveřejňuje a ukáže ji až konzole. **Rozhodne tvůj pohled 
   e2e ostré Wiki s falešným Googlem (adresy Googlu přes proměnnou jen v testech).
 * **Živé ověření**: po nasazení se účastník přihlásí, potvrdí Kalendář, v Google Kalendáři vlevo uvidí
   „Vzdělávání ZBC“ s akcemi své skupiny. Správce změní čas akce a účastník změnu uvidí do minuty.
+
+## Živě 17. 11.: self-invite e-maily neposílá a akce zdvojuje
+
+* Neon: oba kalendáře `active`, `event_format = 3`, každá varianta `calendarList` vrací `401_authError`.
+  Upozornění kalendáře (`notificationSettings`) ani výchozí připomínky rozsah `calendar.app.created` nastavit nedovolí.
+* Self-invite (host = vlastník kalendáře) e-mail nepošle: Google neupozorňuje toho, kdo změnu provedl. Navíc
+  zobrazí kopii akce jako nezodpovězenou pozvánku v primárním kalendáři (dutý kroužek), proto je každá akce dvakrát.
+* 17. 11. `CALENDAR_PERSONAL_NOTIFY=off` (Production). Připomínky v akci (e-mail den předem, oznámení 30 min) zůstávají.
+* Spolehlivý e-mail o nové/změněné/zrušené akci musí poslat jiný odesílatel než příjemce: Wiki sama (Gmail SMTP
+  s heslem aplikace, nebo poskytovatel s doménou), nebo pozvánka z kalendáře správce. Rozhodne uživatel.
