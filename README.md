@@ -155,6 +155,8 @@ Hlavní rozhodnutí:
 - Audit zaznamenává kdo, co a kdy bez obsahu dat. Provozní log obsahuje jen kódy chyb.
 - Ochrana repozitáře: `.gitignore` pro tajemství a podklady, `.claude/settings.json`, pre-push hook
   (`git config --local core.hooksPath .githooks`) a CI s kontrolou citlivých cest.
+- `npm audit` produkčních závislostí blokuje merge. Plný audit včetně vývojových nástrojů je dočasně jen
+  report kvůli GHSA-fc5q-39xc-vjpf (`picomatch`), viz [`docs/bezpecnost-zavislosti.md`](docs/bezpecnost-zavislosti.md).
 
 ## Nasazení
 
