@@ -1,5 +1,11 @@
 # Prompt pro další session
 
+**BEZPEČNOSTNÍ ÚPRAVA #67 (18. 11. 2026).** Na pokyn uživatele: plný audit už není `continue-on-error`. #67 (480e814):
+`scripts/audit-plny.ts` + `scripts/audit-vyjimky.ts` + `scripts/audit-vyjimky.json` – blokuje vše kromě GHSA-fc5q-39xc-vjpf
+v `picomatch` do 31. 12. 2026; chyba auditu blokuje; produkční audit beze změny; testy `tests/audit-vyjimky.test.ts` (7).
+Zkušební sloučení #67+#63+#64+#65 bez konfliktu, unit 279/279. Uživatel nechce další funkční ani vizuální úpravy.
+**Další krok:** nic bez pokynu; uživatel slučuje #67 → #63 → #64 → #65 (vždy Update branch + zelené CI).
+
 **OVĚŘENÍ PŘED PŘEDÁNÍM HOTOVO (18. 11. 2026, relace session_01HpUiruuQL3xe1DCLQTCGbo).**
 * CI #67 zelené (oba joby + citlivé cesty). #63/#64/#65 padají jen na plném `npm audit` (picomatch, dev), vyřeší sloučení #67.
 * Popisy #63 (U08 v 1127481) a #64 (U08 hotové, pořadí sloučení) aktualizované.
