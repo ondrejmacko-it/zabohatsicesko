@@ -147,7 +147,7 @@ describe("stav osobního kalendáře", () => {
     const base = { accountEmail: "ucastnik@example.com", syncedAt: null, retrying: false, blocked: false };
     expect(personalCalendarView({ ...base, status: "none" }).action).toBe("Propojit Kalendář");
     expect(personalCalendarView({ ...base, status: "declined" }).action).toBe("Propojit Kalendář");
-    expect(personalCalendarView({ ...base, status: "revoked" }).action).toBe("Propojit znovu");
+    expect(personalCalendarView({ ...base, status: "revoked" })).toMatchObject({ badge: "Kalendář odpojen", action: "Připojit Kalendář znovu" });
     expect(personalCalendarView({ ...base, status: "calendar_deleted" }).action).toBe("Vytvořit znovu");
     const active = personalCalendarView({ ...base, status: "active", syncedAt: "2026-11-16T08:05:00Z" });
     expect(active.action).toBeNull();
@@ -156,7 +156,7 @@ describe("stav osobního kalendáře", () => {
     expect(active.text).toContain("připomínka e-mailem");
     expect(personalCalendarView({ ...base, status: "active", retrying: true }).tone).toBe("warn");
     const blocked = personalCalendarView({ ...base, status: "active", blocked: true });
-    expect(blocked.action).toBe("Propojit znovu");
+    expect(blocked.action).toBe("Připojit Kalendář znovu");
     expect(blocked.text).not.toContain("odvolán");
     expect(personalCalendarLabel(undefined)).toBe("Kalendář: nepropojen");
   });

@@ -14,7 +14,7 @@ import {
   CalendarStatusLine,
   InviteRecipients,
 } from "@/features/vzdelavani/components/CalendarStatusLine";
-import { personalCalendarLabel } from "@/features/vzdelavani/components/PersonalCalendarStatus";
+import { PersonalCalendarStatus, personalCalendarLabel } from "@/features/vzdelavani/components/PersonalCalendarStatus";
 import type { PersonalCalendarState } from "@/server/calendar/personal";
 import { legacyInviteCount } from "@/server/calendar/legacy-invites";
 import { loadCalendarStatus, loadPersonalCalendars } from "@/server/services/calendar-status";
@@ -123,6 +123,8 @@ export default async function AdminPage() {
                 Stav u každého je v seznamu Lidé.
               </span>
             </p>
+            {/* Vlastní kalendář správce: při odpojení tady rovnou tlačítko „Připojit Kalendář znovu“. Za kolegy to udělat nejde. */}
+            {personal.get(user.id) && <PersonalCalendarStatus state={personal.get(user.id)!} />}
             {legacyInvites > 0 && (
               <div className="cal-status cal-status-warn" data-testid="stare-pozvanky">
                 <span className="cal-status-main">

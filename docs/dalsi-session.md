@@ -38,6 +38,24 @@ Nouzové zrušení zařízení hlavního správce (UI ho záměrně nenabízí) 
 Platí od dalšího požadavku. Můžeš ho provést i ty přes Neon MCP, ale jen na výslovný pokyn uživatele.
 
 
+**Stav 16. 11. noc 3, kalendář 401 (poslední):** #47–#50 jsou v `main`. Draft [#51](https://github.com/ondrejmacko-it/zabohatsicesko/pull/51) z větve `claude/oprava-kalendare-401`:
+`calendarList.get` → `update` → `patch` varianty, 401 už neukončí nastavení (důvod do `setup_code`), `selected/hidden`,
+`EVENT_FORMAT = 3`, kontrola odvolání po 10 min (Úvod čeká max. 2,5 s), „Kalendář odpojen“ + „Připojit Kalendář znovu“
+na Úvodu, v Plánu a ve Správě. Podrobnosti a kroky v `docs/kalendar-ucastniku.md`, část „Po merge #47: 401…“.
+* **Další krok 1:** po merge a nasazení přečíst (jen čtení) `select status, event_format, setup_code, error_code, synced_at
+  from personal_calendars`, zapsat do `docs/kalendar-ucastniku.md`. `event_format < 3` → uživatel otevře Úvod.
+  `setup_code` bez `full` → navrhnout zapnutí self-invite (zapnutí potvrdí uživatel).
+* **Další krok 2 (čeká na souhlas uživatele s návrhem):** Plán „+“ na dni a přesun tažením s potvrzením
+  (`claude/plan-pridani-a-presun`), „Čeká na vás“ na Úvodu (`claude/domu-ceka-na-vas`). Návrhy jsou v odpovědi relace
+  a zkráceně tady:
+  - „+“: tlačítko v rohu buňky dne (`ScheduleGrid`), jen `canPlan`; viditelné při `:hover`/`:focus-within`, na
+    `(hover: none)` vždy. Odkaz na stávající dialog „Přidat akci“ s `?den=YYYY-MM-DD`, server datum validuje stejně.
+  - Přesun: HTML5 drag and drop na bloku akce (jen `canPlan`), drop na den → potvrzovací dialog → serverová akce
+    `moveEventAction(eventId, dateKey, revision)` = úprava akce se stejným časem (stejná validace, oprávnění, revize).
+    Bez myši: v detailu akce „Přesunout na jiný den“ (pole data). Na dotyku jen tato cesta.
+  - „Čeká na vás“: společná komponenta `TasksCard` pro Plán i Úvod; 1280 px dva sloupce (Nejbližší akce | Čeká na vás),
+    320 px pod sebou (Čeká na vás první), odkaz „Celý plán“ u obou.
+
 **Stav 16. 11. noc 2, audit (poslední):** #47, #48, #49 nebyly v `main` (ověřeno `git merge-base --is-ancestor`).
 Blok „Stav 16. 11. noc, notifikace“ je v předávce větve #49.
 * #47: text ve Správě podle `personalSelfInvite()`, lint/typy ok, vitest 202/202, e2e 788 ok + 30 přeskočeno.

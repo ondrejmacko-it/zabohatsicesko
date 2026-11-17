@@ -22,6 +22,11 @@ const HISTORY_DAYS = 60;
 const LEASE_SEC = 120;
 /** Kolikrát se běh zopakuje, když během něj přišla další změna. */
 const MAX_ROUNDS = 3;
+/**
+ * Jak často se ověří, že přístup u Googlu ještě platí, i když se nic nezměnilo. Odebrání přístupu v účtu
+ * Google Wiki jinak pozná až při příští změně akce a do té doby by ukazovala „Propojeno“.
+ */
+export const ACCESS_CHECK_MIN = 10;
 
 export const grantsPersonalCalendar = (scopes: string) => scopes.split(" ").includes(PERSONAL_SCOPE);
 
@@ -152,6 +157,8 @@ export async function personalSyncNeeded(db: Executor): Promise<boolean> {
               gt(personalCalendars.syncRequestedAt, personalCalendars.syncedAt),
               // Nasazení s novou podobou akcí: samo nic nezmění, proto se přepis spustí odsud.
               lt(personalCalendars.eventFormat, EVENT_FORMAT),
+              // Pravidelná kontrola, že přístup u Googlu ještě platí (odvolání v účtu Google).
+              lt(personalCalendars.syncedAt, sql`now() - make_interval(mins => ${ACCESS_CHECK_MIN})`),
             ),
           ),
           isNull(users.id),
@@ -165,10 +172,10 @@ export async function personalSyncNeeded(db: Executor): Promise<boolean> {
 
 /**
  * Verze podoby zapsané akce. Zvýšení přepíše všechny akce v kalendářích a znovu zkusí nastavení kalendáře
- * (2 = připomínky přímo v akci). Kalendář si pamatuje verzi v `event_format`, `personalSyncNeeded` podle ní
+ * (2 = připomínky přímo v akci, 3 = oprava nastavení kalendáře po 401 na `calendarList.patch`). Kalendář si pamatuje verzi v `event_format`, `personalSyncNeeded` podle ní
  * pozná, že po nasazení je co přepisovat.
  */
-export const EVENT_FORMAT = 2;
+export const EVENT_FORMAT = 3;
 const hashOf = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex").slice(0, 32);
 export const personalEventId = (eventId: string) => eventIdForKey(`personal:${config.orgId}:${eventId}`);
 
@@ -283,6 +290,9 @@ export async function syncPersonalCalendar(db: Db, userId: string, deps: Persona
       const stale = [...written.values()].filter((e) => !wanted.has(e.eventId));
       const changed = [...wanted.entries()].filter(([id, w]) => written.get(id)?.dataHash !== w.hash);
 
+      // Bez změn akcí se zapisovat nemá co, jen se obnoví token: tak Wiki pozná odvolání přístupu v účtu
+      // Google. Běh bez změn spustí Úvod nejvýš jednou za `ACCESS_CHECK_MIN` (viz `personalSyncNeeded`).
+      if (round === 0 && !changed.length && !stale.length && calendarId) await api.verifyAccess();
       if (changed.length || stale.length || !calendarId) {
         if (!calendarId) {
           // ID se uloží hned po založení: cokoli dalšího může selhat a příští běh musí kalendář najít,

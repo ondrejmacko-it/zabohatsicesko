@@ -6,6 +6,8 @@ import type { PersonalCalendarState } from "@/server/calendar/personal";
 
 export const PERSONAL_CONNECT_HREF = "/api/google/prihlaseni?kalendar=osobni";
 
+const RECONNECT = "Připojit Kalendář znovu";
+
 export type PersonalCalendarView = {
   tone: "ok" | "warn" | "alert";
   badge: string;
@@ -27,7 +29,7 @@ export function personalCalendarView(state: PersonalCalendarState): PersonalCale
           tone: "warn",
           badge: "Nedaří se zapsat",
           text: "Google zatím nedovolil zapsat akce do kalendáře „Vzdělávání ZBC“. Wiki to zkouší dál. Když to vydrží, propojte Kalendář znovu.",
-          action: "Propojit znovu",
+          action: RECONNECT,
         };
       if (state.retrying)
         return { tone: "warn", badge: "Zkusí se znovu", text: "Poslední změnu se do Kalendáře nepodařilo zapsat. Wiki to zkusí znovu sama, nic dělat nemusíte.", action: null };
@@ -41,7 +43,12 @@ export function personalCalendarView(state: PersonalCalendarState): PersonalCale
       };
     case "revoked":
       // Jen skutečné odvolání (Google odmítl obnovit přístup). Jednotlivé odmítnuté zápisy jsou „Nedaří se zapsat“.
-      return { tone: "alert", badge: "Odpojeno", text: "Přístup Wiki k vašemu Google Kalendáři skončil. Nové akce ani změny se tam neobjeví.", action: "Propojit znovu" };
+      return {
+        tone: "alert",
+        badge: "Kalendář odpojen",
+        text: "Přístup Wiki k vašemu Google Kalendáři skončil (například jste ho odebrali v účtu Google). Nové akce ani změny se tam neobjeví, dokud Kalendář znovu nepřipojíte.",
+        action: RECONNECT,
+      };
     case "calendar_deleted":
       return { tone: "alert", badge: "Kalendář smazán", text: "Kalendář „Vzdělávání ZBC“ jste v Google Kalendáři smazali, akce se do něj už nezapisují.", action: "Vytvořit znovu" };
     case "declined":
@@ -81,7 +88,7 @@ export function personalCalendarLabel(state: PersonalCalendarState | undefined):
     if (state.retrying) return `Kalendář: zápis se zopakuje${account}`;
     return `Kalendář: propojen${account}${state.syncedAt ? `, aktualizováno ${when(state.syncedAt)}` : ", připravuje se"}`;
   }
-  if (state.status === "revoked") return "Kalendář: přístup skončil";
+  if (state.status === "revoked") return "Kalendář odpojen: přístup v účtu Google skončil, připojí ho znovu sám uživatel";
   if (state.status === "calendar_deleted") return "Kalendář: smazán v Googlu";
   return "Kalendář: nepovolen při přihlášení";
 }
