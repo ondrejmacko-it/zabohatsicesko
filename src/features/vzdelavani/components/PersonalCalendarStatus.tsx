@@ -51,6 +51,9 @@ export function personalCalendarView(state: PersonalCalendarState): PersonalCale
       };
     case "calendar_deleted":
       return { tone: "alert", badge: "Kalendář smazán", text: "Kalendář „Vzdělávání ZBC“ jste v Google Kalendáři smazali, akce se do něj už nezapisují.", action: "Vytvořit znovu" };
+    case "removal_failed":
+      // Jen účty mimo Wiki (odebrané, vypnuté) nebo úklid po přechodu na organizátora. Řeší správce, ne uživatel.
+      return { tone: "warn", badge: "Úklid se zopakuje", text: "Kalendář „Vzdělávání ZBC“ se nepodařilo smazat. Wiki to zkusí znovu.", action: null };
     case "declined":
       return { tone: "warn", badge: "Nepropojeno", text: "Při přihlášení jste Kalendář nepovolili. Akce najdete jen tady ve Wiki.", action: "Propojit Kalendář" };
     default:
@@ -90,5 +93,6 @@ export function personalCalendarLabel(state: PersonalCalendarState | undefined):
   }
   if (state.status === "revoked") return "Kalendář odpojen: přístup v účtu Google skončil, připojí ho znovu sám uživatel";
   if (state.status === "calendar_deleted") return "Kalendář: smazán v Googlu";
+  if (state.status === "removal_failed") return `Kalendář: smazání se nepovedlo${state.errorCode ? ` (${state.errorCode})` : ""}, zkusí se znovu`;
   return "Kalendář: nepovolen při přihlášení";
 }
