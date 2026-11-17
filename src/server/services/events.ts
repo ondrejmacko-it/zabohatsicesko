@@ -15,7 +15,7 @@ import {
   templateSlots,
   users,
 } from "@/server/db/schema";
-import { planMonth } from "@/server/domain/generation";
+import { planMonth, slotConflict, type Occupant } from "@/server/domain/generation";
 import { snapshotOf, type EventRow } from "@/server/domain/snapshot";
 import { suggestTopics } from "@/server/domain/topics";
 import { isOrganizer, visibleEvent, type Viewer } from "@/server/policy";
@@ -656,7 +656,16 @@ async function plannedTopicIds(db: Executor): Promise<Set<string>> {
  * Doplní chybějící sloty měsíce podle šablony. Budoucím termínům firemního vzdělávání předvyplní
  * doporučené téma podle zájmu a historie. Vše vzniká jako návrh, který správce upraví a zveřejní.
  */
-export async function generateMonth(viewer: Viewer, monthKey: string): Promise<{ created: number; withTopic: number }> {
+export type GenerateResult = {
+  created: number;
+  withTopic: number;
+  /** Termíny, které už pokrývá akce pro stejnou skupinu ve stejný čas. */
+  skipped: number;
+  /** Data nových návrhů, které se kryjí s jinou akcí pro stejné lidi. Správce rozhodne. */
+  review: string[];
+};
+
+export async function generateMonth(viewer: Viewer, monthKey: string): Promise<GenerateResult> {
   requireOrganizer(viewer);
   const db = await getDb();
   const ranked = await listTopics(viewer);
@@ -672,33 +681,40 @@ export async function generateMonth(viewer: Viewer, monthKey: string): Promise<{
       .from(generationExclusions)
       .where(eq(generationExclusions.orgId, config.orgId));
     const taken = new Set([...existing, ...excluded].map((r) => r.key as string));
-    // Ručně přidaná akce ve stejném čase jako termín šablony by po doplnění vedla k duplicitě.
-    // Takový termín se přeskočí, platí ruční akce. Svátky se doplňují vždy.
+    // Akce, které v měsíci už jsou, rozhodnou o každém termínu: přeskočit, doplnit, nebo doplnit s varováním.
     const { start, end } = monthRange(monthKey);
-    const manual = await tx
-      .select({ startsAt: events.startsAt, endsAt: events.endsAt })
-      .from(events)
-      .where(
-        and(
-          eq(events.orgId, config.orgId),
-          isNull(events.generationKey),
-          ne(events.status, "cancelled"),
-          eq(events.allDay, false),
-          lt(events.startsAt, end),
-          gt(events.endsAt, start),
-        ),
-      );
+    const occupants: Occupant[] = (
+      await tx
+        .select({ startsAt: events.startsAt, endsAt: events.endsAt, audience: events.audience, type: events.type })
+        .from(events)
+        .where(
+          and(
+            eq(events.orgId, config.orgId),
+            ne(events.status, "cancelled"),
+            eq(events.allDay, false),
+            lt(events.startsAt, end),
+            gt(events.endsAt, start),
+          ),
+        )
+    ).map((o) => ({ ...o, dateKey: toDateKey(o.startsAt) }));
+    let skipped = 0;
+    const review: string[] = [];
     const plannedSlots = planMonth(config.orgId, monthKey, slots, taken).filter((slot) => {
       if (slot.holiday) return true;
-      const slotStart = fromPragueLocal(slot.dateKey, slot.startTime);
-      const slotEnd = fromPragueLocal(slot.dateKey, slot.endTime);
-      return !manual.some((m) => m.startsAt < slotEnd && m.endsAt > slotStart);
+      const verdict = slotConflict(
+        { start: fromPragueLocal(slot.dateKey, slot.startTime), end: fromPragueLocal(slot.dateKey, slot.endTime), audience: slot.audience, type: slot.type, dateKey: slot.dateKey },
+        occupants,
+      );
+      if (verdict === "skip") skipped += 1;
+      if (verdict === "warn") review.push(slot.generationKey);
+      return verdict !== "skip";
     });
     const reference = now();
     const upcoming = plannedSlots.filter((s) => !s.holiday && fromPragueLocal(s.dateKey, s.startTime) > reference);
     const suggestions = suggestTopics(upcoming, ranked, planned);
     let created = 0;
     let withTopic = 0;
+    const reviewDays: string[] = [];
     for (const slot of plannedSlots) {
       const holiday = slot.holiday;
       const topic = suggestions.get(slot.generationKey);
@@ -729,11 +745,12 @@ export async function generateMonth(viewer: Viewer, monthKey: string): Promise<{
       if (!row) continue;
       created += 1;
       if (topic) withTopic += 1;
+      if (review.includes(slot.generationKey)) reviewDays.push(slot.dateKey);
       await tx.insert(eventRevisions).values({ eventId: row.id, revision: 1, action: "generate", snapshot: snapshotOf(row), actorId: viewer.id });
       if (holiday) await publishInTx(tx, row, viewer.id, "generate");
     }
     if (created) await audit(tx, viewer.id, "plan.generate", "month", monthKey);
-    return { created, withTopic };
+    return { created, withTopic, skipped, review: reviewDays };
   });
 }
 

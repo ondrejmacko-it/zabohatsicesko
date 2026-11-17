@@ -249,7 +249,7 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
             {/* Hodnota je počet, který správce potvrzuje. Server zveřejnění odmítne, když nesedí. */}
             <input type="checkbox" name="allowIncomplete" value={incomplete} checked={allowIncomplete} onChange={(e) => setAllowIncomplete(e.target.checked)} />
             <span>
-              Zveřejnit i {plural(incomplete, "termín", "termíny", "termínů")} bez tématu nebo vedoucího. Pozvánky odejdou hned, téma a vedoucího jde
+              Zveřejnit i {plural(incomplete, "termín", "termíny", "termínů")} bez tématu nebo vedoucího. Pozvánky se odešlou až po zveřejnění, téma a vedoucího jde
               doplnit později.
             </span>
           </label>

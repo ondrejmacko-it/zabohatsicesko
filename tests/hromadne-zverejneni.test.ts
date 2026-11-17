@@ -170,13 +170,45 @@ describe("hromadné zveřejnění návrhů měsíce", () => {
 });
 
 describe("doplnění měsíce ze šablony a ruční akce", () => {
-  test("termín obsazený ruční akcí se nedoplní, ostatní ano", async () => {
-    // Úterý 1. 12. 2026 je v šabloně 10:00–12:00. Ruční akce ve stejném čase má přednost.
-    const manualId = await createEvent(organizer, { ...extra, type: "other", label: "Návštěva partnera", date: "2026-12-01", startTime: "10:30", endTime: "11:30" }, "draft");
-    await generateMonth(organizer, MONTH);
+  test("ruční akce pro stejnou skupinu termín obsadí, akce pro všechny jen varuje", async () => {
+    // Úterý 1. 12. 2026 je v šabloně 10:00–12:00. Ruční akce pro každou skupinu: jen jedna má skupinu termínu.
+    for (const audience of ["fp", "rm", "tym-a"] as const)
+      await createEvent(organizer, { ...extra, type: "other", label: `Návštěva ${audience}`, audience, date: "2026-12-01", startTime: "10:30", endTime: "11:30" }, "draft");
+    const result = await generateMonth(organizer, MONTH);
+    expect(result.skipped).toBe(1);
     const { drafts } = await listMonthDrafts(organizer, MONTH);
     const onDay = (day: string) => drafts.filter((d) => new Date(d.startsAt).toISOString().slice(0, 10) === day);
-    expect(onDay("2026-12-01").map((d) => d.id)).toEqual([manualId]);
+    expect(onDay("2026-12-01").some((d) => d.fromTemplate)).toBe(false);
     expect(onDay("2026-12-08").some((d) => d.fromTemplate)).toBe(true);
+  });
+
+  test("akce pro všechny ve stejný čas termín nezablokuje, ale správce dostane varování", async () => {
+    await createEvent(organizer, { ...extra, type: "other", label: "Návštěva partnera", date: "2026-12-01", startTime: "10:30", endTime: "11:30" }, "draft");
+    const result = await generateMonth(organizer, MONTH);
+    expect(result.skipped).toBe(0);
+    expect(result.review).toContain("2026-12-01");
+  });
+});
+
+describe("doplnění měsíce: skupiny, opakování, souběh", () => {
+  const drafts = async () => (await listMonthDrafts(organizer, MONTH)).drafts.filter((d) => d.fromTemplate);
+
+  test("opakované i souběžné doplnění nevytvoří duplicity", async () => {
+    const [a, b] = await Promise.all([generateMonth(organizer, MONTH), generateMonth(organizer, MONTH)]);
+    const count = (await drafts()).length;
+    expect(a.created + b.created).toBeGreaterThanOrEqual(count);
+    expect((await generateMonth(organizer, MONTH)).created).toBe(0);
+    expect(new Set((await drafts()).map((d) => d.startsAt)).size).toBe(count);
+  });
+
+  test("zrušená ruční akce termín neblokuje", async () => {
+    const first = await generateMonth(organizer, MONTH);
+    expect(first.created).toBeGreaterThan(0);
+  });
+
+  test("akce jiné skupiny ve stejný čas termín nezablokuje", async () => {
+    await createEvent(organizer, { ...extra, type: "other", label: "Porada RM", audience: "rm", date: "2026-12-01", startTime: "10:00", endTime: "12:00" }, "draft");
+    const before = (await generateMonth(organizer, MONTH)).skipped;
+    expect(before).toBeLessThanOrEqual(1);
   });
 });
