@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { after } from "next/server";
 import { RefreshOnReturn } from "@/components/RefreshOnReturn";
+import { EventPeek } from "@/features/vzdelavani/components/EventPeek";
 import { PersonalCalendarStatus } from "@/features/vzdelavani/components/PersonalCalendarStatus";
 import { NextEventsList } from "@/features/vzdelavani/components/Schedule";
 import { TasksCard, orderTasks } from "@/features/vzdelavani/components/TasksCard";
@@ -26,8 +27,10 @@ const SYNC_WAIT_MS = 2500;
 
 // Úvod odpovídá na dvě otázky: co mě čeká a co mám udělat. Moduly jsou v navigaci, úspěšný stav
 // Kalendáře se neukazuje, jen problém, který chce zásah.
-export default async function HomePage() {
+export default async function HomePage({ searchParams }: { searchParams: Promise<{ akce?: string }> }) {
   const user = await requireUser();
+  // Akce z Nejbližších se otevře v okně přímo nad Úvodem, stejně jako v Plánu.
+  const peekId = ((await searchParams).akce ?? "").slice(0, 120);
   const monthKey = monthOf(toDateKey(now()));
   const planner = canPlan(user);
   const [upcoming, initial, own, monthCards, invitations] = await Promise.all([
@@ -59,19 +62,20 @@ export default async function HomePage() {
   }
   return (
     <>
+      {peekId && <EventPeek key={peekId} user={user} eventId={peekId} preview={null} closeHref="/" />}
       <h1>Vítejte, {user.name}.</h1>
       {personal && <PersonalCalendarStatus state={personal} />}
       {/* Odpověď na pozvánku se dává v Gmailu, po návratu do okna se úkol obnoví. */}
       {invite && <RefreshOnReturn />}
       <div className={tasks.length > 0 ? "home-columns" : undefined}>
         <section className="section" aria-labelledby="nejblizsi">
-          <div className="spread section-head">
-            <h2 id="nejblizsi">Nejbližší akce</h2>
-            <Link className="btn btn-small" href="/vzdelavani/harmonogram">
-              Celý plán
+          <h2 id="nejblizsi">Nejbližší akce</h2>
+          <NextEventsList cards={upcoming} todayKey={toDateKey(now())} hrefFor={(card) => `/?akce=${encodeURIComponent(card.id)}`} />
+          <p className="section-actions">
+            <Link className="btn" href="/vzdelavani/harmonogram">
+              Zobrazit celý plán
             </Link>
-          </div>
-          <NextEventsList cards={upcoming} todayKey={toDateKey(now())} />
+          </p>
         </section>
         <TasksCard tasks={tasks} />
       </div>

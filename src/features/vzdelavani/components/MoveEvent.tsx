@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { ActionMessage } from "@/components/ActionForm";
 import { Modal } from "@/components/Modal";
-import { formatDayMonth, isValidDateKey, monthOf, weekdayShort } from "@/lib/time";
+import { formatDayMonth, monthOf, weekdayShort } from "@/lib/time";
 import type { ChangeImpact } from "@/server/services/impact";
 import { moveEventAction, previewMoveAction, type ActionResult } from "../actions";
 
@@ -160,66 +160,5 @@ export function MoveDropZone({ children }: { children: React.ReactNode }) {
         </Modal>
       )}
     </div>
-  );
-}
-
-/** „Přesunout na jiný den“ v detailu akce: cesta bez myši a na dotyku. Nabízí dny stejného měsíce. */
-export function MoveEventButton({ target, minDate }: { target: MoveTarget; minDate: string }) {
-  const [open, setOpen] = useState(false);
-  const [date, setDate] = useState("");
-  const [to, setTo] = useState<string | null>(null);
-  const month = monthOf(target.from);
-  const lastDay = `${month}-${new Date(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 0).getDate()}`;
-  const close = () => {
-    setOpen(false);
-    setTo(null);
-    setDate("");
-  };
-  return (
-    <>
-      <button type="button" className="btn" onClick={() => setOpen(true)}>
-        Přesunout na jiný den
-      </button>
-      {open && (
-        <Modal open title="Přesunout akci" onRequestClose={close}>
-          {to ? (
-            <MoveConfirm target={target} to={to} onClose={close} />
-          ) : (
-            <form
-              className="stack"
-              onSubmit={(event) => {
-                event.preventDefault();
-                setTo(date);
-              }}
-            >
-              <label className="field">
-                <span className="field-label">Nový den</span>
-                <input
-                  className="input"
-                  type="date"
-                  name="date"
-                  required
-                  value={date}
-                  min={minDate > `${month}-01` ? minDate : `${month}-01`}
-                  max={lastDay}
-                  onChange={(e) => setDate(e.target.value)}
-                />
-              </label>
-              <p className="hint">
-                Nyní {dayLabel(target.from)}. Přesunout jde na budoucí den ve stejném měsíci, čas zůstane stejný.
-              </p>
-              <div className="dialog-actions">
-                <button type="submit" className="btn btn-primary" disabled={!isValidDateKey(date) || date === target.from}>
-                  Pokračovat
-                </button>
-                <button type="button" className="btn" onClick={close}>
-                  Zrušit
-                </button>
-              </div>
-            </form>
-          )}
-        </Modal>
-      )}
-    </>
   );
 }

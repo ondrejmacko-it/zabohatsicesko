@@ -1,11 +1,10 @@
-import { MoveEventButton } from "@/features/vzdelavani/components/MoveEvent";
 import Link from "next/link";
+import { ActionForm } from "@/components/ActionForm";
 import { Icon } from "@/components/Icon";
 import { RouteModal, UnavailableModal } from "@/components/RouteModal";
 import { Todo, missingText } from "@/components/Todo";
-import { EXTRAORDINARY_TYPES, GROUP_LABELS, PLAN_STATUS_LABELS } from "@/lib/labels";
-import { formatEventWhen, toDateKey } from "@/lib/time";
-import { now } from "@/server/config";
+import { GROUP_LABELS, PLAN_STATUS_LABELS } from "@/lib/labels";
+import { formatEventWhen } from "@/lib/time";
 import type { Viewer } from "@/server/policy";
 import { isOrganizer } from "@/server/policy";
 import { getEventDetail } from "@/server/services/detail";
@@ -13,65 +12,98 @@ import { listPeople, loadTemplate } from "@/server/services/events";
 import type { PlanPreview } from "@/server/services/preview";
 import { listTopics } from "@/server/services/topics";
 import { loadInviteRecipients } from "@/server/services/calendar-status";
+import { discardChangesAction } from "../actions";
 import { cardTone, primaryStatus, statusAdvice } from "../status";
-import { EventDialog } from "./EventDialog";
+import { EventWindow } from "./EventDialog";
 import { EventMenu } from "./EventMenu";
 
 type Props = { user: Viewer; eventId: string; preview: PlanPreview | null; previewKey?: string; closeHref: string };
 
 /**
- * Rychlý náhled akce v okně nad Plánem: stav, základní údaje a hlavní krok. Zápis, nahrávka a Kalendář
- * zůstávají na celé stránce detailu. Neviditelná nebo neexistující akce ukáže neutrální „Akce není dostupná“.
+ * Okno akce nad Plánem nebo Úvodem. Správce v něm akci rovnou upravuje a ukládá (jediné místo úprav),
+ * ostatní vidí údaje a odkaz na zápis. Nahrávka a stav v Kalendáři zůstávají na celé stránce akce.
+ * Neviditelná nebo neexistující akce ukáže neutrální „Akce není dostupná“.
  */
 export async function EventPeek({ user, eventId, preview, previewKey, closeHref }: Props) {
   const detail = await getEventDetail(preview?.viewer ?? user, eventId);
   if (!detail) return <UnavailableModal title="Akce není dostupná" closeHref={closeHref} backLabel="Zpět na plán" />;
   const { card } = detail;
+  const holiday = card.type === "holiday";
   const managing = isOrganizer(user) && !preview;
-  const editable = managing && detail.form && card.planStatus !== "cancelled";
-  // Přesun jen budoucí akce, stejné pravidlo kontroluje server (`planMove`).
-  const movable = editable && new Date(card.startsAt) > now();
-  const [people, topics, template, invite] = editable
-    ? await Promise.all([listPeople(user), listTopics(user), loadTemplate(), loadInviteRecipients(user).catch(() => null)])
-    : [[], [], [], null];
-  const start = new Date(card.startsAt);
+  const editable = managing && !holiday && detail.form && card.planStatus !== "cancelled";
   const status = primaryStatus(card);
   const advice = managing ? statusAdvice(card) : null;
-  const holiday = card.type === "holiday";
   const fullHref = `/vzdelavani/akce/${encodeURIComponent(card.id)}${previewKey ? `?jako=${encodeURIComponent(previewKey)}` : ""}`;
   const minutesReady = detail.recording.access === "reader" && Boolean(detail.recording.minutes);
-  const links = [...(minutesReady ? [{ href: `${fullHref}#zapis`, label: "Zobrazit zápis" }] : []), { href: fullHref, label: "Podrobnosti akce" }];
-  const replaceable = editable && detail.fromTemplate && !EXTRAORDINARY_TYPES.has(card.type) && !card.past;
-  const dialogProps = editable
-    ? {
-        mode: "edit" as const,
-        id: card.id,
-        revision: detail.revision,
-        initial: detail.form!,
-        published: detail.publishedForm,
-        people,
-        topics,
-        invite,
-        planDays: template.filter((slot) => slot.active).map((slot) => slot.isoWeekday),
-      }
-    : null;
+  const handlesRecording = detail.recording.access === "handler" && !preview && card.past;
+
+  const statusBand = (
+    <div className={`status-band status-${cardTone(card)}`} role="status">
+      <strong>
+        {card.planStatus === "draft" ? "Návrh · kolegové ho zatím nevidí" : (status?.label ?? PLAN_STATUS_LABELS[card.planStatus])}
+        {card.past && card.planStatus === "published" ? " · proběhlo" : ""}
+      </strong>
+      {advice && <span>{advice}</span>}
+      {preview && <span>Pohled: {preview.label} · jen ke čtení.</span>}
+      {card.planStatus === "cancelled" && detail.cancelReason && <span>Důvod: {detail.cancelReason}</span>}
+    </div>
+  );
+
+  if (editable) {
+    const [people, topics, template, invite] = await Promise.all([
+      listPeople(user),
+      listTopics(user),
+      loadTemplate(),
+      loadInviteRecipients(user).catch(() => null),
+    ]);
+    const intro = (
+      <>
+        {statusBand}
+        {card.unpublishedChanges && (
+          <div className="notice spread">
+            <p className="small">Kolegové a Kalendář zatím vidí zveřejněnou verzi.</p>
+            <ActionForm action={discardChangesAction} fields={{ id: card.id, revision: String(detail.revision) }} label="Zahodit změny" pendingLabel="Zahazuji…" small />
+          </div>
+        )}
+      </>
+    );
+    const links = card.past
+      ? [{ href: `${fullHref}#nahravka`, label: "Nahrávka a zápis" }]
+      : [{ href: fullHref, label: "Stav v Kalendáři" }];
+    return (
+      <EventWindow
+        title={card.label}
+        closeHref={closeHref}
+        intro={intro}
+        menu={<EventMenu id={card.id} revision={detail.revision} canCancel={detail.canCancel} canDelete={detail.canDelete} links={links} />}
+        id={card.id}
+        revision={detail.revision}
+        initial={detail.form!}
+        published={detail.publishedForm}
+        people={people}
+        topics={topics}
+        invite={invite}
+        planDays={template.filter((slot) => slot.active).map((slot) => slot.isoWeekday)}
+        termLocked={card.past}
+      />
+    );
+  }
+
+  const links = [
+    ...(minutesReady ? [{ href: `/vzdelavani/zapisy?zapis=${encodeURIComponent(card.id)}`, label: "Zobrazit zápis" }] : []),
+    ...(handlesRecording ? [{ href: `${fullHref}#nahravka`, label: "Nahrávka a zápis" }] : []),
+    // Zrušená akce: správce si na celé stránce ověří, že storno odešlo i do Kalendáře.
+    ...(managing && !holiday ? [{ href: fullHref, label: "Stav v Kalendáři" }] : []),
+  ];
 
   return (
     <RouteModal title={card.label} closeHref={closeHref}>
-      <div className={`status-band status-${cardTone(card)}`} role="status">
-        <strong>
-          {card.planStatus === "draft" ? "Návrh, do Kalendáře zatím nejde · kolegové ho zatím nevidí" : (status?.label ?? PLAN_STATUS_LABELS[card.planStatus])}
-          {card.past && card.planStatus === "published" ? " · proběhlo" : ""}
-        </strong>
-        {advice && <span>{advice}</span>}
-        {preview && <span>Pohled: {preview.label} · jen ke čtení.</span>}
-        {card.planStatus === "cancelled" && detail.cancelReason && <span>Důvod: {detail.cancelReason}</span>}
-      </div>
+      {!holiday && statusBand}
       <dl className="fact-list">
         <div>
           <dt>Kdy</dt>
           <dd>
-            <Icon name="calendar" /> {formatEventWhen(start, new Date(card.endsAt), card.allDay)}
+            <Icon name="calendar" /> {formatEventWhen(new Date(card.startsAt), new Date(card.endsAt), card.allDay)}
           </dd>
         </div>
         {!holiday && (
@@ -91,22 +123,16 @@ export async function EventPeek({ user, eventId, preview, previewKey, closeHref 
           <dd>{GROUP_LABELS[card.audience]}</dd>
         </div>
       </dl>
-      {holiday && <p className="hint">Svátek je v plánu jen pro přehled, do Kalendáře se neposílá.</p>}
-      <div className="dialog-actions peek-actions">
-        {managing ? (
-          <EventMenu id={card.id} revision={detail.revision} canCancel={detail.canCancel} canDelete={detail.canDelete} links={links}>
-            {replaceable && <EventDialog {...dialogProps!} replace />}
-          </EventMenu>
-        ) : (
-          links.map((link, index) => (
+      {holiday && <p className="hint">Svátek je v plánu jen pro přehled. Nedá se přesunout ani upravit a do Kalendáře se neposílá.</p>}
+      {links.length > 0 && (
+        <div className="dialog-actions peek-actions">
+          {links.map((link, index) => (
             <Link key={link.href} className={index === 0 ? "btn btn-primary" : "btn"} href={link.href}>
               {link.label}
             </Link>
-          ))
-        )}
-        {editable && <EventDialog {...dialogProps!} primary />}
-          {movable && <MoveEventButton target={{ id: card.id, revision: detail.revision, label: card.label, from: toDateKey(new Date(card.startsAt)) }} minDate={toDateKey(now())} />}
-      </div>
+          ))}
+        </div>
+      )}
     </RouteModal>
   );
 }

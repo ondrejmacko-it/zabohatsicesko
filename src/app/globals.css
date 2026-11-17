@@ -2592,3 +2592,98 @@ p.cal-status {
     order: 0;
   }
 }
+
+/* ——— Jednotné okno akce: kroky Přidat akci, vyznačené změny a spodní lišta ——— */
+.step-no {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin-right: 4px;
+  border-radius: 50%;
+  background: var(--ochre);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  vertical-align: 1px;
+}
+
+.form-step + .form-step {
+  margin-top: 2px;
+}
+
+.form-review {
+  display: grid;
+  gap: 4px;
+  padding: 12px 16px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-sm);
+}
+
+.form-review h3 {
+  margin: 0 0 4px;
+  font-size: 15px;
+}
+
+.form-review p {
+  margin: 0;
+}
+
+.form-term {
+  grid-template-columns: minmax(0, 1.4fr) repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 560px) {
+  .form-term {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.changed-mark {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--draft-strong);
+  color: var(--ochre-dark);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: none;
+}
+
+.event-actions {
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.event-actions-menu {
+  margin-right: auto;
+}
+
+.event-actions-note {
+  margin-right: 4px;
+}
+
+.confirm-bar {
+  align-items: flex-start;
+  justify-content: flex-end;
+  background: var(--draft);
+}
+
+.confirm-text {
+  flex: 1 1 260px;
+  margin: 0;
+}
+
+.confirm-text p,
+.confirm-text ul {
+  margin: 0 0 4px;
+}
+
+.invitees > summary {
+  cursor: pointer;
+  list-style-position: inside;
+}
+
+.invitees[open] > summary {
+  margin-bottom: 4px;
+}

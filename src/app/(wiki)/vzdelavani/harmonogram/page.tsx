@@ -104,7 +104,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   const chips: StateChip[] = summary
     ? [
         { state: "doplnit" as const, label: "Chybí údaje", count: summary.toComplete },
-        { state: "navrhy" as const, label: "Ke zveřejnění", count: summary.toPublish },
+        { state: "navrhy" as const, label: "Návrhy", count: summary.toPublish },
       ]
         .filter((chip) => chip.count > 0)
         .map((chip) => ({ ...chip, href: `${link({ stav: chip.state === state ? undefined : chip.state })}#mesic` }))
@@ -187,7 +187,6 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
                 key={addDay ?? "nova"}
                 openOnMount={addDay !== null}
                 closeHref={addDay ? link({}) : undefined}
-                mode="create"
                 initial={{
                   type: "other",
                   label: "",
@@ -200,7 +199,6 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
                   leadId: "",
                   reviewerId: "",
                 }}
-                published={null}
                 people={people}
                 topics={topics}
                 invite={calendar}

@@ -310,6 +310,9 @@ export async function updateEvent(
     if (!current) throw new DomainError("not_found");
     assertNotHoliday(current.type, input.type);
     if (current.status === "cancelled") throw new DomainError("cancelled");
+    // Proběhlé akci termín měnit nejde (okno akce ho zamyká). Ostatní údaje opravit lze.
+    const termChanged = current.startsAt.getTime() !== startsAt.getTime() || current.endsAt.getTime() !== endsAt.getTime() || current.allDay !== allDay;
+    if (current.endsAt <= now() && termChanged) throw new DomainError("invalid_state");
     const [row] = await tx
       .update(events)
       .set({

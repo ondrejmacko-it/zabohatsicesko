@@ -152,7 +152,7 @@ function EventForm({
   const [moreOpen, setMoreOpen] = useState(initial.reviewerId !== "" || multiDay || (initial.type !== "other" && initial.label !== TYPE_LABELS[initial.type]));
   const [impact, setImpact] = useState<{ key: string; data: ChangeImpact } | null>(null);
   const [acceptedIncomplete, setAcceptedIncomplete] = useState<string | null>(null);
-  const [ask, setAsk] = useState<Ask>(null);
+  const [askState, setAskState] = useState<{ ask: Ask; key: string } | null>(null);
   const [previewError, setPreviewError] = useState<ActionResult | null>(null);
   const [checking, setChecking] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
@@ -177,8 +177,9 @@ function EventForm({
   const significant = SIGNIFICANT.some(changed);
   const unpublishedChanges = published !== null && SIGNIFICANT.concat(["leadId", "reviewerId", "type"]).some(changed);
 
-  // Rozpracované potvrzení platí jen pro hodnoty, které správce viděl.
-  useEffect(() => setAsk(null), [valuesKey]);
+  // Rozpracované potvrzení platí jen pro hodnoty, které správce viděl. Další úprava formuláře ho schová.
+  const ask = askState?.key === valuesKey ? askState.ask : null;
+  const setAsk = (next: Ask) => setAskState(next ? { ask: next, key: valuesKey } : null);
 
   // Formulář se neodesílá přes <form action>: React by po akci vrátil výběry (typ, publikum) na první
   // možnost. Ruční odeslání nechá po chybě všechna pole tak, jak je správce vyplnil.
