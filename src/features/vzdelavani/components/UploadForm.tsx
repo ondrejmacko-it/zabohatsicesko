@@ -17,7 +17,7 @@ export function UploadForm({ eventId, eventLabel, replacing }: { eventId: string
     <form action={action} className="stack upload">
       <input type="hidden" name="id" value={eventId} />
       <label className="field">
-        <span className="field-label">{replacing ? "Nahradit nahrávku" : "Nahrát nahrávku"}</span>
+        <span className="field-label">{replacing ? "Nový soubor s nahrávkou" : "Soubor s nahrávkou"}</span>
         <input
           ref={inputRef}
           className="input"
@@ -27,8 +27,15 @@ export function UploadForm({ eventId, eventLabel, replacing }: { eventId: string
           required
           onChange={(e) => setFile(e.target.files?.[0] ?? null)}
         />
-        <span className="field-hint">WAV, MP3 nebo M4A, nejvýš 4 MB a 15 minut. Soubor se uloží soukromě. Přepis je zatím jen ukázka: návrh zápisu vytvoří z ukázkové nahrávky (nabídka ⋯ u nadpisu), jiný soubor nepřepíše.</span>
+        <span className="field-hint">WAV, MP3 nebo M4A, nejvýš 4 MB a 15 minut. Soubor se uloží soukromě.</span>
       </label>
+      {/* Přepis je v této verzi ukázka: umí jen jednu známou nahrávku. UI to musí říct dřív, než vedoucí něco nahraje. */}
+      <p className="notice">
+        Přepis je zatím jen ukázka a návrh zápisu vytvoří jen z ukázkové nahrávky.{" "}
+        <a href="/demo/testovaci-nahravka.wav" download>
+          Stáhnout ukázkovou nahrávku
+        </a>
+      </p>
       {file && (
         <p className={tooLarge ? "notice notice-danger" : "notice"}>
           {tooLarge
@@ -40,7 +47,7 @@ export function UploadForm({ eventId, eventLabel, replacing }: { eventId: string
       <ActionMessage state={state} />
       <div className="row">
         <button type="submit" className="btn btn-primary" disabled={pending || !file || tooLarge}>
-          {pending ? "Nahrávám…" : "Nahrát nahrávku"}
+          {pending ? "Nahrávám…" : replacing ? "Nahradit nahrávku" : "Nahrát nahrávku"}
         </button>
       </div>
     </form>

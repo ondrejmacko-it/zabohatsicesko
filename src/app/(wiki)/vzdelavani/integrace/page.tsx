@@ -174,7 +174,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                         variant="danger"
                         confirm={{
                           title: "Odpojit Google Kalendář",
-                          text: "Přístup se u Googlu zneplatní a uložený token se smaže. Změny akcí zůstanou ve Wiki a po novém připojení se dají odeslat.",
+                          text: "Přístup se u Googlu zneplatní a uložené připojení se smaže. Změny akcí zůstanou ve Wiki a po novém připojení se dají odeslat.",
                           confirmLabel: "Odpojit",
                         }}
                       />

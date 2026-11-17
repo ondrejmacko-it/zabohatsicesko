@@ -23,6 +23,15 @@ const GOOGLE_RESULTS: Record<string, string> = {
   "jiny-ucet": "Tento účet Google k pozvánce nepatří. Přihlaste se účtem, na který vás správce pozval.",
 };
 
+/** Hlášky pro stránku bez platné pozvánky, kde tlačítko Google chybí. Ostatní platí beze změny. */
+const NO_INVITE_RESULTS: Record<string, string> = {
+  "ucet-neni-povoleny":
+    "Tento účet Google nemá do Wiki přístup. Otevřete znovu odkaz z pozvánky a přihlaste se účtem, na který přišla, nebo se obraťte na správce.",
+  "neplatny-stav": "Přihlášení vypršelo. Otevřete znovu odkaz z pozvánky.",
+  "nepodarilo-se": "Přihlášení se nepodařilo dokončit. Otevřete znovu odkaz z pozvánky.",
+  "jiny-ucet": "Tento účet Google k pozvánce nepatří. Otevřete znovu odkaz z pozvánky a přihlaste se účtem, na který přišla.",
+};
+
 const LINK_RESULTS: Record<string, string> = {
   neplatny: "Odkaz s pozvánkou neplatí. Zadejte přístupový kód, nebo si vyžádejte nový odkaz.",
   limit: "Příliš mnoho pokusů. Zkuste to prosím za 15 minut.",
@@ -105,9 +114,10 @@ async function LiveGate({ googleResult, bootstrap }: { googleResult: string; boo
     return (
       <GateShell title="Vstup do Wiki">
         <p className="gate-lead">Do Wiki se vstupuje přes osobní pozvánku. Odkaz vám pošle správce.</p>
-        {googleError && !isPending && (
-          <p className="form-error" role="alert">
-            {googleError}
+        {/* Bez pozvánky tu tlačítko Google není, hláška proto nesmí radit „zkuste jiný účet“. */}
+        {googleError && (
+          <p className={isPending ? "notice" : "form-error"} role={isPending ? "status" : "alert"}>
+            {NO_INVITE_RESULTS[googleResult] ?? googleError}
           </p>
         )}
         <InviteClaim />

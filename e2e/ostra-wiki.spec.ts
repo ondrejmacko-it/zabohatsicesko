@@ -14,6 +14,15 @@ test.describe("ostrá Wiki", () => {
     await expectNoHorizontalScroll(page);
   });
 
+  test("nepozvaný účet a čekající žádost: hláška odpovídá tomu, co stránka nabízí", async ({ page }) => {
+    // Bez pozvánky tu tlačítko Google není, hláška proto radí odkaz z pozvánky, ne „jiný účet“.
+    await page.goto(`${live}/vstup?google=ucet-neni-povoleny`);
+    await expect(page.locator(".form-error")).toContainText("Otevřete znovu odkaz z pozvánky");
+    await expect(page.getByRole("link", { name: /Google/ })).toHaveCount(0);
+    await page.goto(`${live}/vstup?google=ceka-na-schvaleni`);
+    await expect(page.getByRole("status").filter({ hasText: "Žádost o přístup je odeslaná" })).toBeVisible();
+  });
+
   test("vstup správce nabídne přihlášení Googlem", async ({ page }) => {
     await page.goto(`${live}/vstup?spravce=1`);
     await settle(page);
