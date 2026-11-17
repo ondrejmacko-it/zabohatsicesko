@@ -120,6 +120,18 @@ textarea {
 
 /* ——— Shell ——— */
 
+/* Na nejužších telefonech se „Správa systému“ zkrátí na „Správa“, ať se vejde vedle ostatních položek. */
+@media (max-width: 380px) {
+  .nav-label-tail {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
+
 .topbar {
   display: flex;
   align-items: center;

@@ -46,11 +46,13 @@ export function statusAdvice(card: EventCard): string | null {
       ? `Návrh vidíte jen vy. Doplňte ${missing} a zveřejněte ho přes Upravit.`
       : "Návrh vidíte jen vy. Kolegové ho uvidí a dostanou pozvánku, až ho přes Upravit zveřejníte.";
   }
-  if (card.syncStatus === "attention") return "Pozvánka v Kalendáři neodpovídá Wiki. Důvod a tlačítko pro nový pokus jsou níže v části Google Kalendář.";
+  if (card.syncStatus === "attention") return "Pozvánka v Kalendáři neodpovídá Wiki. Důvod a tlačítko pro nový pokus jsou v podrobnostech akce v části Google Kalendář.";
   // Rozpracovaný návrh změny má v detailu vlastní upozornění s tlačítky.
   if (card.unpublishedChanges) return null;
   if (card.syncStatus === "pending") return "Změna se právě posílá do Kalendáře. Není potřeba nic dělat, stránka se obnoví sama.";
-  if (card.syncStatus === "unlinked") return "Akce je zveřejněná ve Wiki, ale zatím nemá pozvánku v Kalendáři. Proč a co s tím, ukazuje níže část Google Kalendář.";
+  // U proběhlé akce už chybějící pozvánka nic neřeší, správce by jen zbytečně hledal opravu.
+  if (card.syncStatus === "unlinked" && !card.past)
+    return "Akce je zveřejněná ve Wiki, ale zatím nemá pozvánku v Kalendáři. Proč a co s tím, ukazuje část Google Kalendář v podrobnostech akce.";
   return null;
 }
 
