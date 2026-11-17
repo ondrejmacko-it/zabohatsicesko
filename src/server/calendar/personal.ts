@@ -362,7 +362,7 @@ export async function syncPersonalCalendars(db: Db, deps: PersonalDeps = {}): Pr
  * Odebraný nebo vypnutý účet: smaže jeho kalendář „Vzdělávání ZBC“ (akce z Wiki mu nezůstanou),
  * zneplatní token u Googlu a smaže záznamy. Volá se pod zámkem ze synchronizace.
  */
-async function removePersonalCalendar(db: Db, userId: string, deps: PersonalDeps): Promise<void> {
+export async function removePersonalCalendar(db: Db, userId: string, deps: PersonalDeps): Promise<void> {
   const [row] = await db.select().from(personalCalendars).where(whereUser(userId)).limit(1);
   if (!row) return;
   const refreshToken = row.encryptedRefreshToken ? openSecret(row.encryptedRefreshToken, tokenEncryptionKey(), secretContext(userId)) : null;
