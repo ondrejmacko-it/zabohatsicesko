@@ -7,7 +7,6 @@ import { NextEventsList } from "@/features/vzdelavani/components/Schedule";
 import { TasksCard, orderTasks } from "@/features/vzdelavani/components/TasksCard";
 import { monthSummary } from "@/features/vzdelavani/status";
 import { monthOf, toDateKey } from "@/lib/time";
-import { toDateKey } from "@/lib/time";
 import { logError } from "@/server/audit";
 import { requireUser } from "@/server/auth/session";
 import { personalSyncNeeded, syncPersonalCalendars } from "@/server/calendar/personal";
@@ -29,7 +28,7 @@ export default async function HomePage() {
   const user = await requireUser();
   const monthKey = monthOf(toDateKey(now()));
   const planner = canPlan(user);
-  const [upcoming, personal, own, monthCards] = await Promise.all([
+  const [upcoming, initial, own, monthCards] = await Promise.all([
     nextEventsFor(user, NEXT_ROWS),
     loadPersonalCalendar(user),
     listTasks(user),
@@ -38,9 +37,6 @@ export default async function HomePage() {
   // Stejné úkoly jako v Plánu bez filtru: vlastní úkoly a správci krok aktuálního měsíce.
   const summary = monthCards ? monthSummary(monthCards, monthKey) : null;
   const tasks = orderTasks(own, summary, monthKey, (stav) => `/vzdelavani/harmonogram?stav=${stav}#mesic`);
-  // Osobní kalendáře doženou zmeškaný zápis (přechodná chyba Googlu, nový účet) při otevření Úvodu.
-  // Zjištění je jeden dotaz do databáze, Google se volá až na pozadí po odeslání stránky.
-  const [upcoming, initial] = await Promise.all([nextEventsFor(user, NEXT_ROWS), loadPersonalCalendar(user)]);
   let personal = initial;
   // Osobní kalendáře doženou zmeškaný zápis (přechodná chyba Googlu, nový účet) a jednou za čas ověří, že
   // přístup u Googlu platí. Zjištění je jeden dotaz do databáze. Na výsledek stránka počká nejvýš chvilku,
