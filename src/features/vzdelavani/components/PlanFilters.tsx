@@ -69,17 +69,24 @@ export function PlanFilters({ keep, types, type, typeResetHref, preview, chips, 
               className="pill pill-count"
               href={chip.href}
               aria-current={on ? "true" : undefined}
-              aria-label={on ? `${chip.label}: ${chip.count}, zrušit filtr` : `${chip.label}: ${chip.count}`}
             >
-              {chip.label}
+              {/* Přístupný název skládá viditelný text (WCAG 2.5.3), skrytá je jen nápověda ke zrušení. */}
+              {chip.label}{" "}
               <span className="pill-number">{chip.count}</span>
-              {on && <Icon name="close" size={14} />}
+              {on && (
+                <>
+                  <span className="visually-hidden">, zrušit filtr</span>
+                  <Icon name="close" size={14} />
+                </>
+              )}
             </Link>
           );
         })}
         {type && typeResetHref && (
-          <Link className="pill pill-count" href={typeResetHref} aria-current="true" aria-label={`Typ: ${TYPE_LABELS[type]}, zrušit filtr`}>
+          <Link className="pill pill-count" href={typeResetHref} aria-current="true">
+            <span className="visually-hidden">Typ: </span>
             {TYPE_LABELS[type]}
+            <span className="visually-hidden">, zrušit filtr</span>
             <Icon name="close" size={14} />
           </Link>
         )}
