@@ -1,5 +1,34 @@
 # Prompt pro další session
 
+**FINÁLNÍ SJEDNOCENÍ PŘED PŘEDÁNÍM (18. 11. 2026) – navazuje na FINAL POLISH níže.**
+Uživatel 18. 11. potvrdil: všechny 3 věty z `/vstup` pryč (už se neptat). Schválil rozdělení auditu a přenos U08 do #63.
+Zákazy: nemergovat do `main`, nepřepínat produkční Kalendář, nerozesílat pozvánky, nemazat produkční data, neměnit tajemství,
+žádné placené služby. Neimplementovat znovu hotové funkce, opravovat jen konkrétní nálezy.
+
+**Hotovo v této relaci:**
+* **Draft PR [#67](https://github.com/ondrejmacko-it/zabohatsicesko/pull/67)** (`claude/ci-audit-produkce`, base main, 46c2eed): job „Lint, typy,
+  testy a build“ má `npm audit --omit=dev --audit-level=moderate` (blokuje), nový neblokující job „Bezpečnostní report – všechny
+  závislosti“ (plný audit, varování + souhrn). Evidence `docs/bezpecnost-zavislosti.md`, issue [#66](https://github.com/ondrejmacko-it/zabohatsicesko/issues/66).
+  Ověřeno lokálně: produkční audit 0, `npm ls picomatch --omit=dev` prázdné, přibalený picomatch v Next jen pro `next/image` (nepoužíváme).
+  **Musí se sloučit první**, jinak CI #63–#65 dál padá na plném auditu (workflow se bere z merge ref PR).
+* **U08**: cherry-pick 44df29e → #63 jako 1127481 (`claude/final-akce-navrhy`), pak merge #63 → #64 (775d696) a #64 → #65
+  (e866d69, prázdný diff, bez konfliktu). Bez force. `e2e/pristupnost.spec.ts` na #63 i #64: 22 passed / 18 skipped / 0 failed.
+  V historii #65 jsou dva commity se stejnou změnou (44df29e a 1127481); bez přepsání historie to nejde, diff PR je bez duplicity.
+
+**Další kroky (nová relace):**
+1. Subscribe #63, #64, #65, #67; zkontrolovat CI #67 (oba joby). Popis #64 a #63 aktualizovat: U08 už opraveno v #63 (1127481).
+2. Na `claude/final-zapisy-temata` (= #63+#64+#65): lint, tsc, unit, `npm run build`, úplné `npm run e2e` (dřív 918/42/0).
+3. Cíleně projít: přístupnost, klávesnice, formuláře, okna, chyby, prázdné stavy; oprávnění správce/vedoucí/FP/RM/host;
+   screenshoty 320–1920 (`node e2e/server.mjs` + `node scripts/audit-screenshoty.mjs . <scratchpad>`; po změně CSS server
+   restartovat a zabít i `next-server`); texty (překlepy, duplicity, technické formulace, zbytečné ovládací prvky);
+   hromadné Zveřejnit/Smazat vybrané návrhy včetně potvrzení a souběhu (`deleteDrafts`, testy `tests/pevne-svatky.test.ts`,
+   `e2e/okna.spec.ts`, `e2e/plan-planovani.spec.ts`; doplnit test souběhu, pokud chybí).
+4. Opravy jen nalezených problémů na `claude/final-zapisy-temata` (nebo do větve, kde chyba vznikla, a pak merge dál bez force).
+5. Finální report uživateli (tykat): hotové/funkční; ukázka/simulace; kontroly prošlé/neprošlé; zbývající problémy; co
+   potřebuje jeho schválení; **pořadí sloučení: #67 → #63 → (merge main do #64, CI) #64 → (merge main do #65, CI) #65**;
+   jak ověřit nasazení po sloučení. Zvlášť: přepis dlouhých nahrávek (`docs/nahravky-moznosti.md`) a ostrý Google Kalendář
+   jsou samostatné otevřené body.
+
 **FINAL POLISH (18. 11. 2026).** Zadání „ZBČ WIKI · FINAL PRODUCT POLISH“ je v první zprávě relace
 session_01HpUiru5P4yB2SxRCiVSjHt. Uživatel dal plné právo pokračovat bez ptaní, zakládat nové relace a připravit draft PR
 (merge do main dělá on, Kalendář nepřepínat, produkční data nemazat).
