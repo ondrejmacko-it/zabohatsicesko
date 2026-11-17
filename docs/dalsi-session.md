@@ -38,6 +38,25 @@ Nouzové zrušení zařízení hlavního správce (UI ho záměrně nenabízí) 
 Platí od dalšího požadavku. Můžeš ho provést i ty přes Neon MCP, ale jen na výslovný pokyn uživatele.
 
 
+**Stav 17. 11., oznámení a zdvojení (poslední):** #51 a #52 jsou v `main`, Production = `main` e39a666.
+#53 (`claude/domu-ceka-na-vas`) NENÍ v `main`. Build selhal na zdvojených deklaracích v `src/app/(wiki)/page.tsx`
+po sloučení s `main`, opraveno commitem 4a914c1 (lint, typy, vitest 212/212, build ok, e2e viz PR #53).
+* Neon (jen čtení): oba osobní kalendáře `active`, `event_format = 3`, `setup_code` =
+  `none|list:401_authError|full:…|nocolor:…|basic:…|reminders:401_authError`, takže `calendarList` s rozsahem
+  `calendar.app.created` nejde vůbec. `calendar_links` 45 vazeb, žádná s událostí v kalendáři správce (úklid hotový).
+* Vercel Production: `CALENDAR_DELIVERY=personal`. `CALENDAR_PERSONAL_NOTIFY` bylo `self-invite`, 17. 11. na pokyn
+  uživatele přepnuto na `off` (platí od dalšího nasazení Production, tj. po dalším merge).
+* **Proč nechodí e-mail ani oznámení:** Wiki zapisuje akce účtem uživatele do jeho vlastního kalendáře a Google
+  neposílá upozornění tomu, kdo změnu udělal. U self-invite je host i vlastník tentýž účet, proto `sendUpdates=all`
+  nepošle nic. **Zdvojení** = self-invite: akce v „Vzdělávání ZBC“ + kopie jako nezodpovězená pozvánka v primárním
+  kalendáři (dutý kroužek). Po nasazení se změní otisk (`g: null`), `PUT` bez `attendees` hosta odstraní.
+* **Další krok 1:** po nejbližším nasazení Production uživatel otevře Úvod, po 10 min znovu. Ověřit v Neonu
+  `select max(updated_at) from personal_calendar_entries` (novější než nasazení) a u uživatele, že dutá kopie zmizela.
+  Kdyby zůstala, smazat ji ručně v hlavním kalendáři (jen kopie, žlutá akce v „Vzdělávání ZBC“ zůstává).
+* **Další krok 2 (čeká na uživatele, „pošlu pak dál, co a jak“):** volba cesty pro e-maily o nové, změněné a zrušené
+  akci: Gmail SMTP z Wiki s heslem aplikace (doporučeno, bez domény), Resend (bez domény jen na adresu majitele),
+  nebo zpět na pozvánky (`CALENDAR_DELIVERY=invites`). Nic neimplementovat bez souhlasu.
+
 **Stav 16. 11. noc 3, kalendář 401 (poslední):** #47–#50 jsou v `main`. Draft [#51](https://github.com/ondrejmacko-it/zabohatsicesko/pull/51) z větve `claude/oprava-kalendare-401`:
 `calendarList.get` → `update` → `patch` varianty, 401 už neukončí nastavení (důvod do `setup_code`), `selected/hidden`,
 `EVENT_FORMAT = 3`, kontrola odvolání po 10 min (Úvod čeká max. 2,5 s), „Kalendář odpojen“ + „Připojit Kalendář znovu“
