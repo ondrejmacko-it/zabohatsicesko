@@ -15,7 +15,7 @@ type Props = {
   keep: Record<string, string>;
   types: EventType[];
   type: EventType | undefined;
-  /** Nabídka „Pohled očima“. Jen pro správce, jinak null. */
+  /** Nabídka „Zobrazit jako“ (pohled skupiny nebo kolegy). Jen pro správce, jinak null. */
   preview: { groups: Option[]; people: Option[]; value: string } | null;
   /** Co v měsíci čeká na správce. Prázdné pole = nic, štítky se nevykreslí. */
   chips: StateChip[];
@@ -24,8 +24,8 @@ type Props = {
 };
 
 /**
- * Jeden řádek nad harmonogramem: vlevo co v měsíci čeká (klik zúží plán), vpravo malé výběry typu
- * a pohledu. Výběr se odešle hned, tlačítko zůstává pro prohlížeč bez JavaScriptu.
+ * Druhý řádek nad harmonogramem: vlevo co v měsíci čeká (klik zúží plán), vpravo malé výběry typu
+ * a „Zobrazit jako“. Výběr se odešle hned, tlačítko zůstává pro prohlížeč bez JavaScriptu.
  */
 export function PlanFilters({ keep, types, type, preview, chips, state, resetHref }: Props) {
   const submit = (event: React.ChangeEvent<HTMLSelectElement>) => event.currentTarget.form?.requestSubmit();
@@ -59,7 +59,9 @@ export function PlanFilters({ keep, types, type, preview, chips, state, resetHre
             </select>
           )}
           {preview && (
-            <select className="select select-small" name="jako" defaultValue={preview.value} onChange={submit} aria-label="Pohled očima skupiny nebo kolegy">
+            <label className="row plan-preview-pick">
+              <span className="small">Zobrazit jako</span>
+              <select className="select select-small" name="jako" defaultValue={preview.value} onChange={submit} aria-describedby="zobrazit-jako-napoveda">
               <option value="">Můj pohled (vše)</option>
               <optgroup label="Očima skupiny">
                 {preview.groups.map((o) => (
@@ -75,7 +77,11 @@ export function PlanFilters({ keep, types, type, preview, chips, state, resetHre
                   </option>
                 ))}
               </optgroup>
-            </select>
+              </select>
+              <span id="zobrazit-jako-napoveda" className="small muted">
+                Ukáže, co vidí vybraný kolega. Nic se nezmění.
+              </span>
+            </label>
           )}
           <noscript>
             <button className="btn btn-small" type="submit">

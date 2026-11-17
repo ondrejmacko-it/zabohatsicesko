@@ -480,7 +480,7 @@ function EventForm({
 
       {/* Enter ve formuláři uloží jen návrh. Zveřejnění je vždy vědomá volba. */}
       {ask === "incomplete" ? (
-        <div className="dialog-actions confirm-bar" role="alertdialog" aria-labelledby="potvrdit-neuplne">
+        <div key="incomplete" className="dialog-actions confirm-bar" role="alertdialog" aria-labelledby="potvrdit-neuplne">
           <p id="potvrdit-neuplne" className="confirm-text">
             <strong>Chybí {missing.join(" a ")}.</strong> Kolegové uvidí obecný název „{values.label.trim() || TYPE_LABELS[values.type]}“.
           </p>
@@ -492,7 +492,7 @@ function EventForm({
           </button>
         </div>
       ) : ask === "impact" && confirmed ? (
-        <div className="dialog-actions confirm-bar" role="alertdialog" aria-labelledby="potvrdit-dopad">
+        <div key="impact" className="dialog-actions confirm-bar" role="alertdialog" aria-labelledby="potvrdit-dopad">
           <div className="confirm-text">
             <p id="potvrdit-dopad">
               <strong>{impactHeadline(confirmed)}</strong>
@@ -526,7 +526,8 @@ function EventForm({
           </button>
         </div>
       ) : (
-        <div className="dialog-actions event-actions">
+        // Vlastní klíč: tlačítko „Zpět“ se nesmí znovu použít jako odesílací tlačítko výchozí lišty.
+        <div key="choose" className="dialog-actions event-actions">
           {menu && <div className="event-actions-menu">{menu}</div>}
           {published && !unpublishedChanges && !dirty && <span className="small muted event-actions-note">Beze změn</span>}
           <button type="submit" name="intent" value="draft" className="btn" disabled={busy || (mode === "edit" && !dirty)}>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { startTransition, useActionState, useState } from "react";
+import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 import { ActionMessage } from "@/components/ActionForm";
 import { flash } from "@/components/FlashMessage";
 import { Modal } from "@/components/Modal";
@@ -23,6 +23,18 @@ export function DraftSelection({ monthKey, monthName, drafts }: { monthKey: stri
   const [open, setOpen] = useState(false);
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [ask, setAsk] = useState<Ask>(null);
+  const form = useRef<HTMLFormElement>(null);
+  const backTo = useRef<Ask>(null);
+  // Po „Zpět“ vrátí fokus na tlačítko, které se ptalo. Jinak by zůstal na zmizelém tlačítku.
+  useEffect(() => {
+    if (ask || !backTo.current) return;
+    form.current?.querySelector<HTMLButtonElement>(`button[value="${backTo.current}"]`)?.focus();
+    backTo.current = null;
+  }, [ask]);
+  const back = () => {
+    backTo.current = ask;
+    setAsk(null);
+  };
   const selected = drafts.filter((d) => picked.has(d.id));
   const incomplete = selected.filter((d) => !d.topicTitle || !d.leadId).length;
 
@@ -73,8 +85,9 @@ export function DraftSelection({ monthKey, monthName, drafts }: { monthKey: stri
         Vybrat návrhy
       </button>
       {open && (
-        <Modal open title={`Návrhy: ${monthName}`} onRequestClose={() => setOpen(false)} wide>
-          <form className="stack" onSubmit={submit}>
+        <Modal open title={`Návrhy: ${monthName}`} onRequestClose={() => setOpen(false)} wide selfGuarded>
+          {/* selfGuarded: výběr není rozepsaná práce, zavření se proto na nic neptá. */}
+          <form ref={form} className="stack" onSubmit={submit}>
             <p className="small muted">Vyberte návrhy, které chcete zveřejnit nebo smazat. Údaje upravíte v okně akce.</p>
             <label className="check">
               <input
@@ -121,12 +134,12 @@ export function DraftSelection({ monthKey, monthName, drafts }: { monthKey: stri
             </ul>
             <ActionMessage state={deleteState ?? publishState} />
             {ask === "publish" ? (
-              <div className="dialog-actions confirm-bar" role="alertdialog" aria-labelledby="potvrdit-zverejneni">
+              <div key="publish" className="dialog-actions confirm-bar" role="alertdialog" aria-labelledby="potvrdit-zverejneni">
                 <p id="potvrdit-zverejneni" className="confirm-text">
                   <strong>Zveřejnit {countLabel(selected.length)}?</strong> Kolegové je uvidí a pozvánky se odešlou podle režimu Kalendáře.
                   {incomplete > 0 && ` ${incomplete} z nich nemá téma nebo vedoucího.`}
                 </p>
-                <button type="button" className="btn" onClick={() => setAsk(null)}>
+                <button type="button" className="btn" onClick={back}>
                   Zpět
                 </button>
                 <button type="submit" value="publish" className="btn btn-primary" disabled={busy} autoFocus>
@@ -134,11 +147,11 @@ export function DraftSelection({ monthKey, monthName, drafts }: { monthKey: stri
                 </button>
               </div>
             ) : ask === "delete" ? (
-              <div className="dialog-actions confirm-bar" role="alertdialog" aria-labelledby="potvrdit-smazani">
+              <div key="delete" className="dialog-actions confirm-bar" role="alertdialog" aria-labelledby="potvrdit-smazani">
                 <p id="potvrdit-smazani" className="confirm-text">
                   <strong>Smazat {countLabel(selected.length)}?</strong> Nic se neodešle. Pravidelné termíny už další doplnění měsíce znovu nevytvoří.
                 </p>
-                <button type="button" className="btn" onClick={() => setAsk(null)}>
+                <button type="button" className="btn" onClick={back}>
                   Zpět
                 </button>
                 <button type="submit" value="delete" className="btn btn-danger" disabled={busy} autoFocus>
@@ -146,7 +159,9 @@ export function DraftSelection({ monthKey, monthName, drafts }: { monthKey: stri
                 </button>
               </div>
             ) : (
-              <div className="dialog-actions event-actions">
+              // Klíče lišt: React jinak použije tlačítko „Zpět“ znovu jako „Smazat vybrané“ (submit)
+              // a prohlížeč po kliknutí na Zpět odešle formulář.
+              <div key="choose" className="dialog-actions event-actions">
                 <span className="small muted event-actions-menu">Vybráno: {selected.length}</span>
                 <button type="submit" value="delete" className="btn btn-danger" disabled={busy || selected.length === 0}>
                   Smazat vybrané

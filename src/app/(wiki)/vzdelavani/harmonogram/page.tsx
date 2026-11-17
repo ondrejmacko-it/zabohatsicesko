@@ -144,7 +144,16 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
         </section>
       )}
       <section className="section" aria-labelledby="mesic">
+        {/* Lišta Plánu: vlevo zobrazení, uprostřed měsíc, vpravo akce správce. Filtry jsou ve druhém řádku. */}
         <div className="schedule-toolbar">
+          <div className="row view-toggle" role="group" aria-label="Zobrazení">
+            <Link className="pill" href={link({ pohled: undefined })} aria-current={!listView ? "page" : undefined}>
+              Měsíc
+            </Link>
+            <Link className="pill" href={link({ pohled: "seznam" })} aria-current={listView ? "page" : undefined}>
+              Seznam
+            </Link>
+          </div>
           <div className="row month-nav">
             <Link className="btn btn-icon" href={link({ mesic: shiftMonth(monthKey, -1) })} aria-label="Předchozí měsíc">
               <Icon name="chevronLeft" />
@@ -161,32 +170,8 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
               </Link>
             )}
           </div>
-          <div className="row view-toggle" role="group" aria-label="Zobrazení">
-            <Link className="pill" href={link({ pohled: undefined })} aria-current={!listView ? "page" : undefined}>
-              Měsíc
-            </Link>
-            <Link className="pill" href={link({ pohled: "seznam" })} aria-current={listView ? "page" : undefined}>
-              Seznam
-            </Link>
-          </div>
           {managing && (
             <div className="row organizer-actions">
-              {monthDrafts && calendar && (
-                <PrepareMonthDialog
-                  monthKey={monthKey}
-                  monthName={formatMonth(monthKey)}
-                  todayKey={todayKey}
-                  drafts={monthDrafts.drafts}
-                  changeDrafts={monthDrafts.changeDrafts}
-                  people={people}
-                  topics={topics.map((t) => t.name)}
-                  recipients={calendar.recipients}
-                  inviteMode={inviteMode}
-                />
-              )}
-              {monthDrafts && monthDrafts.drafts.length > 0 && (
-                <DraftSelection monthKey={monthKey} monthName={formatMonth(monthKey)} drafts={monthDrafts.drafts} />
-              )}
               <EventDialog
                 key={addDay ?? "nova"}
                 openOnMount={addDay !== null}
@@ -208,6 +193,22 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
                 invite={calendar}
                 planDays={activeSlots.map((s) => s.isoWeekday)}
               />
+              {monthDrafts && calendar && (
+                <PrepareMonthDialog
+                  monthKey={monthKey}
+                  monthName={formatMonth(monthKey)}
+                  todayKey={todayKey}
+                  drafts={monthDrafts.drafts}
+                  changeDrafts={monthDrafts.changeDrafts}
+                  people={people}
+                  topics={topics.map((t) => t.name)}
+                  recipients={calendar.recipients}
+                  inviteMode={inviteMode}
+                />
+              )}
+              {monthDrafts && monthDrafts.drafts.length > 0 && (
+                <DraftSelection monthKey={monthKey} monthName={formatMonth(monthKey)} drafts={monthDrafts.drafts} />
+              )}
               <Menu label="Nástroje správce" iconOnly className="organizer-tools">
                 <TemplateDialog slots={template} />
               </Menu>

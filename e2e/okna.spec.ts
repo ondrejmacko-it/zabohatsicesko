@@ -99,6 +99,52 @@ test.describe("okna správce", () => {
     await expect(page.getByRole("status").filter({ hasText: "Návrh je uložený. Kolegové ho zatím nevidí, nic se neodeslalo." })).toBeVisible();
   });
 
+  test("Vybrat návrhy: otevřít, výběr a zavřít bez změn", async ({ page }) => {
+    await page.goto("/vzdelavani/harmonogram");
+    await settle(page);
+    await page.getByRole("button", { name: "Vybrat návrhy" }).click();
+    const picker = dialog(page, /^Návrhy: /);
+    await expect(picker.getByText("Vybráno: 0")).toBeVisible();
+    await expect(picker.getByRole("button", { name: "Smazat vybrané" })).toBeDisabled();
+    await picker.getByRole("checkbox", { name: /^Vybrat vše/ }).check();
+    await expect(picker.getByRole("button", { name: "Zveřejnit vybrané" })).toBeEnabled();
+    // První krok jen ptá, nic neodešle.
+    await picker.getByRole("button", { name: "Zveřejnit vybrané" }).click();
+    await expect(picker.getByRole("alertdialog")).toContainText(/Zveřejnit \d+ návrh/);
+    await picker.getByRole("button", { name: "Zpět" }).click();
+    await expect(picker.getByRole("alertdialog")).toHaveCount(0);
+    await expect(picker.getByRole("button", { name: "Zveřejnit vybrané" })).toBeFocused();
+    // Výběr není rozepsaná práce: Esc zavře okno bez otázky.
+    await checkDialog(page, /^Návrhy: /);
+  });
+
+  test("Vybrat návrhy: smazání vybraného návrhu s potvrzením", async ({ page }, testInfo) => {
+    // Zápis do sdílených dat ukázky jen v jednom projektu. Návrh si test založí sám ve vzdáleném měsíci.
+    test.skip(testInfo.project.name !== "windows-1280", "zápis jen jednou");
+    const label = `Hromadné smazání e2e ${Date.now()}`;
+    await page.goto("/vzdelavani/harmonogram");
+    await settle(page);
+    await page.getByRole("button", { name: "Přidat akci" }).click();
+    const add = dialog(page, "Přidat akci");
+    await add.getByLabel("Typ").selectOption("other");
+    await add.getByLabel("Název akce", { exact: true }).fill(label);
+    await add.getByLabel("Datum").fill("2027-09-14");
+    await add.getByRole("button", { name: "Uložit jako návrh" }).click();
+    await page.waitForURL(/mesic=2027-09/);
+    await settle(page);
+
+    await page.getByRole("button", { name: "Vybrat návrhy" }).click();
+    const picker = dialog(page, /Návrhy: září 2027/i);
+    await picker.getByRole("checkbox", { name: new RegExp(label) }).check();
+    await expect(picker.getByText("Vybráno: 1")).toBeVisible();
+    await picker.getByRole("button", { name: "Smazat vybrané" }).click();
+    await expect(picker.getByRole("alertdialog")).toContainText("Smazat 1 návrh?");
+    await picker.getByRole("button", { name: "Potvrdit smazání" }).click();
+    await expect(picker).toBeHidden();
+    await expect(page.getByRole("status").filter({ hasText: /Smazán/ })).toBeVisible();
+    await expect(page.getByText(label)).toHaveCount(0);
+  });
+
   test("Pravidelný týden z Nástrojů správce", async ({ page }) => {
     await page.goto("/vzdelavani/harmonogram");
     await settle(page);
