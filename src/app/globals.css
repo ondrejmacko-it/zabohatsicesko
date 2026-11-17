@@ -1840,12 +1840,14 @@ a.brief-link:hover {
 
 /* Na telefonu jde tlačítko úkolu pod text, jinak by text zbyl na úzký sloupec. */
 @media (max-width: 520px) {
-  li.brief-row {
+  li.brief-row,
+  .picker-list .brief-row {
     flex-wrap: wrap;
     gap: 8px;
   }
 
-  li.brief-row .brief-main {
+  li.brief-row .brief-main,
+  .picker-list .brief-row .brief-main {
     flex-basis: 100%;
   }
 }

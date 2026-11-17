@@ -726,3 +726,10 @@ describe("OAuth stav a šifrování tokenů", () => {
     expect(sealSecret("refresh-token", key, "org:google-calendar")).not.toBe(sealed); // náhodné IV
   });
 });
+
+describe("zrušená akce", () => {
+  test("nedostane novou pozvánku ani spárování, server to odmítne", async () => {
+    await expect(requestNewInvite(organizer, "ev-11-4")).rejects.toThrow();
+    await expect(pairWithExisting(organizer, "ev-11-4", "cizi-pozvanka")).rejects.toThrow();
+  });
+});

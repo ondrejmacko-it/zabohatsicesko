@@ -503,7 +503,8 @@ export async function requestNewInvite(viewer: Viewer, eventId: string): Promise
   const db = await getDb();
   await db.transaction(async (tx) => {
     const row = await loadEventRow(tx, eventId);
-    if (!row?.published || row.type === "holiday") throw new DomainError("invalid_state");
+    // Zrušená akce pozvánku nedostane: pozvaným by přišla pozvánka se stornem.
+    if (!row?.published || row.type === "holiday" || row.published.status === "cancelled") throw new DomainError("invalid_state");
     await tx.update(events).set({ calendarIntent: "create" }).where(eq(events.id, eventId));
     await tx
       .insert(calendarLinks)
@@ -522,7 +523,7 @@ export async function pairWithExisting(viewer: Viewer, eventId: string, external
   const db = await getDb();
   await db.transaction(async (tx) => {
     const row = await loadEventRow(tx, eventId);
-    if (!row?.published) throw new DomainError("invalid_state");
+    if (!row?.published || row.published.status === "cancelled") throw new DomainError("invalid_state");
     await tx.insert(calendarLinks).values({
       eventId,
       calendarId: targetCalendarId(),

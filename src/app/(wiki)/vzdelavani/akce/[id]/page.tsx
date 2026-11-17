@@ -46,6 +46,8 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
   const advice = statusAdvice(card);
   // Úpravy akce jsou jen v okně akce v Plánu. Tahle stránka nese nahrávku, zápis a stav v Kalendáři.
   const editable = organizer && detail.form && card.planStatus !== "cancelled" && card.type !== "holiday";
+  // Zrušenou akci už nikdo nedoplňuje: chybějící údaj je jen „zatím neurčeno“, ne výzva.
+  const fillable = organizer && card.planStatus !== "cancelled";
   // Nástroje vedoucího (nahrání, úprava zápisu) by v náhledu běžely pod správcem, proto se nenabízejí.
   const handlerPreview = Boolean(preview) && detail.recording.access === "handler";
   const handler = detail.recording.access === "handler" && !preview;
@@ -128,7 +130,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
           {card.type !== "holiday" && (
             <div>
               <dt>Vede</dt>
-              <dd>{detail.leadName ?? <Todo>{missingText(organizer, "vedoucího")}</Todo>}</dd>
+              <dd>{detail.leadName ?? <Todo>{missingText(fillable, "vedoucího")}</Todo>}</dd>
             </div>
           )}
           <div>
@@ -141,7 +143,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
             <>
               <dt>Téma</dt>
               <dd>
-                <Todo>{missingText(organizer, "téma")}</Todo>
+                <Todo>{missingText(fillable, "téma")}</Todo>
               </dd>
             </>
           )}

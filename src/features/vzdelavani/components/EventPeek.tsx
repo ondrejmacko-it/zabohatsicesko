@@ -31,6 +31,8 @@ export async function EventPeek({ user, eventId, preview, previewKey, closeHref 
   const holiday = card.type === "holiday";
   const managing = isOrganizer(user) && !preview;
   const editable = managing && !holiday && detail.form && card.planStatus !== "cancelled";
+  // Zrušenou akci už nikdo nedoplňuje: chybějící údaj je jen „zatím neurčeno“, ne výzva.
+  const fillable = managing && card.planStatus !== "cancelled";
   const status = primaryStatus(card);
   // Návrh: pás už říká, že ho kolegové nevidí, a chybějící údaje jsou vidět přímo v prázdných polích.
   const advice = managing && card.planStatus !== "draft" ? statusAdvice(card) : null;
@@ -117,11 +119,11 @@ export async function EventPeek({ user, eventId, preview, previewKey, closeHref 
           <>
             <div>
               <dt>Téma</dt>
-              <dd>{card.topicTitle ?? <Todo>{missingText(managing, "téma")}</Todo>}</dd>
+              <dd>{card.topicTitle ?? <Todo>{missingText(fillable, "téma")}</Todo>}</dd>
             </div>
             <div>
               <dt>Vede</dt>
-              <dd>{detail.leadName ?? <Todo>{missingText(managing, "vedoucího")}</Todo>}</dd>
+              <dd>{detail.leadName ?? <Todo>{missingText(fillable, "vedoucího")}</Todo>}</dd>
             </div>
           </>
         )}

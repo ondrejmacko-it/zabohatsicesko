@@ -222,6 +222,7 @@ export function SyncPanelView({ eventId, sync }: { eventId: string; sync: SyncPa
               "Pozvánka zatím nevznikla. Wiki ji založí sama při příštím otevření Plánu správcem, nebo ji založte hned."}
             {sync.unlinkedReason === "past" && "Akce už proběhla, Wiki k ní pozvánku sama nezakládá. Můžete ji spárovat s existující."}
             {sync.unlinkedReason === "unavailable" && "Akce zatím nemá pozvánku. Kalendář teď neodpovídá, stav jde ověřit až po jeho obnovení."}
+            {sync.unlinkedReason === "cancelled" && "Akce je zrušená, pozvánka se nezakládá."}
           </p>
           {sync.candidates.map((c, i) => (
             <div key={c.id} className="spread candidate">
@@ -231,13 +232,13 @@ export function SyncPanelView({ eventId, sync }: { eventId: string; sync: SyncPa
               <ActionForm action={pairInviteAction} fields={{ id: eventId, externalId: c.id }} label="Spárovat" variant={i === 0 ? "primary" : "default"} small />
             </div>
           ))}
-          <p className="small muted">
+          <p className="small muted" hidden={sync.unlinkedReason === "cancelled"}>
             {sync.attendeeSource === "allowlist"
               ? `Testovací režim: nová pozvánka půjde jen povoleným testovacím příjemcům (${sync.inviteeCount}), ne publiku akce.`
               : `Nová pozvánka půjde publiku akce (${sync.inviteeCount}). Hosty, které přidáte ručně v Kalendáři, Wiki nemění.`}
             {createInMenu && " Novou pozvánku místo spárování založíte v nabídce ⋯."}
           </p>
-          {!createInMenu && <div className="row">{createInvite(false)}</div>}
+          {!createInMenu && sync.unlinkedReason !== "cancelled" && <div className="row">{createInvite(false)}</div>}
         </div>
       )}
 

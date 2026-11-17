@@ -75,7 +75,7 @@ export type SyncPanel = {
    * „lookalike“ podobná cizí pozvánka zastavila automatiku, „automatic“ pozvánku založí fronta,
    * „past“ proběhlá akce se už nezakládá, „unavailable“ Kalendář teď neodpovídá nebo není propojený.
    */
-  unlinkedReason: "lookalike" | "automatic" | "past" | "unavailable" | null;
+  unlinkedReason: "lookalike" | "automatic" | "past" | "unavailable" | "cancelled" | null;
   /** Jen osobní režim a zveřejněná akce: co o zápisu do osobních kalendářů skutečně víme. */
   personalDelivery: PersonalEventDelivery | null;
   /** Jen osobní režim: starší pozvánka v kalendáři organizátora z doby před osobními kalendáři (jen informace). */
@@ -152,7 +152,7 @@ async function syncPanel(viewer: Viewer, row: EventRow): Promise<SyncPanel | nul
           at: n.createdAt.toISOString(),
         }));
       }
-    } else if (!link && row.published) {
+    } else if (!link && row.published && row.published.status !== "cancelled") {
       rawCandidates = await pairingCandidates(viewer, row.id);
       panel.candidates = rawCandidates.map((c) => ({
         id: c.id,
@@ -169,7 +169,10 @@ async function syncPanel(viewer: Viewer, row: EventRow): Promise<SyncPanel | nul
   if (panel.status === "unlinked" && row.published) {
     const published = row.published;
     const target = { startsAt: new Date(published.startsAt), endsAt: new Date(published.endsAt), summary: calendarSummary(published) };
-    panel.unlinkedReason = panel.calendarUnavailable
+    // Zrušená akce pozvánku nedostane, nabídka založení ani párování nedává smysl.
+    panel.unlinkedReason = published.status === "cancelled"
+      ? "cancelled"
+      : panel.calendarUnavailable
       ? "unavailable"
       : target.startsAt <= now()
         ? "past"
