@@ -1579,10 +1579,15 @@ details > summary {
 }
 
 /* Mobil: kratší záhlaví. Technické podrobnosti ukázky jsou na stránce Integrace. */
-/* Tablet: bez podtitulku značky se výběr role i Odhlásit vejdou do jednoho řádku. */
-@media (max-width: 1023px) {
-  .brand-tagline {
+/* Tablet a malý notebook: bez podtitulku značky se výběr role i Odhlásit vejdou do jednoho řádku. */
+@media (max-width: 1279px) {
+  .brand-tagline,
+  .persona-btn-detail {
     display: none;
+  }
+
+  .brand-name {
+    white-space: nowrap;
   }
 }
 

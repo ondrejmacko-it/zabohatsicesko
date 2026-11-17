@@ -34,8 +34,10 @@ export function Sidebar({ badge, canManageUsers, pendingRequests, live }: Props)
             const content = (
               <>
                 <Icon name={item.icon} />
-                {item.label}
-                {item.labelTail && <span className="nav-label-tail">{item.labelTail}</span>}
+                <span>
+                  {item.label}
+                  {item.labelTail && <span className="nav-label-tail">{item.labelTail}</span>}
+                </span>
                 {count > 0 && (
                   <span className="nav-badge" aria-label={`${count} čeká na vás`}>
                     {count}

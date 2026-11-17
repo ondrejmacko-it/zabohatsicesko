@@ -35,7 +35,10 @@ export function Topbar({ user, personas }: { user: CurrentUser; personas: Person
               ))}
             </select>
             <button className="btn btn-small" type="submit">
-              Změnit<span className="persona-btn-detail"> ukázkovou roli</span>
+              {/* Jeden textový uzel: mezera mezi tlačítkovým flexem by se jinak zdvojila. */}
+              <span>
+                Změnit<span className="persona-btn-detail"> ukázkovou roli</span>
+              </span>
             </button>
           </form>
         )}
