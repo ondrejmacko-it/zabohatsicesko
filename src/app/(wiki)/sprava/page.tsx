@@ -120,10 +120,11 @@ export default async function AdminPage() {
           <h2 id="pozvanky">Kalendář a technický stav</h2>
           {attention && <span className="badge badge-danger">Vyžaduje zásah</span>}
         </summary>
+        {/* Stejné pořadí v obou režimech: stav Kalendáře, co chce zásah, podrobnosti. Každý řádek má stejnou stavbu. */}
         <div className="stack">
         {personal ? (
-          <>
-            <p className="cal-status" role="status">
+          <div className="cal-status" role="status">
+            <span className="cal-status-main">
               <strong>Kalendář</strong>
               <span className="badge badge-ok">Osobní kalendáře</span>
               <span className="cal-status-rest">
@@ -133,40 +134,40 @@ export default async function AdminPage() {
                   : "Pozvánky ani e-maily o pozvání se neposílají."}{" "}
                 Stav u každého je v seznamu Lidé.
               </span>
-            </p>
-            {/* Vlastní kalendář správce: při odpojení tady rovnou tlačítko „Připojit Kalendář znovu“. Za kolegy to udělat nejde. */}
-            {personal.get(user.id) && <PersonalCalendarStatus state={personal.get(user.id)!} />}
-            {legacyInvites > 0 && (
-              <div className="cal-status cal-status-warn" data-testid="stare-pozvanky">
-                <span className="cal-status-main">
-                  <strong>Staré pozvánky: {legacyInvites}</strong>
-                  <span className="cal-status-rest">
-                    Z dřívějška jsou v kalendáři {calendar.connection?.accountEmail ?? "správce"}. Účastník by akci viděl dvakrát. Wiki smaže jen pozvánky, které sama založila, a hostům nepošle žádný e-mail.
-                  </span>
-                </span>
-                <ActionForm
-                  action={cleanupLegacyInvitesAction}
-                  label="Uklidit staré pozvánky"
-                  pendingLabel="Uklízím…"
-                  small
-                  confirm={{
-                    title: "Uklidit staré pozvánky",
-                    text: `Wiki ověří ${legacyInvites} událostí přímo u Googlu a smaže ty, které sama založila. Hosté nedostanou e-mail. Události, které založil někdo jiný a jen jste je spárovali, zůstanou beze změny. Akce zůstanou v osobních kalendářích.`,
-                    confirmLabel: "Smazat staré pozvánky",
-                  }}
-                />
-              </div>
-            )}
-          </>
+            </span>
+          </div>
         ) : (
-          <>
-            <CalendarStatusLine status={calendar} now={now()} />
-            {worker && <CalendarWorkerHealth health={worker} />}
-            <details>
-              <summary className="small">Kdo dostane pozvánky do Kalendáře</summary>
-              <InviteRecipients status={calendar} />
-            </details>
-          </>
+          <CalendarStatusLine status={calendar} now={now()} />
+        )}
+        {/* Vlastní kalendář správce: při odpojení tady rovnou tlačítko „Připojit Kalendář znovu“. Za kolegy to udělat nejde. */}
+        {ownCalendar && <PersonalCalendarStatus state={ownCalendar} />}
+        {legacyInvites > 0 && (
+          <div className="cal-status cal-status-warn" data-testid="stare-pozvanky">
+            <span className="cal-status-main">
+              <strong>Staré pozvánky: {legacyInvites}</strong>
+              <span className="cal-status-rest">
+                Z dřívějška jsou v kalendáři {calendar.connection?.accountEmail ?? "správce"}. Účastník by akci viděl dvakrát. Wiki smaže jen pozvánky, které sama založila, a hostům nepošle žádný e-mail.
+              </span>
+            </span>
+            <ActionForm
+              action={cleanupLegacyInvitesAction}
+              label="Uklidit staré pozvánky"
+              pendingLabel="Uklízím…"
+              small
+              confirm={{
+                title: "Uklidit staré pozvánky",
+                text: `Wiki ověří ${legacyInvites} událostí přímo u Googlu a smaže ty, které sama založila. Hosté nedostanou e-mail. Události, které založil někdo jiný a jen jste je spárovali, zůstanou beze změny. Akce zůstanou v osobních kalendářích.`,
+                confirmLabel: "Smazat staré pozvánky",
+              }}
+            />
+          </div>
+        )}
+        {worker && <CalendarWorkerHealth health={worker} />}
+        {!personal && (
+          <details>
+            <summary className="small">Kdo dostane pozvánky do Kalendáře</summary>
+            <InviteRecipients status={calendar} />
+          </details>
         )}
         {/* Tlačítko v kartě, jako ostatní akce Správy, ne volný odkaz pod ní. */}
         <div className="row">
@@ -180,23 +181,13 @@ export default async function AdminPage() {
   );
 }
 
-/** Stav přístupu v ostré Wiki: zařízení a poslední odkaz. */
-function accessLine(a: Account): string {
+/** Stav přístupu v ostré Wiki: každé zařízení a poslední odkaz na vlastním řádku. */
+function accessLines(a: Account): string[] {
   const { invite, devices } = a.access;
-  const parts: string[] = [];
-  if (devices.length)
-    parts.push(
-      devices
-        .map(
-          (d) =>
-            `${d.label} (naposledy ${formatDayMonth(toDateKey(d.lastSeenAt))})`,
-        )
-        .join(", "),
-    );
-  if (invite.kind === "waiting")
-    parts.push(`odkaz čeká do ${formatDayMonth(toDateKey(invite.expiresAt))}`);
-  if (invite.kind === "expired") parts.push("odkaz vypršel");
-  return parts.length ? parts.join(" · ") : "Bez zařízení. Pošlete nový odkaz.";
+  const lines = devices.map((d) => `${d.label} · naposledy ${formatDayMonth(toDateKey(d.lastSeenAt))}`);
+  if (invite.kind === "waiting") lines.push(`Odkaz pro přihlášení čeká do ${formatDayMonth(toDateKey(invite.expiresAt))}`);
+  if (invite.kind === "expired") lines.push("Odkaz pro přihlášení vypršel");
+  return lines.length ? lines : ["Bez zařízení. Pošlete nový odkaz."];
 }
 
 function AccountHead({
@@ -229,11 +220,17 @@ function AccountHead({
             ` · ${a.groups.map((g) => GROUP_LABELS[g]).join(", ")}`}
         </p>
         {/* Fiktivní role ukázky druhý řádek nemají: že jde o ukázku, říká štítek v hlavičce. */}
-        {(live || a.origin !== "demo") && (
+        {live && a.status === "active" ? (
+          <ul className="access-lines" aria-label="Přihlašování se zařízeními">
+            {accessLines(a).map((line, i) => (
+              <li key={i} className="item-meta">
+                {line}
+              </li>
+            ))}
+          </ul>
+        ) : (live || a.origin !== "demo") && (
           <p className="item-meta">
-            {live && a.status === "active"
-              ? accessLine(a)
-              : a.googleLinked
+            {a.googleLinked
                 ? `Účet Google svázán${a.lastLoginAt ? `, naposledy ${formatDate(toDateKey(a.lastLoginAt))}` : ""}`
                 : "Pozvánka čeká na první přihlášení"}
           </p>

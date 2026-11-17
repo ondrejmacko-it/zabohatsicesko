@@ -10,6 +10,9 @@ import { PAST_FP, admin, asFile, fixtureWav, lead, organizer, outsider, particip
 
 beforeEach(resetDemo);
 
+/** Zápisy mimo ukázkový zveřejněný zápis ze seedu (`publishedMinutes`). */
+const ownMinutes = async (...args: Parameters<typeof listPublishedMinutes>) => (await listPublishedMinutes(...args)).filter((m) => m.eventId === PAST_FP);
+
 async function draftMinutes() {
   const jobId = await uploadRecording(lead, PAST_FP, asFile(fixtureWav(), "nahravka.wav"));
   await processTranscriptionJob(jobId);
@@ -20,20 +23,20 @@ async function draftMinutes() {
 describe("Moje cesta a Zápisy", () => {
   test("zápis je v seznamu až po zveřejnění a jen pro publikum akce, hledání ignoruje diakritiku", async () => {
     const draft = await draftMinutes();
-    expect(await listPublishedMinutes(participant)).toHaveLength(0);
+    expect(await ownMinutes(participant)).toHaveLength(0);
     expect((await listTasks(lead)).map((t) => t.action)).toContain("Zkontrolovat zápis");
 
     await publishMinutes(lead, PAST_FP, draft.id, draft.version);
-    const visible = await listPublishedMinutes(participant);
+    const visible = await ownMinutes(participant);
     expect(visible.map((m) => m.eventId)).toEqual([PAST_FP]);
-    expect(await listPublishedMinutes(outsider)).toHaveLength(0);
+    expect(await ownMinutes(outsider)).toHaveLength(0);
     expect((await listTasks(lead)).some((t) => t.key.endsWith(PAST_FP))).toBe(false);
 
     const word = visible[0]!.summary.split(" ").find((w) => w.length > 4)!;
     const plain = word.normalize("NFD").replace(/\p{Diacritic}/gu, "").toUpperCase();
-    expect(await listPublishedMinutes(participant, { query: plain })).toHaveLength(1);
-    expect(await listPublishedMinutes(participant, { query: "tohle-v-zapisu-neni" })).toHaveLength(0);
-    expect(await listPublishedMinutes(participant, { audience: "rm" })).toHaveLength(0);
+    expect(await ownMinutes(participant, { query: plain })).toHaveLength(1);
+    expect(await ownMinutes(participant, { query: "tohle-v-zapisu-neni" })).toHaveLength(0);
+    expect(await ownMinutes(participant, { audience: "rm" })).toHaveLength(0);
   });
 
   test("zveřejněný zápis doplní do pozvánky odkaz a pozvaní dostanou oznámení", async () => {

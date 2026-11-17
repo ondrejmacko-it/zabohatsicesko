@@ -11,11 +11,6 @@ export function GateForm({ personas, gate }: { personas: Persona[]; gate: GateMo
   const [state, action, pending] = useActionState<GateState, FormData>(enterDemo, { error: null });
   return (
     <form action={action} className="stack gate-form">
-      {gate === "invited" && (
-        <p className="notice" role="status">
-          Pozvánka je ověřená. Vyberte roli, se kterou chcete ukázku projít.
-        </p>
-      )}
       {gate === "code" && (
         <label className="field">
           <span className="field-label">Přístupový kód</span>

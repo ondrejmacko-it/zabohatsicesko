@@ -163,7 +163,7 @@ function NewLink({ account: a, onClose }: { account: AccountActionsProps["accoun
   );
 }
 
-const MODAL_TITLES = { approve: "Schválit přístup", edit: "Role a skupiny", restore: "Vrátit přístup" } as const;
+const MODAL_TITLES = { approve: "Schválit přístup", edit: "Upravit přístup", restore: "Vrátit přístup" } as const;
 
 /**
  * Akce nad účtem ve Správě. Hlavní krok (schválení žádosti) je vidět, ostatní jsou v menu.
@@ -195,35 +195,42 @@ export function AccountActions({ account: a, roles, live, editable = true }: Acc
             }}
           />
         )}
+        {editable && a.status === "active" && (
+          <button type="button" className="btn" onClick={() => setMode("edit")}>
+            Upravit přístup…
+          </button>
+        )}
         {live && a.status === "active" && (
-          <>
+          <div className="menu-group" role="group" aria-labelledby={`prihlasovani-${a.id}`}>
+            <hr className="menu-divider" />
+            <p className="menu-heading" id={`prihlasovani-${a.id}`}>
+              Přihlašování se zařízeními
+            </p>
             <button type="button" className="btn" onClick={() => setLinking(true)}>
-              Nový odkaz…
+              Nový odkaz pro další zařízení…
             </button>
             {live.inviteWaiting && (
-              <ActionForm action={revokeLoginLinkAction} fields={{ userId: a.id }} label="Zneplatnit odkaz" />
+              <ActionForm action={revokeLoginLinkAction} fields={{ userId: a.id }} label="Zneplatnit čekající odkaz" />
             )}
             {live.devices.map((d) => (
               <ActionForm
                 key={d.id}
                 action={revokeDeviceAction}
                 fields={{ userId: a.id, deviceId: d.id }}
-                label={`Zrušit toto zařízení (${d.label})…`}
+                label={`Odhlásit ${d.label}…`}
                 variant="danger"
                 confirm={{
-                  title: "Zrušit toto zařízení",
+                  title: "Odhlásit zařízení",
                   text: `${a.name} se z tohoto zařízení (${d.label}) už nepřihlásí, přístup do Wiki ale zůstává a na jiné zařízení stačí nový odkaz.`,
-                  confirmLabel: "Zrušit zařízení",
+                  confirmLabel: "Odhlásit zařízení",
                 }}
               />
             ))}
-          </>
+          </div>
         )}
         {editable && a.status === "active" && (
           <>
-            <button type="button" className="btn" onClick={() => setMode("edit")}>
-              Upravit roli a skupiny
-            </button>
+            <hr className="menu-divider" />
             <button type="button" className="btn btn-danger" onClick={() => setRevoking(true)}>
               Odebrat přístup…
             </button>

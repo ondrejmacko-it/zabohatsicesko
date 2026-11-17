@@ -96,7 +96,7 @@ async function LiveGate({ googleResult, bootstrap }: { googleResult: string; boo
   const spravce = device ? "" : "&spravce=1";
   return (
     <GateShell title={known ? "Vítejte zpět" : "Vítejte ve Wiki"}>
-      <p className="gate-lead">Přihlaste se svým účtem Google. Plán vzdělávání, zápisy a témata na vás čekají na jednom místě.</p>
+      <p className="gate-lead">Přihlaste se svým účtem Google.</p>
       {googleLoginConfig() ? (
         <section className="gate-google" aria-label="Přihlášení účtem Google">
           {googleError && (
@@ -136,7 +136,7 @@ async function LiveGate({ googleResult, bootstrap }: { googleResult: string; boo
           <rect x="3" y="7" width="10" height="7" rx="1.5" />
           <path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" />
         </svg>
-        <span>Vstup mají jen účty, které schválil správce Wiki. Heslo k účtu Google Wiki nikdy nevidí.</span>
+        <span>Vstup mají jen účty, které schválil správce Wiki.</span>
       </p>
     </GateShell>
   );

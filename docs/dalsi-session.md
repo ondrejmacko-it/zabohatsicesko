@@ -1,33 +1,97 @@
 # Prompt pro další session
 
+**#65 PŘIPRAVENÝ KE SLOUČENÍ (18. 11. 2026, relace session_01HpUirxBmt1Vh8n8CDU9bEP).** #67, #63 a #64 jsou v `main`.
+Do `claude/final-zapisy-temata` sloučen `origin/main` merge commitem c16a852 (bez konfliktů, bez force). Lokálně: lint, tsc,
+unit **279/279**, `npx tsx scripts/audit-plny.ts` projde jen se známou výjimkou GHSA-fc5q-39xc-vjpf (picomatch). Na c16a852
+„Citlivé cesty v PR“ zelené a Vercel preview Ready; „Lint, typy, testy a build“ běžel při zápisu. Tento zápis je jen dokumentace.
+PR je ještě draft.
+**Další krok:** ověřit zelené CI na hlavě PR (oba joby); pak uživatel dá #65 „Ready for review“ a sloučí přes „Create a merge
+commit“ a ověří Production nasazení.
+Otevřené zůstávají přepis dlouhých nahrávek a ostrý Google Kalendář (beze změny).
+
+**BEZPEČNOSTNÍ ÚPRAVA #67 (18. 11. 2026).** Na pokyn uživatele: plný audit už není `continue-on-error`. #67 (480e814):
+`scripts/audit-plny.ts` + `scripts/audit-vyjimky.ts` + `scripts/audit-vyjimky.json` – blokuje vše kromě GHSA-fc5q-39xc-vjpf
+v `picomatch` do 31. 12. 2026; chyba auditu blokuje; produkční audit beze změny; testy `tests/audit-vyjimky.test.ts` (7).
+Zkušební sloučení #67+#63+#64+#65 bez konfliktu, unit 279/279. Uživatel nechce další funkční ani vizuální úpravy.
+**Další krok:** nic bez pokynu; uživatel slučuje #67 → #63 → #64 → #65 (vždy Update branch + zelené CI).
+
+**OVĚŘENÍ PŘED PŘEDÁNÍM HOTOVO (18. 11. 2026, relace session_01HpUiruuQL3xe1DCLQTCGbo).**
+* CI #67 zelené (oba joby + citlivé cesty). #63/#64/#65 padají jen na plném `npm audit` (picomatch, dev), vyřeší sloučení #67.
+* Popisy #63 (U08 v 1127481) a #64 (U08 hotové, pořadí sloučení) aktualizované.
+* Kombinace #63+#64+#65 (`claude/final-zapisy-temata`): lint, tsc, unit **272/272** (+2 testy souběhu hromadného mazání
+  v `tests/pevne-svatky.test.ts`, commit 1c99f77), build OK, úplné e2e **918 passed / 42 skipped / 0 failed**.
+* Screenshoty 328 (5 rolí + host × 8 šířek) bez vodorovného posunu; prohlédnuté montáže správce 320/1280/1920, role 390,
+  vstup 360, RM 768. Nové nálezy: žádné.
+* Finální report uživateli odeslán. **Další krok:** nic bez pokynu uživatele. Sloučení: #67 → #63 → (merge main do #64, CI)
+  #64 → (merge main do #65, CI) #65. Otevřené zůstávají přepis dlouhých nahrávek a ostrý Google Kalendář.
+
+**FINÁLNÍ SJEDNOCENÍ PŘED PŘEDÁNÍM (18. 11. 2026) – navazuje na FINAL POLISH níže.**
+Uživatel 18. 11. potvrdil: všechny 3 věty z `/vstup` pryč (už se neptat). Schválil rozdělení auditu a přenos U08 do #63.
+Zákazy: nemergovat do `main`, nepřepínat produkční Kalendář, nerozesílat pozvánky, nemazat produkční data, neměnit tajemství,
+žádné placené služby. Neimplementovat znovu hotové funkce, opravovat jen konkrétní nálezy.
+
+**Hotovo v této relaci:**
+* **Draft PR [#67](https://github.com/ondrejmacko-it/zabohatsicesko/pull/67)** (`claude/ci-audit-produkce`, base main, 46c2eed): job „Lint, typy,
+  testy a build“ má `npm audit --omit=dev --audit-level=moderate` (blokuje), nový neblokující job „Bezpečnostní report – všechny
+  závislosti“ (plný audit, varování + souhrn). Evidence `docs/bezpecnost-zavislosti.md`, issue [#66](https://github.com/ondrejmacko-it/zabohatsicesko/issues/66).
+  Ověřeno lokálně: produkční audit 0, `npm ls picomatch --omit=dev` prázdné, přibalený picomatch v Next jen pro `next/image` (nepoužíváme).
+  **Musí se sloučit první**, jinak CI #63–#65 dál padá na plném auditu (workflow se bere z merge ref PR).
+* **U08**: cherry-pick 44df29e → #63 jako 1127481 (`claude/final-akce-navrhy`), pak merge #63 → #64 (775d696) a #64 → #65
+  (e866d69, prázdný diff, bez konfliktu). Bez force. `e2e/pristupnost.spec.ts` na #63 i #64: 22 passed / 18 skipped / 0 failed.
+  V historii #65 jsou dva commity se stejnou změnou (44df29e a 1127481); bez přepsání historie to nejde, diff PR je bez duplicity.
+
+**Další kroky (nová relace):**
+1. Subscribe #63, #64, #65, #67; zkontrolovat CI #67 (oba joby). Popis #64 a #63 aktualizovat: U08 už opraveno v #63 (1127481).
+2. Na `claude/final-zapisy-temata` (= #63+#64+#65): lint, tsc, unit, `npm run build`, úplné `npm run e2e` (dřív 918/42/0).
+3. Cíleně projít: přístupnost, klávesnice, formuláře, okna, chyby, prázdné stavy; oprávnění správce/vedoucí/FP/RM/host;
+   screenshoty 320–1920 (`node e2e/server.mjs` + `node scripts/audit-screenshoty.mjs . <scratchpad>`; po změně CSS server
+   restartovat a zabít i `next-server`); texty (překlepy, duplicity, technické formulace, zbytečné ovládací prvky);
+   hromadné Zveřejnit/Smazat vybrané návrhy včetně potvrzení a souběhu (`deleteDrafts`, testy `tests/pevne-svatky.test.ts`,
+   `e2e/okna.spec.ts`, `e2e/plan-planovani.spec.ts`; doplnit test souběhu, pokud chybí).
+4. Opravy jen nalezených problémů na `claude/final-zapisy-temata` (nebo do větve, kde chyba vznikla, a pak merge dál bez force).
+5. Finální report uživateli (tykat): hotové/funkční; ukázka/simulace; kontroly prošlé/neprošlé; zbývající problémy; co
+   potřebuje jeho schválení; **pořadí sloučení: #67 → #63 → (merge main do #64, CI) #64 → (merge main do #65, CI) #65**;
+   jak ověřit nasazení po sloučení. Zvlášť: přepis dlouhých nahrávek (`docs/nahravky-moznosti.md`) a ostrý Google Kalendář
+   jsou samostatné otevřené body.
+
 **FINAL POLISH (18. 11. 2026).** Zadání „ZBČ WIKI · FINAL PRODUCT POLISH“ je v první zprávě relace
 session_01HpUiru5P4yB2SxRCiVSjHt. Uživatel dal plné právo pokračovat bez ptaní, zakládat nové relace a připravit draft PR
 (merge do main dělá on, Kalendář nepřepínat, produkční data nemazat).
 
 **Hotovo:**
-* **Draft PR [#63](https://github.com/ondrejmacko-it/zabohatsicesko/pull/63) „Final A“** (`claude/final-akce-navrhy`): jednotné
-  okno akce (`EventPeek` → `EventWindow`, přímé úpravy, Uložit jako návrh / Zveřejnit, Další možnosti s odkazem „Stav v Kalendáři“
-  nebo „Nahrávka a zápis“), bez „Podrobnosti akce“ a `MoveEventButton`; detail akce má jen odkaz „Upravit akci“ do Plánu; Úvod
-  otevírá akci v okně (`/?akce=`), „Zobrazit celý plán“ pod seznamem; filtr „Návrhy“; svátky pevné (UI + server `holiday_locked`);
-  termín proběhlé akce zamčený i na serveru (`invalid_state`); sbalená pole přejmenována na „Další údaje“. Lint, tsc, unit 268/268,
-  build, cílené e2e 73/73 (1280 + 320). PR je sledovaný (subscribe).
-* **Větev `claude/final-hromadne-navrhy`** (stojí na #63, PR zatím NENÍ): `deleteDrafts` (server, jedna transakce, přeskočí
-  zveřejněné/svátek/změněné) + `deleteDraftsAction`; okno „Vybrat návrhy“ (`DraftSelection.tsx`) v Plánu vedle Přidat akci:
-  výběr, Vybrat vše, Zveřejnit vybrané (přes `publishMonthAction`, potvrzení v liště) a Smazat vybrané (potvrzení). Unit testy
-  v `tests/pevne-svatky.test.ts` (5/5). tsc a lint čisté. **Neověřeno:** e2e a screenshot okna Vybrat návrhy.
+* **Draft PR [#63](https://github.com/ondrejmacko-it/zabohatsicesko/pull/63) „Final A“** (`claude/final-akce-navrhy`): jednotné okno
+  akce, Úvod otevírá akci v okně, filtr „Návrhy“, pevné svátky (UI + server), zamčený termín proběhlé akce. Sledovaný.
+* **Draft PR [#64](https://github.com/ondrejmacko-it/zabohatsicesko/pull/64) „Final B“** (`claude/final-hromadne-navrhy`, stojí na #63,
+  sledovaný): Vybrat návrhy (výběr, Zveřejnit/Smazat vybrané, server `deleteDrafts` v jedné transakci); lišta Plánu (Měsíc/Seznam
+  vlevo, měsíc uprostřed, Přidat akci · Připravit měsíc · Vybrat návrhy · ⋯ vpravo, filtry ve 2. řádku, „Zobrazit jako“ s nápovědou);
+  **oprava chyby**: „Zpět“ v potvrzovací liště odeslal formulář (React znovu použil tlačítko) – lišty mají `key` (i `EventDialog`),
+  po Zpět se fokus vrátí; výběr návrhů se při zavření neptá na rozepsané změny. E2e okna/plán (1280, 1920, 320) prošly, unit 270/270,
+  screenshoty 320–1920 lišty prohlédnuté (bez vodorovného posunu).
+* **Draft PR [#65](https://github.com/ondrejmacko-it/zabohatsicesko/pull/65) „Final C“** (`claude/final-zapisy-temata`, base main,
+  stojí na #64, sledovaný): `/vstup` bez 3 vět (slogan „Plán…na jednom místě“, „Heslo… nikdy nevidí“, notice „Pozvánka je
+  ověřená…“ v ukázce); Zápisy: okno „Nedokončené zápisy“ / „Moje zápisy k dokončení“, „Odpovědný: jméno“, seed zveřejněného
+  zápisu ev-11-6; Témata: archiv jako karty s Obnovit; **Správa** (e0f2c65): menu účtu Upravit přístup… / skupina „Přihlašování
+  se zařízeními“ (Nový odkaz pro další zařízení, Zneplatnit čekající odkaz, Odhlásit <zařízení>… po řádcích) / Odebrat přístup…;
+  zařízení v kartě po řádcích (`accessLines`); panel Kalendář jednotná stavba v obou režimech. Lint, tsc, unit 270/270, build OK.
+  Screenshoty prohlédnuté (ostrá Správa přes lokální `next start` s fiktivním správcem: skript ve scratchpadu, v repu není;
+  Témata-archiv, Zápisy, `/vstup` 390/1280).
+
+* **E2E U08 opraveno v #65** (44df29e): `pristupnost.spec.ts` počítal se starým dialogem akce (před jednotným editorem z #63):
+  „Název“ → „Název akce“, „Uložit návrh“ → „Uložit jako návrh“, na počítači je v řádku Typ + Pro koho a Datum + Od (dřív Typ + Datum).
+  Úplné e2e na e0f2c65: 913 passed / 42 skipped / 5 failed (jen U08). Na #63 a #64 samotných tyto testy dál padají (oprava jen v #65,
+  do jejich větví se nepushuje bez svolení). Úplné e2e na 44df29e: **918 passed / 42 skipped (záměrně jen jeden projekt) / 0 failed**.
+
+* **Screenshoty (18. 11.)**: úplný audit 5 rolí × 8 šířek (320–1920) na e46ce35 bez vodorovného posunu, montáže prohlédnuté.
+  Opraveno (99a6c76): Zápisy na telefonu od 360 px mají „Hledat“ vedle pole (`.filter-grow` 180 px). Cílené e2e zapisy+stranky
+  531 passed / 3 skipped / 0 failed, lint, tsc, unit 270/270. Popis #64 doplněn o úplné e2e a U08 (cherry-pick 44df29e do #63,
+  nebo sloučit #63–#65 dohromady). Závěrečný report uživateli odeslán.
 
 **Další kroky:**
-1. Na `claude/final-hromadne-navrhy`: e2e pro Vybrat návrhy (otevřít, vybrat 1, Smazat vybrané → potvrdit; jen projekt
-   windows-1280, jinde jen otevřít/zavřít), screenshot 390/1280 (`scripts/audit-screenshoty.mjs`, server `node e2e/server.mjs`,
-   před e2e ho ukonči). Pak horní lišta Plánu (Měsíc/Seznam vlevo, měsíce uprostřed, Přidat akci + Připravit měsíc + Vybrat
-   návrhy vpravo, filtry ve 2. řádku, „Zobrazit jako“ s nápovědou „Ukáže, co vidí vybraný kolega. Nic se nezmění.“).
-   Draft PR „Final B: hromadné návrhy a lišta Plánu“ (base main, v popisu: stojí na #63).
-2. Další PR: `/vstup` bez 3 nadbytečných vět, Zápisy (Odpovědný: vedoucí, „Nedokončené zápisy“ / „Moje zápisy k dokončení“,
-   ukázkový zveřejněný zápis v `demo/seed.json` + e2e čtenáře „Zobrazit zápis“ z okna akce), Témata (záhlaví „Navrhněte téma nebo
-   podpořte návrh kolegů.“, archiv jako karty s Obnovit), Správa (menu účtu: Upravit přístup / Přihlašování se zařízeními po řádcích /
-   Odebrat přístup; sjednotit panel Kalendář), revize textů.
-3. Nakonec: lint, tsc, `npm test`, build, úplné `npm run e2e`, screenshoty 320–1920 (prohlédnout), závěrečný report
-   (passed/failed/skipped, simulace vs. živý test, otevřené body; dlouhé nahrávky jen jako otevřený bod `docs/nahravky-moznosti.md`).
+1. Nic dalšího bez pokynu uživatele. Čeká se na jeho kontrolu #63–#65 a odpovědi na otevřené body.
+2. Otevřené: výklad „3 nadbytečné věty na /vstup“ (potvrdit); U08 na #63/#64 (cherry-pick 44df29e?); dlouhé nahrávky jen jako
+   otevřený bod `docs/nahravky-moznosti.md`. **CI červené jen kvůli `npm audit`**: advisory GHSA-fc5q-39xc-vjpf (picomatch, všechny verze, bez opravy, jen
+   dev nástroje; `--omit=dev` = 0). Komentář na #65. Rozhodnutí o CI auditu (počkat / `--omit=dev`) je na uživateli.
+   Pozn.: e2e server je produkční build, po změně CSS ho restartovat (zabít i `next-server`).
 
 Kontext limit: na začátku čti jen tento blok, README a měněné soubory.
 

@@ -44,3 +44,20 @@ test.describe("Zápisy: od nahrávky ke zveřejnění @desktop", () => {
     }
   });
 });
+
+// Ukázka má jeden zveřejněný zápis (seed `publishedMinutes`): čtenář ho otevře rovnou z okna akce.
+test.describe("Zápisy: čtenář z okna akce", () => {
+  test.use({ storageState: authFile("ucastnikRm") });
+
+  test("Zobrazit zápis z okna akce", async ({ page }) => {
+    await page.goto("/vzdelavani/harmonogram?mesic=2026-11&akce=ev-11-6");
+    await settle(page);
+    await page.getByRole("dialog").getByRole("link", { name: "Zobrazit zápis" }).click();
+    await page.waitForURL(/\/vzdelavani\/zapisy\?zapis=ev-11-6/);
+    const reader = page.getByRole("dialog");
+    await expect(reader).toContainText("První rozhovor s klientem");
+    await expect(reader).toContainText("Tým používá jednotný seznam úvodních otázek.");
+    // Čtenář vidí jen zveřejněný zápis, ne nahrávku ani pracovní přepis.
+    await expect(reader).not.toContainText("Pracovní přepis");
+  });
+});

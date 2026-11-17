@@ -830,6 +830,28 @@ fieldset.field > legend {
   border-top: 1px solid var(--line);
 }
 
+/* Zařízení účtu ve Správě: jedno na řádek, bez odrážek. */
+.access-lines {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Skupina položek s nadpisem, např. Přihlašování se zařízeními ve Správě. Jedna akce na řádek. */
+.menu-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.menu-heading {
+  margin: 0;
+  padding: 4px 12px 2px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
 .menu-list .menu-danger {
   color: var(--danger);
 }
@@ -1509,7 +1531,9 @@ details > summary {
 }
 
 .filter-grow {
-  flex: 1 1 240px;
+  /* 180 px: na telefonu od 360 px se „Hledat“ vejde vedle pole. */
+  flex: 1 1 180px;
+  min-width: 0;
 }
 
 .clamp {
@@ -1573,9 +1597,12 @@ details > summary {
   flex-wrap: wrap;
 }
 .archived-topics {
-  list-style: none;
-  padding: 0;
   margin-top: 8px;
+}
+
+.topic-card.topic-archived {
+  background: var(--surface-muted, transparent);
+  border-style: dashed;
 }
 
 /* Mobil: kratší záhlaví. Technické podrobnosti ukázky jsou na stránce Integrace. */
