@@ -191,6 +191,10 @@ test.describe("okna správce", () => {
     await page.getByRole("button", { name: "Přidat přístup" }).click();
     await checkDialog(page, /./);
     await page.getByRole("button", { name: /Možnosti účtu Vedoucí akce/ }).click();
+    // Pořadí položek: úprava přístupu nahoře, odebrání dole za oddělovačem.
+    const items = page.locator(".menu-list:not([hidden]) .btn");
+    await expect(items.first()).toHaveText("Upravit přístup…");
+    await expect(items.last()).toHaveText("Odebrat přístup…");
     await expectNoHorizontalScroll(page);
     await page.keyboard.press("Escape");
   });

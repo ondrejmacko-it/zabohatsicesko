@@ -830,6 +830,28 @@ fieldset.field > legend {
   border-top: 1px solid var(--line);
 }
 
+/* Zařízení účtu ve Správě: jedno na řádek, bez odrážek. */
+.access-lines {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Skupina položek s nadpisem, např. Přihlašování se zařízeními ve Správě. Jedna akce na řádek. */
+.menu-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.menu-heading {
+  margin: 0;
+  padding: 4px 12px 2px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
 .menu-list .menu-danger {
   color: var(--danger);
 }
