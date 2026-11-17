@@ -1708,7 +1708,7 @@ details > summary {
 }
 
 /* Odznak nesmí nadpis zvýšit, jinak by řádky ve dvou blocích vedle sebe nezačínaly stejně. */
-.plan-top .section > h2 {
+.tasks-card h2 {
   line-height: 24px;
 }
 
@@ -2467,5 +2467,26 @@ p.cal-status {
 @container (min-width: 17rem) and (max-width: 34rem) {
   .event-form .form-grid .form-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Úvod: Nejbližší akce | Čeká na vás. Na úzkém displeji pod sebou, úkoly první. */
+.home-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  column-gap: 32px;
+}
+
+.home-columns > .tasks-card {
+  order: -1;
+}
+
+@media (min-width: 900px) {
+  .home-columns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .home-columns > .tasks-card {
+    order: 0;
   }
 }

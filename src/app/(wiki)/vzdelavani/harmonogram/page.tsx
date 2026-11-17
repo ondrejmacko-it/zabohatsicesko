@@ -14,8 +14,9 @@ import { EventPeek } from "@/features/vzdelavani/components/EventPeek";
 import { PrepareMonthDialog, type InviteMode, type PairingItem } from "@/features/vzdelavani/components/PrepareMonthDialog";
 import { PlanFilters } from "@/features/vzdelavani/components/PlanFilters";
 import { Agenda, Legend, NextEventsList, ScheduleGrid } from "@/features/vzdelavani/components/Schedule";
+import { TasksCard, orderTasks } from "@/features/vzdelavani/components/TasksCard";
 import { TemplateDialog } from "@/features/vzdelavani/components/TemplateDialog";
-import { PLAN_STATES, filterCards, monthSummary, monthTasks } from "@/features/vzdelavani/status";
+import { PLAN_STATES, filterCards, monthSummary } from "@/features/vzdelavani/status";
 import styles from "@/features/vzdelavani/components/schedule.module.css";
 import { MoveDropZone } from "@/features/vzdelavani/components/MoveEvent";
 import { formatMonth, isValidDateKey, isValidMonthKey, monthOf, shiftMonth, toDateKey } from "@/lib/time";
@@ -41,9 +42,6 @@ async function nearestEvent(viewer: Parameters<typeof nextEventFor>[0], monthCar
   const inMonth = monthCards.find((c) => c.planStatus === "published" && c.type !== "holiday" && new Date(c.startsAt) >= from);
   return inMonth ?? (await nextEventFor(viewer));
 }
-
-/** Kolik úkolů se vejde bez rozbalení. */
-const TOP_ROWS = 3;
 
 export default async function PlanPage({ searchParams }: { searchParams: SearchParams }) {
   const user = await requireUser();
@@ -116,36 +114,9 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   const taskSummary = summary && type ? monthSummary(filterCards(monthCards, monthKey, { type }), monthKey) : summary;
   const ownTasks = viewerTasks.filter((task) => !state && (!type || task.eventType === type));
   const hiddenTasks = viewerTasks.length - ownTasks.length;
-  const monthStepTasks = (taskSummary ? monthTasks(taskSummary, formatMonth(monthKey).split(" ")[0]!).filter((task) => !state || task.state === state) : []).map((task) => ({
-    key: `mesic-${task.state}`,
-    title: task.title,
-    detail: task.detail,
-    href: `${link({ stav: task.state })}#mesic`,
-    action: task.action,
-  }));
-  // Krok měsíce je hlavní práce správce: zůstane mezi úkoly viditelnými bez rozbalení (i na telefonu).
-  const stepAt = Math.min(ownTasks.length, TOP_ROWS - 1);
-  const tasks = [...ownTasks.slice(0, stepAt), ...monthStepTasks, ...ownTasks.slice(stepAt)];
+  const tasks = orderTasks(ownTasks, taskSummary, monthKey, (stav) => `${link({ stav })}#mesic`, state);
   // Kdo nemá úkoly ani neplánuje, uvidí na telefonu nejdřív nejbližší akci (měsíční seznam začíná prvním dnem).
   const nextEvent = !managing && tasks.length === 0 ? await nearestEvent(viewer, monthKey === monthOf(todayKey) ? monthCards : []) : null;
-  const taskRow = (task: (typeof tasks)[number] & { external?: boolean }) => (
-    <li key={task.key} className="brief-row">
-      <span className="brief-main">
-        <span className="item-title">{task.title}</span>
-        <span className="item-meta">{task.detail}</span>
-      </span>
-      {preview ? null : task.external ? (
-        <a className="btn btn-small btn-primary" href={task.href}>
-          {task.action}
-        </a>
-      ) : (
-        <Link className="btn btn-small btn-primary" href={task.href}>
-          {task.action}
-        </Link>
-      )}
-    </li>
-  );
-
   return (
     <>
       <AutoRefresh active={syncing} />
@@ -174,30 +145,12 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
       {/* Prázdná karta úkolů nic neříká, proto se bez úkolů skryje. Filtr, který úkoly schoval, ji nechá. */}
       {(tasks.length > 0 || hiddenTasks > 0) && (
         <div className="plan-top">
-          <section className="section" aria-labelledby="ceka">
-            <h2 id="ceka">
-              {preview ? "Úkoly v náhledu" : "Čeká na vás"}
-              {tasks.length > 0 && <span className="count-badge">{tasks.length}</span>}
-            </h2>
-            {tasks.length === 0 ? (
-              <p className="muted">Vybranému filtru neodpovídá žádný úkol.</p>
-            ) : (
-              <>
-                <ul className="brief-list">{tasks.slice(0, TOP_ROWS).map(taskRow)}</ul>
-                {tasks.length > TOP_ROWS && (
-                  <details className="brief-more">
-                    <summary>Další úkoly ({tasks.length - TOP_ROWS})</summary>
-                    <ul className="brief-list">{tasks.slice(TOP_ROWS).map(taskRow)}</ul>
-                  </details>
-                )}
-              </>
-            )}
-            {hiddenTasks > 0 && (
-              <p className="hint">
-                Filtr skrývá další úkoly ({hiddenTasks}). <Link href={link({ typ: undefined, stav: undefined })}>Zobrazit všechny</Link>
-              </p>
-            )}
-          </section>
+          <TasksCard
+            tasks={tasks}
+            title={preview ? "Úkoly v náhledu" : undefined}
+            readOnly={Boolean(preview)}
+            hidden={{ count: hiddenTasks, resetHref: link({ typ: undefined, stav: undefined }) }}
+          />
         </div>
       )}
 

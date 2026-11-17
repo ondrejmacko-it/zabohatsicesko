@@ -4,15 +4,18 @@ import { after } from "next/server";
 import { Icon, type IconName } from "@/components/Icon";
 import { PersonalCalendarStatus } from "@/features/vzdelavani/components/PersonalCalendarStatus";
 import { NextEventsList } from "@/features/vzdelavani/components/Schedule";
-import { toDateKey } from "@/lib/time";
+import { TasksCard, orderTasks } from "@/features/vzdelavani/components/TasksCard";
+import { monthSummary } from "@/features/vzdelavani/status";
+import { monthOf, toDateKey } from "@/lib/time";
 import { logError } from "@/server/audit";
 import { requireUser } from "@/server/auth/session";
 import { personalSyncNeeded, syncPersonalCalendars } from "@/server/calendar/personal";
 import { now } from "@/server/config";
 import { getDb } from "@/server/db/client";
-import { canManageUsers } from "@/server/policy";
+import { canManageUsers, canPlan } from "@/server/policy";
 import { loadPersonalCalendar } from "@/server/services/calendar-status";
-import { nextEventsFor } from "@/server/services/events";
+import { listMonth, nextEventsFor } from "@/server/services/events";
+import { listTasks } from "@/server/services/journey";
 
 /** Kolik nejbližších akcí úvod ukáže. Celý měsíc je v Plánu. */
 const NEXT_ROWS = 3;
@@ -23,7 +26,17 @@ type ModuleCard = { href: string; icon: IconName; title: string; text: string };
 
 export default async function HomePage() {
   const user = await requireUser();
-  const [upcoming, initial] = await Promise.all([nextEventsFor(user, NEXT_ROWS), loadPersonalCalendar(user)]);
+  const monthKey = monthOf(toDateKey(now()));
+  const planner = canPlan(user);
+  const [upcoming, initial, own, monthCards] = await Promise.all([
+    nextEventsFor(user, NEXT_ROWS),
+    loadPersonalCalendar(user),
+    listTasks(user),
+    planner ? listMonth(user, monthKey) : null,
+  ]);
+  // Stejné úkoly jako v Plánu bez filtru: vlastní úkoly a správci krok aktuálního měsíce.
+  const summary = monthCards ? monthSummary(monthCards, monthKey) : null;
+  const tasks = orderTasks(own, summary, monthKey, (stav) => `/vzdelavani/harmonogram?stav=${stav}#mesic`);
   let personal = initial;
   // Osobní kalendáře doženou zmeškaný zápis (přechodná chyba Googlu, nový účet) a jednou za čas ověří, že
   // přístup u Googlu platí. Zjištění je jeden dotaz do databáze. Na výsledek stránka počká nejvýš chvilku,
@@ -73,15 +86,18 @@ export default async function HomePage() {
           ))}
         </ul>
       </nav>
-      <section className="section" aria-labelledby="nejblizsi">
-        <div className="spread section-head">
-          <h2 id="nejblizsi">Nejbližší akce</h2>
-          <Link className="btn btn-small" href="/vzdelavani/harmonogram">
-            Celý plán
-          </Link>
-        </div>
-        <NextEventsList cards={upcoming} todayKey={toDateKey(now())} />
-      </section>
+      <div className={tasks.length > 0 ? "home-columns" : undefined}>
+        <section className="section" aria-labelledby="nejblizsi">
+          <div className="spread section-head">
+            <h2 id="nejblizsi">Nejbližší akce</h2>
+            <Link className="btn btn-small" href="/vzdelavani/harmonogram">
+              Celý plán
+            </Link>
+          </div>
+          <NextEventsList cards={upcoming} todayKey={toDateKey(now())} />
+        </section>
+        <TasksCard tasks={tasks} planHref="/vzdelavani/harmonogram" />
+      </div>
     </>
   );
 }
