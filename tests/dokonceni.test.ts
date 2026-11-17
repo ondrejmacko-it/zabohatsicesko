@@ -119,7 +119,7 @@ describe("stín původního termínu a průvodce měsícem", () => {
     expect(filterCards(cards, "2026-11", {})).toBe(cards);
 
     const draft = cards.find((c) => c.planStatus === "draft")!;
-    expect(statusAdvice(draft)).toContain("Návrh vidíte jen vy");
+    expect(statusAdvice(draft)).toContain("Kolegové návrh zatím nevidí");
     // Chybějící pozvánka v Kalendáři je úkol jen u akce, která ještě neproběhla.
     const published = cards.find((c) => c.planStatus === "published" && c.type !== "holiday")!;
     expect(statusAdvice({ ...published, syncStatus: "unlinked", unpublishedChanges: false, past: false })).toContain("nemá pozvánku");

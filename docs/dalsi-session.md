@@ -1,5 +1,42 @@
 # Prompt pro další session
 
+**BODY 1–3 (17. 11. 2026, relace session_01HpUiryLTnYTDVdKXExXTxz, větev `claude/awesome-dijkstra-yc1boc`).**
+* (1) Okna akcí hotová (a27f734): bez nápovědy pod „Pro koho“ (`GROUP_HINTS` smazané), bez kroku Kontrola v Přidat
+  akci, příjemci pozvánky jen tlumený sbalený řádek (0 příjemců = krátká poznámka, u proběhlé akce nic), návrh bez
+  opakované rady, detail bez duplicitního typu/publika, Připravit měsíc s kratšími texty (potvrzení zachována).
+* (2) Inventura produkce read-only (Neon `zbc-wiki-produkce`): `docs/cisteni-testovacich-dat.md`. Testovací témata
+  Test/Něco/Ahoj/Ahojda/Tos/Ahojky (+ Tym A?) a 6 zveřejněných akcí s Kalendářem. **Nic nesmazáno, čeká na schválení.**
+  Seed ukázky je profesionální a v ostré Wiki zakázaný, beze změny.
+* (3) lint, tsc, unit 279/279 OK; screenshoty 6 šířek prohlédnuté, #mesic 0 px od středu (320/390: −0,01 px),
+  bez vodorovného posunu. Kompletní e2e 918 passed / 42 skipped / 0 failed (po opravě axe štítků filtrů, 9644b40).
+* Draft PR [#68](https://github.com/ondrejmacko-it/zabohatsicesko/pull/68) do main, CI zelené, Vercel preview Ready.
+**Další krok:** nic bez pokynu. Uživatel dá #68 Ready for review a sloučí. Čištění produkčních dat jen po schválení
+podle `docs/cisteni-testovacich-dat.md` (otázky tam).
+
+**URGENTNÍ UX/UI OPRAVY (17. 11. 2026, relace session_01HpUiryXvc6ixD5KrHNTanQ, větev `claude/awesome-dijkstra-yc1boc` z main 6eb778e).**
+Hotovo (jedna větev, bez PR – uživatel PR zatím nechtěl):
+* Plán: lišta jako mřížka 3 zón (`.plan-head` + container query), měsíc 27 px přesně uprostřed (změřeno 0 px odchylky
+  při 1280/1440/1600/1920/320/390; dřív −154 až −194 px). Vpravo Připravit měsíc + Přidat akci; „⋯“ zrušeno,
+  Pravidelný týden je v okně Připravit měsíc (krok 1).
+* Filtry: jeden řádek pod lištou (Návrhy, Chybí údaje, vybraný typ s křížkem | Filtry ▾ = Typ akce + Zobrazit jako
+  s krátkou nápovědou | Vybrat akce). Staré konfliktní CSS `.schedule-toolbar/.month-nav/.plan-filters/.topic-list` sjednocené.
+* Výběr přímo v Plánu (`PlanSelection.tsx`, `DraftSelection.tsx` smazán): checkbox na kartách návrhů (mřížka i seznam),
+  klik/Enter na kartu označí, mezerník na checkboxu, Esc ukončí, tažení vypnuté, lišta „Vybráno X“ se Zveřejnit/Smazat/
+  Zrušit výběr a potvrzením. Označit jde každý nikdy nezveřejněný návrh (i proběhlý – jen smazat, potvrzení to řekne);
+  zveřejní se jen budoucí (`listMonthDrafts`); návrhy změn jen v okně akce. Serverové akce beze změny.
+* Karty: jeden štítek (`cardStatus`) + ikona „Chybí téma a vedoucí“ (`missingDetails`), žádné „Bez tématu/Bez vedoucího“.
+* Témata: jeden sloupec kompaktních řádků, archiv stejné řádky tlumeně bez vysvětlující věty. Správa: panel Kalendáře
+  nadpis vlevo, štítek a šipka vpravo (`::after`, rotace).
+* Texty: `statusAdvice` bez „přes Upravit“ a zkrácené.
+* Ověřeno: lint, tsc, unit 279/279, build, e2e okna+klávesnice+přístupnost+plan-planovani 263 passed/27 skipped/0 failed
+  (po opravě názvu skupiny štítků). Screenshoty před/po prohlédnuté. **Kompletní e2e neběželo.**
+**Rozhodnutí uživatele (17. 11.):** nejdřív dodělat body 1–3 níže, pak JEDEN draft PR do main (z této větve), pokračovat bez
+ptaní a při limitu kontextu založit další relaci. Zastavit se až na úplném konci s PR připraveným ke sloučení (zelené CI,
+popis PR podle šablony). Merge dělá uživatel.
+**Další krok:** (1) okna akcí: duplicitní texty; (2) inventura testovacích dat; (3) kompletní `npm run e2e`; pak draft PR; projít okna akcí (EventDialog/EventPeek) – duplicitní texty o publiku a pozvánkách
+(„Akci uvidí skupina…“, „Pozvánku nedostane nikdo“) ještě NEJSOU upravené; inventura testovacích názvů v produkční DB
+(„Ahoj“, „Něco“, „Test“, „Ahojda“, „Tos“) – jen read-only dotaz a návrh, nic nemazat bez schválení; pak draft PR.
+
 **#65 PŘIPRAVENÝ KE SLOUČENÍ (18. 11. 2026, relace session_01HpUirxBmt1Vh8n8CDU9bEP).** #67, #63 a #64 jsou v `main`.
 Do `claude/final-zapisy-temata` sloučen `origin/main` merge commitem c16a852 (bez konfliktů, bez force). Lokálně: lint, tsc,
 unit **279/279**, `npx tsx scripts/audit-plny.ts` projde jen se známou výjimkou GHSA-fc5q-39xc-vjpf (picomatch). Na c16a852

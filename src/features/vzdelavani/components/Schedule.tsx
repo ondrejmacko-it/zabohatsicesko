@@ -14,7 +14,8 @@ import {
   weekdayShort,
 } from "@/lib/time";
 import type { EventCard } from "@/server/services/events";
-import { badgeClass, cardBadges, cardTone, primaryStatus } from "../status";
+import { badgeClass, cardStatus, cardTone, isPickable, missingDetails, primaryStatus } from "../status";
+import { PickBox } from "./PlanSelection";
 import styles from "./schedule.module.css";
 
 const COLUMNS = [
@@ -68,23 +69,42 @@ function GhostBlock({ card, hrefFor = pageHref }: { card: EventCard; hrefFor?: C
   );
 }
 
-/** Štítky stavu pod kartou. Bez štítků nic nevykreslí. */
-function Badges({ card, managing }: { card: EventCard; managing: boolean }) {
-  const badges = cardBadges(card, managing);
-  if (!badges.length) return null;
+/**
+ * Stav karty: nejvýš jeden štítek a decentní indikátor chybějících údajů (jen správce). Co přesně chybí,
+ * říká popisek indikátoru a čtečce i text odkazu; podrobnosti jsou v okně akce.
+ */
+function CardMeta({ card, managing }: { card: EventCard; managing: boolean }) {
+  const status = cardStatus(card);
+  const missing = missingDetails(card, managing);
+  if (!status && !missing.length) return null;
+  const missingText = `Chybí ${missing.join(" a ")}`;
   return (
-    <span className={styles.badges}>
-      {badges.map((b) => (
-        <span key={b.label} className={badgeClass(b.tone)}>
-          {b.label}
+    <span className={styles.meta}>
+      {status && <span className={badgeClass(status.tone)}>{status.label}</span>}
+      {missing.length > 0 && (
+        <span className={styles.missing} title={missingText}>
+          <Icon name="alert" />
+          <span className="visually-hidden">{missingText}</span>
         </span>
-      ))}
+      )}
     </span>
   );
 }
 
-// Karta v mřížce: název, téma (je součástí názvu akce), čas a jen nutné štítky. Vedoucího a podrobnosti
-// ukáže náhled po kliknutí.
+/** Obal karty: v režimu výběru (jen správce, jen návrhy) k ní přidá checkbox. */
+function CardWrap({ card, managing, children }: { card: EventCard; managing: boolean; children: React.ReactNode }) {
+  return (
+    <div className={styles.cardWrap}>
+      {children}
+      {managing && isPickable(card) && <PickBox id={card.id} label={card.label} />}
+    </div>
+  );
+}
+
+const pickAttr = (card: EventCard, managing: boolean) => (managing && isPickable(card) ? { "data-pick-id": card.id } : {});
+
+// Karta v mřížce: název, téma (je součástí názvu akce), čas a jeden stav. Vedoucího a podrobnosti
+// ukáže okno akce po kliknutí.
 function EventBlock({ card, hrefFor = pageHref, managing = false, movable = false }: { card: EventCard; movable?: boolean } & Linking) {
   const tone = cardTone(card);
   const isHoliday = card.type === "holiday";
@@ -94,12 +114,14 @@ function EventBlock({ card, hrefFor = pageHref, managing = false, movable = fals
     ? { draggable: true, "data-move-id": card.id, "data-move-revision": card.revision ?? 0, "data-move-label": card.label, "data-move-from": dayOf(card) }
     : {};
   return (
-    <Link href={hrefFor(card)} scroll={false} className={`${styles.event} ${styles[tone]}`} {...drag}>
-      <span className={styles.title}>{card.label}</span>
-      {!isHoliday && !cancelled && card.topicTitle && <span className={styles.topic}>{card.topicTitle}</span>}
-      {!isHoliday && !cancelled && <span className={styles.line}>{formatEventTime(new Date(card.startsAt), new Date(card.endsAt), card.allDay)}</span>}
-      <Badges card={card} managing={managing} />
-    </Link>
+    <CardWrap card={card} managing={managing}>
+      <Link href={hrefFor(card)} scroll={false} className={`${styles.event} ${styles[tone]}`} {...drag} {...pickAttr(card, managing)}>
+        <span className={styles.title}>{card.label}</span>
+        {!isHoliday && !cancelled && card.topicTitle && <span className={styles.topic}>{card.topicTitle}</span>}
+        {!isHoliday && !cancelled && <span className={styles.line}>{formatEventTime(new Date(card.startsAt), new Date(card.endsAt), card.allDay)}</span>}
+        <CardMeta card={card} managing={managing} />
+      </Link>
+    </CardWrap>
   );
 }
 
@@ -249,18 +271,20 @@ export function Agenda({
                   {(days.get(day) ?? []).map((card) => {
                     return (
                       <li key={card.id}>
-                        <Link href={hrefFor(card)} scroll={false} className={`${styles.agendaEvent} ${styles[cardTone(card)]}`}>
-                          <span className={styles.agendaTime}>
-                            {formatEventTime(new Date(card.startsAt), new Date(card.endsAt), card.allDay)}
-                          </span>
-                          <span className={styles.agendaMain}>
-                            <span className={styles.title}>{card.label}</span>
-                            {card.type !== "holiday" && card.planStatus !== "cancelled" && card.topicTitle && (
-                              <span className={styles.topic}>{card.topicTitle}</span>
-                            )}
-                          </span>
-                          <Badges card={card} managing={managing} />
-                        </Link>
+                        <CardWrap card={card} managing={managing}>
+                          <Link href={hrefFor(card)} scroll={false} className={`${styles.agendaEvent} ${styles[cardTone(card)]}`} {...pickAttr(card, managing)}>
+                            <span className={styles.agendaTime}>
+                              {formatEventTime(new Date(card.startsAt), new Date(card.endsAt), card.allDay)}
+                            </span>
+                            <span className={styles.agendaMain}>
+                              <span className={styles.title}>{card.label}</span>
+                              {card.type !== "holiday" && card.planStatus !== "cancelled" && card.topicTitle && (
+                                <span className={styles.topic}>{card.topicTitle}</span>
+                              )}
+                            </span>
+                            <CardMeta card={card} managing={managing} />
+                          </Link>
+                        </CardWrap>
                       </li>
                     );
                   })}

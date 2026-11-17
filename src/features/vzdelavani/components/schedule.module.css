@@ -170,6 +170,7 @@
 
 .event {
   display: flex;
+  position: relative;
   flex-direction: column;
   align-items: flex-start;
   gap: 1px;
@@ -181,6 +182,13 @@
   overflow-wrap: anywhere;
 }
 
+/* Karty v buňce pod sebou: obal karty (s checkboxem výběru) i stín přesunutého termínu. */
+.cardWrap {
+  position: relative;
+}
+
+.cardWrap + .cardWrap,
+.cardWrap + .event,
 .event + .event {
   margin-top: 6px;
 }
@@ -189,15 +197,27 @@
   border-color: var(--line-strong);
 }
 
-/* Štítky stavu pod kartou, víc štítků se zalomí. */
-.badges {
+/* Stav karty: jeden štítek a vedle něj decentní indikátor chybějících údajů. */
+.meta {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
+  align-items: center;
+  gap: 6px;
   margin-top: 4px;
 }
 
-.badges :global(.badge) {
+.meta :global(.badge) {
+  margin: 0;
+}
+
+.missing {
+  display: inline-flex;
+  color: var(--ochre-dark);
+}
+
+.event .meta:not(:has(:global(.badge))) {
+  position: absolute;
+  top: 7px;
+  right: 8px;
   margin: 0;
 }
 
@@ -330,6 +350,7 @@
 
 .agendaEvent {
   display: grid;
+  position: relative;
   grid-template-columns: 110px minmax(0, 1fr) auto;
   align-items: center;
   gap: 4px 12px;
@@ -377,7 +398,7 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .agendaEvent .badges {
+  .agendaEvent .meta {
     margin-top: 0;
   }
 

@@ -10,6 +10,7 @@ import { addDays, formatDayMonth, formatEventTime, shiftMonth, toDateKey, weekda
 import { GROUPS, type Group } from "@/lib/types";
 import type { MonthDraft } from "@/server/services/events";
 import { generateMonthAction, publishMonthAction, type ActionResult } from "../actions";
+import { TemplateDialog, type SlotValue } from "./TemplateDialog";
 
 /** Jak se zveřejnění propíše do Kalendáře. Určuje jen text přehledu dopadu. */
 
@@ -24,6 +25,8 @@ type Props = {
   topics: string[];
   recipients: Record<Group, Array<{ email: string; name: string }>>;
   inviteMode: InviteMode;
+  /** Pravidelný týden, ze kterého se termíny doplňují. Upravuje se odsud. */
+  template: SlotValue[];
 };
 
 const plural = (count: number, one: string, few: string, many: string) => `${count} ${count === 1 ? one : count >= 2 && count <= 4 ? few : many}`;
@@ -58,8 +61,11 @@ export function PrepareMonthDialog(props: Props) {
         <div className="stack">
           <section className="prepare-step" aria-labelledby="prepare-fill">
             <h3 id="prepare-fill">1. Doplnit termíny</h3>
-            <p className="hint">Přidá návrhy na volná místa podle Pravidelného týdne. Termíny, kde už akce je, přeskočí. Nic se nezveřejní.</p>
-            <ActionForm action={generateMonthAction} fields={{ month: props.monthKey }} label="Doplnit chybějící termíny" pendingLabel="Doplňuji…" />
+            <p className="hint">Doplní návrhy podle pravidelného týdne, nic nezveřejní.</p>
+            <div className="row prepare-fill">
+              <ActionForm action={generateMonthAction} fields={{ month: props.monthKey }} label="Doplnit chybějící termíny" pendingLabel="Doplňuji…" />
+              <TemplateDialog slots={props.template} />
+            </div>
           </section>
           <MonthDraftsForm key={draftsKey} {...props} action={action} pending={pending} state={state} onCancel={() => setOpen(false)} />
         </div>
@@ -123,7 +129,6 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
 
   const chosen = drafts.filter((d) => picked.has(d.id));
   const incomplete = chosen.filter((d) => missing(d).length > 0).length;
-  const gapCount = drafts.filter((d) => missing(d).length > 0).length;
   const clashCount = drafts.filter((d) => d.clash).length;
   const [allowIncomplete, setAllowIncomplete] = useState(false);
   const audiences = [...new Set(chosen.map((d) => current(d).audience))];
@@ -134,7 +139,7 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
   const minDate = todayKey > monthStart ? todayKey : monthStart;
   const maxDate = addDays(`${shiftMonth(monthKey, 1)}-01`, -1);
 
-  const group = (title: string, hint: string, list: MonthDraft[]) => {
+  const group = (title: string, list: MonthDraft[]) => {
     if (!list.length) return null;
     const ids = list.map((d) => d.id);
     const all = ids.every((id) => picked.has(id));
@@ -148,7 +153,6 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
             {all ? "Zrušit výběr" : "Vybrat vše"}
           </button>
         </legend>
-        <p className="hint">{hint}</p>
         <ul className="publish-list">
           {list.map((d) => {
             const start = new Date(d.startsAt);
@@ -201,7 +205,7 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
   if (!drafts.length) {
     return (
       <>
-        <p className="muted">V tomto měsíci nejsou žádné návrhy. Doplňte chybějící termíny, nebo přidejte akci.</p>
+        <p className="muted">V tomto měsíci nejsou žádné návrhy.</p>
         {changeDrafts > 0 && <ChangeDraftsNote count={changeDrafts} />}
         {state && <ActionMessage state={state} />}
         <div className="dialog-actions">
@@ -223,15 +227,9 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
       </datalist>
       <section className="prepare-step" aria-labelledby="prepare-gaps">
         <h3 id="prepare-gaps">2. Zkontrolovat</h3>
-        <p className="small">
-          {gapCount === 0
-            ? "Všechny návrhy mají téma i vedoucího."
-            : `${plural(gapCount, "návrh nemá", "návrhy nemají", "návrhů nemá")} téma nebo vedoucího. Doplňte je u termínu, nebo zveřejněte bez nich.`}
-          {clashCount > 0 &&
-            ` ${plural(clashCount, "návrh se kryje", "návrhy se kryjí", "návrhů se kryje")} s jinou akcí. Posuňte datum, změňte skupinu, nebo ho nezveřejňujte.`}
-        </p>
-        {group("Pravidelné termíny", "Předvybrané ke zveřejnění. Datum, skupinu, téma i vedoucího můžete změnit.", drafts.filter((d) => d.fromTemplate))}
-        {group("Další návrhy", "Zveřejní se jen ty, které zaškrtnete.", drafts.filter((d) => !d.fromTemplate))}
+        {clashCount > 0 && <p className="small">{plural(clashCount, "návrh se kryje", "návrhy se kryjí", "návrhů se kryje")} s jinou akcí.</p>}
+        {group("Pravidelné termíny", drafts.filter((d) => d.fromTemplate))}
+        {group("Další návrhy", drafts.filter((d) => !d.fromTemplate))}
         {changeDrafts > 0 && <ChangeDraftsNote count={changeDrafts} />}
       </section>
       <section className="prepare-step" aria-labelledby="prepare-publish">
@@ -243,10 +241,9 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
               : "Ke zveřejnění není vybraný žádný návrh"}
           </strong>
           <span className="small">
-            Uložení změn nic neodešle.{" "}
-            {chosen.length > 0 && inviteMode === "simulation" && "Zveřejnění je simulace, skutečné e-maily se neodesílají."}
-            {chosen.length > 0 && inviteMode === "disconnected" && "Zveřejněné akce se vydají ve Wiki, pozvánky čekají na propojení Kalendáře."}
-            {chosen.length > 0 && inviteMode === "allowlist" && `Pozvánky půjdou jen na testovací adresu (${[...invited].join(", ") || "žádná"}), kolegům zatím ne.`}
+            {chosen.length > 0 && inviteMode === "simulation" && "Simulace: skutečné e-maily se neodesílají."}
+            {chosen.length > 0 && inviteMode === "disconnected" && "Pozvánky počkají na propojení Kalendáře."}
+            {chosen.length > 0 && inviteMode === "allowlist" && `Pozvánky jen na testovací adresu (${[...invited].join(", ") || "žádná"}), kolegům ne.`}
             {chosen.length > 0 &&
               inviteMode === "audience" &&
               `Po zveřejnění dostane e-mail s pozvánkou od Googlu ${plural(invited.size, "člověk", "lidé", "lidí")}: ${audiences.map((g) => `${GROUP_LABELS[g]} (${recipients[g].length})`).join(", ")}.`}
@@ -257,8 +254,7 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
             {/* Hodnota je počet, který správce potvrzuje. Server zveřejnění odmítne, když nesedí. */}
             <input type="checkbox" name="allowIncomplete" value={incomplete} checked={allowIncomplete} onChange={(e) => setAllowIncomplete(e.target.checked)} />
             <span>
-              Zveřejnit i {plural(incomplete, "termín", "termíny", "termínů")} bez tématu nebo vedoucího. Pozvánky se odešlou až po zveřejnění, téma a vedoucího jde
-              doplnit později.
+              Zveřejnit i {plural(incomplete, "termín", "termíny", "termínů")} bez tématu nebo vedoucího.
             </span>
           </label>
         )}
@@ -288,8 +284,7 @@ function ignoreEnter(event: React.KeyboardEvent<HTMLFormElement>) {
 function ChangeDraftsNote({ count }: { count: number }) {
   return (
     <p className="hint">
-      {plural(count, "návrh změny", "návrhy změn", "návrhů změn")} u už zveřejněných akcí tu není. Mění platnou pozvánku, proto se zveřejňují
-      jednotlivě u akce.
+      Návrhy změn zveřejněných akcí ({count}) se zveřejňují přímo u akce.
     </p>
   );
 }

@@ -18,41 +18,39 @@ export function primaryStatus(card: EventCard): { label: string; tone: Tone } | 
 }
 
 /**
- * Štítky karty v Plánu: jen stav, který něco znamená. Synchronizace, která běží sama, štítek nemá.
- * Správce navíc vidí, co chybí (téma, vedoucí). Kolega chybějící údaje neřeší, proto je nevidí.
+ * Jediný štítek karty v Plánu: stav, který něco znamená. Synchronizace, která běží sama, štítek nemá.
+ * Chybějící údaje ukazuje zvlášť decentní indikátor (`missingDetails`), ne další štítky.
  */
-export function cardBadges(card: EventCard, managing: boolean): { label: string; tone: Tone }[] {
-  if (card.planStatus === "cancelled") return [{ label: "Zrušeno", tone: "danger" }];
-  if (card.type === "holiday") return [];
-  const badges: { label: string; tone: Tone }[] = [];
-  if (card.planStatus === "draft") badges.push({ label: "Návrh", tone: "draft" });
-  else if (card.unpublishedChanges) badges.push({ label: "Návrh změny", tone: "ochre" });
-  if (card.syncStatus === "attention") badges.push({ label: "Kalendář k opravě", tone: "danger" });
-  if (managing && !card.topicTitle) badges.push({ label: "Bez tématu", tone: "outline" });
-  if (managing && !card.leadName) badges.push({ label: "Bez vedoucího", tone: "outline" });
-  if (card.extraordinary && badges.length === 0) badges.push({ label: "Mimořádná", tone: "neutral" });
-  return badges;
+export function cardStatus(card: EventCard): { label: string; tone: Tone } | null {
+  if (card.planStatus === "cancelled") return { label: "Zrušeno", tone: "danger" };
+  if (card.type === "holiday") return null;
+  if (card.planStatus === "draft") return { label: "Návrh", tone: "draft" };
+  if (card.syncStatus === "attention") return { label: "Kalendář k opravě", tone: "danger" };
+  if (card.unpublishedChanges) return { label: "Návrh změny", tone: "ochre" };
+  if (card.extraordinary) return { label: "Mimořádná", tone: "neutral" };
+  return null;
+}
+
+/** Co akci chybí (jen správce): „téma“, „vedoucí“. Svátek a zrušená akce nic nepotřebují. */
+export function missingDetails(card: EventCard, managing: boolean): string[] {
+  if (!managing || card.type === "holiday" || card.planStatus === "cancelled") return [];
+  return [!card.topicTitle && "téma", !card.leadName && "vedoucí"].filter((m): m is string => Boolean(m));
 }
 
 /**
- * Co má správce u daného stavu udělat. Účastník a vedoucí mají své úkoly v Přehledu,
+ * Krátká rada správci k danému stavu. Účastník a vedoucí mají své úkoly v Přehledu,
  * proto pro ně (syncStatus je null a návrhy nevidí) vrací null.
  */
 export function statusAdvice(card: EventCard): string | null {
   if (card.planStatus === "cancelled" || card.type === "holiday") return null;
-  if (card.planStatus === "draft") {
-    const missing = [!card.topicTitle && "téma", !card.leadName && "vedoucího"].filter(Boolean).join(" a ");
-    return missing
-      ? `Návrh vidíte jen vy. Doplňte ${missing} a zveřejněte ho přes Upravit.`
-      : "Návrh vidíte jen vy. Kolegové ho uvidí a dostanou pozvánku, až ho přes Upravit zveřejníte.";
-  }
-  if (card.syncStatus === "attention") return "Pozvánka v Kalendáři neodpovídá Wiki. Důvod a tlačítko pro nový pokus jsou v podrobnostech akce v části Google Kalendář.";
+  // Chybějící téma a vedoucího ukazují samotná pole („Doplňte téma“), rada je neopakuje.
+  if (card.planStatus === "draft") return "Kolegové návrh zatím nevidí.";
+  if (card.syncStatus === "attention") return "Pozvánka v Kalendáři neodpovídá Wiki. Oprava je v části Google Kalendář.";
   // Rozpracovaný návrh změny má v detailu vlastní upozornění s tlačítky.
   if (card.unpublishedChanges) return null;
-  if (card.syncStatus === "pending") return "Změna se právě posílá do Kalendáře. Není potřeba nic dělat, stránka se obnoví sama.";
+  if (card.syncStatus === "pending") return "Změna se posílá do Kalendáře.";
   // U proběhlé akce už chybějící pozvánka nic neřeší, správce by jen zbytečně hledal opravu.
-  if (card.syncStatus === "unlinked" && !card.past)
-    return "Akce je zveřejněná ve Wiki, ale zatím nemá pozvánku v Kalendáři. Proč a co s tím, ukazuje část Google Kalendář v podrobnostech akce.";
+  if (card.syncStatus === "unlinked" && !card.past) return "Akce zatím nemá pozvánku v Kalendáři.";
   return null;
 }
 
@@ -150,3 +148,6 @@ export function planGaps(cards: EventCard[], monthKey: string): PlanGap[] {
     }))
     .filter((gap) => gap.reasons.length > 0);
 }
+
+/** Návrh, který jde v Plánu hromadně označit: nikdy nezveřejněná akce (ne svátek). Návrh změny má vlastní potvrzení. */
+export const isPickable = (card: EventCard) => card.planStatus === "draft" && card.type !== "holiday" && card.revision !== null;

@@ -44,6 +44,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
   const dayKey = toDateKey(start);
   const title = card.topicTitle ? `${card.label}: ${card.topicTitle}` : card.label;
   const status = primaryStatus(card);
+  const advice = statusAdvice(card);
   // Úpravy akce jsou jen v okně akce v Plánu. Tahle stránka nese nahrávku, zápis a stav v Kalendáři.
   const editable = organizer && detail.form && card.planStatus !== "cancelled" && card.type !== "holiday";
   // Nástroje vedoucího (nahrání, úprava zápisu) by v náhledu běžely pod správcem, proto se nenabízejí.
@@ -70,9 +71,8 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
 
       <div className="page-head detail-head">
         <div>
-          <p className="eyebrow">
-            {TYPE_LABELS[card.type]} · {GROUP_LABELS[card.audience]}
-          </p>
+          {/* Typ nad nadpisem jen tehdy, když ho název akce neopakuje. */}
+          {card.label !== TYPE_LABELS[card.type] && <p className="eyebrow">{TYPE_LABELS[card.type]}</p>}
           <h2 className="detail-title">{title}</h2>
           <div className="row detail-badges">
             {(!status || !status.label.startsWith(PLAN_STATUS_LABELS[card.planStatus])) && (
@@ -83,7 +83,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
             {status && status.label !== PLAN_STATUS_LABELS[card.planStatus] && <span className={badgeClass(status.tone)}>{status.label}</span>}
             {card.past && card.planStatus === "published" && <span className="badge">Proběhlo</span>}
           </div>
-          {organizer && statusAdvice(card) && <p className="small muted status-advice">{statusAdvice(card)}</p>}
+          {organizer && advice && <p className="small muted status-advice">{advice}</p>}
         </div>
         <div className="row">
           {handler && card.past && (
@@ -107,13 +107,13 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
 
       {organizer && card.unpublishedChanges && (
         <div className="notice spread">
-          <p>Máte uložený návrh změny. Kolegové a Kalendář zatím vidí zveřejněnou verzi.</p>
+          <p>Kolegové a Kalendář zatím vidí zveřejněnou verzi.</p>
           <ActionForm action={discardChangesAction} fields={{ id: card.id, revision: String(detail.revision) }} label="Zahodit návrh změny" pendingLabel="Zahazuji…" small />
         </div>
       )}
 
       <section className="section facts-section" aria-label="Údaje o akci">
-        {/* Kdy a kdo: to hlavní, co kolega z akce potřebuje, je nahoře a výrazně. Typ a publikum nese nadpis. */}
+        {/* Kdy, kdo a pro koho: to hlavní, co kolega z akce potřebuje, je nahoře a výrazně. Typ nese nadpis. */}
         <dl className="key-facts">
           <div>
             <dt>Kdy</dt>

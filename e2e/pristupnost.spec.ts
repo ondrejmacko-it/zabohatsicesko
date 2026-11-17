@@ -27,10 +27,10 @@ test.describe("U07 menu @desktop", () => {
   test.use({ storageState: authFile("spravce") });
 
   test("menu je disclosure: bez aria-haspopup, Tab projde položky a odchod menu zavře", async ({ page }) => {
-    await page.goto("/vzdelavani/harmonogram");
+    await page.goto("/vzdelavani/temata");
     await settle(page);
     expect(await page.locator("[aria-haspopup]").count()).toBe(0);
-    const trigger = page.getByRole("button", { name: "Nástroje správce" });
+    const trigger = page.getByRole("button", { name: /^Možnosti tématu/ }).first();
     await trigger.focus();
     await page.keyboard.press("Enter");
     await expect(trigger).toHaveAttribute("aria-expanded", "true");
@@ -68,7 +68,7 @@ test.describe("U05 Plán na telefonu", () => {
     const page = await context.newPage();
     await page.goto("/vzdelavani/harmonogram");
     await settle(page);
-    const chips = page.getByRole("group", { name: "Čeká na vás v tomto měsíci" });
+    const chips = page.getByRole("group", { name: "Zúžit plán" });
     await expect(chips).toBeVisible();
     const hrefs = await chips.getByRole("link").evaluateAll((nodes) => nodes.map((node) => node.getAttribute("href") ?? ""));
     expect(hrefs.some((href) => href.includes("stav=")), `stav měsíce v ${hrefs.join(", ")}`).toBe(true);

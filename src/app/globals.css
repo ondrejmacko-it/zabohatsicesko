@@ -356,12 +356,13 @@ a.nav-item:hover {
   font-size: 19px;
 }
 
-/* Správa: sbalený blok Kalendáře a technického stavu. Nadpis zůstává nadpisem i v souhrnu. */
+/* Správa: sbalený blok Kalendáře a technického stavu. Nadpis vlevo, případný problém a šipka vpravo,
+   klikací je celá hlavička. Odsazení přebírá z karty sekce, aby seděla s ostatními kartami. */
 .admin-tech > summary {
   display: flex;
   align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
+  gap: 12px;
+  min-height: 28px;
   list-style: none;
   cursor: pointer;
 }
@@ -371,22 +372,33 @@ a.nav-item:hover {
   display: none;
 }
 
-.admin-tech > summary::before {
+.admin-tech > summary::after {
   content: "";
+  flex: none;
   width: 8px;
   height: 8px;
+  margin: 0 4px 4px auto;
   border-right: 2px solid currentColor;
   border-bottom: 2px solid currentColor;
-  transform: rotate(-45deg);
+  transform: rotate(45deg);
   transition: transform 0.15s;
 }
 
-.admin-tech[open] > summary::before {
-  transform: rotate(45deg);
+.admin-tech > summary .badge {
+  margin-left: auto;
+}
+
+.admin-tech > summary:has(.badge)::after {
+  margin-left: 0;
+}
+
+.admin-tech[open] > summary::after {
+  margin-bottom: 0;
+  margin-top: 4px;
+  transform: rotate(-135deg);
 }
 
 .admin-tech > summary h2 {
-  display: inline;
   margin: 0;
   font-size: 19px;
 }
@@ -1296,22 +1308,6 @@ body > .dialog[open]:has(~ .dialog[open]) {
   width: auto;
 }
 
-.schedule-toolbar {
-  margin-bottom: 14px;
-}
-
-.month-title {
-  min-width: 150px;
-  font-size: 22px;
-  text-align: center;
-}
-
-@media (max-width: 760px) {
-  .view-toggle {
-    display: none;
-  }
-}
-
 .candidate,
 .conflict,
 .invite {
@@ -1592,18 +1588,6 @@ details > summary {
   margin-bottom: 12px;
 }
 
-.topic-actions {
-  justify-content: flex-end;
-  flex-wrap: wrap;
-}
-.archived-topics {
-  margin-top: 8px;
-}
-
-.topic-card.topic-archived {
-  background: var(--surface-muted, transparent);
-  border-style: dashed;
-}
 
 /* Mobil: kratší záhlaví. Technické podrobnosti ukázky jsou na stránce Integrace. */
 /* Tablet a malý notebook: bez podtitulku značky se výběr role i Odhlásit vejdou do jednoho řádku. */
@@ -1998,61 +1982,42 @@ a.brief-link:hover {
   margin-right: auto;
 }
 
-/* ——— Zarovnání: prvky v jednom řádku mají stejnou výšku ——— */
-.schedule-toolbar,
-.schedule-toolbar > .row {
-  align-items: center;
-}
-
-.schedule-toolbar .pill {
-  display: inline-flex;
-  align-items: center;
-  min-height: 36px;
-}
-
-.schedule-toolbar .month-title {
-  margin: 0;
-  line-height: 36px;
-}
-
 .brief-main .item-title .badge {
   margin-left: 8px;
   vertical-align: 2px;
 }
 
-/* ——— Témata jako karty: obsah, ne další odstavec textu ——— */
+/* ——— Témata: jeden seznam kompaktních řádků (název a údaje vlevo, zájem a akce vpravo) ——— */
 .topic-list {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
   margin: 0;
   padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
   list-style: none;
 }
 
-.topic-card {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: flex-start;
-  justify-content: space-between;
-  padding: 14px 16px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--band);
+.topic-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 10rem auto;
+  align-items: center;
+  gap: 8px 20px;
+  padding: 12px 16px;
 }
 
-.topic-card.topic-recommended {
-  border-color: var(--draft-line);
-  background: var(--ochre-soft);
+.topic-row + .topic-row {
+  border-top: 1px solid var(--line);
+}
+
+/* Doporučené téma: jen okrový pruh vlevo a štítek, bez dalšího podbarvení. */
+.topic-row.topic-recommended {
+  box-shadow: inset 3px 0 0 var(--ochre);
 }
 
 .topic-main {
   display: flex;
-  /* Na úzké kartě (telefon) nemá název ustupovat tlačítkům: pod 12rem jdou tlačítka na další řádek. */
-  flex: 1 1 12rem;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
   min-width: 0;
 }
 
@@ -2060,17 +2025,46 @@ a.brief-link:hover {
   margin: 0;
 }
 
-.topic-card .topic-actions {
+.topic-interest {
+  min-width: 0;
+}
+
+.topic-row .topic-actions {
   display: flex;
-  flex: none;
   gap: 6px;
   align-items: center;
+  justify-content: flex-end;
   margin: 0;
+}
+
+/* Archiv: stejné řádky, jen tlumené. */
+.archived-topics {
+  margin-top: 10px;
+}
+
+.topic-archived .topic-main {
+  color: var(--ink-soft);
+}
+
+.topic-archived .item-title {
+  font-weight: 500;
+}
+
+/* Telefon: řádek se rozdělí na dvě úrovně, nahoře název, dole zájem a tlačítka. */
+@media (max-width: 640px) {
+  .topic-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: 12px;
+  }
+
+  .topic-main {
+    grid-column: 1 / -1;
+  }
 }
 
 .topic-count,
 .topic-people > summary {
-  margin-top: 4px;
+  margin: 0;
   color: var(--ink-soft);
   font-size: 14px;
   font-weight: 600;
@@ -2099,12 +2093,6 @@ a.brief-link:hover {
   border-radius: 999px;
   background: var(--surface);
   font-size: 13px;
-}
-
-@media (max-width: 900px) {
-  .topic-list {
-    grid-template-columns: 1fr;
-  }
 }
 
 /* ——— Zápis v okně: sekce uvnitř okna nemá vlastní rámeček ——— */
@@ -2196,68 +2184,259 @@ p.cal-status {
   font-size: 15px;
 }
 
-/* ——— Plán: jeden řádek nástrojů, pod ním štítky stavu a malé filtry ——— */
+/* ——— Plán: lišta ve třech zónách a pod ní jeden řádek filtrů ———
+   Krajní sloupce mřížky jsou stejně široké, takže měsíc je přesně uprostřed obsahu bez ohledu na to,
+   kolik tlačítek je vlevo a vpravo. Rozložení řídí šířka obsahu (container query), ne šířka okna. */
+.plan-head {
+  container-type: inline-size;
+}
+
 .schedule-toolbar {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-areas: "start month end";
   align-items: center;
-  gap: 10px 16px;
+  gap: 12px 16px;
+  padding-bottom: 14px;
+}
+
+.toolbar-start,
+.toolbar-end,
+.view-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toolbar-start {
+  grid-area: start;
+}
+
+.toolbar-end {
+  grid-area: end;
+  justify-content: flex-end;
+}
+
+.schedule-toolbar .pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
 }
 
 .month-nav {
-  gap: 4px;
-}
-
-.organizer-actions {
-  margin-left: auto;
+  display: grid;
+  grid-area: month;
+  grid-template-columns: 40px auto 40px;
+  align-items: center;
+  justify-items: center;
   gap: 8px;
 }
 
-/* Měsíc uprostřed mezi zobrazením a akcemi správce. Když se nevejdou, akce přejdou na další řádek vpravo. */
-@media (min-width: 761px) {
-  .schedule-toolbar > .month-nav {
-    margin-inline: auto;
-  }
+.month-title {
+  margin: 0;
+  font-size: 27px;
+  line-height: 40px;
+  text-align: center;
+  white-space: nowrap;
 }
 
-.schedule-toolbar .month-title {
-  min-width: 0;
-}
-
-@media (min-width: 1100px) {
+/* Užší obsah: měsíc má celý první řádek, zobrazení a akce správce jsou pod ním vlevo a vpravo. */
+@container (max-width: 820px) {
   .schedule-toolbar {
-    gap: 10px 12px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "month month"
+      "start end";
+  }
+
+  .month-title {
+    font-size: 23px;
   }
 }
 
-.plan-preview-pick {
-  gap: 8px;
-  flex-wrap: wrap;
-  min-width: 0;
+/* Telefon: Plán je vždy seznam, přepínač zobrazení není potřeba. Akce správce se zarovnají vlevo. */
+@container (max-width: 560px) {
+  .view-toggle {
+    display: none;
+  }
+
+  .schedule-toolbar {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "month"
+      "start"
+      "end";
+  }
+
+  .toolbar-start:not(:has(> :not(.view-toggle))) {
+    display: none;
+  }
+
+  .toolbar-end {
+    flex-wrap: wrap;
+    justify-content: stretch;
+  }
+
+  .toolbar-end > * {
+    flex: 1 1 auto;
+  }
+
+  .month-title {
+    font-size: 21px;
+  }
 }
 
 .plan-filters {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: space-between;
   gap: 8px 12px;
   margin: 0 0 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
 }
 
-.plan-chips,
-.plan-selects {
+.plan-filters-start,
+.plan-filters-end {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
 }
 
-.plan-selects {
+.plan-filters-end {
   margin-left: auto;
-  min-width: 0;
-  max-width: 100%;
 }
 
-.plan-selects .select {
-  min-width: 0;
-  max-width: 100%;
+.filter-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.filter-button .count-badge {
+  margin: 0;
+}
+
+.filter-button[aria-pressed="true"] {
+  border-color: var(--ochre);
+  color: var(--ochre-dark);
+}
+
+/* Nabídka Filtry: malý panel pod tlačítkem, nic dalšího v řádku nezabírá. */
+.filter-menu {
+  position: relative;
+}
+
+.filter-menu > summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.filter-menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.filter-menu[open] > summary {
+  border-color: var(--line-strong);
+}
+
+.filter-menu-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  width: min(300px, calc(100vw - 32px));
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: 0 10px 30px rgba(28, 25, 23, 0.12);
+}
+
+.filter-menu-panel .select {
+  width: 100%;
+}
+
+.filter-menu-panel .field {
+  display: grid;
+  gap: 4px;
+}
+
+/* ——— Hromadný výběr návrhů přímo v Plánu ——— */
+.pick-box {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--ochre);
+  cursor: pointer;
+}
+
+/* Během výběru se nepřidává: „+“ u dne zmizí. */
+[data-selecting] [data-drop-day] > a[href*="den="] {
+  display: none;
+}
+
+[data-selecting] a[data-pick-id] {
+  padding-right: 36px;
+  cursor: pointer;
+}
+
+/* Označená karta: výrazný okrový rámeček, aby byl výběr vidět i bez checkboxu. */
+[data-selecting] :has(> .pick-box:checked) > a {
+  outline: 2px solid var(--ochre);
+  outline-offset: 1px;
+}
+
+/* Co označit nejde (zveřejněné akce, svátky, návrhy změn), ustoupí do pozadí. */
+[data-selecting] a[href]:not([data-pick-id]) {
+  opacity: 0.5;
+}
+
+.select-bar {
+  position: sticky;
+  bottom: 12px;
+  z-index: 15;
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: 0 10px 30px rgba(28, 25, 23, 0.14);
+}
+
+.select-bar-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.select-bar-text {
+  display: flex;
+  flex: 1 1 16rem;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin: 0;
+}
+
+.link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ochre-dark);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
 }
 
 .pill-count {
@@ -2335,19 +2514,6 @@ p.cal-status {
 .plan-preview,
 .plan-preview + .cal-status {
   margin-bottom: 14px;
-}
-
-@media (max-width: 760px) {
-  .organizer-actions {
-    margin-left: 0;
-  }
-}
-
-/* Když se filtry zalomí pod štítky, mají začínat vlevo, ne viset osamoceně vpravo. */
-@media (max-width: 1100px) {
-  .plan-selects {
-    margin-left: 0;
-  }
 }
 
 .recipients-table th[scope="row"] {
@@ -2495,35 +2661,17 @@ p.cal-status {
   color: var(--ochre-dark);
 }
 
-/* Hosté pozvánky v dialogu akce: počet jako hlavní údaj, jména a vysvětlení tlumeně. */
-.invitees {
-  display: grid;
-  gap: 4px;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-}
-
-.invitees-head {
-  display: grid;
-  gap: 2px;
+/* Příjemci pozvánky v okně akce: jen tlumený sbalený řádek, jména až po rozbalení. */
+.invitees,
+.invitees-none {
   margin: 0;
+  font-size: 13px;
+  color: var(--muted);
 }
 
 .invitees-names {
   font-size: 13px;
   color: var(--muted);
-}
-
-.invitees-more {
-  display: inline;
-}
-
-.invitees-more summary {
-  display: inline;
-  margin-left: 4px;
-  cursor: pointer;
-  text-decoration: underline;
 }
 
 .suggestion-head {
@@ -2662,23 +2810,6 @@ p.cal-status {
   margin-top: 2px;
 }
 
-.form-review {
-  display: grid;
-  gap: 4px;
-  padding: 12px 16px;
-  border: 1px dashed var(--line-strong);
-  border-radius: var(--radius-sm);
-}
-
-.form-review h3 {
-  margin: 0 0 4px;
-  font-size: 15px;
-}
-
-.form-review p {
-  margin: 0;
-}
-
 .form-term {
   grid-template-columns: minmax(0, 1.4fr) repeat(2, minmax(0, 1fr));
 }
@@ -2737,25 +2868,4 @@ p.cal-status {
 
 .invitees[open] > summary {
   margin-bottom: 4px;
-}
-
-/* ——— Vybrat návrhy: seznam s výběrem ——— */
-.draft-pick-list {
-  display: grid;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.draft-pick {
-  align-items: flex-start;
-  padding: 8px 10px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--draft);
-}
-
-.draft-pick:has(input:checked) {
-  border-color: var(--ochre);
 }

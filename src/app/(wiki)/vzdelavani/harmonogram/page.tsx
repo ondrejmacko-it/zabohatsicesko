@@ -5,20 +5,18 @@ import { after } from "next/server";
 import { ActionForm } from "@/components/ActionForm";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { Icon } from "@/components/Icon";
-import { Menu } from "@/components/Menu";
 import { generateMonthAction } from "@/features/vzdelavani/actions";
 import { CalendarAlert } from "@/features/vzdelavani/components/CalendarStatusLine";
 import { EventDialog } from "@/features/vzdelavani/components/EventDialog";
 import { PersonalCalendarStatus } from "@/features/vzdelavani/components/PersonalCalendarStatus";
 import { EventPeek } from "@/features/vzdelavani/components/EventPeek";
-import { DraftSelection } from "@/features/vzdelavani/components/DraftSelection";
+import { SelectionZone } from "@/features/vzdelavani/components/PlanSelection";
 import { PrepareMonthDialog } from "@/features/vzdelavani/components/PrepareMonthDialog";
 import { inviteModeOf } from "@/lib/invite-mode";
 import { PlanFilters, type StateChip } from "@/features/vzdelavani/components/PlanFilters";
 import { Agenda, NextEventsList, ScheduleGrid } from "@/features/vzdelavani/components/Schedule";
 import { TasksCard } from "@/features/vzdelavani/components/TasksCard";
-import { TemplateDialog } from "@/features/vzdelavani/components/TemplateDialog";
-import { PLAN_STATES, filterCards, monthSummary } from "@/features/vzdelavani/status";
+import { PLAN_STATES, filterCards, isPickable, monthSummary } from "@/features/vzdelavani/status";
 import styles from "@/features/vzdelavani/components/schedule.module.css";
 import { MoveDropZone } from "@/features/vzdelavani/components/MoveEvent";
 import { formatMonth, isValidDateKey, isValidMonthKey, monthOf, shiftMonth, toDateKey } from "@/lib/time";
@@ -104,8 +102,8 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   const summary = managing && monthKey >= monthOf(todayKey) ? monthSummary(monthCards, monthKey) : null;
   const chips: StateChip[] = summary
     ? [
-        { state: "doplnit" as const, label: "Chybí údaje", count: summary.toComplete },
         { state: "navrhy" as const, label: "Návrhy", count: summary.toPublish },
+        { state: "doplnit" as const, label: "Chybí údaje", count: summary.toComplete },
       ]
         .filter((chip) => chip.count > 0)
         .map((chip) => ({ ...chip, href: `${link({ stav: chip.state === state ? undefined : chip.state })}#mesic` }))
@@ -144,55 +142,37 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
         </section>
       )}
       <section className="section" aria-labelledby="mesic">
-        {/* Lišta Plánu: vlevo zobrazení, uprostřed měsíc, vpravo akce správce. Filtry jsou ve druhém řádku. */}
-        <div className="schedule-toolbar">
-          <div className="row view-toggle" role="group" aria-label="Zobrazení">
-            <Link className="pill" href={link({ pohled: undefined })} aria-current={!listView ? "page" : undefined}>
-              Měsíc
-            </Link>
-            <Link className="pill" href={link({ pohled: "seznam" })} aria-current={listView ? "page" : undefined}>
-              Seznam
-            </Link>
-          </div>
-          <div className="row month-nav">
-            <Link className="btn btn-icon" href={link({ mesic: shiftMonth(monthKey, -1) })} aria-label="Předchozí měsíc">
-              <Icon name="chevronLeft" />
-            </Link>
-            <h2 id="mesic" className="month-title">
-              {formatMonth(monthKey)}
-            </h2>
-            <Link className="btn btn-icon" href={link({ mesic: shiftMonth(monthKey, 1) })} aria-label="Další měsíc">
-              <Icon name="chevronRight" />
-            </Link>
-            {monthKey !== thisMonth && (
-              <Link className="btn btn-small btn-quiet" href={link({ mesic: thisMonth })}>
-                Dnes
+        {/* Lišta Plánu ve třech zónách (mřížka se stejně širokými krajními sloupci): vlevo zobrazení,
+            přesně uprostřed měsíc, vpravo akce správce. Pod ní jeden řádek filtrů a výběru. */}
+        <div className="plan-head">
+          <div className="schedule-toolbar">
+            <div className="toolbar-start" role="group" aria-label="Zobrazení">
+              <span className="view-toggle">
+                <Link className="pill" href={link({ pohled: undefined })} aria-current={!listView ? "page" : undefined}>
+                  Měsíc
+                </Link>
+                <Link className="pill" href={link({ pohled: "seznam" })} aria-current={listView ? "page" : undefined}>
+                  Seznam
+                </Link>
+              </span>
+              {monthKey !== thisMonth && (
+                <Link className="btn btn-small btn-quiet" href={link({ mesic: thisMonth })}>
+                  Dnes
+                </Link>
+              )}
+            </div>
+            <div className="month-nav">
+              <Link className="btn btn-icon" href={link({ mesic: shiftMonth(monthKey, -1) })} aria-label="Předchozí měsíc">
+                <Icon name="chevronLeft" />
               </Link>
-            )}
-          </div>
-          {managing && (
-            <div className="row organizer-actions">
-              <EventDialog
-                key={addDay ?? "nova"}
-                openOnMount={addDay !== null}
-                closeHref={addDay ? link({}) : undefined}
-                initial={{
-                  type: "other",
-                  label: "",
-                  date: newDate,
-                  endDate: null,
-                  startTime: "09:00",
-                  endTime: "11:00",
-                  topicTitle: "",
-                  audience: defaultAudience("other"),
-                  leadId: "",
-                  reviewerId: "",
-                }}
-                people={people}
-                topics={topics}
-                invite={calendar}
-                planDays={activeSlots.map((s) => s.isoWeekday)}
-              />
+              <h2 id="mesic" className="month-title">
+                {formatMonth(monthKey)}
+              </h2>
+              <Link className="btn btn-icon" href={link({ mesic: shiftMonth(monthKey, 1) })} aria-label="Další měsíc">
+                <Icon name="chevronRight" />
+              </Link>
+            </div>
+            <div className="toolbar-end">
               {monthDrafts && calendar && (
                 <PrepareMonthDialog
                   monthKey={monthKey}
@@ -204,62 +184,87 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
                   topics={topics.map((t) => t.name)}
                   recipients={calendar.recipients}
                   inviteMode={inviteMode}
+                  template={template}
                 />
               )}
-              {monthDrafts && monthDrafts.drafts.length > 0 && (
-                <DraftSelection monthKey={monthKey} monthName={formatMonth(monthKey)} drafts={monthDrafts.drafts} />
+              {managing && (
+                <EventDialog
+                  key={addDay ?? "nova"}
+                  openOnMount={addDay !== null}
+                  closeHref={addDay ? link({}) : undefined}
+                  initial={{
+                    type: "other",
+                    label: "",
+                    date: newDate,
+                    endDate: null,
+                    startTime: "09:00",
+                    endTime: "11:00",
+                    topicTitle: "",
+                    audience: defaultAudience("other"),
+                    leadId: "",
+                    reviewerId: "",
+                  }}
+                  people={people}
+                  topics={topics}
+                  invite={calendar}
+                  planDays={activeSlots.map((s) => s.isoWeekday)}
+                />
               )}
-              <Menu label="Nástroje správce" iconOnly className="organizer-tools">
-                <TemplateDialog slots={template} />
-              </Menu>
+            </div>
+          </div>
+        </div>
+        <SelectionZone
+          monthKey={monthKey}
+          items={managing ? cards.filter(isPickable).map((c) => ({ id: c.id, revision: c.revision! })) : []}
+          publishable={monthDrafts?.drafts ?? []}
+          changeDrafts={monthDrafts?.changeDrafts ?? 0}
+        >
+          <PlanFilters
+            key={`${params.jako ?? ""}|${type ?? ""}`}
+            keep={Object.fromEntries(Object.entries({ mesic: monthKey, pohled: current.pohled, stav: state }).filter((e): e is [string, string] => Boolean(e[1])))}
+            types={types}
+            type={type}
+            typeResetHref={type ? link({ typ: undefined }) : null}
+            preview={previewOptions && { ...previewOptions, value: preview ? (params.jako ?? "") : "" }}
+            chips={chips}
+            state={state}
+          />
+
+          {summary && !summary.planned && (
+            <div className="notice month-summary-empty">
+              <p>V tomto měsíci zatím nejsou žádné akce.</p>
+              {managing && <ActionForm action={generateMonthAction} fields={{ month: monthKey }} label="Přidat chybějící termíny jako návrhy" pendingLabel="Přidávám…" variant="primary" />}
             </div>
           )}
-        </div>
-        <PlanFilters
-          key={`${params.jako ?? ""}|${type ?? ""}`}
-          keep={Object.fromEntries(Object.entries({ mesic: monthKey, pohled: current.pohled, stav: state }).filter((e): e is [string, string] => Boolean(e[1])))}
-          types={types}
-          type={type}
-          preview={previewOptions && { ...previewOptions, value: preview ? (params.jako ?? "") : "" }}
-          chips={chips}
-          state={state}
-          resetHref={filtering ? link({ typ: undefined, stav: undefined }) : null}
-        />
 
-        {summary && !summary.planned && (
-          <div className="notice month-summary-empty">
-            <p>V tomto měsíci zatím nejsou žádné akce.</p>
-            {managing && <ActionForm action={generateMonthAction} fields={{ month: monthKey }} label="Přidat chybějící termíny jako návrhy" pendingLabel="Přidávám…" variant="primary" />}
-          </div>
-        )}
-
-        {listView ? (
-          <Agenda monthKey={monthKey} cards={cards} todayKey={todayKey} emptyText={emptyText} hrefFor={peekHref} managing={managing} />
-        ) : (
-          <>
-            <div className={styles.desktopOnly}>
-              {managing ? (
-                <MoveDropZone>
-                  <ScheduleGrid
-                    monthKey={monthKey}
-                    cards={cards}
-                    todayKey={todayKey}
-                    slotTimes={slotTimes}
-                    hrefFor={peekHref}
-                    managing
-                    addHref={addHref}
-                    movableFrom={todayKey}
-                  />
-                </MoveDropZone>
-              ) : (
-                <ScheduleGrid monthKey={monthKey} cards={cards} todayKey={todayKey} slotTimes={slotTimes} hrefFor={peekHref} managing={managing} />
-              )}
-            </div>
-            <div className={styles.mobileOnly}>
-              <Agenda monthKey={monthKey} cards={cards} todayKey={todayKey} emptyText={emptyText} hrefFor={peekHref} managing={managing} />
-            </div>
-          </>
-        )}
+          {listView ? (
+            <Agenda monthKey={monthKey} cards={cards} todayKey={todayKey} emptyText={emptyText} hrefFor={peekHref} managing={managing} />
+          ) : (
+            <>
+              <div className={styles.desktopOnly}>
+                {managing ? (
+                  <MoveDropZone>
+                    <ScheduleGrid
+                      monthKey={monthKey}
+                      cards={cards}
+                      todayKey={todayKey}
+                      slotTimes={slotTimes}
+                      hrefFor={peekHref}
+                      managing
+                      addHref={addHref}
+                      movableFrom={todayKey}
+                    />
+                  </MoveDropZone>
+                ) : (
+                  <ScheduleGrid monthKey={monthKey} cards={cards} todayKey={todayKey} slotTimes={slotTimes} hrefFor={peekHref} managing={managing} />
+                )}
+              </div>
+              <div className={styles.mobileOnly}>
+                <Agenda monthKey={monthKey} cards={cards} todayKey={todayKey} emptyText={emptyText} hrefFor={peekHref} managing={managing} />
+              </div>
+            </>
+          )}
+        </SelectionZone>
       </section>
     </>
   );

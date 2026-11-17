@@ -32,7 +32,8 @@ export async function EventPeek({ user, eventId, preview, previewKey, closeHref 
   const managing = isOrganizer(user) && !preview;
   const editable = managing && !holiday && detail.form && card.planStatus !== "cancelled";
   const status = primaryStatus(card);
-  const advice = managing ? statusAdvice(card) : null;
+  // Návrh: pás už říká, že ho kolegové nevidí, a chybějící údaje jsou vidět přímo v prázdných polích.
+  const advice = managing && card.planStatus !== "draft" ? statusAdvice(card) : null;
   const fullHref = `/vzdelavani/akce/${encodeURIComponent(card.id)}${previewKey ? `?jako=${encodeURIComponent(previewKey)}` : ""}`;
   const minutesReady = detail.recording.access === "reader" && Boolean(detail.recording.minutes);
   const handlesRecording = detail.recording.access === "handler" && !preview && card.past;
@@ -54,7 +55,8 @@ export async function EventPeek({ user, eventId, preview, previewKey, closeHref 
       listPeople(user),
       listTopics(user),
       loadTemplate(),
-      loadInviteRecipients(user).catch(() => null),
+      // U proběhlé akce už příjemci pozvánky nic neřeší.
+      card.past ? null : loadInviteRecipients(user).catch(() => null),
     ]);
     const intro = (
       <>
