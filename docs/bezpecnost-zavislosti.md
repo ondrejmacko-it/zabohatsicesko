@@ -4,12 +4,23 @@ Stav k 18. 11. 2026. Výjimku schválil vlastník repa. Platí jen pro níže uv
 
 ## Co se změnilo v CI (`.github/workflows/ci.yml`)
 
-| Kontrola | Příkaz | Režim |
-| --- | --- | --- |
-| Audit produkčních závislostí (job „Lint, typy, testy a build“) | `npm audit --omit=dev --audit-level=moderate` | **blokuje merge** |
-| Bezpečnostní report – všechny závislosti (samostatný job) | `npm audit --audit-level=moderate` | neblokující: nález ukáže varování v PR a výpis v souhrnu běhu |
+Obě kontroly jsou v povinném jobu „Lint, typy, testy a build“ a **obě blokují merge**:
 
-Nepoužívá se plošné ignorování zranitelností, `npm audit fix --force` ani zvýšení prahu na `critical`.
+| Kontrola | Příkaz | Co projde |
+| --- | --- | --- |
+| Audit produkčních závislostí | `npm audit --omit=dev --audit-level=moderate` | jen 0 nálezů, bez výjimek |
+| Plný audit se schválenými výjimkami | `npx tsx scripts/audit-plny.ts` | jen nálezy kryté platnou výjimkou ze `scripts/audit-vyjimky.json` |
+
+Pravidla plného auditu (`scripts/audit-vyjimky.ts`, testy `tests/audit-vyjimky.test.ts`):
+
+* Výjimka platí jen pro konkrétní advisory **a** balíček (GHSA-fc5q-39xc-vjpf v `picomatch`) a jen do data `platiDo`
+  (31. 12. 2026). Tolerovaný nález se ukáže jako varování v PR a v souhrnu běhu.
+* Každý jiný advisory od úrovně moderate CI zastaví, dokud ho někdo neposoudí a nepřidá jako samostatnou výjimku
+  (advisory, balíček, datum, issue, důvod).
+* Chyba samotného auditu (nedostupný registr, neplatný nebo neznámý výstup) CI zastaví, nikdy se nebere jako povolený nález.
+* Po datu `platiDo` výjimka přestane platit a CI zastaví.
+
+Nepoužívá se `continue-on-error`, plošné ignorování zranitelností, `npm audit fix --force` ani zvýšení prahu na `critical`.
 
 ## Známá zranitelnost
 
@@ -25,17 +36,13 @@ Nepoužívá se plošné ignorování zranitelností, `npm audit fix --force` an
 
 Dopad: zranitelnost se týká lintu a testů na vývojářském počítači a v CI, ne nasazené aplikace.
 
-## Kdy se plný audit vrátí do blokujícího režimu
-
-Jakmile platí kterákoli z podmínek:
+## Kdy výjimku odebrat
 
 1. Vyjde opravená verze `picomatch` (nebo advisory upraví rozsah) a `npm audit --audit-level=moderate` po
-   `npm update` / aktualizaci `eslint-config-next` a `vitest` projde bez nálezu.
-2. Plný audit najde **jinou** zranitelnost než GHSA-fc5q-39xc-vjpf. Tu je potřeba řešit hned, výjimka se na ni nevztahuje.
-3. Nejpozději k 31. 12. 2026 výjimku znovu posoudit, i když oprava nevyjde.
-
-Návrat: v `ci.yml` vrátit do jobu „Lint, typy, testy a build“ krok `npm audit --audit-level=moderate`
-(produkční krok může zůstat) a smazat job „Bezpečnostní report – všechny závislosti“. Pak aktualizovat tento soubor.
+   aktualizaci `eslint-config-next` a `vitest` projde bez nálezu: smazat výjimku ze `scripts/audit-vyjimky.json`
+   a zavřít issue #66.
+2. Nejpozději 31. 12. 2026 výjimka sama vyprší a CI zastaví. Pak ji znovu posoudit (prodloužit datum jen se
+   souhlasem vlastníka repa).
 
 ## Jak to ověřit ručně
 
@@ -44,4 +51,5 @@ npm ci
 npm audit --omit=dev --audit-level=moderate   # musí projít
 npm ls picomatch --omit=dev --all             # musí být prázdné
 npm audit --audit-level=moderate              # dočasně hlásí jen GHSA-fc5q-39xc-vjpf
+npx tsx scripts/audit-plny.ts                 # musí projít a ukázat jen známou výjimku
 ```

@@ -23,10 +23,14 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      # Blokující: jen závislosti, které jdou do produkce. Plný audit je dočasně v jobu níže,
-      # viz docs/bezpecnost-zavislosti.md (výjimka pro GHSA-fc5q-39xc-vjpf a podmínky návratu).
+      # Blokující: produkční závislosti bez jakékoli výjimky.
       - name: Audit produkčních závislostí (blokuje merge)
         run: npm audit --omit=dev --audit-level=moderate
+      # Blokující: všechny závislosti. Projde jen schválená a platná výjimka ze scripts/audit-vyjimky.json
+      # (GHSA-fc5q-39xc-vjpf, issue #66), ta se ukáže jako varování. Jiný nález od moderate i chyba auditu
+      # CI zastaví. Viz docs/bezpecnost-zavislosti.md.
+      - name: Plný audit se schválenými výjimkami (blokuje merge)
+        run: npx tsx scripts/audit-plny.ts
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
@@ -35,38 +39,3 @@ jobs:
         env:
           SESSION_SECRET: ci-only-build-placeholder-not-a-secret-0000
           DEMO_ACCESS_CODE: ci-only-build-placeholder
-
-  # Dočasně neblokující (docs/bezpecnost-zavislosti.md). Job vždy doběhne zeleně, nález ukáže
-  # jako varování v PR a v souhrnu běhu. Po opravě picomatch vrátit plný audit do jobu výše.
-  report-zavislosti:
-    name: Bezpečnostní report – všechny závislosti (neblokující)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout přesného commitu PR
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          persist-credentials: false
-      - name: Node.js
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - name: Plný audit včetně vývojových nástrojů
-        id: plny
-        continue-on-error: true
-        run: npm audit --audit-level=moderate
-      - name: Varování při nálezu
-        if: steps.plny.outcome == 'failure'
-        run: |
-          echo "::warning title=Plný npm audit (neblokující)::Plný audit hlásí zranitelnost ve vývojových závislostech. Známá výjimka: GHSA-fc5q-39xc-vjpf (picomatch). Jiný nález řešit hned, viz docs/bezpecnost-zavislosti.md."
-          {
-            echo "## Plný npm audit: nález (neblokující)"
-            echo
-            echo "Známá výjimka: GHSA-fc5q-39xc-vjpf (picomatch, jen vývojové nástroje). Podmínky návratu do blokujícího režimu: docs/bezpecnost-zavislosti.md."
-            echo
-            echo '```'
-            npm audit --audit-level=moderate || true
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
