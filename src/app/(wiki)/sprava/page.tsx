@@ -17,6 +17,9 @@ import {
 import { PersonalCalendarStatus, personalCalendarLabel } from "@/features/vzdelavani/components/PersonalCalendarStatus";
 import type { PersonalCalendarState } from "@/server/calendar/personal";
 import { legacyInviteCount } from "@/server/calendar/legacy-invites";
+import { workerHealth } from "@/server/calendar/worker";
+import { CalendarWorkerHealth } from "@/features/vzdelavani/components/CalendarWorkerHealth";
+import { getDb } from "@/server/db/client";
 import { loadCalendarStatus, loadPersonalCalendars } from "@/server/services/calendar-status";
 import { requireUser } from "@/server/auth/session";
 import { isLiveWiki, now, personalSelfInvite } from "@/server/config";
@@ -29,11 +32,12 @@ export default async function AdminPage() {
   const user = await requireUser();
   // Stejná odpověď jako neexistující stránka: bez oprávnění se o správě nic nedozví.
   if (!canManageUsers(user)) notFound();
-  const [accounts, calendar, personal, legacyInvites] = await Promise.all([
+  const [accounts, calendar, personal, legacyInvites, worker] = await Promise.all([
     listAccounts(user),
     loadCalendarStatus(user),
     loadPersonalCalendars(user),
     legacyInviteCount(user),
+    getDb().then(workerHealth),
   ]);
   // Jedna role pro plánování a správu. Starší hodnota „organizer“ se už nepřiděluje, pravidla ji berou stejně.
   const roles: Role[] = ["admin", "member"];
@@ -150,6 +154,7 @@ export default async function AdminPage() {
         ) : (
           <>
             <CalendarStatusLine status={calendar} now={now()} />
+            {worker && <CalendarWorkerHealth health={worker} />}
             <details>
               <summary className="small">Kdo dostane pozvánky do Kalendáře</summary>
               <InviteRecipients status={calendar} />

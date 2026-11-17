@@ -2,6 +2,8 @@ import { isLiveWiki } from "@/server/config";
 import Link from "next/link";
 import { after } from "next/server";
 import { Icon, type IconName } from "@/components/Icon";
+import { RefreshOnReturn } from "@/components/RefreshOnReturn";
+import { InvitesCard } from "@/features/vzdelavani/components/InvitesCard";
 import { PersonalCalendarStatus } from "@/features/vzdelavani/components/PersonalCalendarStatus";
 import { NextEventsList } from "@/features/vzdelavani/components/Schedule";
 import { TasksCard, orderTasks } from "@/features/vzdelavani/components/TasksCard";
@@ -10,6 +12,8 @@ import { monthOf, toDateKey } from "@/lib/time";
 import { logError } from "@/server/audit";
 import { requireUser } from "@/server/auth/session";
 import { personalSyncNeeded, syncPersonalCalendars } from "@/server/calendar/personal";
+import { invitationsFor } from "@/server/calendar/rsvp";
+import { runWorkerIfDue } from "@/server/calendar/worker";
 import { now } from "@/server/config";
 import { getDb } from "@/server/db/client";
 import { canManageUsers, canPlan } from "@/server/policy";
@@ -28,12 +32,16 @@ export default async function HomePage() {
   const user = await requireUser();
   const monthKey = monthOf(toDateKey(now()));
   const planner = canPlan(user);
-  const [upcoming, initial, own, monthCards] = await Promise.all([
+  const [upcoming, initial, own, monthCards, invitations] = await Promise.all([
     nextEventsFor(user, NEXT_ROWS),
     loadPersonalCalendar(user),
     listTasks(user),
     planner ? listMonth(user, monthKey) : null,
+    getDb().then((db) => invitationsFor(db, user)),
   ]);
+  // Režim organizátora: návštěva dožene frontu a odpovědi (nejvýš jednou za 5 minut), až po odeslání stránky.
+  // Plánovač to dělá i bez návštěv, tady jde jen o čerstvější stav.
+  after(() => runWorkerIfDue("visit"));
   // Stejné úkoly jako v Plánu bez filtru: vlastní úkoly a správci krok aktuálního měsíce.
   const summary = monthCards ? monthSummary(monthCards, monthKey) : null;
   const tasks = orderTasks(own, summary, monthKey, (stav) => `/vzdelavani/harmonogram?stav=${stav}#mesic`);
@@ -61,6 +69,12 @@ export default async function HomePage() {
     <>
       <h1>Vítejte, {user.name}.</h1>
       {personal && <PersonalCalendarStatus state={personal} />}
+      {invitations && invitations.items.length > 0 && (
+        <>
+          <InvitesCard view={invitations} />
+          <RefreshOnReturn />
+        </>
+      )}
       {/* Hledání je kulisa ukázky, ostrá Wiki neaktivní pole neukazuje. */}
       {!isLiveWiki() && (
         <input

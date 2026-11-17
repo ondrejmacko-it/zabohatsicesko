@@ -16,7 +16,24 @@ kroky pro mě piš úplně, pod sebe, s přesnými kliky (Windows, PowerShell).
   `GOOGLE_OAUTH_PUBLISHED=1` (nastaveno 15. 11., platí od dalšího nasazení Production).
 * Úkoly z auditu jsou v `docs/audit-ukoly.md`. Audit ZIP stačí přiložit, jen když je potřeba `textove-upravy.csv`.
 
-**Stav 17. 11. noc, PR A rozpracovaný (poslední):** větev `claude/kalendar-pozvanky-organizator`, commit „WIP PR A“.
+**Stav 17. 11. noc 2, PR A téměř hotový (poslední):** větev `claude/kalendar-pozvanky-organizator`, commit „PR A: RSVP, worker, endpoint…“.
+Ověřeno v této relaci: `npm ci`, `npx tsc --noEmit`, `npm run lint`, `npm test` (235/235) prošly. **Neověřeno:** `npm run build`, `npm run e2e`.
+* Hotové navíc proti WIP: `src/server/calendar/rsvp.ts` (`syncResponses` se zámkem, úplná/přírůstková, 410 → úplná, stránkování,
+  jen GET; `invitationsFor`, `gmailSearchHref`), `worker.ts` (`runCalendarWorker`, `runWorkerIfDue` 5 min s atomickým nárokem,
+  `workerHealth`), `worker-auth.ts` (sha256 + `timingSafeEqual`), endpoint `src/app/api/kalendar/fronta/route.ts` (GET cron, POST GitHub),
+  `vercel.json` (cron `17 5 * * *`), `.github/workflows/kalendar-fronta.yml` (`*/10`, bez tajemství exit 0, denní `enable`),
+  Úvod: `InvitesCard` + `RefreshOnReturn` + `after(runWorkerIfDue)`, Správa: `CalendarWorkerHealth`. `FakeGoogle` přesunutý do
+  `tests/fake-google.ts` (umí syncToken, 410, `pageSize`). Testy `tests/kalendar-organizator.test.ts` (23, všechny scénáře ze zadání).
+* **Zbývá v PR A:** (1) `docs/kalendar-organizator.md`: provoz, kroky pro uživatele (účet organizátora, OAuth, `CALENDAR_WORKER_TOKEN`
+  a `CRON_SECRET` ve Vercelu, secret `CALENDAR_WORKER_TOKEN` a proměnná `WIKI_URL` v GitHub Actions, přesné kliky Windows),
+  náklady (GitHub Actions zdarma pro veřejné repo; Vercel Pro 20 USD/měs. s cronem po minutách; cron-job.org zdarma), README tabulka
+  proměnných (`CALENDAR_WORKER_TOKEN`, `CRON_SECRET`). (2) `npm run build`, `npm run e2e` (na pozadí, porty 3310/3311 uvolnit).
+  (3) Preview proměnné na Vercelu: ověřit `GET /v9/projects/<prj>/env` (jen názvy), nesecretní nic nového nepotřebuje.
+  (4) Draft PR (base `main`) s výsledky a upřímným přehledem simulace vs. živě. (5) PR B: jen příprava a dry-run.
+* Otevřené pro živý test: zda `sendUpdates=all` při pouhém přidání hosta pošle e-mail i ostatním hostům; zda denní `enable`
+  workflow skutečně resetuje 60denní odpočet.
+
+**Stav 17. 11. noc, PR A rozpracovaný (předchozí):** větev `claude/kalendar-pozvanky-organizator`, commit „WIP PR A“.
 Relace skončila na limitu kontextu. **Neověřeno:** v kontejneru chyběly `node_modules`, nejdřív `npm ci`, pak `npx tsc --noEmit`.
 * Hotové v kódu (jen napsané): `CALENDAR_DELIVERY` = `organizer` (výchozí, `invites` = totéž) | `personal`, `organizerDelivery()`,
   `calendarWorkerTokens()` (`CALENDAR_WORKER_TOKEN`, `CRON_SECRET`, min. 32 znaků), `.env.example`. Migrace `0011_calendar_outbox_rsvp`
