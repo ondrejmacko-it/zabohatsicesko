@@ -1531,7 +1531,9 @@ details > summary {
 }
 
 .filter-grow {
-  flex: 1 1 240px;
+  /* 180 px: na telefonu od 360 px se „Hledat“ vejde vedle pole. */
+  flex: 1 1 180px;
+  min-width: 0;
 }
 
 .clamp {
