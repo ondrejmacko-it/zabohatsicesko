@@ -1,5 +1,16 @@
 # Prompt pro další session
 
+**BODY 1–3 (17. 11. 2026, relace session_01HpUiryLTnYTDVdKXExXTxz, větev `claude/awesome-dijkstra-yc1boc`).**
+* (1) Okna akcí hotová (a27f734): bez nápovědy pod „Pro koho“ (`GROUP_HINTS` smazané), bez kroku Kontrola v Přidat
+  akci, příjemci pozvánky jen tlumený sbalený řádek (0 příjemců = krátká poznámka, u proběhlé akce nic), návrh bez
+  opakované rady, detail bez duplicitního typu/publika, Připravit měsíc s kratšími texty (potvrzení zachována).
+* (2) Inventura produkce read-only (Neon `zbc-wiki-produkce`): `docs/cisteni-testovacich-dat.md`. Testovací témata
+  Test/Něco/Ahoj/Ahojda/Tos/Ahojky (+ Tym A?) a 6 zveřejněných akcí s Kalendářem. **Nic nesmazáno, čeká na schválení.**
+  Seed ukázky je profesionální a v ostré Wiki zakázaný, beze změny.
+* (3) lint, tsc, unit 279/279 OK; screenshoty 6 šířek prohlédnuté, #mesic 0 px od středu (320/390: −0,01 px),
+  bez vodorovného posunu. Kompletní e2e: viz PR.
+**Další krok:** výsledek kompletního e2e, draft PR do main, subscribe, zelené CI, shrnutí uživateli.
+
 **URGENTNÍ UX/UI OPRAVY (17. 11. 2026, relace session_01HpUiryXvc6ixD5KrHNTanQ, větev `claude/awesome-dijkstra-yc1boc` z main 6eb778e).**
 Hotovo (jedna větev, bez PR – uživatel PR zatím nechtěl):
 * Plán: lišta jako mřížka 3 zón (`.plan-head` + container query), měsíc 27 px přesně uprostřed (změřeno 0 px odchylky
