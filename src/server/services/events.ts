@@ -212,6 +212,14 @@ async function assertUsers(db: Executor, ids: Array<string | null>) {
 export type SaveMode = "draft" | "publish";
 
 /**
+ * Státní svátek vzniká jen při doplnění měsíce ze šablony a je pevný: ruční založení, úprava, přesun,
+ * zrušení ani změna typu na svátek nebo ze svátku neprojde, ani přímým voláním serverové akce.
+ */
+function assertNotHoliday(...types: Array<string | null | undefined>) {
+  if (types.includes("holiday")) throw new DomainError("holiday_locked");
+}
+
+/**
  * Zveřejnění uloží snímek, revizi a požadavek na synchronizaci v jedné transakci.
  * Svátek se nesynchronizuje. Vazbu tu dostane akce založená ve Wiki. Importované akci bez vazby
  * ji dozaloží `linkPublishedWithoutInvite` (nejdřív ověří, že ve stejném čase neleží cizí pozvánka).
@@ -249,6 +257,7 @@ async function publishInTx(tx: Executor, row: EventRow, actorId: string, action:
 
 export async function createEvent(viewer: Viewer, input: EventInput, mode: SaveMode): Promise<string> {
   requireOrganizer(viewer);
+  assertNotHoliday(input.type);
   const db = await getDb();
   const { startsAt, endsAt, allDay } = resolveTimes(input);
   const id = `ev-${randomUUID()}`;
@@ -299,7 +308,11 @@ export async function updateEvent(
     await assertUsers(tx, [input.leadId, input.reviewerId]);
     const current = await loadEventRow(tx, id);
     if (!current) throw new DomainError("not_found");
+    assertNotHoliday(current.type, input.type);
     if (current.status === "cancelled") throw new DomainError("cancelled");
+    // Proběhlé akci termín měnit nejde (okno akce ho zamyká). Ostatní údaje opravit lze.
+    const termChanged = current.startsAt.getTime() !== startsAt.getTime() || current.endsAt.getTime() !== endsAt.getTime() || current.allDay !== allDay;
+    if (current.endsAt <= now() && termChanged) throw new DomainError("invalid_state");
     const [row] = await tx
       .update(events)
       .set({
@@ -340,6 +353,7 @@ export async function planMove(viewer: Viewer, id: string, date: string): Promis
   requireOrganizer(viewer);
   const row = await loadEventRow(await getDb(), id);
   if (!row) throw new DomainError("not_found");
+  assertNotHoliday(row.type);
   if (row.status === "cancelled") throw new DomainError("cancelled");
   if (row.startsAt <= now()) throw new DomainError("invalid_state");
   const from = toDateKey(row.startsAt);
@@ -372,6 +386,7 @@ export async function cancelEvent(viewer: Viewer, id: string, expectedRevision: 
   await db.transaction(async (tx) => {
     const current = await loadEventRow(tx, id);
     if (!current) throw new DomainError("not_found");
+    assertNotHoliday(current.type);
     if (!current.published || current.status === "cancelled") throw new DomainError("invalid_state");
     // Zrušení vychází z poslední zveřejněné verze. Rozpracovaný návrh změny se zahodí,
     // aby se nezveřejněné téma, termín ani publikum nedostaly do Wiki a Kalendáře.

@@ -90,7 +90,7 @@ function EventBlock({ card, hrefFor = pageHref, managing = false, movable = fals
   const isHoliday = card.type === "holiday";
   const cancelled = card.planStatus === "cancelled";
   // Data pro přesun tažením čte `MoveDropZone`. Odkaz zůstává odkazem: klik i klávesnice otevřou náhled.
-  const drag = movable
+  const drag = movable && !isHoliday
     ? { draggable: true, "data-move-id": card.id, "data-move-revision": card.revision ?? 0, "data-move-label": card.label, "data-move-from": dayOf(card) }
     : {};
   return (
@@ -191,7 +191,7 @@ export function ScheduleGrid({
                           card={card}
                           hrefFor={hrefFor}
                           managing={managing}
-                          movable={plannable && card.revision !== null && card.planStatus !== "cancelled" && !card.past}
+                          movable={plannable && card.revision !== null && card.type !== "holiday" && card.planStatus !== "cancelled" && !card.past}
                         />
                       ))}
                       {inMonth && (ghosts.get(day) ?? []).map((card) => <GhostBlock key={`stin-${card.id}`} card={card} hrefFor={hrefFor} />)}

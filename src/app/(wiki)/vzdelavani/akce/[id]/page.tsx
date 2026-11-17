@@ -1,4 +1,3 @@
-import { MoveEventButton } from "@/features/vzdelavani/components/MoveEvent";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -7,22 +6,16 @@ import { AutoRefresh } from "@/components/AutoRefresh";
 import { discardChangesAction } from "@/features/vzdelavani/actions";
 import { Icon } from "@/components/Icon";
 import { Todo, missingText } from "@/components/Todo";
-import { EventDialog } from "@/features/vzdelavani/components/EventDialog";
-import { EventMenu } from "@/features/vzdelavani/components/EventMenu";
 import { RecordingSection } from "@/features/vzdelavani/components/RecordingSection";
 import { SyncPanelView } from "@/features/vzdelavani/components/SyncPanelView";
 import { badgeClass, primaryStatus, statusAdvice } from "@/features/vzdelavani/status";
-import { EXTRAORDINARY_TYPES, GROUP_LABELS, PLAN_STATUS_LABELS, TYPE_LABELS } from "@/lib/labels";
+import { GROUP_LABELS, PLAN_STATUS_LABELS, TYPE_LABELS } from "@/lib/labels";
 import { safeDecode } from "@/lib/params";
 import { formatDate, formatEventWhen, monthOf, toDateKey } from "@/lib/time";
 import { requireUser } from "@/server/auth/session";
 import { isOrganizer } from "@/server/policy";
 import { getEventDetail } from "@/server/services/detail";
-import { listPeople, loadTemplate } from "@/server/services/events";
-import { now } from "@/server/config";
 import { resolvePreview } from "@/server/services/preview";
-import { listTopics } from "@/server/services/topics";
-import { loadInviteRecipients } from "@/server/services/calendar-status";
 
 export const metadata: Metadata = { title: "Detail akce" };
 
@@ -51,18 +44,8 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
   const dayKey = toDateKey(start);
   const title = card.topicTitle ? `${card.label}: ${card.topicTitle}` : card.label;
   const status = primaryStatus(card);
-  // Neplatná sestava hostů (chybná konfigurace) dialog nezastaví, jen v něm chybí seznam pozvaných.
-  const [people, topics, invite] = organizer
-    ? await Promise.all([listPeople(user), listTopics(user), loadInviteRecipients(user).catch(() => null)])
-    : [[], [], null];
-  const planDays = organizer ? (await loadTemplate()).filter((slot) => slot.active).map((slot) => slot.isoWeekday) : [];
-  const editable = organizer && detail.form && card.planStatus !== "cancelled";
-  // Přesun jen budoucí akce, stejné pravidlo kontroluje server (`planMove`).
-  const movable = editable && !preview && new Date(card.startsAt) > now();
-  const replaceable = editable && detail.fromTemplate && !EXTRAORDINARY_TYPES.has(card.type) && !card.past;
-  const dialogProps = editable
-    ? { mode: "edit" as const, id: card.id, revision: detail.revision, initial: detail.form!, published: detail.publishedForm, people, topics, invite, planDays }
-    : null;
+  // Úpravy akce jsou jen v okně akce v Plánu. Tahle stránka nese nahrávku, zápis a stav v Kalendáři.
+  const editable = organizer && detail.form && card.planStatus !== "cancelled" && card.type !== "holiday";
   // Nástroje vedoucího (nahrání, úprava zápisu) by v náhledu běžely pod správcem, proto se nenabízejí.
   const handlerPreview = Boolean(preview) && detail.recording.access === "handler";
   const handler = detail.recording.access === "handler" && !preview;
@@ -113,20 +96,18 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
               Zobrazit zápis
             </a>
           )}
-          {organizer && (
-            <EventMenu id={card.id} revision={detail.revision} canCancel={detail.canCancel} canDelete={detail.canDelete}>
-              {replaceable && <EventDialog {...dialogProps!} replace />}
-            </EventMenu>
-          )}
           {/* U proběhlé akce, kterou správce sám vede, je hlavní krok nahrávka. Úprava zůstává vedle jako vedlejší. */}
-          {editable && <EventDialog {...dialogProps!} primary={!(handler && card.past)} />}
-          {movable && <MoveEventButton target={{ id: card.id, revision: detail.revision, label: card.label, from: toDateKey(new Date(card.startsAt)) }} minDate={toDateKey(now())} />}
+          {editable && (
+            <Link className={handler && card.past ? "btn" : "btn btn-primary"} href={`${planHref}&akce=${encodeURIComponent(card.id)}`}>
+              Upravit akci
+            </Link>
+          )}
         </div>
       </div>
 
       {organizer && card.unpublishedChanges && (
         <div className="notice spread">
-          <p>Máte uložený návrh změny. Kolegové a Kalendář zatím vidí zveřejněnou verzi. Návrh zveřejněte přes Upravit, nebo ho zahoďte.</p>
+          <p>Máte uložený návrh změny. Kolegové a Kalendář zatím vidí zveřejněnou verzi.</p>
           <ActionForm action={discardChangesAction} fields={{ id: card.id, revision: String(detail.revision) }} label="Zahodit návrh změny" pendingLabel="Zahazuji…" small />
         </div>
       )}

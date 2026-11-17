@@ -14,6 +14,12 @@ test.describe("Úvod: Čeká na vás", () => {
     await expect(page.getByRole("heading", { name: "Moduly" })).toHaveCount(0);
     await expect(page.getByRole("main").getByRole("textbox")).toHaveCount(0);
     await expect(next.getByRole("link", { name: "Celý plán" })).toBeVisible();
+    // Akce z Nejbližších se otevře v okně nad Úvodem a Esc vrátí na Úvod.
+    await next.getByRole("listitem").first().getByRole("link").click();
+    await expect(page).toHaveURL(/\/\?akce=/);
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page).toHaveURL(/\/$/);
     const [t, n] = [(await tasks.boundingBox())!, (await next.boundingBox())!];
     const width = page.viewportSize()!.width;
     if (width >= 900) {

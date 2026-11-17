@@ -22,6 +22,7 @@ export type DomainErrorCode =
   | "file_corrupt"
   | "file_too_long"
   | "not_past"
+  | "holiday_locked"
   | "outside_month";
 
 export const DOMAIN_ERROR_MESSAGES: Record<DomainErrorCode, string> = {
@@ -41,4 +42,5 @@ export const DOMAIN_ERROR_MESSAGES: Record<DomainErrorCode, string> = {
   file_too_long: "Nahrávka je delší než 15 minut, což je limit ukázky.",
   outside_month: "Datum návrhu musí být v budoucnu a ve stejném měsíci.",
   not_past: "Nahrávku lze přidat až po skončení zveřejněné akce.",
+  holiday_locked: "Státní svátek je pevně daný. Nejde přesunout ani upravit.",
 };

@@ -16,7 +16,7 @@ async function expectAddDialog(page: Page, day: string) {
   await expect(dialog).toBeVisible();
   await expect(dialog.getByLabel("Datum", { exact: true })).toHaveValue(day);
   // Jiná akce nemá výchozí název, pole je nahoře a prázdné.
-  await expect(dialog.getByLabel("Název", { exact: true })).toHaveValue("");
+  await expect(dialog.getByLabel("Název akce", { exact: true })).toHaveValue("");
   await expectNoHorizontalScroll(page);
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();
@@ -64,7 +64,7 @@ test.describe("Plán: přidání akce na den @desktop", () => {
     await expect(cell(page, "2026-11-27").locator('[data-move-id="ev-11-27"]')).toHaveCount(1);
   });
 
-  test("Přesun tažením s potvrzením a zpět přes detail akce", async ({ page }, testInfo) => {
+  test("Přesun tažením s potvrzením a zpět v okně akce", async ({ page }, testInfo) => {
     // Zápis do sdílených dat ukázky jen v jednom projektu, ostatní projekty ověří Zrušit.
     test.skip(testInfo.project.name !== "windows-1280", "zápis jen jednou");
     await openPlan(page);
@@ -75,17 +75,28 @@ test.describe("Plán: přidání akce na den @desktop", () => {
     await expect(dialog).toBeHidden();
     await expect(cell(page, "2026-11-24").locator('[data-move-id="ev-11-25"]')).toHaveCount(1);
 
-    // Cesta bez myši: náhled akce → Přesunout na jiný den → potvrzení. Vrátí akci na původní den.
+    // Cesta bez myši: okno akce → datum rovnou v poli → Uložit jako návrh. Vrátí akci na původní den.
     await cell(page, "2026-11-24").locator('[data-move-id="ev-11-25"]').click();
-    await page.getByRole("button", { name: "Přesunout na jiný den" }).click();
-    const move = page.getByRole("dialog", { name: "Přesunout akci" });
-    await move.getByLabel("Nový den").fill("2026-11-25");
-    await move.getByRole("button", { name: "Pokračovat" }).click();
-    await expect(move).toContainText("z út 24. 11. na st 25. 11.?");
-    await move.getByRole("button", { name: "Potvrdit" }).click();
-    await expect(move).toBeHidden();
+    const win = page.getByRole("dialog", { name: "Trénink poradců" });
+    await win.getByLabel("Datum", { exact: true }).fill("2026-11-25");
+    await win.getByRole("button", { name: "Uložit jako návrh" }).click();
+    await expect(win).toBeHidden();
     await page.goto("/vzdelavani/harmonogram");
     await expect(cell(page, "2026-11-25").locator('[data-move-id="ev-11-25"]')).toHaveCount(1);
+  });
+});
+
+test.describe("Plán: svátek je pevný @desktop", () => {
+  test.use({ storageState: authFile("spravce") });
+
+  test("svátek nejde táhnout a jeho okno nemá úpravy", async ({ page }) => {
+    await openPlan(page);
+    await expect(block(page, "ev-11-17")).toHaveCount(0);
+    await page.goto("/vzdelavani/harmonogram?akce=ev-11-17");
+    const win = page.getByRole("dialog", { name: "Státní svátek" });
+    await expect(win).toContainText("Nedá se přesunout ani upravit");
+    await expect(win.getByRole("button", { name: /Zveřejnit|Uložit/ })).toHaveCount(0);
+    await expect(win.getByRole("button", { name: "Další možnosti" })).toHaveCount(0);
   });
 });
 

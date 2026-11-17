@@ -100,9 +100,9 @@ test.describe("U08 dialog akce", () => {
     const dateBox = await opened.getByLabel("Datum").boundingBox();
     expect(dateBox!.y, "Datum pod Typem").toBeGreaterThan(typeBox!.y + typeBox!.height - 1);
     // Jiná akce nemá výchozí název; vyplněný název nechá chybu jen na Datu.
-    await opened.getByLabel("Název", { exact: true }).fill("Návštěva partnera");
+    await opened.getByLabel("Název akce", { exact: true }).fill("Návštěva partnera");
     await opened.getByLabel("Datum").fill("");
-    const save = opened.getByRole("button", { name: "Uložit návrh" });
+    const save = opened.getByRole("button", { name: "Uložit jako návrh" });
     await save.scrollIntoViewIfNeeded();
     await save.click();
     const summary = opened.getByRole("alert").filter({ hasText: "Akci zatím nejde uložit" });
@@ -117,10 +117,14 @@ test.describe("U08 dialog akce", () => {
 test.describe("U08 dialog akce na počítači @desktop", () => {
   test.use({ storageState: authFile("spravce") });
 
-  test("Typ a Datum zůstávají vedle sebe", async ({ page }) => {
+  // Jednotný editor akce: Typ vedle Pro koho, Datum vedle Od a Do (na telefonu pod sebou, viz test výše).
+  test("Typ s Pro koho a Datum s časem zůstávají vedle sebe", async ({ page }) => {
     const opened = await openAddEvent(page);
-    const typeBox = await opened.getByLabel("Typ").boundingBox();
+    const typeBox = await opened.getByRole("combobox", { name: "Typ", exact: true }).boundingBox();
+    const audienceBox = await opened.getByRole("combobox", { name: /^Pro koho/ }).boundingBox();
     const dateBox = await opened.getByLabel("Datum").boundingBox();
-    expect(Math.abs(dateBox!.y - typeBox!.y), "stejný řádek").toBeLessThan(4);
+    const fromBox = await opened.getByRole("textbox", { name: "Od", exact: true }).boundingBox();
+    expect(Math.abs(audienceBox!.y - typeBox!.y), "Typ a Pro koho na jednom řádku").toBeLessThan(4);
+    expect(Math.abs(fromBox!.y - dateBox!.y), "Datum a Od na jednom řádku").toBeLessThan(4);
   });
 });
