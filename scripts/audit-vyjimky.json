@@ -1,0 +1,12 @@
+{
+  "_poznamka": "Schválené výjimky plného npm auditu. Každá platí jen pro uvedený advisory a balíček do data platiDo. Podrobnosti: docs/bezpecnost-zavislosti.md",
+  "vyjimky": [
+    {
+      "advisory": "GHSA-fc5q-39xc-vjpf",
+      "balicek": "picomatch",
+      "platiDo": "2026-12-31",
+      "issue": "https://github.com/ondrejmacko-it/zabohatsicesko/issues/66",
+      "duvod": "ReDoS v picomatch bez opravené verze, jen vývojové nástroje (eslint-config-next, vitest). Produkční audit je čistý."
+    }
+  ]
+}
