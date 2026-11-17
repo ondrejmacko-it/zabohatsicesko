@@ -1,5 +1,14 @@
 # Prompt pro další session
 
+**#65 PŘIPRAVENÝ KE SLOUČENÍ (18. 11. 2026, relace session_01HpUirxBmt1Vh8n8CDU9bEP).** #67, #63 a #64 jsou v `main`.
+Do `claude/final-zapisy-temata` sloučen `origin/main` merge commitem c16a852 (bez konfliktů, bez force). Lokálně: lint, tsc,
+unit **279/279**, `npx tsx scripts/audit-plny.ts` projde jen se známou výjimkou GHSA-fc5q-39xc-vjpf (picomatch). Na c16a852
+„Citlivé cesty v PR“ zelené a Vercel preview Ready; „Lint, typy, testy a build“ běžel při zápisu. Tento zápis je jen dokumentace.
+PR je ještě draft.
+**Další krok:** ověřit zelené CI na hlavě PR (oba joby); pak uživatel dá #65 „Ready for review“ a sloučí přes „Create a merge
+commit“ a ověří Production nasazení.
+Otevřené zůstávají přepis dlouhých nahrávek a ostrý Google Kalendář (beze změny).
+
 **BEZPEČNOSTNÍ ÚPRAVA #67 (18. 11. 2026).** Na pokyn uživatele: plný audit už není `continue-on-error`. #67 (480e814):
 `scripts/audit-plny.ts` + `scripts/audit-vyjimky.ts` + `scripts/audit-vyjimky.json` – blokuje vše kromě GHSA-fc5q-39xc-vjpf
 v `picomatch` do 31. 12. 2026; chyba auditu blokuje; produkční audit beze změny; testy `tests/audit-vyjimky.test.ts` (7).
