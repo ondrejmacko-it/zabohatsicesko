@@ -115,15 +115,15 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
     );
   };
   const current = (d: MonthDraft): Filled => filled[d.id] ?? { topic: Boolean(d.topicTitle), lead: Boolean(d.leadId), audience: d.audience };
-  const gapsOf = (d: MonthDraft) => {
+  const missing = (d: MonthDraft) => {
     if (d.type === "holiday") return [];
     const f = current(d);
     return [!f.topic && "téma", !f.lead && "vedoucí"].filter((g): g is string => Boolean(g));
   };
 
   const chosen = drafts.filter((d) => picked.has(d.id));
-  const incomplete = chosen.filter((d) => gapsOf(d).length > 0).length;
-  const gaps = drafts.map((d) => ({ draft: d, missing: gapsOf(d) })).filter((g) => g.missing.length > 0);
+  const incomplete = chosen.filter((d) => missing(d).length > 0).length;
+  const gapCount = drafts.filter((d) => missing(d).length > 0).length;
   const [allowIncomplete, setAllowIncomplete] = useState(false);
   const audiences = [...new Set(chosen.map((d) => current(d).audience))];
   const invited = new Set(audiences.flatMap((g) => recipients[g].map((r) => r.email)));
@@ -154,7 +154,7 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
             const dateKey = toDateKey(start);
             const name = `${d.label} ${formatDayMonth(dateKey)}`;
             return (
-              <li key={d.id} className="publish-row" data-picked={picked.has(d.id)}>
+              <li key={d.id} className="publish-row" data-picked={picked.has(d.id)} data-draft={d.id}>
                 <label className="publish-pick">
                   <input type="checkbox" name="pick" value={d.id} checked={picked.has(d.id)} onChange={(e) => toggle(d.id, e.target.checked)} />
                   <span className="publish-main">
@@ -162,6 +162,7 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
                     <span className="item-meta">
                       {weekdayShort(dateKey)} {formatDayMonth(dateKey)} · {formatEventTime(start, new Date(d.endsAt), false)}
                     </span>
+                    {missing(d).length > 0 && <span className="publish-gap">Chybí {missing(d).join(" a ")}</span>}
                   </span>
                 </label>
                 <input type="hidden" name="row" value={d.id} />
@@ -194,7 +195,7 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
   if (!drafts.length) {
     return (
       <>
-        <p className="muted">V tomto měsíci nejsou žádné návrhy. Doplňte termíny ze šablony, nebo přidejte akci.</p>
+        <p className="muted">V tomto měsíci nejsou žádné návrhy. Doplňte chybějící termíny, nebo přidejte akci.</p>
         {changeDrafts > 0 && <ChangeDraftsNote count={changeDrafts} />}
         {state && <ActionMessage state={state} />}
         <div className="dialog-actions">
@@ -216,22 +217,13 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
       </datalist>
       <section className="prepare-step" aria-labelledby="prepare-gaps">
         <h3 id="prepare-gaps">2. Zkontrolovat</h3>
-        {gaps.length === 0 ? (
-          <p className="small">Všechny návrhy mají téma i vedoucího.</p>
-        ) : (
-          <ul className="prepare-list">
-            {gaps.map(({ draft, missing }) => {
-              const day = toDateKey(new Date(draft.startsAt));
-              return (
-                <li key={draft.id} data-draft={draft.id}>
-                  {weekdayShort(day)} {formatDayMonth(day)} · {draft.label} · chybí {missing.join(" a ")}
-                </li>
-              );
-            })}
-          </ul>
-        )}
-        {group("Základ měsíce ze šablony", "Předvybrané ke zveřejnění. Datum, skupinu, téma i vedoucího můžete změnit.", drafts.filter((d) => d.fromTemplate))}
-        {group("Návrhy přidané navíc", "Zveřejní se jen ty, které zaškrtnete.", drafts.filter((d) => !d.fromTemplate))}
+        <p className="small">
+          {gapCount === 0
+            ? "Všechny návrhy mají téma i vedoucího."
+            : `${plural(gapCount, "návrh nemá", "návrhy nemají", "návrhů nemá")} téma nebo vedoucího. Doplňte je u termínu, nebo zveřejněte bez nich.`}
+        </p>
+        {group("Pravidelné termíny", "Předvybrané ke zveřejnění. Datum, skupinu, téma i vedoucího můžete změnit.", drafts.filter((d) => d.fromTemplate))}
+        {group("Další návrhy", "Zveřejní se jen ty, které zaškrtnete.", drafts.filter((d) => !d.fromTemplate))}
         {changeDrafts > 0 && <ChangeDraftsNote count={changeDrafts} />}
       </section>
       <section className="prepare-step" aria-labelledby="prepare-publish">

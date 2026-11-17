@@ -216,7 +216,7 @@ function EventForm({ mode, id, revision, initial, published, people, topics, inv
           {revision !== undefined && <input type="hidden" name="revision" value={revision} />}
           {replace && (
             <p className="notice">
-              Vyberte, co se v tomto termínu bude konat místo pravidelné aktivity. Doplnění měsíce ze šablony sem pak nic nepřidá.
+              Vyberte, co se v tomto termínu bude konat místo pravidelné aktivity. Doplnění chybějících termínů sem pak nic nepřidá.
             </p>
           )}
           <fieldset className="form-main">

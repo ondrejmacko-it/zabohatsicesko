@@ -2402,10 +2402,14 @@ p.cal-status {
   font-size: 1rem;
 }
 
-.prepare-list {
-  margin: 0;
-  padding-left: 18px;
-  font-size: 0.875rem;
+/* Seznam návrhů vyplní šířku okna (krok jinak zarovnává obsah doleva na šířku obsahu). */
+.prepare-step > .publish-group {
+  align-self: stretch;
+}
+
+.publish-gap {
+  font-size: 0.8125rem;
+  color: var(--ochre-dark);
 }
 
 /* Hosté pozvánky v dialogu akce: počet jako hlavní údaj, jména a vysvětlení tlumeně. */

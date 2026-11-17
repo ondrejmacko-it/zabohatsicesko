@@ -55,7 +55,7 @@ test.describe("okna správce", () => {
     // Mezery se počítají živě z rozepsaného formuláře.
     const id = (await date.getAttribute("name"))!.replace("date-", "");
     const topic = prepare.locator(`[name="topic-${id}"]`);
-    const gap = prepare.locator(`.prepare-list li[data-draft="${id}"]`);
+    const gap = prepare.locator(`.publish-row[data-draft="${id}"] .publish-gap`);
     await topic.fill("");
     await expect(gap).toContainText("téma");
     await topic.fill("Téma z e2e testu");
