@@ -17,8 +17,9 @@ export async function GET(request: NextRequest) {
 
   // Automatické propojení se vrací na Plán. Když se nepovede, zůstane tam úkol „Propojit Kalendář“.
   const auto = request.cookies.get(AUTO_COOKIE)?.value === "1";
+  // Jiný účet než organizátor vede vždy na Integrace: správce musí vidět, proč se nic nepropojilo.
   const finish = (result: string) => {
-    const response = NextResponse.redirect(auto ? planUrl() : integrationsUrl(result));
+    const response = NextResponse.redirect(auto && result !== "jiny-ucet" ? planUrl() : integrationsUrl(result));
     response.cookies.set(OAUTH_COOKIE, "", { ...oauthCookieOptions, maxAge: 0 });
     response.cookies.set(AUTO_COOKIE, "", { ...oauthCookieOptions, maxAge: 0 });
     response.headers.set("Cache-Control", "no-store");
@@ -35,6 +36,10 @@ export async function GET(request: NextRequest) {
   try {
     const db = await getDb();
     const result = await completeAuthorization(db, cfg, { code, verifier, userId: user.id });
+    if (result === "wrong_account") {
+      await audit(db, user.id, "calendar.wrong_account", "settings", "google-calendar");
+      return finish("jiny-ucet");
+    }
     if (result !== "connected") return finish(result === "missing_scope" ? "chybi-opravneni" : "nepripojeno");
     await audit(db, user.id, "calendar.connected", "settings", "google-calendar");
     // Účet bez přístupu k nastavenému kalendáři: propojení platí, ale správce se to musí dozvědět hned.

@@ -16,7 +16,52 @@ kroky pro mě piš úplně, pod sebe, s přesnými kliky (Windows, PowerShell).
   `GOOGLE_OAUTH_PUBLISHED=1` (nastaveno 15. 11., platí od dalšího nasazení Production).
 * Úkoly z auditu jsou v `docs/audit-ukoly.md`. Audit ZIP stačí přiložit, jen když je potřeba `textove-upravy.csv`.
 
-**Stav 17. 11. odpoledne, C1 a C2 jako drafty (poslední):** draft [#58](https://github.com/ondrejmacko-it/zabohatsicesko/pull/58)
+**Stav 17. 11. pozdě večer, C2 dokončené jako nový draft PR (poslední):** #56, #57, #58, #59 jsou **sloučené v `main`** (#59 na d2d0a9d).
+Zbytek C2 je ve větvi `claude/ux-formular-akce` (sloučený `origin/main`, merge d2554bd) jako nový draft PR do `main` („PR C2b“, číslo v GitHubu).
+* Hotovo v C2b: `slotConflict` (6d3a6d5); `MonthDraft.clash` v `listMonthDrafts` + štítek `.publish-clash` a věta v kroku „2. Zkontrolovat“;
+  Enter v Připravit měsíc nic neodešle (`ignoreEnter`); okno `Modal wide="extra"` (1120 px, návrh na jednom řádku od ~800 px);
+  pravdivé hlášky po uložení/zveřejnění (`src/lib/invite-mode.ts`: simulace / čeká na Kalendář / testovací adresy / odesílá se)
+  a `FlashMessage` v `(wiki)/layout.tsx` (potvrzení přežije zavření dialogu a přesměrování); testy `tests/doplneni-mesice-scenare.test.ts`
+  (svátek, smazaný a přesunutý termín, zveřejněná a zrušená akce, souběh), e2e `okna.spec.ts` (Enter, potvrzení návrhu).
+  Lint, tsc, `npm test` 254/254, cílené e2e `okna`+`pristupnost` (1280, 320) 62 passed / 3 skipped (desktop testy na telefonu).
+  **Neověřeno: úplné e2e** (zastaveno kvůli limitu kontextu) – spustit na začátku další relace a výsledek zapsat do popisu PR C2b.
+* Screenshoty dialogů prohlédnuté (390, 1280): formulář, souhrn chyb („Doplňte nebo opravte: Název“), potvrzení dopadu i chyba
+  „Nezveřejněno, chybí téma… hodnoty zůstaly“ odpovídají chování. Skript: `node <scratchpad>/dialogy.mjs` není v repu; použij
+  `scripts/audit-screenshoty.mjs` (teď s `locale: 'cs-CZ'`). Návrh 30 termínů: na desktopu ~75 px na řádek, na telefonu delší seznam
+  se svislým posunem v okně a pevnými tlačítky dole – přijatelné, bez wizardu.
+* **Další krok: C3** ve větvi `claude/ux-temata-sprava` (commit 5d56e60 na d2d0a9d): `git merge origin/claude/ux-formular-akce` (bez force),
+  pak body C3 níže, draft PR C3 do `main`. Pak PR D a velké závěrečné shrnutí (viz zadání uživatele v promptu).
+* Vyčištění testovacích témat („Test“, „Něco“, „Ahoj“): jen návrh uživateli (archivovat přes Témata → Správa), produkční DB nečíst ani neměnit.
+
+**Stav 17. 11. večer, C2 doplněné, C3 rozpracované (předchozí):** uživatel poslal podrobné zadání „Dokončení UX/UI: C2 → C3 → D“
+(platí nadále, shrnutí níže). Kalendář, #56 a #57 stranou.
+* **C2** (`claude/ux-formular-akce`, draft #59, base `main`, stojí na #58): navíc commity d2d0a9d (Připravit měsíc na celou šířku,
+  „Chybí téma a vedoucí“ u termínu místo souhrnného seznamu, texty bez „šablona“) a 6d3a6d5 (`slotConflict` v `domain/generation.ts`:
+  termín přeskočí jen akce stejné skupiny s časovým překryvem, akce „vsichni“ nebo stejný typ ve stejný den = návrh vznikne
+  + varování v hlášce; `generateMonth` vrací `{ created, withTopic, skipped, review }`; testy `tests/obsazeni-terminu.test.ts`
+  a v `tests/hromadne-zverejneni.test.ts`). Lint, tsc, `npm test` 249/249. **Neověřeno: build a úplné e2e na posledním commitu.**
+* **Zbývá v C2 (podle zadání uživatele):** (1) varování z `review` ukázat i v kroku „2. Zkontrolovat“ (teď jen ve zprávě po doplnění);
+  (2) testy pro svátek/výjimku, přesunutý termín z Pravidelného týdne, zveřejněnou akci, zrušenou ruční akci (pravidlo už to pokrývá,
+  chybí scénáře v DB); (3) projít `EventDialog.tsx` texty o pozvánkách (rozlišit uloženo / zveřejněno ve Wiki / čeká na Kalendář /
+  chyba; žádný falešný úspěch), Enter nesmí zveřejnit, zachování hodnot při chybě; (4) Připravit měsíc s 0, 1, 5, 15, 30 návrhy
+  (seed nebo test fixture), případně sbalit skupiny; (5) screenshoty: Přidat akci, Upravit akci, rozbalené možnosti, potvrzení,
+  Připravit měsíc prázdný / více návrhů / neúplné / připravené, chyba validace; 320, 390, 1280 + tablet a 1920. Skript na dialogy:
+  viz `scripts/audit-screenshoty.mjs` (rozšířit o dialogy, nebo vlastní skript ve scratchpadu); (6) čistý build + úplné e2e, aktualizovat
+  popis #59 (base můžeš přepnout na `claude/ux-uvod-plan`, aby diff byl jen C2).
+* **C3** (`claude/ux-temata-sprava` z C2, commit „C3 (rozpracováno)“, PR zatím není, před pokračováním rebase na nový C2 bez force:
+  `git merge origin/claude/ux-formular-akce`): hotové `isRecommendable` (doporučení jen s ≥1 zájemcem, i ve formuláři a `suggestTopics`,
+  test `tests/temata-doporuceni.test.ts`), kratší úvod Témat, Správa bez štítku „Aktivní“ a řádku „Fiktivní role ukázky“,
+  Kalendář + diagnostika v `<details class="admin-tech">` „Kalendář a technický stav“, otevře se sám jen při problému
+  (`calendarExpiresSoon` v `CalendarStatusLine.tsx`), Zápisy bez nepravdivého „Vyhledávejte“ v prázdném stavu, prázdný stav pro vedoucího,
+  `UploadForm` říká, že přepis je zatím jen ukázka. **Neověřeno:** screenshoty po změně (pořízené v `scratchpad/a2`, neprohlédnuté),
+  e2e. Zbývá: přihlášení `/vstup` (první dojem, chyby, nepozvaný účet, bez oprávnění), celý průchod zápisu (nahrát → návrh → kontrola →
+  zveřejnit → účastník vidí), karty témat a archiv, návrh vyčištění testovacích témat (jen návrh), jednotná čeština (vykání, role,
+  tlačítka, bez technických pojmů), pak draft PR C3.
+* **PR D:** audit všech rolí a šířek 320–1920 (`scripts/audit-screenshoty.mjs`), oprava nálezů, úplné e2e a přístupnost, pak velké
+  závěrečné shrnutí pro uživatele (9 bodů z jeho zadání: změny po stránkách, odstraněné duplicity, opravené průchody, co je funkční,
+  co demo, PR a testy, screenshoty desktop/mobil, zbývající nedostatky, produkční kroky čekající na schválení) včetně #56–#59.
+
+**Stav 17. 11. odpoledne, C1 a C2 jako drafty (předchozí):** draft [#58](https://github.com/ondrejmacko-it/zabohatsicesko/pull/58)
 = PR C1 (`claude/ux-uvod-plan` → `main`), draft [#59](https://github.com/ondrejmacko-it/zabohatsicesko/pull/59) = PR C2
 (`claude/ux-formular-akce`, stojí na C1, base `main`, mergovat po #58). Obě: lint, tsc, test (C2 239/239), e2e zelené.
 * C1 navíc: Správa v navigaci jen pro oprávněné, filtry Plánu na 768–1100 vlevo a bez přetečení na 320, kontrast `.extra .line`,
@@ -65,6 +110,7 @@ Lint, tsc a `npm test` 238/238 prošly. **Neověřeno:** `npm run build` mimo e2
   (PR #57 to předpokládá).
 
 **Stav 18. 11., ZMĚNA PRIORIT (předchozí):** #55 (PR A) je sloučené v `main` (849f139). #56 (PR B, větev
+**Stav 18. 11., ZMĚNA PRIORIT (poslední):** #55 (PR A) je sloučené v `main` (849f139). #56 (PR B, větev
 `claude/kalendar-migrace-dry-run`) zůstává draft. Nejvyšší priorita uživatele je teď **finální UX/UI a obsah celé Wiki**.
 Kalendář: jen dvě opravy, pak pozastavit.
 1. **Oprava v PR B:** `src/server/calendar/personal.ts` `removePersonalCalendar()`: když Google odmítne smazání kalendáře

@@ -3,13 +3,15 @@
 import { after } from "next/server";
 import { z } from "zod";
 import { EVENT_TYPES, GROUPS } from "@/lib/types";
-import { isValidDateKey, isValidMonthKey, isValidTime } from "@/lib/time";
+import { inviteModeOf, inviteOutcome } from "@/lib/invite-mode";
+import { formatDayMonth, isValidDateKey, isValidMonthKey, isValidTime } from "@/lib/time";
 import { audit } from "@/server/audit";
 import { disconnect as disconnectCalendar } from "@/server/calendar/google-auth";
 import { simulateManualEdit } from "@/server/calendar/simulated";
 import { pairWithExisting, requestNewInvite, requestRetry, syncEvent, syncPublished } from "@/server/calendar/sync";
 import { calendarMode, isLiveWiki } from "@/server/config";
 import { getDb } from "@/server/db/client";
+import { loadCalendarStatus } from "@/server/services/calendar-status";
 import { isOrganizer } from "@/server/policy";
 import { resetDatabase } from "@/server/seed";
 import { DomainError } from "@/server/services/errors";
@@ -127,6 +129,15 @@ export async function previewImpactAction(formData: FormData): Promise<ActionRes
   });
 }
 
+/** Pravdivá věta o pozvánkách po zveřejnění. Když stav Kalendáře nejde zjistit, neslibuje nic. */
+async function inviteNote(user: Parameters<typeof loadCalendarStatus>[0], many = false): Promise<string> {
+  try {
+    return inviteOutcome(inviteModeOf(await loadCalendarStatus(user)), many);
+  } catch {
+    return "Stav pozvánek uvidíte u akce.";
+  }
+}
+
 export async function saveEventAction(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
   return run(async (user) => {
     let parsed;
@@ -141,7 +152,11 @@ export async function saveEventAction(_prev: ActionResult | null, formData: Form
     if (!id) {
       const created = await createEvent(user, input, intent);
       if (intent === "publish") after(() => syncEvent(created));
-      return { ok: true, id: created, message: intent === "publish" ? "Akce je zveřejněná." : "Návrh je uložený." };
+      return {
+        ok: true,
+        id: created,
+        message: intent === "publish" ? `Akce je zveřejněná ve Wiki. ${await inviteNote(user)}` : "Návrh je uložený. Kolegové ho zatím nevidí, nic se neodeslalo.",
+      };
     }
     const revision = z.coerce.number().int().positive().parse(formData.get("revision"));
     if (intent === "publish") {
@@ -160,7 +175,11 @@ export async function saveEventAction(_prev: ActionResult | null, formData: Form
     await updateEvent(user, id, revision, input, intent);
     // Akce bez vazby (import, seed) ji dostane až tady, proto celá fronta a ne jen jedna akce.
     if (intent === "publish") after(() => syncPublished());
-    return { ok: true, id, message: intent === "publish" ? "Změna je zveřejněná." : "Návrh změny je uložený." };
+    return {
+      ok: true,
+      id,
+      message: intent === "publish" ? `Změna je zveřejněná ve Wiki. ${await inviteNote(user)}` : "Návrh změny je uložený. Kolegové dál vidí zveřejněnou verzi, nic se neodeslalo.",
+    };
   });
 }
 
@@ -246,13 +265,19 @@ export async function discardChangesAction(_prev: ActionResult | null, formData:
 export async function generateMonthAction(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
   return run(async (user) => {
     const month = z.string().refine(isValidMonthKey).parse(formData.get("month"));
-    const { created, withTopic } = await generateMonth(user, month);
-    if (!created) return { ok: true, message: "Všechny pravidelné termíny už v plánu jsou." };
-    const places = `${created} ${created === 1 ? "místo" : created < 5 ? "místa" : "míst"}`;
-    const topicNote = withTopic
-      ? ` U ${withTopic} ${withTopic === 1 ? "termínu" : "termínů"} je předvyplněné doporučené téma podle zájmu, před zveřejněním ho můžete změnit.`
+    const { created, withTopic, skipped, review } = await generateMonth(user, month);
+    const skippedNote = skipped
+      ? ` ${skipped} ${skipped === 1 ? "termín je" : skipped < 5 ? "termíny jsou" : "termínů je"} vynechaných, ve stejný čas už je akce pro stejnou skupinu.`
       : "";
-    return { ok: true, message: `Doplněno ${places} podle Pravidelného týdne. Stávající akce zůstaly beze změny.${topicNote}` };
+    if (!created) return { ok: true, message: `Nic nového k doplnění.${skippedNote || " Všechny pravidelné termíny už v plánu jsou."}` };
+    const places = `${created} ${created === 1 ? "termín" : created < 5 ? "termíny" : "termínů"}`;
+    const topicNote = withTopic
+      ? ` U ${withTopic} ${withTopic === 1 ? "termínu" : "termínů"} je předvyplněné doporučené téma, můžete ho změnit.`
+      : "";
+    const reviewNote = review.length
+      ? ` Zkontrolujte ${review.map((d) => formatDayMonth(d)).join(", ")}: ve stejný den nebo čas už mají stejní lidé jinou akci.`
+      : "";
+    return { ok: true, message: `Doplněno ${places} jako návrh, nic se nezveřejnilo.${skippedNote}${topicNote}${reviewNote}` };
   });
 }
 
@@ -298,7 +323,7 @@ export async function publishMonthAction(_prev: ActionResult | null, formData: F
     if (published.length) after(() => syncPublished());
     if (!published.length) return { ok: false, error: `Nic se nezveřejnilo.${skippedNote(skipped)}` };
     const count = `${published.length} ${published.length === 1 ? "akce" : published.length < 5 ? "akce" : "akcí"}`;
-    return { ok: true, message: `Zveřejněno: ${count}. Pozvánky do Kalendáře se odesílají.${skippedNote(skipped)}` };
+    return { ok: true, message: `Zveřejněno ve Wiki: ${count}. ${await inviteNote(user, published.length > 1)}${skippedNote(skipped)}` };
   });
 }
 

@@ -564,6 +564,14 @@ a.item-card:hover {
   background: var(--ok-soft);
 }
 
+.flash {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
 /* ——— Formuláře a dialog ——— */
 
 .field {
@@ -1148,6 +1156,10 @@ body > .dialog[open]:has(~ .dialog[open]) {
 
 .dialog-wide {
   width: min(760px, calc(100vw - 24px));
+}
+
+.dialog-extra {
+  width: min(1120px, calc(100vw - 24px));
 }
 
 .action-form {
@@ -2426,7 +2438,8 @@ p.cal-status {
   align-self: stretch;
 }
 
-.publish-gap {
+.publish-gap,
+.publish-clash {
   font-size: 0.8125rem;
   color: var(--ochre-dark);
 }

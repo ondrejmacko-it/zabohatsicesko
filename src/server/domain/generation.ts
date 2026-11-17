@@ -111,3 +111,25 @@ export function planMonth(
   }
   return planned;
 }
+
+/** Akce, která v měsíci už je (ruční i z Pravidelného týdne, nezrušená, s časem). */
+export type Occupant = { startsAt: Date; endsAt: Date; audience: string; type: string; dateKey: string };
+
+/**
+ * Jak doplnění měsíce naloží s termínem Pravidelného týdne, když už v měsíci jsou jiné akce.
+ * „skip“: ve stejný čas už je akce pro stejnou skupinu, nový termín by byl duplicita.
+ * „warn“: návrh vznikne, ale správce ho má zkontrolovat (kryje se s akcí pro všechny,
+ * nebo stejná skupina má ve stejný den akci stejného typu v jiném čase).
+ * Akce jiné skupiny ve stejný čas termín neblokuje: paralelní školení jsou běžná.
+ */
+export function slotConflict(
+  slot: { start: Date; end: Date; audience: string; type: string; dateKey: string },
+  occupants: ReadonlyArray<Occupant>,
+): "skip" | "warn" | null {
+  const overlaps = (o: Occupant) => o.startsAt < slot.end && o.endsAt > slot.start;
+  if (occupants.some((o) => overlaps(o) && o.audience === slot.audience)) return "skip";
+  const shared = (o: Occupant) => o.audience === "vsichni" || slot.audience === "vsichni";
+  if (occupants.some((o) => overlaps(o) && shared(o))) return "warn";
+  if (occupants.some((o) => o.dateKey === slot.dateKey && o.audience === slot.audience && o.type === slot.type)) return "warn";
+  return null;
+}

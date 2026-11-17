@@ -11,7 +11,8 @@ import { CalendarAlert } from "@/features/vzdelavani/components/CalendarStatusLi
 import { EventDialog } from "@/features/vzdelavani/components/EventDialog";
 import { PersonalCalendarStatus } from "@/features/vzdelavani/components/PersonalCalendarStatus";
 import { EventPeek } from "@/features/vzdelavani/components/EventPeek";
-import { PrepareMonthDialog, type InviteMode } from "@/features/vzdelavani/components/PrepareMonthDialog";
+import { PrepareMonthDialog } from "@/features/vzdelavani/components/PrepareMonthDialog";
+import { inviteModeOf } from "@/lib/invite-mode";
 import { PlanFilters, type StateChip } from "@/features/vzdelavani/components/PlanFilters";
 import { Agenda, NextEventsList, ScheduleGrid } from "@/features/vzdelavani/components/Schedule";
 import { TasksCard } from "@/features/vzdelavani/components/TasksCard";
@@ -71,8 +72,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   ]);
   const activeSlots = template.filter((s) => s.active);
   const slotTimes = Object.fromEntries(activeSlots.map((s) => [s.isoWeekday, `${s.startTime}–${s.endTime}`]));
-  const inviteMode: InviteMode =
-    calendar?.mode !== "google" ? "simulation" : !calendar.connection ? "disconnected" : calendar.attendeeSource;
+  const inviteMode = calendar ? inviteModeOf(calendar) : "simulation";
 
   const types = EVENT_TYPES.filter((t) => monthCards.some((c) => c.type === t && monthOf(toDateKey(new Date(c.startsAt))) === monthKey));
   const type = types.find((t) => t === params.typ);

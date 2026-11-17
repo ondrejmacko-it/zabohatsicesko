@@ -78,6 +78,7 @@ Vzor je v `.env.example`. Hodnoty tajemství patří do správce tajemství host
 | `CALENDAR_MODE` | ne | `google-test` zapne testovací režim Google Kalendáře. Jinak simulace. |
 | `CALENDAR_ATTENDEES` | ne | `audience` zve v režimu Googlu skutečné publikum akce (aktivní účty skupiny). Jinak jen `GOOGLE_ALLOWED_ATTENDEES`, která je pak povinná. |
 | `CALENDAR_DELIVERY` | ne | Prázdné nebo `organizer` = pozvánky z kalendáře dedikovaného organizátora s frontou a odpověďmi (RSVP), viz [docs/kalendar-organizator.md](docs/kalendar-organizator.md). `personal` = dočasný starý režim osobních kalendářů. Režimy se vylučují. |
+| `GOOGLE_ORGANIZER_EMAIL` | v režimu organizátora | Účet Google organizátora. Kalendář smí propojit jen on (porovnává se ověřený e-mail z ID tokenu Googlu), přihlášení správce se na Kalendář neptá. Bez ní se pozvánky neposílají a Integrace ukáže problém. |
 | `CALENDAR_WORKER_TOKEN` | pro plánovač | Tajný token, který GitHub Actions posílá endpointu fronty Kalendáře (`Authorization: Bearer`). Min. 32 znaků. |
 | `CRON_SECRET` | pro denní cron | Tajemství, které Vercel posílá svému cronu na stejný endpoint. Min. 32 znaků, doporučeně jiné než `CALENDAR_WORKER_TOKEN`. |
 | `GOOGLE_OAUTH_PUBLISHED` | ne | `1`, když je souhlasová obrazovka Googlu zveřejněná. Vypne upozornění na vypršení propojení po 7 dnech (režim Testing). |

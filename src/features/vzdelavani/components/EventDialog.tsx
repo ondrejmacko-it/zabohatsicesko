@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 import { ActionMessage } from "@/components/ActionForm";
+import { flash } from "@/components/FlashMessage";
 import { Icon } from "@/components/Icon";
 import { Modal } from "@/components/Modal";
 import { EXTRAORDINARY_TYPES, GROUP_HINTS, GROUP_LABELS, TYPE_LABELS } from "@/lib/labels";
@@ -110,6 +111,7 @@ function EventForm({ mode, id, revision, initial, published, people, topics, inv
   const [state, action, pending] = useActionState(async (prev: ActionResult | null, formData: FormData) => {
     const result = await saveEventAction(prev, formData);
     if (result.ok) {
+      flash(result.message);
       onClose();
       if (mode === "create" && result.id) router.push(`/vzdelavani/akce/${encodeURIComponent(result.id)}`);
     }
