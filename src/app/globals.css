@@ -1470,8 +1470,7 @@ details > summary {
   max-width: 68ch;
 }
 
-.card-list,
-.plain-list {
+.card-list {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -1479,40 +1478,8 @@ details > summary {
   gap: 10px;
 }
 
-.plain-list {
-  margin-top: 14px;
-  gap: 6px;
-}
-
-/* Řádky dalších termínů: celý řádek je odkaz, bez podtržení, ať se dobře trefuje prstem. */
-.plain-list a {
-  display: block;
-  padding: 9px 12px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--band);
-  text-decoration: none;
-}
-
-.plain-list a:hover {
-  border-color: var(--line-strong);
-}
-
 .section > .spread:first-child {
   margin-bottom: 14px;
-}
-
-.task-card {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 14px 16px;
-  border: 1px solid var(--line-strong);
-  border-left: 4px solid var(--ochre);
-  border-radius: 10px;
-  background: var(--surface);
 }
 
 .empty-state {
@@ -1610,42 +1577,6 @@ details > summary {
 
 .mode-strip {
   margin-bottom: 12px;
-}
-
-/* Průvodce měsícem pro správce: tři kroky vedle sebe, na telefonu pod sebou. */
-.month-guide {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  margin: 12px 0 0;
-  padding: 0;
-  list-style: none;
-  counter-reset: krok;
-}
-.month-guide > li {
-  counter-increment: krok;
-  padding: 8px 12px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  font-size: 13px;
-}
-.month-guide > li.todo {
-  border-color: var(--ochre);
-}
-.month-guide-title {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  font-weight: 600;
-}
-.month-guide-title::before {
-  content: counter(krok) ".";
-}
-@media (max-width: 720px) {
-  .month-guide {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 
 .status-advice {
@@ -1898,10 +1829,6 @@ a.brief-link:hover {
 
 .topic-badge {
   margin-left: 8px;
-}
-
-.topic-reason {
-  display: block;
 }
 
 .archived-block {
