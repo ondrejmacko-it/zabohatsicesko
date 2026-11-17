@@ -26,6 +26,7 @@ import { PUBLISHED_RM, admin, organizer, resetDemo } from "./helpers";
 
 const WORKER_TOKEN = "t".repeat(40);
 const ENV = {
+  GOOGLE_ORGANIZER_EMAIL: "organizator.test@example.com",
   CALENDAR_MODE: "google-test",
   CALENDAR_DELIVERY: "organizer",
   CALENDAR_ATTENDEES: "audience",

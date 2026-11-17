@@ -101,15 +101,20 @@ Pořadí je důležité. Kroky 1–3 jsou příprava, kroky 4–6 zapnou plánov
 
 1. V proměnných Vercelu nech `GOOGLE_CALENDAR_ID=primary` (hlavní kalendář připojeného účtu). Pokud tam je
    jiná hodnota, nastav `primary` a totéž přidej do `GOOGLE_ALLOWED_CALENDAR_IDS`.
-2. Přihlas se do Wiki jako správce.
-3. Otevři **Vzdělávání → Integrace**.
-4. Pokud je připojený jiný účet, klikni **Odpojit Kalendář…** a v okně potvrď **Odpojit**.
-5. Klikni **Připojit Google Kalendář**. V okně Googlu vyber **Použít jiný účet** a přihlas se účtem organizátora.
-6. Zaškrtni oprávnění ke Kalendáři a klikni **Pokračovat**.
-7. Ve **Správě**, sekce **Kalendář**, zkontroluj, že je jako propojený účet uvedený organizátor.
+2. Ve Vercelu (**Settings → Environment Variables → Add Environment Variable**) přidej **Key**
+   `GOOGLE_ORGANIZER_EMAIL`, **Value** adresu účtu organizátora, **Environments** Production i Preview, **Save**.
+   Bez ní režim organizátora pozvánky neposílá (fronta stojí a Integrace ukáže chybějící proměnnou).
+3. Přihlas se do Wiki jako správce.
+4. Otevři **Vzdělávání → Integrace**.
+5. Pokud je připojený jiný účet, klikni **Odpojit Kalendář…** a v okně potvrď **Odpojit**.
+6. Klikni **Připojit Google Kalendář**. Google rovnou nabídne účet organizátora; když ho v prohlížeči nemáš
+   přihlášený, přihlas se jím.
+7. Zaškrtni oprávnění ke Kalendáři a klikni **Pokračovat**.
+8. Ve **Správě**, sekce **Kalendář**, zkontroluj, že je jako propojený účet uvedený organizátor.
 
-Pozor: když propojení chybí a správce se přihlásí Googlem, Wiki nabídne propojení jeho vlastního účtu.
-V tu chvíli souhlas zruš a připoj organizátora podle bodů 3–6.
+Pojistka: Wiki po návratu z Googlu porovná ověřený e-mail z ID tokenu s `GOOGLE_ORGANIZER_EMAIL`. Jiný účet
+(např. tvůj osobní) se neuloží, jeho oprávnění se u Googlu zneplatní a Integrace ukáže „Kalendář smí propojit
+jen účet organizátora“. Přihlášení správce do Wiki se v režimu organizátora na Kalendář neptá.
 
 ### 4. Vygenerovat dva tokeny
 
