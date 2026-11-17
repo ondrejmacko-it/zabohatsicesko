@@ -11,9 +11,8 @@ Uživatel opravy schválil, pokračovat bez ptaní až do ověřeného PR. Merge
   URL Googlu (login_hint), klient `location.assign`; GET e-mail z URL nečte; form `method="post"` (bez hydratace nic
   neuteče do URL). Testy `tests/prvni-prihlaseni.test.ts` (10) + e2e „ručně zadaný e-mail není v žádné URL Wiki“.
   (6) ukázkový přepis označen u návrhu zápisu, „Pracovní přepis (ukázka)“, `unsupported_fixture` texty (labels, journey, MinutesPeek).
-* Ověřeno: lint OK, typecheck OK, unit 307/307. Build + CELÉ e2e spuštěno na konci relace, výsledek NEZAPSÁN (pusť znovu).
-**Další krok (v tomto pořadí):** (a) `npm run build` + celé `npm run e2e`, opravit selhání (nové e2e v `e2e/ostra-wiki.spec.ts`);
-(b) screenshoty 320/390/768/1280/1600/1920 (Playwright, `node e2e/server.mjs`, ostrá instance port 3311 `/vstup?spravce=1`;
+* Ověřeno na 2b57702: lint OK, typecheck OK, unit 307/307, build OK, CELÉ e2e 932 passed / 42 skipped / 0 failed (4,9 min).
+**Další krok (v tomto pořadí):** (b) screenshoty 320/390/768/1280/1600/1920 (Playwright, `node e2e/server.mjs`, ostrá instance port 3311 `/vstup?spravce=1`;
 ukázka 3310): Témata, zrušená akce detail+okno, technický detail Kalendáře, Nedokončené zápisy + okno; pořadí tlačítek,
 návrat fokusu, klávesnice, chyba; opravit jen nalezené. (c) bod 5: read-only inventura 6 akcí z `docs/cisteni-testovacich-dat.md`
 v Neon produkce (jen SELECT, bez tokenů) + proměnné CALENDAR_* přes Vercel bez dešifrování → tabulka do doc. NIC neměnit.
