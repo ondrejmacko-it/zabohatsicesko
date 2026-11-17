@@ -16,7 +16,19 @@ kroky pro mě piš úplně, pod sebe, s přesnými kliky (Windows, PowerShell).
   `GOOGLE_OAUTH_PUBLISHED=1` (nastaveno 15. 11., platí od dalšího nasazení Production).
 * Úkoly z auditu jsou v `docs/audit-ukoly.md`. Audit ZIP stačí přiložit, jen když je potřeba `textove-upravy.csv`.
 
-**Stav 17. 11. odpoledne, #60 ověřené, C3 rozpracované (poslední):** #56–#59 sloučené v `main`.
+**Stav 17. 11. večer, C3 jako draft #61, PR D rozpracovaný (poslední):** #56–#59 v `main`, #60 čeká na merge (CI zelené).
+* **C3 = draft [#61](https://github.com/ondrejmacko-it/zabohatsicesko/pull/61)** (`claude/ux-temata-sprava`, stojí na #60). Úplné e2e
+  899 passed / 36 skipped (záměrně jen jeden projekt) / 0 failed, unit 265/265, lint, tsc, build. Po sloučení #60 sloučit
+  `origin/main` do C3 (bez force).
+* **PR D = draft [#62](https://github.com/ondrejmacko-it/zabohatsicesko/pull/62)** (`claude/ux-zaverecny-audit`, stojí na #61; e2e 899/36 skip/0 fail, unit 265, build): úplný audit 328 screenshotů (8 šířek × 5 rolí) bez vodorovného
+  posunu. Opraveno: nepoužité styly pryč; navigace na ≤380 px „Správa“ (zbytek názvu jen pro čtečku); rada „nemá pozvánku v
+  Kalendáři“ jen u neproběhlé akce a bez odkazu „níže“; Integrace bez technických pojmů; 404 ve stejném rámci jako `/vstup`
+  (`src/components/GateShell.tsx`); na tabletu skrytý podtitulek značky.
+* **Hotovo, závěrečné shrnutí odeslané.** Další krok: po sloučení #60 → #61 → #62 vždy sloučit `origin/main` do další
+  větve (bez force), sledovat CI. Nic dalšího bez pokynu uživatele.
+* CI na `main` nemá běhy (workflow běží jen na PR), dřívější „červené main“ proto ověřit nejde; příčina byla opravená v #60.
+
+**Stav 17. 11. odpoledne, #60 ověřené, C3 rozpracované (předchozí):** #56–#59 sloučené v `main`.
 * **#60 (PR C2b, `claude/ux-formular-akce`)**: hotové. Úplné e2e na ba4682e 891 passed / 33 skipped (záměrně jen na jednom
   projektu) / 0 failed, unit 263/263, lint, build. Opraven test `tests/kalendar-migrace.test.ts` (chyběl
   `GOOGLE_ORGANIZER_EMAIL` po #57; chování beze změny). Popis PR aktualizovaný, položka e2e zaškrtnutá.

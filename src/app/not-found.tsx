@@ -1,17 +1,15 @@
 import Link from "next/link";
+import { GateShell } from "@/components/GateShell";
 
 export default function NotFound() {
   return (
-    <main className="gate">
-      <div className="panel stack">
-        <h1>Stránka nenalezena</h1>
-        <p>Stránka neexistuje nebo k ní nemáte přístup.</p>
-        <p>
-          <Link className="btn" href="/">
-            Na úvod
-          </Link>
-        </p>
-      </div>
-    </main>
+    <GateShell title="Stránka nenalezena">
+      <p className="gate-lead">Stránka neexistuje nebo k ní nemáte přístup.</p>
+      <p>
+        <Link className="btn" href="/">
+          Na úvod
+        </Link>
+      </p>
+    </GateShell>
   );
 }

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Icon, type IconName } from "./Icon";
 
-type Item = { label: string; icon: IconName; href?: string; match?: (path: string) => boolean; badgeKey?: "education" | "admin" };
+type Item = { label: string; /** Část názvu, kterou úzký telefon skryje jen vizuálně, čtečka ji přečte. */ labelTail?: string; icon: IconName; href?: string; match?: (path: string) => boolean; badgeKey?: "education" | "admin" };
 
 // Ostatní sekce Wiki jsou v ukázce jen kulisy shellu, bez interního obsahu.
 const ITEMS: Item[] = [
@@ -14,7 +14,7 @@ const ITEMS: Item[] = [
   { label: "Vzdělávání", icon: "education", href: "/vzdelavani", match: (p) => p.startsWith("/vzdelavani"), badgeKey: "education" },
 ];
 
-const ADMIN: Item = { label: "Správa systému", icon: "settings", href: "/sprava", match: (p) => p.startsWith("/sprava"), badgeKey: "admin" };
+const ADMIN: Item = { label: "Správa", labelTail: " systému", icon: "settings", href: "/sprava", match: (p) => p.startsWith("/sprava"), badgeKey: "admin" };
 
 /** `live`: ostrá Wiki. Neaktivní kulisy ukázky (další sekce, dokumenty, hledání) se v ní nezobrazují. */
 type Props = { badge: number; canManageUsers: boolean; pendingRequests: number; live: boolean };
@@ -34,7 +34,10 @@ export function Sidebar({ badge, canManageUsers, pendingRequests, live }: Props)
             const content = (
               <>
                 <Icon name={item.icon} />
-                {item.label}
+                <span>
+                  {item.label}
+                  {item.labelTail && <span className="nav-label-tail">{item.labelTail}</span>}
+                </span>
                 {count > 0 && (
                   <span className="nav-badge" aria-label={`${count} čeká na vás`}>
                     {count}

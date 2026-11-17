@@ -120,6 +120,18 @@ textarea {
 
 /* ——— Shell ——— */
 
+/* Na nejužších telefonech se „Správa systému“ zkrátí na „Správa“, ať se vejde vedle ostatních položek. */
+@media (max-width: 380px) {
+  .nav-label-tail {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
+
 .topbar {
   display: flex;
   align-items: center;
@@ -1567,8 +1579,19 @@ details > summary {
 }
 
 /* Mobil: kratší záhlaví. Technické podrobnosti ukázky jsou na stránce Integrace. */
-@media (max-width: 720px) {
+/* Tablet a malý notebook: bez podtitulku značky se výběr role i Odhlásit vejdou do jednoho řádku. */
+@media (max-width: 1279px) {
   .brand-tagline,
+  .persona-btn-detail {
+    display: none;
+  }
+
+  .brand-name {
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 720px) {
   .demo-badge-detail,
   .status-strip:not(.mode-strip) {
     display: none;

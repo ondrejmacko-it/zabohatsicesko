@@ -78,7 +78,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                 <td>
                   {googleTest
                     ? `Zápis do Kalendáře přes propojený účet Google. ${attendeeSource() === "audience" ? "Pozvánky jdou skupině, pro kterou je akce určená." : "Pozvánky jdou jen testovacím příjemcům."} Aktuální stav propojení je níže.`
-                    : "Identita pozvánky, hosté a RSVP, oznámení, opakování bez duplicit, pořadí revizí a chyby. Ověřeno proti simulaci, ne proti skutečnému Google účtu."}
+                    : "Pozvánky, hosté a jejich odpovědi, upozornění, opakované odeslání bez zdvojení a chybové stavy. Vyzkoušeno na simulaci, ne na skutečném účtu Google."}
                 </td>
               </tr>
               <tr>
@@ -86,9 +86,9 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                 <td>{loginMode() === "google-test" ? "Fiktivní role + účet Google · neověřeno proti Googlu" : "Fiktivní role"}</td>
                 <td>
                   {loginMode() !== "google-test"
-                    ? "Vstup přístupovým kódem a výběrem fiktivní role. Oprávnění ověřuje server podle role v databázi."
+                    ? "Vstup přístupovým kódem a výběrem fiktivní role. Co kdo smí, kontroluje Wiki podle uložené role, ne podle toho, co je vidět na obrazovce."
                     : googleLoginConfig()
-                      ? "Ověření ID tokenu (podpis, vydavatel, příjemce, platnost, ověřený e-mail) a vazba na stabilní identifikátor účtu Google."
+                      ? "Wiki ověří, že přihlášení opravdu potvrdil Google a že e-mail je ověřený. Účet se pak pozná i po změně jména."
                       : `Přihlášení účtem Google je vypnuté, konfigurace není úplná: ${googleLoginConfigProblems().join(", ")}.`}
                 </td>
               </tr>
@@ -100,7 +100,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
               <tr>
                 <td>Úložiště nahrávek</td>
                 <td>Soukromé v databázi</td>
-                <td>Soubor je dostupný jen přes autorizovanou serverovou cestu, nikdy přes veřejný odkaz.</td>
+                <td>Nahrávku si stáhne jen přihlášený kolega s oprávněním. Veřejný odkaz neexistuje.</td>
               </tr>
             </tbody>
           </table>
