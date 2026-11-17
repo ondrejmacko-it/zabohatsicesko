@@ -1573,9 +1573,12 @@ details > summary {
   flex-wrap: wrap;
 }
 .archived-topics {
-  list-style: none;
-  padding: 0;
   margin-top: 8px;
+}
+
+.topic-card.topic-archived {
+  background: var(--surface-muted, transparent);
+  border-style: dashed;
 }
 
 /* Mobil: kratší záhlaví. Technické podrobnosti ukázky jsou na stránce Integrace. */

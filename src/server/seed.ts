@@ -1,4 +1,5 @@
 import { calendarMode, isLiveWiki } from "@/server/config";
+import { createHash } from "node:crypto";
 import { ne, sql } from "drizzle-orm";
 import seed from "../../demo/seed.json";
 import { isoWeekday, toDateKey } from "@/lib/time";
@@ -13,6 +14,10 @@ import {
   topicInterests,
   topics,
   integrationCredentials,
+  minutes,
+  recordingBlobs,
+  recordings,
+  transcriptionJobs,
   userIdentities,
   users,
 } from "@/server/db/schema";
@@ -140,6 +145,72 @@ export async function seedDatabase(tx: Executor): Promise<void> {
         attempts: 0,
       });
     }
+  }
+
+  await insertPublishedMinutes(tx, orgId);
+}
+
+/** Krátké ticho ve formátu WAV (8 kHz, 8 bit, mono): ukázkový zápis má nahrávku, kterou jde stáhnout. */
+function silentWav(seconds: number): Buffer {
+  const rate = 8000;
+  const samples = rate * seconds;
+  const wav = Buffer.alloc(44 + samples, 0x80);
+  wav.write("RIFF", 0);
+  wav.writeUInt32LE(36 + samples, 4);
+  wav.write("WAVEfmt ", 8);
+  wav.writeUInt32LE(16, 16);
+  wav.writeUInt16LE(1, 20);
+  wav.writeUInt16LE(1, 22);
+  wav.writeUInt32LE(rate, 24);
+  wav.writeUInt32LE(rate, 28);
+  wav.writeUInt16LE(1, 32);
+  wav.writeUInt16LE(8, 34);
+  wav.write("data", 36);
+  wav.writeUInt32LE(samples, 40);
+  return wav;
+}
+
+/**
+ * Zveřejněné zápisy ukázky: hotový průchod nahrávka → přepis → zápis, aby čtenář hned viděl, jak zápis
+ * vypadá. Zápis k ukázkové nahrávce (`recordingFixture`) se dál vytváří až nahráním.
+ */
+async function insertPublishedMinutes(tx: Executor, orgId: string): Promise<void> {
+  for (const m of seed.publishedMinutes) {
+    const data = silentWav(1);
+    const id = `demo-${m.eventId}`;
+    const publishedAt = new Date(m.publishedAt);
+    await tx.insert(recordingBlobs).values({ storageKey: id, data });
+    await tx.insert(recordings).values({
+      id,
+      orgId,
+      eventId: m.eventId,
+      storageKey: id,
+      originalName: "ukazkovy-zaznam.wav",
+      mimeType: "audio/wav",
+      sizeBytes: data.length,
+      sha256: createHash("sha256").update(data).digest("hex"),
+      durationSec: 1,
+      uploadedBy: m.uploadedBy,
+      createdAt: publishedAt,
+    });
+    await tx.insert(transcriptionJobs).values({ id, orgId, eventId: m.eventId, recordingId: id, status: "done", attempts: 1, createdAt: publishedAt, updatedAt: publishedAt });
+    await tx.insert(minutes).values({
+      id,
+      orgId,
+      eventId: m.eventId,
+      recordingId: id,
+      jobId: id,
+      transcript: m.transcript,
+      content: m.content,
+      detectedTemplate: "course",
+      templateMismatch: false,
+      status: "published",
+      version: 1,
+      updatedBy: m.uploadedBy,
+      publishedBy: m.uploadedBy,
+      publishedAt,
+      createdAt: publishedAt,
+    });
   }
 }
 

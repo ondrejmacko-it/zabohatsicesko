@@ -98,11 +98,11 @@ describe("zpracování nahrávky", () => {
     await writeSwitch(db, "transcription.outage", true);
     const jobId = await uploadRecording(lead, PAST_FP, asFile(fixtureWav(), "trenink.wav"));
     await processTranscriptionJob(jobId);
-    expect((await db.select().from(transcriptionJobs))[0]).toMatchObject({ status: "failed", errorCode: "transcription_unavailable" });
+    expect((await db.select().from(transcriptionJobs).where(eq(transcriptionJobs.eventId, PAST_FP)))[0]).toMatchObject({ status: "failed", errorCode: "transcription_unavailable" });
 
     await writeSwitch(db, "transcription.outage", false);
     await processTranscriptionJob(await retryTranscription(lead, PAST_FP));
-    expect(await db.select().from(minutes)).toHaveLength(1);
+    expect(await db.select().from(minutes).where(eq(minutes.eventId, PAST_FP))).toHaveLength(1);
   });
 
   test("nahrazení audia: starší úloha nepřepíše novější výsledek a starý soubor zmizí", async () => {
@@ -110,13 +110,15 @@ describe("zpracování nahrávky", () => {
     const oldJob = await uploadRecording(lead, PAST_FP, asFile(fixtureWav(), "prvni.wav"));
     const newJob = await uploadRecording(lead, PAST_FP, asFile(fixtureWav(), "druha.wav"));
     await processTranscriptionJob(oldJob);
-    expect(await db.select().from(minutes)).toHaveLength(0);
+    expect(await db.select().from(minutes).where(eq(minutes.eventId, PAST_FP))).toHaveLength(0);
     await processTranscriptionJob(newJob);
-    const rows = await db.select().from(minutes);
+    const rows = await db.select().from(minutes).where(eq(minutes.eventId, PAST_FP));
     expect(rows).toHaveLength(1);
     expect(rows[0]!.jobId).toBe(newJob);
-    expect(await db.select().from(recordingBlobs)).toHaveLength(1);
-    expect((await db.select().from(recordings)).filter((r) => r.supersededAt === null)).toHaveLength(1);
+    // Seed má vlastní ukázkovou nahrávku (`demo-…`), počítají se jen soubory této akce.
+    const current = (await db.select().from(recordings).where(eq(recordings.eventId, PAST_FP))).filter((r) => r.supersededAt === null);
+    expect(current).toHaveLength(1);
+    expect((await db.select().from(recordingBlobs)).filter((b) => !b.storageKey.startsWith("demo-"))).toHaveLength(1);
   });
 
   test("nahrávku nelze přidat k akci, která ještě neproběhla", async () => {
@@ -125,7 +127,7 @@ describe("zpracování nahrávky", () => {
 
   test("souběžná úprava zápisu se starší verzí neprojde a výstup se validuje", async () => {
     await processTranscriptionJob(await uploadRecording(lead, PAST_FP, asFile(fixtureWav(), "a.wav")));
-    const [row] = await (await getDb()).select().from(minutes);
+    const [row] = await (await getDb()).select().from(minutes).where(eq(minutes.eventId, PAST_FP));
     const content = { summary: "Opraveno", keyPoints: ["Bod"], decisions: [], nextSteps: [] };
     await updateMinutes(lead, PAST_FP, row!.id, 1, content);
     await expect(updateMinutes(lead, PAST_FP, row!.id, 1, content)).rejects.toMatchObject({ code: "conflict" });

@@ -173,11 +173,13 @@ test.describe("okna správce", () => {
     await checkDialog(page, "Zrušit akci");
   });
 
-  test("Zápisy k dokončení", async ({ page }) => {
+  test("Nedokončené zápisy s odpovědnou osobou", async ({ page }) => {
     await page.goto("/vzdelavani/zapisy");
     await settle(page);
-    await page.getByRole("link", { name: /Zápisy k dokončení/ }).click();
-    await expect(dialog(page, "Zápisy k dokončení")).toBeVisible();
+    await page.getByRole("link", { name: /Nedokončené zápisy/ }).click();
+    const picker = dialog(page, "Nedokončené zápisy");
+    await expect(picker).toBeVisible();
+    await expect(picker.getByText(/Odpovědný: /).first()).toBeVisible();
     await expectNoHorizontalScroll(page);
     await page.keyboard.press("Escape");
     await expect(page).toHaveURL(/\/vzdelavani\/zapisy$/);

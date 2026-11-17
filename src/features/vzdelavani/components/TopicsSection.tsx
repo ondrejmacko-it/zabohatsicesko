@@ -29,7 +29,7 @@ export async function TopicsSection({ user }: { user: Viewer }) {
         <ProposeTopicDialog groups={groups} />
       </div>
       <p className="lead-text">
-        Navrhněte téma nebo dejte najevo zájem. Doporučená témata mají zájemce a dlouho neproběhla.{!organizer && " O zařazení do plánu rozhoduje správce."}
+        Navrhněte téma nebo podpořte návrh kolegů.{!organizer && " O zařazení do plánu rozhoduje správce."}
       </p>
       {topics.length === 0 ? (
         <div className="empty-state">
@@ -80,13 +80,16 @@ export async function TopicsSection({ user }: { user: Viewer }) {
         <details className="archived-block">
           <summary>Archivovaná témata ({archived.length})</summary>
           <p className="small muted">Nenabízí se v doporučení ani v dialogu akce. Minulé akce na ně dál odkazují.</p>
-          <ul className="stack archived-topics">
+          <ul className="topic-list archived-topics">
             {archived.map((t) => (
-              <li key={t.id} className="spread">
-                <span>
-                  {t.name} <span className="small muted">· {label(t.audience)}</span>
-                </span>
-                <RestoreTopicButton topicId={t.id} />
+              <li key={t.id} className="topic-card topic-archived">
+                <div className="topic-main">
+                  <p className="item-title">{t.name}</p>
+                  <p className="item-meta">{label(t.audience)} · archivované</p>
+                </div>
+                <div className="topic-actions">
+                  <RestoreTopicButton topicId={t.id} />
+                </div>
               </li>
             ))}
           </ul>

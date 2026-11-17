@@ -51,10 +51,13 @@ export async function MinutesPeek({ user, eventId, closeHref }: { user: Viewer; 
   );
 }
 
-/** Okno „Zápisy k dokončení“: proběhlé akce, kterým zápis chybí. Výběr akce otevře její zápis ve stejném okně. */
-export function AddMinutesPicker({ items, hrefFor, closeHref }: { items: MissingMinutesItem[]; hrefFor: (eventId: string) => string; closeHref: string }) {
+/**
+ * Okno „Nedokončené zápisy“ (správce, všechny) nebo „Moje zápisy k dokončení“ (vedoucí): proběhlé akce,
+ * kterým zápis chybí. U každé je odpovědná osoba. Výběr akce otevře její zápis ve stejném okně.
+ */
+export function AddMinutesPicker({ title, items, hrefFor, closeHref }: { title: string; items: MissingMinutesItem[]; hrefFor: (eventId: string) => string; closeHref: string }) {
   return (
-    <RouteModal title="Zápisy k dokončení" closeHref={closeHref}>
+    <RouteModal title={title} closeHref={closeHref}>
       {items.length === 0 ? (
         <div className="empty-state">
           <p className="item-title">Všechny proběhlé akce už zápis mají.</p>
@@ -70,8 +73,7 @@ export function AddMinutesPicker({ items, hrefFor, closeHref }: { items: Missing
                   <span className="brief-main">
                     <span className="item-title">{item.title}</span>
                     <span className="item-meta">
-                      {formatDate(toDateKey(new Date(item.startsAt)))} · {STATE_TEXT[item.state]}
-                      {!item.canHandle && ` · zápis připravuje ${item.leadName ?? "vedoucí akce"}`}
+                      {formatDate(toDateKey(new Date(item.startsAt)))} · {STATE_TEXT[item.state]} · Odpovědný: {item.leadName ?? "vedoucí akce"}
                     </span>
                   </span>
                   <span className={item.canHandle ? "btn btn-small btn-primary" : "btn btn-small"} aria-hidden="true">

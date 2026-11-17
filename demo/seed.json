@@ -351,5 +351,28 @@
     "eventId": "tr-fp-1111",
     "file": "testovaci_skoleni_en.wav",
     "expectedTranscript": "PREPIS_FIXTURE.md"
-  }
+  },
+  "publishedMinutes": [
+    {
+      "eventId": "ev-11-6",
+      "uploadedBy": "demo-vedouci",
+      "publishedAt": "2026-11-07T09:00:00+01:00",
+      "transcript": "Fiktivní přepis ukázkového vzdělávání RM. Vedoucí prošel strukturu prvního rozhovoru s klientem: představení, otázky na cíle, shrnutí a domluva dalšího kroku. Tým se shodl na jednotném seznamu úvodních otázek.",
+      "content": {
+        "summary": "První rozhovor s klientem: struktura schůzky, úvodní otázky a domluva dalšího kroku.",
+        "keyPoints": [
+          "Schůzka má čtyři části: představení, cíle klienta, shrnutí a další krok.",
+          "Otázky na cíle klademe dřív než nabídku služeb.",
+          "Na konci shrnout, co klient řekl, jeho slovy."
+        ],
+        "decisions": [
+          "Tým používá jednotný seznam úvodních otázek."
+        ],
+        "nextSteps": [
+          "Vedoucí rozešle seznam otázek do pátku.",
+          "Každý si ho vyzkouší na příští schůzce."
+        ]
+      }
+    }
+  ]
 }
