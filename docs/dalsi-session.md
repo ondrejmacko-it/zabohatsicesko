@@ -27,12 +27,15 @@ session_01HpUiru5P4yB2SxRCiVSjHt. Uživatel dal plné právo pokračovat bez pta
   Úplné e2e na e0f2c65: 913 passed / 42 skipped / 5 failed (jen U08). Na #63 a #64 samotných tyto testy dál padají (oprava jen v #65,
   do jejich větví se nepushuje bez svolení). Úplné e2e na 44df29e: **918 passed / 42 skipped (záměrně jen jeden projekt) / 0 failed**.
 
+* **Screenshoty (18. 11.)**: úplný audit 5 rolí × 8 šířek (320–1920) na e46ce35 bez vodorovného posunu, montáže prohlédnuté.
+  Opraveno (99a6c76): Zápisy na telefonu od 360 px mají „Hledat“ vedle pole (`.filter-grow` 180 px). Cílené e2e zapisy+stranky
+  531 passed / 3 skipped / 0 failed, lint, tsc, unit 270/270. Popis #64 doplněn o úplné e2e a U08 (cherry-pick 44df29e do #63,
+  nebo sloučit #63–#65 dohromady). Závěrečný report uživateli odeslán.
+
 **Další kroky:**
-1. Screenshoty 320–1920 všech rolí (`node e2e/server.mjs` zvlášť, pak `node scripts/audit-screenshoty.mjs . <scratchpad>`,
-   prohlédnout zmenšené montáže), případné drobné opravy, pak závěrečný report uživateli (passed/failed/skipped, simulace vs.
-   živý test, otevřené body; dlouhé nahrávky jen jako otevřený bod `docs/nahravky-moznosti.md`).
-2. Otevřené: výklad „3 nadbytečné věty na /vstup“ je můj (viz výše) – uvést v reportu, ať ho uživatel potvrdí; U08 na #63/#64
-   (navrhnout cherry-pick 44df29e, nebo sloučit až s #65).
+1. Nic dalšího bez pokynu uživatele. Čeká se na jeho kontrolu #63–#65 a odpovědi na otevřené body.
+2. Otevřené: výklad „3 nadbytečné věty na /vstup“ (potvrdit); U08 na #63/#64 (cherry-pick 44df29e?); dlouhé nahrávky jen jako
+   otevřený bod `docs/nahravky-moznosti.md`. Pozn.: e2e server je produkční build, po změně CSS ho restartovat (zabít i `next-server`).
 
 Kontext limit: na začátku čti jen tento blok, README a měněné soubory.
 
