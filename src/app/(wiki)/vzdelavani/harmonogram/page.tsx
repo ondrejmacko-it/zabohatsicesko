@@ -11,7 +11,7 @@ import { CalendarAlert } from "@/features/vzdelavani/components/CalendarStatusLi
 import { EventDialog } from "@/features/vzdelavani/components/EventDialog";
 import { PersonalCalendarStatus } from "@/features/vzdelavani/components/PersonalCalendarStatus";
 import { EventPeek } from "@/features/vzdelavani/components/EventPeek";
-import { PrepareMonthDialog, type InviteMode, type PairingItem } from "@/features/vzdelavani/components/PrepareMonthDialog";
+import { PrepareMonthDialog, type InviteMode } from "@/features/vzdelavani/components/PrepareMonthDialog";
 import { PlanFilters, type StateChip } from "@/features/vzdelavani/components/PlanFilters";
 import { Agenda, NextEventsList, ScheduleGrid } from "@/features/vzdelavani/components/Schedule";
 import { TasksCard } from "@/features/vzdelavani/components/TasksCard";
@@ -80,15 +80,6 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   const cards = filterCards(monthCards, monthKey, { type, state });
   const filtering = Boolean(type || state);
   const syncing = monthCards.some((c) => c.syncStatus === "pending");
-  // Stav párování nadcházejících zveřejněných akcí měsíce pro okno Připravit měsíc (z už načtených karet,
-  // bez dalšího dotazu). Proběhlé akce se do Kalendáře neposílají, proto v přehledu nejsou.
-  const pairing: PairingItem[] = managing
-    ? monthCards.flatMap((c) =>
-        c.syncStatus && c.type !== "holiday" && new Date(c.endsAt) > now() && monthOf(toDateKey(new Date(c.startsAt))) === monthKey
-          ? [{ id: c.id, label: c.label, startsAt: c.startsAt, syncStatus: c.syncStatus }]
-          : [],
-      )
-    : [];
   // Čekající pozvánky (nový host ve skupině, obnovené propojení) i zveřejněné akce bez vazby se odešlou
   // samy, jakmile správce otevře Plán. Souběh hlídá zámek u každé vazby v `syncPending`.
   if (managing) after(() => syncPublished());
@@ -186,7 +177,6 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
                   todayKey={todayKey}
                   drafts={monthDrafts.drafts}
                   changeDrafts={monthDrafts.changeDrafts}
-                  pairing={pairing}
                   people={people}
                   topics={topics.map((t) => t.name)}
                   recipients={calendar.recipients}
@@ -200,7 +190,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
                 mode="create"
                 initial={{
                   type: "other",
-                  label: "Jiná akce",
+                  label: "",
                   date: newDate,
                   endDate: null,
                   startTime: "09:00",

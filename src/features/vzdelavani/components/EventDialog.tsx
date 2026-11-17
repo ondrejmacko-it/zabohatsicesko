@@ -163,13 +163,16 @@ function EventForm({ mode, id, revision, initial, published, people, topics, inv
     setValues((v) => ({
       ...v,
       type,
-      label: v.label === TYPE_LABELS[v.type] || !v.label ? TYPE_LABELS[type] : v.label,
+      // Výchozí název přebírá typ. U jiné akce žádný výchozí název není, správce ho napíše sám.
+      label: v.label === TYPE_LABELS[v.type] || !v.label ? (type === "other" ? "" : TYPE_LABELS[type]) : v.label,
       audience: mode === "create" ? defaultAudience(type) : v.audience,
     }));
 
+  // U jiné akce a svátku je název hlavní údaj, jinak jen volitelná úprava v dalších nastaveních.
+  const labelInMain = isHoliday || values.type === "other";
   const labelField = (
-    <label className="field">
-      <span className="field-label">Název v plánu</span>
+    <label className={labelInMain ? "field span-2" : "field"}>
+      <span className="field-label">{labelInMain ? "Název" : "Název v plánu"}</span>
       <input className="input" name="label" value={values.label} onChange={(e) => set("label", e.target.value)} required minLength={2} maxLength={80} />
     </label>
   );
@@ -213,14 +216,13 @@ function EventForm({ mode, id, revision, initial, published, people, topics, inv
           {revision !== undefined && <input type="hidden" name="revision" value={revision} />}
           {replace && (
             <p className="notice">
-              Vyberte, co se v tomto termínu bude konat místo pravidelné aktivity. Akce zůstane na stejném místě
-              v rozpisu, takže další doplnění měsíce ze šablony sem nic nepřidá.
-              {published ? " Protože je termín zveřejněný, změna se uloží jako návrh a zveřejníte ji po potvrzení dopadu." : ""}
+              Vyberte, co se v tomto termínu bude konat místo pravidelné aktivity. Doplnění měsíce ze šablony sem pak nic nepřidá.
             </p>
           )}
           <fieldset className="form-main">
             <legend>Základní údaje</legend>
           <div className="form-grid">
+            {labelInMain && labelField}
             <label className="field">
               <span className="field-label">Typ</span>
               <select className="select" name="type" value={values.type} onChange={(e) => changeType(e.target.value as EventFormValues["type"])}>
@@ -231,7 +233,6 @@ function EventForm({ mode, id, revision, initial, published, people, topics, inv
                 ))}
               </select>
             </label>
-            {isHoliday && labelField}
             <label className="field">
               <span className="field-label">Datum</span>
               <input className="input" type="date" name="date" value={values.date} onChange={(e) => set("date", e.target.value)} required />
@@ -345,14 +346,14 @@ function EventForm({ mode, id, revision, initial, published, people, topics, inv
             </label>
           </div>
           {invite && !isHoliday && <InviteeList invite={invite} audience={values.audience} />}
-          {!isHoliday && <p className="field-hint">Návrh můžete uložit bez tématu nebo vedoucího. Při zveřejnění neúplného termínu vás požádáme o potvrzení.</p>}
+          {!isHoliday && <p className="field-hint">Návrh jde uložit i bez tématu a vedoucího. Pozvaní ho neuvidí, dokud ho nezveřejníte.</p>}
           </fieldset>
 
           {!isHoliday && (
             <details className="more-settings" open={moreOpen} onToggle={(e) => setMoreOpen(e.currentTarget.open)}>
-              <summary>Další nastavení: název v plánu a kdo zkontroluje zápis</summary>
+              <summary>{labelInMain ? "Další nastavení: kdo zkontroluje zápis" : "Další nastavení: název v plánu a kdo zkontroluje zápis"}</summary>
               <div className="form-grid">
-                {labelField}
+                {!labelInMain && labelField}
                 <label className="field">
               <span className="field-label">Kdo zkontroluje zápis</span>
               <select className="select" name="reviewerId" value={values.reviewerId} onChange={(e) => set("reviewerId", e.target.value)}>
@@ -377,14 +378,8 @@ function EventForm({ mode, id, revision, initial, published, people, topics, inv
             </label>
           )}
 
-          {published && !significant && (
-            <p className="notice notice-ok">Tato úprava se pozvaných nedotkne. Pozvánka v Kalendáři i hosté zůstanou beze změny.</p>
-          )}
           {published && significant && !confirmed && (
-            <p className="notice">
-              Změna zasáhne pozvané. Po kliknutí na Zveřejnit změnu nejdřív uvidíte, co přesně se změní a komu, a teprve
-              potom ji potvrdíte.
-            </p>
+            <p className="field-hint">Změna se dotkne pozvaných. Před zveřejněním uvidíte, co se změní a komu.</p>
           )}
           {confirmed && (
             <div className="notice" role="status" aria-live="polite">
@@ -452,8 +447,8 @@ function InviteeList({ invite, audience }: { invite: InviteRecipients; audience:
         </strong>
         <span className="field-hint">
           {invite.attendeeSource === "allowlist"
-            ? `Testovací režim: jen povolené adresy. Skupina ${GROUP_LABELS[audience]} má ${group.length} lidí, ti zatím pozvánku nedostanou.`
-            : `Aktivní účty skupiny ${GROUP_LABELS[audience]}. Ručně přidané hosty v Kalendáři Wiki nemění.`}
+            ? `Testovací režim: jen povolené adresy, ne celá skupina (${group.length} lidí).`
+            : `Skupina ${GROUP_LABELS[audience]}.`}
         </span>
       </p>
       {guests.length > 0 && (

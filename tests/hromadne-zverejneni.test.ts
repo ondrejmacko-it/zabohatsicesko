@@ -168,3 +168,15 @@ describe("hromadné zveřejnění návrhů měsíce", () => {
     expect((await listMonth(participant, MONTH)).some((c) => c.id === a!.id)).toBe(false);
   });
 });
+
+describe("doplnění měsíce ze šablony a ruční akce", () => {
+  test("termín obsazený ruční akcí se nedoplní, ostatní ano", async () => {
+    // Úterý 1. 12. 2026 je v šabloně 10:00–12:00. Ruční akce ve stejném čase má přednost.
+    const manualId = await createEvent(organizer, { ...extra, type: "other", label: "Návštěva partnera", date: "2026-12-01", startTime: "10:30", endTime: "11:30" }, "draft");
+    await generateMonth(organizer, MONTH);
+    const { drafts } = await listMonthDrafts(organizer, MONTH);
+    const onDay = (day: string) => drafts.filter((d) => new Date(d.startsAt).toISOString().slice(0, 10) === day);
+    expect(onDay("2026-12-01").map((d) => d.id)).toEqual([manualId]);
+    expect(onDay("2026-12-08").some((d) => d.fromTemplate)).toBe(true);
+  });
+});

@@ -6,15 +6,12 @@ import { Modal } from "@/components/Modal";
 import { submitKeepingValues } from "@/features/shared/keep-values";
 import { GROUP_LABELS } from "@/lib/labels";
 import { addDays, formatDayMonth, formatEventTime, shiftMonth, toDateKey, weekdayShort } from "@/lib/time";
-import { GROUPS, type Group, type SyncStatus } from "@/lib/types";
+import { GROUPS, type Group } from "@/lib/types";
 import type { MonthDraft } from "@/server/services/events";
 import { generateMonthAction, publishMonthAction, type ActionResult } from "../actions";
 
 /** Jak se zveřejnění propíše do Kalendáře. Určuje jen text přehledu dopadu. */
 export type InviteMode = "simulation" | "allowlist" | "audience" | "disconnected";
-
-/** Nadcházející zveřejněná akce měsíce a stav její vazby na pozvánku v Kalendáři. */
-export type PairingItem = { id: string; label: string; startsAt: string; syncStatus: SyncStatus | "unlinked" };
 
 type Props = {
   monthKey: string;
@@ -23,7 +20,6 @@ type Props = {
   drafts: MonthDraft[];
   /** Návrhy změn už zveřejněných akcí. Hromadně se nezveřejňují. */
   changeDrafts: number;
-  pairing: PairingItem[];
   people: Array<{ id: string; name: string }>;
   topics: string[];
   recipients: Record<Group, Array<{ email: string; name: string }>>;
@@ -31,13 +27,6 @@ type Props = {
 };
 
 const plural = (count: number, one: string, few: string, many: string) => `${count} ${count === 1 ? one : count >= 2 && count <= 4 ? few : many}`;
-
-const PAIRING_LABELS: Record<PairingItem["syncStatus"], string> = {
-  synced: "spárováno",
-  pending: "odesílá se",
-  attention: "čeká na opravu",
-  unlinked: "bez pozvánky",
-};
 
 /**
  * Okno Připravit měsíc: doplnění termínů ze šablony, mezery, úprava návrhů (datum, skupina, téma,
@@ -68,43 +57,14 @@ export function PrepareMonthDialog(props: Props) {
       <Modal open={open} title={`Připravit měsíc: ${props.monthName}`} onRequestClose={() => setOpen(false)} wide>
         <div className="stack">
           <section className="prepare-step" aria-labelledby="prepare-fill">
-            <h3 id="prepare-fill">Termíny ze šablony</h3>
-            <p className="hint">Přidá prázdné návrhy na volná místa podle Pravidelného týdne. Nic se neodešle ani nezveřejní.</p>
+            <h3 id="prepare-fill">1. Doplnit termíny</h3>
+            <p className="hint">Přidá návrhy na volná místa podle Pravidelného týdne. Termíny, kde už akce je, přeskočí. Nic se nezveřejní.</p>
             <ActionForm action={generateMonthAction} fields={{ month: props.monthKey }} label="Doplnit chybějící termíny" pendingLabel="Doplňuji…" />
           </section>
-          <PairingOverview pairing={props.pairing} />
           <MonthDraftsForm key={draftsKey} {...props} action={action} pending={pending} state={state} onCancel={() => setOpen(false)} />
         </div>
       </Modal>
     </>
-  );
-}
-
-function PairingOverview({ pairing }: { pairing: PairingItem[] }) {
-  if (!pairing.length) return null;
-  const open = pairing.filter((p) => p.syncStatus !== "synced");
-  const counts = (Object.keys(PAIRING_LABELS) as Array<PairingItem["syncStatus"]>)
-    .map((status) => [status, pairing.filter((p) => p.syncStatus === status).length] as const)
-    .filter(([, count]) => count > 0);
-  return (
-    <section className="prepare-step" aria-labelledby="prepare-pairing">
-      <h3 id="prepare-pairing">Párování s Kalendářem</h3>
-      <p className="small">
-        {plural(pairing.length, "nadcházející zveřejněná akce", "nadcházející zveřejněné akce", "nadcházejících zveřejněných akcí")}: {counts.map(([status, count]) => `${count} ${PAIRING_LABELS[status]}`).join(", ")}.
-      </p>
-      {open.length > 0 && (
-        <ul className="prepare-list">
-          {open.map((p) => {
-            const day = toDateKey(new Date(p.startsAt));
-            return (
-              <li key={p.id}>
-                {weekdayShort(day)} {formatDayMonth(day)} · {p.label} · <strong>{PAIRING_LABELS[p.syncStatus]}</strong>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </section>
   );
 }
 
@@ -255,7 +215,7 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
         ))}
       </datalist>
       <section className="prepare-step" aria-labelledby="prepare-gaps">
-        <h3 id="prepare-gaps">Mezery</h3>
+        <h3 id="prepare-gaps">2. Zkontrolovat</h3>
         {gaps.length === 0 ? (
           <p className="small">Všechny návrhy mají téma i vedoucího.</p>
         ) : (
@@ -270,36 +230,39 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
             })}
           </ul>
         )}
+        {group("Základ měsíce ze šablony", "Předvybrané ke zveřejnění. Datum, skupinu, téma i vedoucího můžete změnit.", drafts.filter((d) => d.fromTemplate))}
+        {group("Návrhy přidané navíc", "Zveřejní se jen ty, které zaškrtnete.", drafts.filter((d) => !d.fromTemplate))}
+        {changeDrafts > 0 && <ChangeDraftsNote count={changeDrafts} />}
       </section>
-      {group("Základ měsíce ze šablony", "Pravidelné termíny. Jsou předvybrané ke zveřejnění, datum, skupinu, téma i vedoucího můžete změnit.", drafts.filter((d) => d.fromTemplate))}
-      {group("Návrhy přidané navíc", "Akce mimo šablonu. Zveřejní se jen ty, které zaškrtnete.", drafts.filter((d) => !d.fromTemplate))}
-      {changeDrafts > 0 && <ChangeDraftsNote count={changeDrafts} />}
-      <div className="publish-impact" role="status">
-        <strong>
-          {chosen.length
-            ? `Ke zveřejnění ${chosen.length} z ${plural(drafts.length, "návrhu", "návrhů", "návrhů")}${incomplete ? ` · ${plural(incomplete, "neúplný", "neúplné", "neúplných")}` : ""}`
-            : "Ke zveřejnění není vybraný žádný návrh"}
-        </strong>
-        <span className="small">
-          Uložení změn nic neodešle.{" "}
-          {chosen.length > 0 && inviteMode === "simulation" && "Zveřejnění je simulace, skutečné e-maily se neodesílají."}
-          {chosen.length > 0 && inviteMode === "disconnected" && "Zveřejněné akce se vydají ve Wiki, pozvánky čekají na propojení Kalendáře."}
-          {chosen.length > 0 && inviteMode === "allowlist" && `Pozvánky půjdou jen na testovací adresu (${[...invited].join(", ") || "žádná"}), kolegům zatím ne.`}
-          {chosen.length > 0 &&
-            inviteMode === "audience" &&
-            `Po zveřejnění dostane e-mail s pozvánkou od Googlu ${plural(invited.size, "člověk", "lidé", "lidí")}: ${audiences.map((g) => `${GROUP_LABELS[g]} (${recipients[g].length})`).join(", ")}.`}
-        </span>
-      </div>
-      {incomplete > 0 && (
-        <label className="check">
-          {/* Hodnota je počet, který správce potvrzuje. Server zveřejnění odmítne, když nesedí. */}
-          <input type="checkbox" name="allowIncomplete" value={incomplete} checked={allowIncomplete} onChange={(e) => setAllowIncomplete(e.target.checked)} />
-          <span>
-            Zveřejnit i {plural(incomplete, "termín", "termíny", "termínů")} bez tématu nebo vedoucího. Pozvánky odejdou hned, téma a vedoucího jde
-            doplnit později.
+      <section className="prepare-step" aria-labelledby="prepare-publish">
+        <h3 id="prepare-publish">3. Zveřejnit</h3>
+        <div className="publish-impact" role="status">
+          <strong>
+            {chosen.length
+              ? `Ke zveřejnění ${chosen.length} z ${plural(drafts.length, "návrhu", "návrhů", "návrhů")}${incomplete ? ` · ${plural(incomplete, "neúplný", "neúplné", "neúplných")}` : ""}`
+              : "Ke zveřejnění není vybraný žádný návrh"}
+          </strong>
+          <span className="small">
+            Uložení změn nic neodešle.{" "}
+            {chosen.length > 0 && inviteMode === "simulation" && "Zveřejnění je simulace, skutečné e-maily se neodesílají."}
+            {chosen.length > 0 && inviteMode === "disconnected" && "Zveřejněné akce se vydají ve Wiki, pozvánky čekají na propojení Kalendáře."}
+            {chosen.length > 0 && inviteMode === "allowlist" && `Pozvánky půjdou jen na testovací adresu (${[...invited].join(", ") || "žádná"}), kolegům zatím ne.`}
+            {chosen.length > 0 &&
+              inviteMode === "audience" &&
+              `Po zveřejnění dostane e-mail s pozvánkou od Googlu ${plural(invited.size, "člověk", "lidé", "lidí")}: ${audiences.map((g) => `${GROUP_LABELS[g]} (${recipients[g].length})`).join(", ")}.`}
           </span>
-        </label>
-      )}
+        </div>
+        {incomplete > 0 && (
+          <label className="check">
+            {/* Hodnota je počet, který správce potvrzuje. Server zveřejnění odmítne, když nesedí. */}
+            <input type="checkbox" name="allowIncomplete" value={incomplete} checked={allowIncomplete} onChange={(e) => setAllowIncomplete(e.target.checked)} />
+            <span>
+              Zveřejnit i {plural(incomplete, "termín", "termíny", "termínů")} bez tématu nebo vedoucího. Pozvánky odejdou hned, téma a vedoucího jde
+              doplnit později.
+            </span>
+          </label>
+        )}
+      </section>
       {state && <ActionMessage state={state} />}
       <div className="dialog-actions">
         <button type="submit" name="intent" value="publish" className="btn btn-primary" disabled={pending || chosen.length === 0 || (incomplete > 0 && !allowIncomplete)}>

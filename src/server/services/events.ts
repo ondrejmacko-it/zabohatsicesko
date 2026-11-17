@@ -672,7 +672,28 @@ export async function generateMonth(viewer: Viewer, monthKey: string): Promise<{
       .from(generationExclusions)
       .where(eq(generationExclusions.orgId, config.orgId));
     const taken = new Set([...existing, ...excluded].map((r) => r.key as string));
-    const plannedSlots = planMonth(config.orgId, monthKey, slots, taken);
+    // Ručně přidaná akce ve stejném čase jako termín šablony by po doplnění vedla k duplicitě.
+    // Takový termín se přeskočí, platí ruční akce. Svátky se doplňují vždy.
+    const { start, end } = monthRange(monthKey);
+    const manual = await tx
+      .select({ startsAt: events.startsAt, endsAt: events.endsAt })
+      .from(events)
+      .where(
+        and(
+          eq(events.orgId, config.orgId),
+          isNull(events.generationKey),
+          ne(events.status, "cancelled"),
+          eq(events.allDay, false),
+          lt(events.startsAt, end),
+          gt(events.endsAt, start),
+        ),
+      );
+    const plannedSlots = planMonth(config.orgId, monthKey, slots, taken).filter((slot) => {
+      if (slot.holiday) return true;
+      const slotStart = fromPragueLocal(slot.dateKey, slot.startTime);
+      const slotEnd = fromPragueLocal(slot.dateKey, slot.endTime);
+      return !manual.some((m) => m.startsAt < slotEnd && m.endsAt > slotStart);
+    });
     const reference = now();
     const upcoming = plannedSlots.filter((s) => !s.holiday && fromPragueLocal(s.dateKey, s.startTime) > reference);
     const suggestions = suggestTopics(upcoming, ranked, planned);
