@@ -213,6 +213,19 @@ termíny“ = `generateMonthAction`, přehled mezer a stavu párování z `month
 a skupina, „Uložit změny“ a „Zveřejnit“), vitest pro `publishDrafts` (datum mimo měsíc, minulost, uložení bez
 zveřejnění nic neodešle) a e2e okna. Pak PR 8 podle `docs/audit-ukoly.md`.
 
+**Stav 16. 11. noc 4, Plán a Úvod (poslední):** #51 (`claude/oprava-kalendare-401`) zatím NENÍ v `main`
+(ověřeno `git merge-base --is-ancestor`), čtení Neonu proto čeká. Blok „Stav 16. 11. noc 3“ je v předávce větve #51.
+* Draft PR z `claude/plan-pridani-a-presun`: „+“ na dni v měsíčním Plánu (`?den=`), přesun tažením s potvrzením,
+  „Přesunout na jiný den“ v náhledu i detailu. Server `planMove` (events.ts) + `previewMoveAction`/`moveEventAction`.
+  Vitest 209/209 (nové `tests/presun.test.ts`), e2e `e2e/plan-planovani.spec.ts`.
+* Draft PR z `claude/domu-ceka-na-vas`: `TasksCard` + `orderTasks` (Plán i Úvod), Úvod 2 sloupce / pod sebou.
+  e2e `e2e/domu-ukoly.spec.ts`.
+* **Další krok 1:** po merge #51 a nasazení číst (jen čtení) `select status, event_format, setup_code, error_code,
+  synced_at from personal_calendars` a postupovat podle `docs/kalendar-ucastniku.md`, část „Po merge #47: 401…“.
+* **Další krok 2:** po merge PR Plánu živě vyzkoušet přesun zveřejněné akce na ostré Wiki (Kalendář účastníků).
+* Otevřené: přesun mimo měsíc a do minulosti je odmítnutý (pravidlo z Připravit měsíc), proběhlou akci přesunout
+  nejde; zveřejněná akce s rozpracovaným návrhem se přesune jen v návrhu. „+“ jen u dnů od dneška.
+
 **Stav 15. 11. noc 3:** #34, #35 a #36 se sloučily jen do svých základních větví, ne do `main`. Jejich obsah jde do
 `main` draft PR [#37](https://github.com/ondrejmacko-it/zabohatsicesko/pull/37) z `claude/testy-desktop-macos`. Další práci
 stavět z `main` až po sloučení #37. U dalších PR v řetězu dávat base `main` (ne předchozí větev) a mergovat postupně.

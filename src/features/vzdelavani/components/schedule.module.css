@@ -98,10 +98,48 @@
 }
 
 .cell {
+  position: relative;
   padding: 8px;
   border-top: 1px solid var(--line);
   border-left: 1px solid var(--line);
   vertical-align: top;
+}
+
+/* „+“ pro přidání akce na den: správci se ukáže při najetí nebo fokusu, na dotyku je vidět stále. */
+.addDay {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--ink);
+  opacity: 0;
+}
+
+.cell:hover .addDay,
+.cell:focus-within .addDay,
+.addDay:focus-visible {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .addDay {
+    opacity: 1;
+  }
+}
+
+.cell[data-drop-over] {
+  outline: 2px dashed var(--ink);
+  outline-offset: -3px;
+}
+
+.event[draggable="true"] {
+  cursor: grab;
 }
 
 .outside {
