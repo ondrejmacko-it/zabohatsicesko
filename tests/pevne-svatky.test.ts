@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, test } from "vitest";
 import { snapshotOf } from "@/server/domain/snapshot";
 import { formValuesOf } from "@/server/services/detail";
+import { and, eq } from "drizzle-orm";
 import { getDb } from "@/server/db/client";
+import { auditLog } from "@/server/db/schema";
 import { DomainError } from "@/server/services/errors";
 import { cancelEvent, createEvent, loadEventRow, planMove, updateEvent, type EventInput } from "@/server/services/events";
 import { PAST_FP, PUBLISHED_RM, organizer, resetDemo } from "./helpers";
@@ -67,6 +69,40 @@ describe("hromadné smazání návrhů", () => {
     expect(result).toEqual({ deleted: ["ev-11-25"], skipped: 3 });
     expect(await loadEventRow(db, PUBLISHED_RM)).toBeTruthy();
     expect(await loadEventRow(db, "ev-11-13")).toBeTruthy();
+  });
+
+  test("souběh: dvě stejná smazání smažou návrh jen jednou, zastaralá verze se přeskočí", async () => {
+    const { deleteDrafts } = await import("@/server/services/events");
+    const db = await getDb();
+    const draft = (await loadEventRow(db, "ev-11-25"))!;
+    const item = { id: draft.id, revision: draft.revision };
+    const [a, b] = await Promise.all([deleteDrafts(organizer, [item]), deleteDrafts(organizer, [item])]);
+    expect([...a.deleted, ...b.deleted]).toEqual(["ev-11-25"]);
+    expect(a.skipped + b.skipped).toBe(1);
+    const logs = await db.select().from(auditLog).where(and(eq(auditLog.action, "event.delete_draft"), eq(auditLog.entityId, "ev-11-25")));
+    expect(logs).toHaveLength(1);
+
+    // Návrh, který mezitím někdo upravil (nová verze), se podle staré verze nesmaže.
+    expect((await loadEventRow(db, "ev-11-13"))!.publishedRevision).toBeNull();
+    const { revision, ...input } = await inputOf("ev-11-13");
+    expect(await code(updateEvent(organizer, "ev-11-13", revision, { ...input, topicTitle: "Změněno mezitím" }, "draft"))).toBe("ok");
+    expect(await deleteDrafts(organizer, [{ id: "ev-11-13", revision }])).toEqual({ deleted: [], skipped: 1 });
+    expect(await loadEventRow(db, "ev-11-13")).toBeTruthy();
+  });
+
+  test("souběh: zveřejnění a smazání téhož návrhu, vyhraje jen jedno", async () => {
+    const { deleteDrafts, generateMonth, listMonthDrafts, publishDrafts } = await import("@/server/services/events");
+    await generateMonth(organizer, "2026-12");
+    const pick = (await listMonthDrafts(organizer, "2026-12")).drafts[0]!;
+    const incomplete = pick.topicTitle && pick.leadId ? 0 : 1;
+    const [published, removed] = await Promise.all([
+      publishDrafts(organizer, "2026-12", [{ id: pick.id, revision: pick.revision, topicTitle: pick.topicTitle, leadId: pick.leadId }], incomplete),
+      deleteDrafts(organizer, [{ id: pick.id, revision: pick.revision }]),
+    ]);
+    expect(published.published.length + removed.deleted.length).toBe(1);
+    const row = await loadEventRow(await getDb(), pick.id);
+    if (removed.deleted.length) expect(row).toBeFalsy();
+    else expect(row?.publishedRevision).not.toBeNull();
   });
 
   test("účastník hromadně mazat nesmí", async () => {
