@@ -35,7 +35,9 @@ session_01HpUiru5P4yB2SxRCiVSjHt. Uživatel dal plné právo pokračovat bez pta
 **Další kroky:**
 1. Nic dalšího bez pokynu uživatele. Čeká se na jeho kontrolu #63–#65 a odpovědi na otevřené body.
 2. Otevřené: výklad „3 nadbytečné věty na /vstup“ (potvrdit); U08 na #63/#64 (cherry-pick 44df29e?); dlouhé nahrávky jen jako
-   otevřený bod `docs/nahravky-moznosti.md`. Pozn.: e2e server je produkční build, po změně CSS ho restartovat (zabít i `next-server`).
+   otevřený bod `docs/nahravky-moznosti.md`. **CI červené jen kvůli `npm audit`**: advisory GHSA-fc5q-39xc-vjpf (picomatch, všechny verze, bez opravy, jen
+   dev nástroje; `--omit=dev` = 0). Komentář na #65. Rozhodnutí o CI auditu (počkat / `--omit=dev`) je na uživateli.
+   Pozn.: e2e server je produkční build, po změně CSS ho restartovat (zabít i `next-server`).
 
 Kontext limit: na začátku čti jen tento blok, README a měněné soubory.
 
