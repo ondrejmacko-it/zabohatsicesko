@@ -334,7 +334,8 @@ export const loginInvites = pgTable("login_invites", {
   deviceId: text("device_id"),
 });
 
-export type PersonalCalendarStatus = "active" | "declined" | "revoked" | "calendar_deleted";
+/** `removal_failed` = Google odmítl smazat kalendář odebraného účtu, token zůstal kvůli dalšímu pokusu. */
+export type PersonalCalendarStatus = "active" | "declined" | "revoked" | "calendar_deleted" | "removal_failed";
 
 /**
  * Vlastní kalendář „Vzdělávání ZBC“ v účtu Google uživatele (`CALENDAR_DELIVERY=personal`). Bez cizího

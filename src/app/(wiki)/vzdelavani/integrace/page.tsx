@@ -38,6 +38,7 @@ const CONNECT_RESULTS: Record<string, { text: string; ok: boolean }> = {
   "neplatny-stav": { text: "Připojení vypršelo nebo nezačalo v tomto prohlížeči. Zkuste to znovu.", ok: false },
   "bez-pristupu": { text: "Účet je připojený, ale nemá přístup ke kalendáři, do kterého Wiki zapisuje. Připojte účet, který kalendář vlastní.", ok: false },
   nepripojeno: { text: "Připojení se nepodařilo dokončit. Zkuste to znovu.", ok: false },
+  "jiny-ucet": { text: "Kalendář smí propojit jen účet organizátora. Zvolený účet Google to není, nic se neuložilo. Přihlaste se u Googlu účtem organizátora a zkuste to znovu.", ok: false },
 };
 
 export default async function IntegrationsPage({ searchParams }: { searchParams: Promise<{ google?: string }> }) {

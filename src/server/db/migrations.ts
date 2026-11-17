@@ -381,4 +381,14 @@ CREATE TABLE calendar_worker_runs (
 );
 `,
   },
+  {
+    id: "0012_personal_calendar_removal_failed",
+    sql: `
+-- Jen rozšíření povolených stavů, data se nemění. \`removal_failed\` = Google odmítl smazat kalendář
+-- odebraného účtu; token a řádek zůstávají kvůli dalšímu pokusu.
+ALTER TABLE personal_calendars DROP CONSTRAINT IF EXISTS personal_calendars_status_check;
+ALTER TABLE personal_calendars ADD CONSTRAINT personal_calendars_status_check
+  CHECK (status IN ('active', 'declined', 'revoked', 'calendar_deleted', 'removal_failed'));
+`,
+  },
 ];

@@ -141,7 +141,15 @@ export type GoogleCalendarConfig = {
   /** Testovací příjemci pozvánek, přesné adresy malými písmeny. */
   allowedAttendees: string[];
   redirectUri: string;
+  /**
+   * Účet Google organizátora (`GOOGLE_ORGANIZER_EMAIL`, malými písmeny). Propojit Kalendář smí jen on:
+   * porovnává se s e-mailem z ID tokenu od Googlu, ne se vstupem uživatele. `null` jen v osobním režimu.
+   */
+  organizerEmail: string | null;
 };
+
+const organizerRequired = () => process.env.CALENDAR_DELIVERY?.trim() !== "personal";
+const organizerEmailValue = () => process.env.GOOGLE_ORGANIZER_EMAIL?.trim().toLowerCase() ?? "";
 
 export const GOOGLE_CALENDAR_ENV = [
   "GOOGLE_OAUTH_CLIENT_ID",
@@ -159,6 +167,13 @@ export function googleCalendarConfigProblems(): string[] {
   // Testovací příjemci jsou povinní jen tehdy, když se pozvánky omezují na ně. Při `audience` se nečtou.
   const required = GOOGLE_CALENDAR_ENV.filter((name) => name !== "GOOGLE_ALLOWED_ATTENDEES" || attendeeSource() === "allowlist");
   const problems: string[] = required.filter((name) => !env[name]?.trim());
+  // Režim organizátora bez známého účtu organizátora by nepoznal, že Kalendář propojil osobní účet správce.
+  // Pozvánky se proto bez něj neposílají (konfigurace není úplná, fronta stojí, Správa ukáže tento řádek).
+  if (organizerRequired()) {
+    const organizer = organizerEmailValue();
+    if (!organizer) problems.push("GOOGLE_ORGANIZER_EMAIL");
+    else if (!/^[^@\s]+@[^@\s]+$/.test(organizer)) problems.push("GOOGLE_ORGANIZER_EMAIL musí být celá adresa");
+  }
   const allowed = list(env.GOOGLE_ALLOWED_CALENDAR_IDS);
   if (env.GOOGLE_CALENDAR_ID && allowed.length && !allowed.includes(env.GOOGLE_CALENDAR_ID.trim())) {
     problems.push("GOOGLE_CALENDAR_ID není v GOOGLE_ALLOWED_CALENDAR_IDS");
@@ -183,6 +198,7 @@ export function googleCalendarConfig(): GoogleCalendarConfig | null {
     allowedCalendarIds: list(env.GOOGLE_ALLOWED_CALENDAR_IDS),
     allowedAttendees: list(env.GOOGLE_ALLOWED_ATTENDEES).map((entry) => entry.toLowerCase()),
     redirectUri: `${config.appUrl}/api/google/kalendar/callback`,
+    organizerEmail: organizerRequired() ? organizerEmailValue() : null,
   };
 }
 

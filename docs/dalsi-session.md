@@ -48,6 +48,7 @@ Lint, tsc a `npm test` 238/238 prošly. **Neověřeno:** `npm run build` mimo e2
   (PR #57 to předpokládá).
 
 **Stav 18. 11., ZMĚNA PRIORIT (předchozí):** #55 (PR A) je sloučené v `main` (849f139). #56 (PR B, větev
+**Stav 18. 11., ZMĚNA PRIORIT (poslední):** #55 (PR A) je sloučené v `main` (849f139). #56 (PR B, větev
 `claude/kalendar-migrace-dry-run`) zůstává draft. Nejvyšší priorita uživatele je teď **finální UX/UI a obsah celé Wiki**.
 Kalendář: jen dvě opravy, pak pozastavit.
 1. **Oprava v PR B:** `src/server/calendar/personal.ts` `removePersonalCalendar()`: když Google odmítne smazání kalendáře
