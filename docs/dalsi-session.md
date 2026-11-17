@@ -16,7 +16,20 @@ kroky pro mě piš úplně, pod sebe, s přesnými kliky (Windows, PowerShell).
   `GOOGLE_OAUTH_PUBLISHED=1` (nastaveno 15. 11., platí od dalšího nasazení Production).
 * Úkoly z auditu jsou v `docs/audit-ukoly.md`. Audit ZIP stačí přiložit, jen když je potřeba `textove-upravy.csv`.
 
-**Stav 17. 11. noc 2, PR A téměř hotový (poslední):** větev `claude/kalendar-pozvanky-organizator`, commit „PR A: RSVP, worker, endpoint…“.
+**Stav 17. 11. noc 3, PR A a PR B jako drafty (poslední):** PR A = draft #55 (`claude/kalendar-pozvanky-organizator` → `main`),
+PR B = draft #56 (`claude/kalendar-migrace-dry-run` → větev PR A). PR A: lint, tsc, `npm test` 235/235, build, e2e 883 passed / 33 skipped.
+PR B: lint, tsc, `npm test` 239/239, build (e2e ne, UI beze změny). Nic neběželo proti skutečnému Googlu.
+* PR A navíc: `docs/kalendar-organizator.md` (provoz, RSVP, náklady, úplné kroky pro uživatele), README proměnné, workflow
+  s volitelným secretem `VERCEL_AUTOMATION_BYPASS_SECRET` (preview je za Vercel Authentication, `all_except_custom_domains`).
+* Vercel preview: `CALENDAR_MODE=simulation`, `CALENDAR_DELIVERY` nenastavené, `CALENDAR_ATTENDEES` jen v Production. Nic neměněno.
+* PR B: `migration.ts` (`migrationInventory`, `retireWikiCalendars` s otiskem, odmítne v `personal`), `scripts/kalendar-migrace.ts`,
+  `docs/kalendar-migrace.md` (inventura produkce: 41 akcí, 3 aktivní, 2 osobní kalendáře, 23 záznamů, 45 vazeb bez ext. ID).
+* **Otevřené pro uživatele:** (1) kde spustit úklid na produkci (sensitive proměnné nejdou stáhnout: tlačítko ve Správě,
+  nebo endpoint s otiskem), (2) pojistka proti propojení osobního účtu správce místo organizátora (proměnná s očekávaným
+  účtem), (3) založit účet organizátora a tokeny podle `docs/kalendar-organizator.md`, (4) merge #55 a ruční běh workflow.
+* **Další krok:** po odpovědích doplnit PR B (spouštění úklidu, pojistka účtu), pak PR C1, C2, D podle plánu.
+
+**Stav 17. 11. noc 2, PR A téměř hotový (předchozí):** větev `claude/kalendar-pozvanky-organizator`, commit „PR A: RSVP, worker, endpoint…“.
 Ověřeno v této relaci: `npm ci`, `npx tsc --noEmit`, `npm run lint`, `npm test` (235/235) prošly. **Neověřeno:** `npm run build`, `npm run e2e`.
 * Hotové navíc proti WIP: `src/server/calendar/rsvp.ts` (`syncResponses` se zámkem, úplná/přírůstková, 410 → úplná, stránkování,
   jen GET; `invitationsFor`, `gmailSearchHref`), `worker.ts` (`runCalendarWorker`, `runWorkerIfDue` 5 min s atomickým nárokem,
