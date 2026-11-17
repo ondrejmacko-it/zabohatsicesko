@@ -1,3 +1,4 @@
+import { MoveEventButton } from "@/features/vzdelavani/components/MoveEvent";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -18,6 +19,7 @@ import { requireUser } from "@/server/auth/session";
 import { isOrganizer } from "@/server/policy";
 import { getEventDetail } from "@/server/services/detail";
 import { listPeople, loadTemplate } from "@/server/services/events";
+import { now } from "@/server/config";
 import { resolvePreview } from "@/server/services/preview";
 import { listTopics } from "@/server/services/topics";
 import { loadInviteRecipients } from "@/server/services/calendar-status";
@@ -55,6 +57,8 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
     : [[], [], null];
   const planDays = organizer ? (await loadTemplate()).filter((slot) => slot.active).map((slot) => slot.isoWeekday) : [];
   const editable = organizer && detail.form && card.planStatus !== "cancelled";
+  // Přesun jen budoucí akce, stejné pravidlo kontroluje server (`planMove`).
+  const movable = editable && !preview && new Date(card.startsAt) > now();
   const replaceable = editable && detail.fromTemplate && !EXTRAORDINARY_TYPES.has(card.type) && !card.past;
   const dialogProps = editable
     ? { mode: "edit" as const, id: card.id, revision: detail.revision, initial: detail.form!, published: detail.publishedForm, people, topics, invite, planDays }
@@ -116,6 +120,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
           )}
           {/* U proběhlé akce, kterou správce sám vede, je hlavní krok nahrávka. Úprava zůstává vedle jako vedlejší. */}
           {editable && <EventDialog {...dialogProps!} primary={!(handler && card.past)} />}
+          {movable && <MoveEventButton target={{ id: card.id, revision: detail.revision, label: card.label, from: toDateKey(new Date(card.startsAt)) }} minDate={toDateKey(now())} />}
         </div>
       </div>
 

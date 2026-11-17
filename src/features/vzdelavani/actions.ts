@@ -22,6 +22,7 @@ import {
   generateMonth,
   publishDrafts,
   IncompleteNotConfirmed,
+  planMove,
   updateEvent,
   updateTemplate,
   type EventInput,
@@ -160,6 +161,42 @@ export async function saveEventAction(_prev: ActionResult | null, formData: Form
     // Akce bez vazby (import, seed) ji dostane až tady, proto celá fronta a ne jen jedna akce.
     if (intent === "publish") after(() => syncPublished());
     return { ok: true, id, message: intent === "publish" ? "Změna je zveřejněná." : "Návrh změny je uložený." };
+  });
+}
+
+const moveSchema = z.object({
+  id: z.string().max(80),
+  date: z.string().refine(isValidDateKey),
+  revision: z.coerce.number().int().positive(),
+  confirmToken: z.string().max(64).optional(),
+});
+
+/** Co přesun udělá: zveřejní změnu (s dopadem na pozvané), nebo ji uloží jako návrh. Nic nezapisuje. */
+export async function previewMoveAction(formData: FormData): Promise<ActionResult & { publish?: boolean; impact?: ChangeImpact | null }> {
+  return run(async (user) => {
+    const data = moveSchema.parse(formObject(formData));
+    const plan = await planMove(user, data.id, data.date);
+    const publish = plan.mode === "publish";
+    return { ok: true, publish, impact: publish ? await changeImpact(user, data.id, plan.input) : null };
+  });
+}
+
+/** Přesun na jiný den = úprava akce se stejným časem: stejná validace, oprávnění, revize a potvrzení dopadu. */
+export async function moveEventAction(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
+  return run(async (user) => {
+    const data = moveSchema.parse(formObject(formData));
+    const plan = await planMove(user, data.id, data.date);
+    if (plan.mode === "publish") {
+      try {
+        await assertImpactConfirmed(data.id, plan.input, data.confirmToken ?? null);
+      } catch (error) {
+        if (!(error instanceof ImpactNotConfirmed)) throw error;
+        return { ok: false, error: "Dopad přesunu se od kontroly změnil. Otevřete přesun znovu a potvrďte ho. Nic se nezměnilo." };
+      }
+    }
+    await updateEvent(user, data.id, data.revision, plan.input, plan.mode);
+    if (plan.mode === "publish") after(() => syncPublished());
+    return { ok: true, id: data.id, message: plan.mode === "publish" ? "Akce je přesunutá a změna zveřejněná." : "Přesun je uložený jako návrh." };
   });
 }
 

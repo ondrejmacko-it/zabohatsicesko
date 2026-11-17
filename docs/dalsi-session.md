@@ -38,6 +38,24 @@ Nouzové zrušení zařízení hlavního správce (UI ho záměrně nenabízí) 
 Platí od dalšího požadavku. Můžeš ho provést i ty přes Neon MCP, ale jen na výslovný pokyn uživatele.
 
 
+**Stav 16. 11. noc 3, kalendář 401 (poslední):** #47–#50 jsou v `main`. Draft [#51](https://github.com/ondrejmacko-it/zabohatsicesko/pull/51) z větve `claude/oprava-kalendare-401`:
+`calendarList.get` → `update` → `patch` varianty, 401 už neukončí nastavení (důvod do `setup_code`), `selected/hidden`,
+`EVENT_FORMAT = 3`, kontrola odvolání po 10 min (Úvod čeká max. 2,5 s), „Kalendář odpojen“ + „Připojit Kalendář znovu“
+na Úvodu, v Plánu a ve Správě. Podrobnosti a kroky v `docs/kalendar-ucastniku.md`, část „Po merge #47: 401…“.
+* **Další krok 1:** po merge a nasazení přečíst (jen čtení) `select status, event_format, setup_code, error_code, synced_at
+  from personal_calendars`, zapsat do `docs/kalendar-ucastniku.md`. `event_format < 3` → uživatel otevře Úvod.
+  `setup_code` bez `full` → navrhnout zapnutí self-invite (zapnutí potvrdí uživatel).
+* **Další krok 2 (čeká na souhlas uživatele s návrhem):** Plán „+“ na dni a přesun tažením s potvrzením
+  (`claude/plan-pridani-a-presun`), „Čeká na vás“ na Úvodu (`claude/domu-ceka-na-vas`). Návrhy jsou v odpovědi relace
+  a zkráceně tady:
+  - „+“: tlačítko v rohu buňky dne (`ScheduleGrid`), jen `canPlan`; viditelné při `:hover`/`:focus-within`, na
+    `(hover: none)` vždy. Odkaz na stávající dialog „Přidat akci“ s `?den=YYYY-MM-DD`, server datum validuje stejně.
+  - Přesun: HTML5 drag and drop na bloku akce (jen `canPlan`), drop na den → potvrzovací dialog → serverová akce
+    `moveEventAction(eventId, dateKey, revision)` = úprava akce se stejným časem (stejná validace, oprávnění, revize).
+    Bez myši: v detailu akce „Přesunout na jiný den“ (pole data). Na dotyku jen tato cesta.
+  - „Čeká na vás“: společná komponenta `TasksCard` pro Plán i Úvod; 1280 px dva sloupce (Nejbližší akce | Čeká na vás),
+    320 px pod sebou (Čeká na vás první), odkaz „Celý plán“ u obou.
+
 **Stav 16. 11. noc 2, audit (poslední):** #47, #48, #49 nebyly v `main` (ověřeno `git merge-base --is-ancestor`).
 Blok „Stav 16. 11. noc, notifikace“ je v předávce větve #49.
 * #47: text ve Správě podle `personalSelfInvite()`, lint/typy ok, vitest 202/202, e2e 788 ok + 30 přeskočeno.
@@ -194,6 +212,19 @@ přestavět `PublishMonthDialog` na okno „Připravit měsíc“ (tlačítko v�
 termíny“ = `generateMonthAction`, přehled mezer a stavu párování z `monthCards[].syncStatus`, sloupce datum
 a skupina, „Uložit změny“ a „Zveřejnit“), vitest pro `publishDrafts` (datum mimo měsíc, minulost, uložení bez
 zveřejnění nic neodešle) a e2e okna. Pak PR 8 podle `docs/audit-ukoly.md`.
+
+**Stav 16. 11. noc 4, Plán a Úvod (poslední):** #51 (`claude/oprava-kalendare-401`) zatím NENÍ v `main`
+(ověřeno `git merge-base --is-ancestor`), čtení Neonu proto čeká. Blok „Stav 16. 11. noc 3“ je v předávce větve #51.
+* Draft PR z `claude/plan-pridani-a-presun`: „+“ na dni v měsíčním Plánu (`?den=`), přesun tažením s potvrzením,
+  „Přesunout na jiný den“ v náhledu i detailu. Server `planMove` (events.ts) + `previewMoveAction`/`moveEventAction`.
+  Vitest 209/209 (nové `tests/presun.test.ts`), e2e `e2e/plan-planovani.spec.ts`.
+* Draft PR z `claude/domu-ceka-na-vas`: `TasksCard` + `orderTasks` (Plán i Úvod), Úvod 2 sloupce / pod sebou.
+  e2e `e2e/domu-ukoly.spec.ts`.
+* **Další krok 1:** po merge #51 a nasazení číst (jen čtení) `select status, event_format, setup_code, error_code,
+  synced_at from personal_calendars` a postupovat podle `docs/kalendar-ucastniku.md`, část „Po merge #47: 401…“.
+* **Další krok 2:** po merge PR Plánu živě vyzkoušet přesun zveřejněné akce na ostré Wiki (Kalendář účastníků).
+* Otevřené: přesun mimo měsíc a do minulosti je odmítnutý (pravidlo z Připravit měsíc), proběhlou akci přesunout
+  nejde; zveřejněná akce s rozpracovaným návrhem se přesune jen v návrhu. „+“ jen u dnů od dneška.
 
 **Stav 15. 11. noc 3:** #34, #35 a #36 se sloučily jen do svých základních větví, ne do `main`. Jejich obsah jde do
 `main` draft PR [#37](https://github.com/ondrejmacko-it/zabohatsicesko/pull/37) z `claude/testy-desktop-macos`. Další práci

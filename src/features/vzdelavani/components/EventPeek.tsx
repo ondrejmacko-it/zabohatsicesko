@@ -1,9 +1,11 @@
+import { MoveEventButton } from "@/features/vzdelavani/components/MoveEvent";
 import Link from "next/link";
 import { Icon } from "@/components/Icon";
 import { RouteModal, UnavailableModal } from "@/components/RouteModal";
 import { Todo, missingText } from "@/components/Todo";
 import { EXTRAORDINARY_TYPES, GROUP_LABELS, PLAN_STATUS_LABELS } from "@/lib/labels";
-import { formatEventWhen } from "@/lib/time";
+import { formatEventWhen, toDateKey } from "@/lib/time";
+import { now } from "@/server/config";
 import type { Viewer } from "@/server/policy";
 import { isOrganizer } from "@/server/policy";
 import { getEventDetail } from "@/server/services/detail";
@@ -27,6 +29,8 @@ export async function EventPeek({ user, eventId, preview, previewKey, closeHref 
   const { card } = detail;
   const managing = isOrganizer(user) && !preview;
   const editable = managing && detail.form && card.planStatus !== "cancelled";
+  // Přesun jen budoucí akce, stejné pravidlo kontroluje server (`planMove`).
+  const movable = editable && new Date(card.startsAt) > now();
   const [people, topics, template, invite] = editable
     ? await Promise.all([listPeople(user), listTopics(user), loadTemplate(), loadInviteRecipients(user).catch(() => null)])
     : [[], [], [], null];
@@ -101,6 +105,7 @@ export async function EventPeek({ user, eventId, preview, previewKey, closeHref 
           ))
         )}
         {editable && <EventDialog {...dialogProps!} primary />}
+          {movable && <MoveEventButton target={{ id: card.id, revision: detail.revision, label: card.label, from: toDateKey(new Date(card.startsAt)) }} minDate={toDateKey(now())} />}
       </div>
     </RouteModal>
   );
