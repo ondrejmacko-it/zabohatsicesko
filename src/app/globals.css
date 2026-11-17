@@ -2688,3 +2688,24 @@ p.cal-status {
 .invitees[open] > summary {
   margin-bottom: 4px;
 }
+
+/* ——— Vybrat návrhy: seznam s výběrem ——— */
+.draft-pick-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.draft-pick {
+  align-items: flex-start;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--draft);
+}
+
+.draft-pick:has(input:checked) {
+  border-color: var(--ochre);
+}

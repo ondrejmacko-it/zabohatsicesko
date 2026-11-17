@@ -485,6 +485,39 @@ export async function deleteDraft(viewer: Viewer, id: string, expectedRevision: 
 
 // ——— Hromadné zveřejnění návrhů měsíce ———
 
+/**
+ * Hromadné smazání vybraných návrhů v jedné transakci. Smaže jen nikdy nezveřejněný návrh (ne svátek)
+ * ve verzi, kterou správce viděl. Ostatní (mezitím změněné, zveřejněné, cizí ID) přeskočí a nezmění.
+ */
+export async function deleteDrafts(viewer: Viewer, items: Array<{ id: string; revision: number }>): Promise<{ deleted: string[]; skipped: number }> {
+  requireOrganizer(viewer);
+  const db = await getDb();
+  return db.transaction(async (tx) => {
+    const deleted: string[] = [];
+    for (const item of items) {
+      const [row] = await tx
+        .delete(events)
+        .where(
+          and(
+            eq(events.id, item.id),
+            eq(events.orgId, config.orgId),
+            eq(events.revision, item.revision),
+            ne(events.type, "holiday"),
+            sql`${events.publishedRevision} IS NULL`,
+          ),
+        )
+        .returning();
+      if (!row) continue;
+      if (row.generationKey) {
+        await tx.insert(generationExclusions).values({ orgId: config.orgId, generationKey: row.generationKey }).onConflictDoNothing();
+      }
+      await audit(tx, viewer.id, "event.delete_draft", "event", row.id);
+      deleted.push(row.id);
+    }
+    return { deleted, skipped: items.length - deleted.length };
+  });
+}
+
 export type MonthDraft = {
   id: string;
   revision: number;

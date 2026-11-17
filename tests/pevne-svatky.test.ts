@@ -50,3 +50,28 @@ describe("proběhlá akce má pevný termín", () => {
     expect(await code(updateEvent(organizer, PAST_FP, revision, { ...input, topicTitle: "Opravené téma" }, "draft"))).toBe("ok");
   });
 });
+
+describe("hromadné smazání návrhů", () => {
+  test("smaže jen nezveřejněný návrh v aktuální verzi, ostatní přeskočí", async () => {
+    const { deleteDrafts } = await import("@/server/services/events");
+    const db = await getDb();
+    const draft = (await loadEventRow(db, "ev-11-25"))!;
+    const pub = (await loadEventRow(db, PUBLISHED_RM))!;
+    const holiday = (await loadEventRow(db, HOLIDAY))!;
+    const result = await deleteDrafts(organizer, [
+      { id: draft.id, revision: draft.revision },
+      { id: pub.id, revision: pub.revision },
+      { id: holiday.id, revision: holiday.revision },
+      { id: "ev-11-13", revision: 999 },
+    ]);
+    expect(result).toEqual({ deleted: ["ev-11-25"], skipped: 3 });
+    expect(await loadEventRow(db, PUBLISHED_RM)).toBeTruthy();
+    expect(await loadEventRow(db, "ev-11-13")).toBeTruthy();
+  });
+
+  test("účastník hromadně mazat nesmí", async () => {
+    const { deleteDrafts } = await import("@/server/services/events");
+    const { participant } = await import("./helpers");
+    expect(await code(deleteDrafts(participant, [{ id: "ev-11-25", revision: 1 }]))).toBe("forbidden");
+  });
+});

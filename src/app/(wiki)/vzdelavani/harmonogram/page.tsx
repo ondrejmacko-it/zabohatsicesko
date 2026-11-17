@@ -11,6 +11,7 @@ import { CalendarAlert } from "@/features/vzdelavani/components/CalendarStatusLi
 import { EventDialog } from "@/features/vzdelavani/components/EventDialog";
 import { PersonalCalendarStatus } from "@/features/vzdelavani/components/PersonalCalendarStatus";
 import { EventPeek } from "@/features/vzdelavani/components/EventPeek";
+import { DraftSelection } from "@/features/vzdelavani/components/DraftSelection";
 import { PrepareMonthDialog } from "@/features/vzdelavani/components/PrepareMonthDialog";
 import { inviteModeOf } from "@/lib/invite-mode";
 import { PlanFilters, type StateChip } from "@/features/vzdelavani/components/PlanFilters";
@@ -182,6 +183,9 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
                   recipients={calendar.recipients}
                   inviteMode={inviteMode}
                 />
+              )}
+              {monthDrafts && monthDrafts.drafts.length > 0 && (
+                <DraftSelection monthKey={monthKey} monthName={formatMonth(monthKey)} drafts={monthDrafts.drafts} />
               )}
               <EventDialog
                 key={addDay ?? "nova"}
