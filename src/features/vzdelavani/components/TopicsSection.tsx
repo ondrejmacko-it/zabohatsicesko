@@ -9,7 +9,7 @@ import { listArchivedTopics, listTopicInterested, listTopics } from "@/server/se
 /** Kolik nenaplánovaných témat z čela pořadí dostane štítek Doporučené. */
 const RECOMMENDED_COUNT = 3;
 
-/** Témata jako karty. Doporučená jsou nahoře se štítkem, správa je v nabídce u každé karty. */
+/** Témata jako jeden přehledný seznam řádků. Doporučená jsou nahoře se štítkem, správa je v nabídce u každého řádku. */
 export async function TopicsSection({ user }: { user: Viewer }) {
   const organizer = isOrganizer(user);
   const [topics, archived, interested] = await Promise.all([
@@ -41,7 +41,7 @@ export async function TopicsSection({ user }: { user: Viewer }) {
           {topics.map((t) => {
             const names = interested?.get(t.id) ?? [];
             return (
-              <li key={t.id} className={recommended.has(t.id) ? "topic-card topic-recommended" : "topic-card"}>
+              <li key={t.id} className={recommended.has(t.id) ? "topic-row topic-recommended" : "topic-row"}>
                 <div className="topic-main">
                   <p className="item-title">
                     <span id={`tema-${t.id}`}>{t.name}</span>
@@ -49,8 +49,10 @@ export async function TopicsSection({ user }: { user: Viewer }) {
                   </p>
                   <p className="item-meta">
                     {label(t.audience)} · {t.lastHeld ? `naposledy ${formatDayMonth(t.lastHeld)}` : "zatím neproběhlo"}
-                    {t.nextPlanned && ` · naplánováno na ${formatDayMonth(t.nextPlanned)}`}
+                    {t.nextPlanned && ` · příště ${formatDayMonth(t.nextPlanned)}`}
                   </p>
+                </div>
+                <div className="topic-interest">
                   {names.length > 0 ? (
                     <details className="topic-people">
                       <summary>{interestedLabel(t.interestCount)}</summary>
@@ -79,14 +81,14 @@ export async function TopicsSection({ user }: { user: Viewer }) {
       {archived.length > 0 && (
         <details className="archived-block">
           <summary>Archivovaná témata ({archived.length})</summary>
-          <p className="small muted">Nenabízí se v doporučení ani v dialogu akce. Minulé akce na ně dál odkazují.</p>
           <ul className="topic-list archived-topics">
             {archived.map((t) => (
-              <li key={t.id} className="topic-card topic-archived">
+              <li key={t.id} className="topic-row topic-archived">
                 <div className="topic-main">
                   <p className="item-title">{t.name}</p>
-                  <p className="item-meta">{label(t.audience)} · archivované</p>
+                  <p className="item-meta">{label(t.audience)}</p>
                 </div>
+                <div className="topic-interest" />
                 <div className="topic-actions">
                   <RestoreTopicButton topicId={t.id} />
                 </div>

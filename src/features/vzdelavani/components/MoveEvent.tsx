@@ -126,6 +126,8 @@ export function MoveDropZone({ children }: { children: React.ReactNode }) {
       onDragStart={(event) => {
         const block = (event.target as HTMLElement).closest<HTMLElement>("[data-move-id]");
         if (!block) return;
+        // V režimu hromadného výběru se karty jen označují, přesun tažením je vypnutý.
+        if (block.closest("[data-selecting]")) return event.preventDefault();
         const { moveId, moveRevision, moveLabel, moveFrom } = block.dataset;
         dragged.current = { id: moveId!, revision: Number(moveRevision), label: moveLabel!, from: moveFrom! };
         event.dataTransfer.setData(DRAG_TYPE, moveId!);

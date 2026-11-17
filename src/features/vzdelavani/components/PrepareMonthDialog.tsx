@@ -10,6 +10,7 @@ import { addDays, formatDayMonth, formatEventTime, shiftMonth, toDateKey, weekda
 import { GROUPS, type Group } from "@/lib/types";
 import type { MonthDraft } from "@/server/services/events";
 import { generateMonthAction, publishMonthAction, type ActionResult } from "../actions";
+import { TemplateDialog, type SlotValue } from "./TemplateDialog";
 
 /** Jak se zveřejnění propíše do Kalendáře. Určuje jen text přehledu dopadu. */
 
@@ -24,6 +25,8 @@ type Props = {
   topics: string[];
   recipients: Record<Group, Array<{ email: string; name: string }>>;
   inviteMode: InviteMode;
+  /** Pravidelný týden, ze kterého se termíny doplňují. Upravuje se odsud. */
+  template: SlotValue[];
 };
 
 const plural = (count: number, one: string, few: string, many: string) => `${count} ${count === 1 ? one : count >= 2 && count <= 4 ? few : many}`;
@@ -58,8 +61,11 @@ export function PrepareMonthDialog(props: Props) {
         <div className="stack">
           <section className="prepare-step" aria-labelledby="prepare-fill">
             <h3 id="prepare-fill">1. Doplnit termíny</h3>
-            <p className="hint">Přidá návrhy na volná místa podle Pravidelného týdne. Termíny, kde už akce je, přeskočí. Nic se nezveřejní.</p>
-            <ActionForm action={generateMonthAction} fields={{ month: props.monthKey }} label="Doplnit chybějící termíny" pendingLabel="Doplňuji…" />
+            <p className="hint">Přidá návrhy na volná místa podle pravidelného týdne. Nic se nezveřejní.</p>
+            <div className="row prepare-fill">
+              <ActionForm action={generateMonthAction} fields={{ month: props.monthKey }} label="Doplnit chybějící termíny" pendingLabel="Doplňuji…" />
+              <TemplateDialog slots={props.template} />
+            </div>
           </section>
           <MonthDraftsForm key={draftsKey} {...props} action={action} pending={pending} state={state} onCancel={() => setOpen(false)} />
         </div>

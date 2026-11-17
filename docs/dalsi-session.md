@@ -1,5 +1,26 @@
 # Prompt pro další session
 
+**URGENTNÍ UX/UI OPRAVY (17. 11. 2026, relace session_01HpUiryXvc6ixD5KrHNTanQ, větev `claude/awesome-dijkstra-yc1boc` z main 6eb778e).**
+Hotovo (jedna větev, bez PR – uživatel PR zatím nechtěl):
+* Plán: lišta jako mřížka 3 zón (`.plan-head` + container query), měsíc 27 px přesně uprostřed (změřeno 0 px odchylky
+  při 1280/1440/1600/1920/320/390; dřív −154 až −194 px). Vpravo Připravit měsíc + Přidat akci; „⋯“ zrušeno,
+  Pravidelný týden je v okně Připravit měsíc (krok 1).
+* Filtry: jeden řádek pod lištou (Návrhy, Chybí údaje, vybraný typ s křížkem | Filtry ▾ = Typ akce + Zobrazit jako
+  s krátkou nápovědou | Vybrat akce). Staré konfliktní CSS `.schedule-toolbar/.month-nav/.plan-filters/.topic-list` sjednocené.
+* Výběr přímo v Plánu (`PlanSelection.tsx`, `DraftSelection.tsx` smazán): checkbox na kartách návrhů (mřížka i seznam),
+  klik/Enter na kartu označí, mezerník na checkboxu, Esc ukončí, tažení vypnuté, lišta „Vybráno X“ se Zveřejnit/Smazat/
+  Zrušit výběr a potvrzením. Označit jde každý nikdy nezveřejněný návrh (i proběhlý – jen smazat, potvrzení to řekne);
+  zveřejní se jen budoucí (`listMonthDrafts`); návrhy změn jen v okně akce. Serverové akce beze změny.
+* Karty: jeden štítek (`cardStatus`) + ikona „Chybí téma a vedoucí“ (`missingDetails`), žádné „Bez tématu/Bez vedoucího“.
+* Témata: jeden sloupec kompaktních řádků, archiv stejné řádky tlumeně bez vysvětlující věty. Správa: panel Kalendáře
+  nadpis vlevo, štítek a šipka vpravo (`::after`, rotace).
+* Texty: `statusAdvice` bez „přes Upravit“ a zkrácené.
+* Ověřeno: lint, tsc, unit 279/279, build, e2e okna+klávesnice+přístupnost+plan-planovani 263 passed/27 skipped/0 failed
+  (po opravě názvu skupiny štítků). Screenshoty před/po prohlédnuté. **Kompletní e2e neběželo.**
+**Další krok:** kompletní `npm run e2e`; projít okna akcí (EventDialog/EventPeek) – duplicitní texty o publiku a pozvánkách
+(„Akci uvidí skupina…“, „Pozvánku nedostane nikdo“) ještě NEJSOU upravené; inventura testovacích názvů v produkční DB
+(„Ahoj“, „Něco“, „Test“, „Ahojda“, „Tos“) – jen read-only dotaz a návrh, nic nemazat bez schválení; pak draft PR.
+
 **#65 PŘIPRAVENÝ KE SLOUČENÍ (18. 11. 2026, relace session_01HpUirxBmt1Vh8n8CDU9bEP).** #67, #63 a #64 jsou v `main`.
 Do `claude/final-zapisy-temata` sloučen `origin/main` merge commitem c16a852 (bez konfliktů, bez force). Lokálně: lint, tsc,
 unit **279/279**, `npx tsx scripts/audit-plny.ts` projde jen se známou výjimkou GHSA-fc5q-39xc-vjpf (picomatch). Na c16a852

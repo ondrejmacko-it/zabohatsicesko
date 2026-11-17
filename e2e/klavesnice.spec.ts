@@ -52,9 +52,9 @@ test.describe("klávesnice @desktop", () => {
   });
 
   test("menu: Enter otevře, Esc zavře a vrátí fokus", async ({ page }) => {
-    await page.goto("/vzdelavani/harmonogram");
+    await page.goto("/vzdelavani/temata");
     await settle(page);
-    const trigger = page.getByRole("button", { name: "Nástroje správce" });
+    const trigger = page.getByRole("button", { name: /^Možnosti tématu/ }).first();
     await trigger.focus();
     await page.keyboard.press("Enter");
     await expect(trigger).toHaveAttribute("aria-expanded", "true");
@@ -64,14 +64,14 @@ test.describe("klávesnice @desktop", () => {
   });
 
   test("okno z menu: po zavření se fokus vrátí na tlačítko menu", async ({ page }) => {
-    await page.goto("/vzdelavani/harmonogram");
+    await page.goto("/vzdelavani/temata");
     await settle(page);
-    const trigger = page.getByRole("button", { name: "Nástroje správce" });
+    const trigger = page.getByRole("button", { name: /^Možnosti tématu/ }).first();
     await trigger.focus();
     await page.keyboard.press("Enter");
-    await page.getByRole("button", { name: "Pravidelný týden" }).focus();
+    await page.getByRole("button", { name: "Upravit téma" }).first().focus();
     await page.keyboard.press("Enter");
-    const opened = page.getByRole("dialog", { name: "Pravidelný týden" });
+    const opened = page.getByRole("dialog", { name: "Upravit téma" });
     await expect(opened).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(opened).toBeHidden();
