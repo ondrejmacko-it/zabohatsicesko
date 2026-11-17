@@ -1,5 +1,26 @@
 # Prompt pro další session
 
+**ZADÁNÍ UŽIVATELE PRO UZAVŘENÍ #69 (17. 11. 2026, po 9c4bac1, CI na 9c4bac1 zelené).** Pokračovat na větvi
+`claude/focused-tesla-cw2jdt`, PR #69, nic od začátku. Zákazy: žádný redesign, nová funkce, merge do `main`, úprava
+produkčních dat, skutečné Google pozvánky ani změny konfigurace.
+* (0) OPRAVA: `personalEventDelivery()` (`src/server/calendar/personal.ts`) počítá každý záznam `personalCalendarEntries`
+  jako zapsaný bez ověření `dataHash`. Rozlišit: aktuální zápis / zastaralý (čeká na aktualizaci) / chybějící / chyba
+  synchronizace. Otisk musí vznikat STEJNOU logikou jako `desiredEvents()` (obsah akce, `EVENT_FORMAT`, `guest` =
+  `personalSelfInvite() ? accountEmail : undefined`, zápis z publikovaného zápisu `withMinutes`). Žádný duplicitní
+  algoritmus: vytáhnout z `desiredEvents` sdílenou funkci (např. `desiredEntry(row, withMinutes, guest)` → {data, hash}
+  a `eventsWithMinutes(db)`), použít v obou místech. Bez volání Google API. Popisek „Poslední srovnání“ v
+  `PersonalSyncView` (`SyncPanelView.tsx`) neprokazuje aktuálnost akce: přejmenovat/upravit (např. „Poslední běh
+  synchronizace kalendářů“) nebo odstranit. Regresní test v `tests/kalendar-osobni.test.ts`: zápis po sync = aktuální,
+  změna termínu akce před sync = zastaralý, po `syncPersonalCalendar` = znovu aktuální.
+* (1) screenshoty 320/390/768/1280/1600/1920 skutečně prohlédnout: přihlášení (ostrá 3311 `/vstup?spravce=1`), Témata,
+  zrušená akce (detail + okno), diagnostika Kalendáře, Nedokončené zápisy + okno. (2)+(3) tab/klávesnice, pořadí tlačítek,
+  návrat fokusu po zavření oken, chování při chybě. Opravit jen nalezené.
+* (4) read-only inventura 6 akcí z `docs/cisteni-testovacich-dat.md` v Neon produkce (jen SELECT, bez tokenů a osobních
+  údajů) + režim Kalendáře (CALENDAR_MODE/DELIVERY/ATTENDEES/PERSONAL_NOTIFY) přes Vercel bez dešifrování → tabulka do doc.
+* (5) znovu: dotčené testy, lint, typecheck, unit, build, CELÉ e2e. (6) popis PR #69 podle `.github/pull_request_template.md`
+  s nejnovějšími výsledky + finální report sem. (7) subscribe na PR, zelené CI na posledním commitu → Ready for review.
+  Merge dělá uživatel.
+
 **OPRAVY PŘED MERGE #69 (17. 11. 2026, relace session_01HpUirux5ZWx5eUkrUCJ17V, větev `claude/focused-tesla-cw2jdt`).**
 Uživatel opravy schválil, pokračovat bez ptaní až do ověřeného PR. Merge dělá uživatel.
 * HOTOVO (commit 2b57702, pushnuto): (1)+(2) osobní režim Kalendáře podle evidence: `syncStatus: "personal"` na kartě
