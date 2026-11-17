@@ -1,5 +1,24 @@
 # Prompt pro další session
 
+**OPRAVY PŘED MERGE #69 (17. 11. 2026, relace session_01HpUirux5ZWx5eUkrUCJ17V, větev `claude/focused-tesla-cw2jdt`).**
+Uživatel opravy schválil, pokračovat bez ptaní až do ověřeného PR. Merge dělá uživatel.
+* HOTOVO (commit 2b57702, pushnuto): (1)+(2) osobní režim Kalendáře podle evidence: `syncStatus: "personal"` na kartě
+  (`events.ts`), `statusAdvice` → null; `SyncPanel.status "personal"` + `personalDelivery` (`personalEventDelivery` v
+  `src/server/calendar/personal.ts`: publikum, zapsáno z `personal_calendar_entries`, čeká, nepropojeno, chyby po lidech)
+  a `legacyInviteId`; `personalSyncPanel` v `detail.ts` nevolá Google, nepáruje, nenabízí pozvánku. `SyncPanelView`:
+  `PersonalSyncView`. Testy v `tests/kalendar-osobni.test.ts` (3) a `tests/google-calendar.test.ts` (2).
+  (3) `GoogleStart` posílá e-mail `fetch` POST (JSON, stejný původ, 403 jinak) na `/api/google/prihlaseni`, server vrátí
+  URL Googlu (login_hint), klient `location.assign`; GET e-mail z URL nečte; form `method="post"` (bez hydratace nic
+  neuteče do URL). Testy `tests/prvni-prihlaseni.test.ts` (10) + e2e „ručně zadaný e-mail není v žádné URL Wiki“.
+  (6) ukázkový přepis označen u návrhu zápisu, „Pracovní přepis (ukázka)“, `unsupported_fixture` texty (labels, journey, MinutesPeek).
+* Ověřeno: lint OK, typecheck OK, unit 307/307. Build + CELÉ e2e spuštěno na konci relace, výsledek NEZAPSÁN (pusť znovu).
+**Další krok (v tomto pořadí):** (a) `npm run build` + celé `npm run e2e`, opravit selhání (nové e2e v `e2e/ostra-wiki.spec.ts`);
+(b) screenshoty 320/390/768/1280/1600/1920 (Playwright, `node e2e/server.mjs`, ostrá instance port 3311 `/vstup?spravce=1`;
+ukázka 3310): Témata, zrušená akce detail+okno, technický detail Kalendáře, Nedokončené zápisy + okno; pořadí tlačítek,
+návrat fokusu, klávesnice, chyba; opravit jen nalezené. (c) bod 5: read-only inventura 6 akcí z `docs/cisteni-testovacich-dat.md`
+v Neon produkce (jen SELECT, bez tokenů) + proměnné CALENDAR_* přes Vercel bez dešifrování → tabulka do doc. NIC neměnit.
+(d) popis PR #69 podle šablony s důkazy, subscribe na PR, zelené CI, případně Ready for review. Zapsat sem stav.
+
 **POSLEDNÍ OPRAVY UX, PŘIHLÁŠENÍ A ZÁPISŮ (17. 11. 2026, relace session_01HpUirxUSjYc9wbogeZGpqN, větev `claude/focused-tesla-cw2jdt` z main 80513a1).**
 Rozhodnutí uživatele: e-mail ověřit až po Googlu (bez předkontroly), „Nejžádanější“ nahrazuje „Doporučené“, sekundární řazení
 abecedně + ID, ruční zápis jen jako návrh (`docs/rucni-zapis-navrh.md`).
