@@ -17,7 +17,10 @@ Hotovo (jedna větev, bez PR – uživatel PR zatím nechtěl):
 * Texty: `statusAdvice` bez „přes Upravit“ a zkrácené.
 * Ověřeno: lint, tsc, unit 279/279, build, e2e okna+klávesnice+přístupnost+plan-planovani 263 passed/27 skipped/0 failed
   (po opravě názvu skupiny štítků). Screenshoty před/po prohlédnuté. **Kompletní e2e neběželo.**
-**Další krok:** kompletní `npm run e2e`; projít okna akcí (EventDialog/EventPeek) – duplicitní texty o publiku a pozvánkách
+**Rozhodnutí uživatele (17. 11.):** nejdřív dodělat body 1–3 níže, pak JEDEN draft PR do main (z této větve), pokračovat bez
+ptaní a při limitu kontextu založit další relaci. Zastavit se až na úplném konci s PR připraveným ke sloučení (zelené CI,
+popis PR podle šablony). Merge dělá uživatel.
+**Další krok:** (1) okna akcí: duplicitní texty; (2) inventura testovacích dat; (3) kompletní `npm run e2e`; pak draft PR; projít okna akcí (EventDialog/EventPeek) – duplicitní texty o publiku a pozvánkách
 („Akci uvidí skupina…“, „Pozvánku nedostane nikdo“) ještě NEJSOU upravené; inventura testovacích názvů v produkční DB
 („Ahoj“, „Něco“, „Test“, „Ahojda“, „Tos“) – jen read-only dotaz a návrh, nic nemazat bez schválení; pak draft PR.
 
