@@ -231,6 +231,11 @@
   background: var(--beige-strong);
 }
 
+/* Na tmavší béžové by běžná šedá neměla kontrast 4,5 : 1. */
+.extra .line {
+  color: #524c47;
+}
+
 .muted {
   background: var(--beige);
   color: var(--muted);
