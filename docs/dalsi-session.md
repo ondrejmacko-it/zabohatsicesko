@@ -16,7 +16,36 @@ kroky pro mě piš úplně, pod sebe, s přesnými kliky (Windows, PowerShell).
   `GOOGLE_OAUTH_PUBLISHED=1` (nastaveno 15. 11., platí od dalšího nasazení Production).
 * Úkoly z auditu jsou v `docs/audit-ukoly.md`. Audit ZIP stačí přiložit, jen když je potřeba `textove-upravy.csv`.
 
-**Stav 17. 11. noc 3, PR A a PR B jako drafty (poslední):** PR A = draft #55 (`claude/kalendar-pozvanky-organizator` → `main`),
+**Stav 18. 11., ZMĚNA PRIORIT (poslední):** #55 (PR A) je sloučené v `main` (849f139). #56 (PR B, větev
+`claude/kalendar-migrace-dry-run`) zůstává draft. Nejvyšší priorita uživatele je teď **finální UX/UI a obsah celé Wiki**.
+Kalendář: jen dvě opravy, pak pozastavit.
+1. **Oprava v PR B:** `src/server/calendar/personal.ts` `removePersonalCalendar()`: když Google odmítne smazání kalendáře
+   (CalendarError kromě 404 = už smazaný), NEodvolat token a NEmazat řádek. Nastavit stav `removal_failed` + `error_code`
+   (rozšířit `PersonalCalendarStatus` v `schema.ts`, `stateOf`), aby šel úklid bezpečně zopakovat (sync volá
+   `removePersonalCalendar` znovu u neaktivního účtu). `retireWikiCalendars` vrací `{ removed, failed }`. Testy.
+2. **Pojistka účtu organizátora** (nová větev z `main`, např. `claude/kalendar-ucet-organizatora`): `GOOGLE_ORGANIZER_EMAIL`
+   v konfiguraci; v callbacku propojení Kalendáře ověřit skutečnou identitu Googlu (id_token/userinfo, ne vstup uživatele);
+   při nesouladu propojení odmítnout se srozumitelnou hláškou; v režimu organizátora nepovolit auto-propojení osobního účtu
+   správce; v `WIKI_MODE=production`/`google-test` bez nastavené adresy organizátora neodesílat pozvánky (fronta stojí,
+   Správa ukáže problém). Testy. Produkci nepřepínat.
+3. **Pak UX/UI** podle zadání uživatele (níže), rozdělit na PR C1 (Úvod, Plán, navigace), C2 (Přidat/upravit akci,
+   Připravit měsíc), C3 (Témata, Správa, Zápisy, přihlášení, texty), D (vizuální audit, screenshoty, předávka).
+   Zásady: méně informací, každý prvek má účel, úspěšný technický stav neukazovat, problém jen když vyžaduje zásah,
+   žádné duplicity (blok Moduly na Úvodu, „Čeká na vás“ na Plánu, „Kalendář propojen“), neslibovat neověřené
+   (přepis nahrávek je demo), zachovat identitu (teplé světlé pozadí, bílé plochy, tmavá navigace, okrové akcenty).
+   Úvod: nejbližší akce a úkoly vedle sebe na desktopu. Plán: karty jen název, čas, stav; chybějící téma/vedoucí
+   jako malý štítek; filtry a nástroje správce přehodnotit; zachovat přidání z kalendáře, přetahování, seznam, detail.
+   Formulář akce: hlavní pole nahoře, doplňky schované, bez technických bloků příjemců, uložit jako návrh,
+   bez výchozího názvu „Jiná akce“. Připravit měsíc: Doplnit → Zkontrolovat → Zveřejnit, bez diagnostiky Kalendáře,
+   duplicity ručních akcí a šablony. Témata: doporučovat jen s ≥1 zájemcem (`TopicsSection.tsx:21`), návrh vyčištění
+   testovacích názvů („Test“, „Něco“, „Ahoj“) bez mazání produkce. Správa: lidé, role, skupiny, zařízení; integrace
+   a diagnostika seskupené a sbalené. Role: správce, vedoucí, FP, RM, nový uživatel, bez oprávnění.
+   Šířky 320, 360, 390, 768, 1024, 1280, 1440, 1920. Screenshoty (mimo repo, `scripts/audit-screenshoty.mjs`)
+   sám prohlédnout a opravit. Pak lint, tsc, test, build, e2e. Málo dokumentace, hlavně reálné změny UI.
+* Nesmí bez souhlasu: přepnout produkci, rozeslat pozvánky, mazat produkční data, merge, placené služby, produkční
+  úklid Kalendáře (ani trvalé tlačítko pro něj).
+
+**Stav 17. 11. noc 3, PR A a PR B jako drafty (předchozí):** PR A = draft #55 (`claude/kalendar-pozvanky-organizator` → `main`),
 PR B = draft #56 (`claude/kalendar-migrace-dry-run` → větev PR A). PR A: lint, tsc, `npm test` 235/235, build, e2e 883 passed / 33 skipped.
 PR B: lint, tsc, `npm test` 239/239, build (e2e ne, UI beze změny). Nic neběželo proti skutečnému Googlu.
 * PR A navíc: `docs/kalendar-organizator.md` (provoz, RSVP, náklady, úplné kroky pro uživatele), README proměnné, workflow
