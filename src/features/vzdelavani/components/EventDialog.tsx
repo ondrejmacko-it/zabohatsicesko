@@ -180,6 +180,17 @@ function EventForm({
   // Rozpracované potvrzení platí jen pro hodnoty, které správce viděl. Další úprava formuláře ho schová.
   const ask = askState?.key === valuesKey ? askState.ask : null;
   const setAsk = (next: Ask) => setAskState(next ? { ask: next, key: valuesKey } : null);
+  // „Zpět“ z potvrzení vrátí fokus na Zveřejnit, jinak by zůstal na zmizelém tlačítku.
+  const backFocus = useRef(false);
+  useEffect(() => {
+    if (askState || !backFocus.current) return;
+    backFocus.current = false;
+    formRef.current?.querySelector<HTMLButtonElement>('.event-actions button[value="publish"]')?.focus();
+  }, [askState]);
+  const back = () => {
+    backFocus.current = true;
+    setAsk(null);
+  };
 
   // Formulář se neodesílá přes <form action>: React by po akci vrátil výběry (typ, publikum) na první
   // možnost. Ruční odeslání nechá po chybě všechna pole tak, jak je správce vyplnil.
@@ -484,7 +495,7 @@ function EventForm({
           <p id="potvrdit-neuplne" className="confirm-text">
             <strong>Chybí {missing.join(" a ")}.</strong> Kolegové uvidí obecný název „{values.label.trim() || TYPE_LABELS[values.type]}“.
           </p>
-          <button type="button" className="btn" onClick={() => setAsk(null)}>
+          <button type="button" className="btn" onClick={back}>
             Zpět
           </button>
           <button type="submit" name="intent" value="publish" data-confirm="incomplete" className="btn btn-primary" disabled={busy} autoFocus>
@@ -518,7 +529,7 @@ function EventForm({
               </details>
             )}
           </div>
-          <button type="button" className="btn" onClick={() => setAsk(null)}>
+          <button type="button" className="btn" onClick={back}>
             Zpět
           </button>
           <button type="submit" name="intent" value="publish" data-confirm="impact" className="btn btn-primary" disabled={busy} autoFocus>
