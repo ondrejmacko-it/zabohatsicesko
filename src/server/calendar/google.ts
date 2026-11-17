@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import type { SimAttendee } from "@/lib/types";
 import { logError } from "@/server/audit";
 import type { AccessTokenSource, FetchLike } from "./google-auth";
-import { CalendarError, type CalendarProvider, type ExternalEvent, type GuestChange, type ManagedEventData } from "./provider";
+import { CalendarError, type CalendarProvider, type ChangePage, type ExternalEvent, type GuestChange, type ManagedEventData } from "./provider";
 
 // Adaptér Google Calendar API v3 pro testovací režim. Zatím ověřený jen proti napodobenému HTTP
 // v tests/google-calendar.test.ts, živý test podle zadání (část 02) čeká na testovací účty.
@@ -29,6 +29,9 @@ type GoogleEvent = {
   /** Další pole hosta (komentář, počet doprovodu) se při úpravě hostů posílají zpět beze změny. */
   attendees?: Array<Record<string, unknown> & { email?: string; displayName?: string; responseStatus?: string; resource?: boolean }>;
   hangoutLink?: string;
+  guestsCanSeeOtherGuests?: boolean;
+  guestsCanModify?: boolean;
+  guestsCanInviteOthers?: boolean;
   extendedProperties?: { private?: Record<string, string> };
   conferenceData?: { entryPoints?: Array<{ entryPointType?: string; uri?: string }> };
 };
@@ -49,6 +52,14 @@ export const eventIdForKey = (key: string) => `akce${createHash("sha256").update
 
 const RESPONSES = new Set(["needsAction", "accepted", "declined", "tentative"]);
 const TRANSIENT_403 = new Set(["rateLimitExceeded", "userRateLimitExceeded", "quotaExceeded", "backendError"]);
+/** 403, kterým Google říká, že účet do kalendáře nesmí zapisovat (sdílení, úroveň přístupu). */
+const ACCESS_403 = new Set(["requiredAccessLevel", "forbiddenForNonOrganizer", "notACalendarUser"]);
+
+/**
+ * Soukromí hostů u každé pozvánky: pozvaní nevidí ostatní pozvané, nemohou akci měnit ani zvát další.
+ * Posílá se při založení i při každé úpravě, takže ruční změna v Kalendáři se vrátí.
+ */
+export const GUEST_PRIVACY = { guestsCanSeeOtherGuests: false, guestsCanModify: false, guestsCanInviteOthers: false } as const;
 
 const toDate = (value: GoogleDate | undefined): Date | null => {
   const raw = value?.dateTime ?? value?.date;
@@ -68,19 +79,24 @@ function toExternal(event: GoogleEvent): ExternalEvent | null {
     startsAt,
     endsAt,
     cancelled: event.status === "cancelled",
-    attendees: (event.attendees ?? [])
-      .filter((a) => a.email && !a.resource)
-      .map((a) => ({
-        email: a.email!,
-        name: a.displayName ?? a.email!,
-        responseStatus: (RESPONSES.has(a.responseStatus ?? "") ? a.responseStatus : "needsAction") as SimAttendee["responseStatus"],
-      })),
+    attendees: toAttendees(event),
     meetingUrl: event.hangoutLink ?? event.conferenceData?.entryPoints?.find((e) => e.entryPointType === "video")?.uri ?? null,
     recurringEventId: event.recurringEventId ?? null,
     originalStartTime: toDate(event.originalStartTime),
     createdByWiki: Boolean(event.extendedProperties?.private?.[KEY_PROPERTY]),
+    guestsPrivate:
+      event.guestsCanSeeOtherGuests === false && event.guestsCanModify !== true && event.guestsCanInviteOthers === false,
   };
 }
+
+const toAttendees = (event: GoogleEvent): SimAttendee[] =>
+  (event.attendees ?? [])
+    .filter((a) => a.email && !a.resource)
+    .map((a) => ({
+      email: a.email!,
+      name: a.displayName ?? a.email!,
+      responseStatus: (RESPONSES.has(a.responseStatus ?? "") ? a.responseStatus : "needsAction") as SimAttendee["responseStatus"],
+    }));
 
 /** Jen spravovaná pole. Hosté, RSVP ani konferenční údaje se v těle nikdy neposílají, takže zůstanou. */
 const managedBody = (data: ManagedEventData) => ({
@@ -138,7 +154,8 @@ export class GoogleCalendar implements CalendarProvider {
         // Síťová chyba nebo vypršení času. Výsledek zápisu je nejasný, opakování řeší synchronizace.
         throw new CalendarError("calendar_unavailable", true);
       }
-      // Prošlý přístupový token: jednou ho obnovíme. Odvolaný přístup ohlásí až zdroj tokenů.
+      // Prošlý přístupový token: jednou ho obnovíme. Odvolaný přístup pozná jen zdroj tokenů podle selhání
+      // obnovy (`invalid_grant`), nikdy samotné API.
       if (response.status === 401 && attempt === 0) continue;
       const body: unknown = await response.json().catch(() => null);
       if (response.ok || [404, 409, 410, 412].includes(response.status)) return { status: response.status, body };
@@ -150,10 +167,16 @@ export class GoogleCalendar implements CalendarProvider {
     const reason = (body as { error?: { errors?: Array<{ reason?: string }> } } | null)?.error?.errors?.[0]?.reason ?? "";
     // Do logu jde jen stav a strojový důvod, nikdy text odpovědi ani obsah události.
     logError("google.calendar", `http_${status}${reason ? `_${reason}` : ""}`);
-    if (status === 401) return new CalendarError("calendar_revoked", false);
-    if (status === 403) return TRANSIENT_403.has(reason) ? new CalendarError("calendar_unavailable", true) : new CalendarError("calendar_revoked", false);
-    if (status === 429 || status >= 500) return new CalendarError("calendar_unavailable", true);
-    return new CalendarError("calendar_unavailable", false);
+    // Odvolání přístupu hlásí jen zdroj tokenů (selhání obnovy). 401 i s čerstvým tokenem nebo 403 znamená, že
+    // Google odmítl tuto operaci: token zůstává, správce dostane upozornění a fronta to zkusí znovu po prodlevě.
+    if (status === 401) return new CalendarError("calendar_forbidden", false, "http_401_after_refresh");
+    if (status === 403) {
+      if (TRANSIENT_403.has(reason)) return new CalendarError("calendar_unavailable", true, reason);
+      if (ACCESS_403.has(reason)) return new CalendarError("calendar_no_access", false, reason);
+      return new CalendarError("calendar_forbidden", false, reason || "http_403");
+    }
+    if (status === 429 || status >= 500) return new CalendarError("calendar_unavailable", true, `http_${status}`);
+    return new CalendarError("calendar_unavailable", false, `http_${status}`);
   }
 
   private async getRaw(calendarId: string, eventId: string): Promise<GoogleEvent | null> {
@@ -194,7 +217,7 @@ export class GoogleCalendar implements CalendarProvider {
         ...managedBody({ ...data, cancelled: false }),
         attendees: attendees.map((a) => ({ email: a.email, displayName: a.name })),
         extendedProperties: { private: { [KEY_PROPERTY]: id } },
-        guestsCanModify: false,
+        ...GUEST_PRIVACY,
       },
     });
     // 404 při zakládání znamená, že připojený účet kalendář nevidí. Bez toho by chyba vypadala jako výpadek.
@@ -221,6 +244,7 @@ export class GoogleCalendar implements CalendarProvider {
       query: { sendUpdates: "all" },
       body: {
         ...managedBody(data),
+        ...GUEST_PRIVACY,
         // Seznam hostů Google nahrazuje celý. Stávající hosté se proto posílají zpět tak, jak přišli
         // (včetně odpovědí), jen bez odebraných a s přidanými. Bez změny hostů se pole neposílá vůbec.
         ...(guests && (guests.add.length || guests.remove.length)
@@ -261,5 +285,27 @@ export class GoogleCalendar implements CalendarProvider {
       .filter((event) => event.start?.dateTime && (!event.organizer || event.organizer.self === true))
       .map(toExternal)
       .filter((event): event is ExternalEvent => event !== null);
+  }
+
+  async listChanges(calendarId: string, syncToken: string | null, pageToken: string | null): Promise<ChangePage | null> {
+    // Stejné parametry pro úplnou i přírůstkovou synchronizaci (Google je vyžaduje shodné). Bez časového
+    // okna a řazení, ty se syncToken nejdou. Kalendář organizátora obsahuje jen akce Wiki, výpis je malý.
+    const { status, body } = await this.request("GET", calendarId, "", {
+      query: {
+        maxResults: "250",
+        showDeleted: "true",
+        ...(syncToken ? { syncToken } : {}),
+        ...(pageToken ? { pageToken } : {}),
+      },
+    });
+    if (status === 410) return null;
+    if (status === 404) throw new CalendarError("calendar_no_access", false, "http_404");
+    if (status !== 200) throw new CalendarError("calendar_unavailable", true, `http_${status}`);
+    const page = body as { items?: GoogleEvent[]; nextPageToken?: string; nextSyncToken?: string };
+    return {
+      events: (page.items ?? []).map((event) => ({ id: event.id, cancelled: event.status === "cancelled", attendees: toAttendees(event) })),
+      nextPageToken: page.nextPageToken ?? null,
+      nextSyncToken: page.nextSyncToken ?? null,
+    };
   }
 }

@@ -146,6 +146,7 @@ export async function seedDatabase(tx: Executor): Promise<void> {
 const TABLES = [
   "rate_limits", "audit_log", "minutes", "transcription_jobs", "recording_blobs", "recordings",
   "sim_calendar_notifications", "sim_calendar_events", "integration_settings", "calendar_links",
+  "calendar_responses", "calendar_sync_state", "calendar_worker_runs",
   "generation_exclusions", "event_revisions", "events", "topic_interests", "topics", "template_slots", "users",
 ];
 

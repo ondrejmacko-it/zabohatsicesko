@@ -40,7 +40,7 @@ serveru) nebo tlačítkem *Vzdělávání → Integrace → Obnovit ukázková d
 | Příkaz | Co dělá |
 |---|---|
 | `npm run lint` · `npm run typecheck` | ESLint a TypeScript |
-| `npm test` | 180 testů: správa uživatelů, přístupy, plán a revize, Kalendář, přihlášení Google, témata, nahrávky, čas a session |
+| `npm test` | Testy (vitest): správa uživatelů, přístupy, plán a revize, Kalendář, přihlášení Google, témata, nahrávky, čas a session |
 | `npm run e2e` | Playwright nad produkčním buildem: 4 role, všechny stránky a okna, klávesnice, axe, ostrá Wiki s falešnými hodnotami Google. Desktop Windows (1280, 1920), macOS (1440×900, 1512×982, Retina, user agent Safari a Chrome) a telefony (390, 360, 320). Vykresluje Chromium, skutečné Safari viz [docs/overeni-mac.md](docs/overeni-mac.md). `E2E_SKIP_BUILD=1` přeskočí build. |
 | `npm run build` | Produkční build (vyžaduje `SESSION_SECRET` a `DEMO_ACCESS_CODE`) |
 | `npm run db:migrate` · `npm run db:reset` | Migrace a seed, nebo obnova ukázkových dat |
@@ -77,6 +77,9 @@ Vzor je v `.env.example`. Hodnoty tajemství patří do správce tajemství host
 | `SIM_LATENCY_MS` | ne | Zpoždění simulací v ms (výchozí 1200). |
 | `CALENDAR_MODE` | ne | `google-test` zapne testovací režim Google Kalendáře. Jinak simulace. |
 | `CALENDAR_ATTENDEES` | ne | `audience` zve v režimu Googlu skutečné publikum akce (aktivní účty skupiny). Jinak jen `GOOGLE_ALLOWED_ATTENDEES`, která je pak povinná. |
+| `CALENDAR_DELIVERY` | ne | Prázdné nebo `organizer` = pozvánky z kalendáře dedikovaného organizátora s frontou a odpověďmi (RSVP), viz [docs/kalendar-organizator.md](docs/kalendar-organizator.md). `personal` = dočasný starý režim osobních kalendářů. Režimy se vylučují. |
+| `CALENDAR_WORKER_TOKEN` | pro plánovač | Tajný token, který GitHub Actions posílá endpointu fronty Kalendáře (`Authorization: Bearer`). Min. 32 znaků. |
+| `CRON_SECRET` | pro denní cron | Tajemství, které Vercel posílá svému cronu na stejný endpoint. Min. 32 znaků, doporučeně jiné než `CALENDAR_WORKER_TOKEN`. |
 | `GOOGLE_OAUTH_PUBLISHED` | ne | `1`, když je souhlasová obrazovka Googlu zveřejněná. Vypne upozornění na vypršení propojení po 7 dnech (režim Testing). |
 | `GOOGLE_*`, `TOKEN_ENCRYPTION_KEY` | v režimu `google-test` | Viz [docs/google-kalendar.md](docs/google-kalendar.md). |
 | `LOGIN_MODE` | ne | `google-test` přidá přihlášení účtem Google. Jinak jen fiktivní role. |

@@ -74,8 +74,9 @@ export const TEMPLATE_LABELS: Record<string, string> = {
 
 /** Čitelné důvody chyb. Neobsahují obsah nahrávky ani technické detaily. */
 export const ERROR_LABELS: Record<string, string> = {
-  calendar_unavailable: "Google Kalendář je dočasně nedostupný. Změna je ve Wiki uložená, zkuste synchronizaci znovu.",
+  calendar_unavailable: "Google Kalendář je dočasně nedostupný. Změna je ve Wiki uložená, Wiki ji odešle sama.",
   calendar_revoked: "Přístup ke Kalendáři byl odvolán. Připojte integraci znovu.",
+  calendar_forbidden: "Google tuto změnu odmítl, přístup ke Kalendáři ale platí. Wiki to zkusí znovu, při opakování zkontrolujte účet organizátora.",
   calendar_no_access: "Připojený účet Google nemá přístup ke kalendáři, do kterého Wiki zapisuje. Nic se neodeslalo.",
   external_change: "Pozvánku někdo upravil přímo v Google Kalendáři. Zkontrolujte rozdíl a rozhodněte, co platí.",
   calendar_missing: "Propojená pozvánka v Kalendáři už neexistuje. Vazbu je potřeba opravit.",

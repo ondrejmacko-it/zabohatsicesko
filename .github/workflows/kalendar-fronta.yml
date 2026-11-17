@@ -1,0 +1,58 @@
+name: Fronta Kalendáře
+
+# Dočasný plánovač pro test: co 10 minut zavolá chráněný endpoint Wiki, který odešle čekající
+# pozvánky a načte odpovědi pozvaných. GitHub běh může zpozdit nebo vynechat, záloha je denní cron
+# Vercelu a zpracování při návštěvě Wiki. Stav posledního běhu ukazuje Správa.
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kalendar-fronta
+  cancel-in-progress: false
+
+jobs:
+  fronta:
+    name: Zpracovat frontu
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Zavolat Wiki
+        env:
+          WIKI_URL: ${{ vars.WIKI_URL }}
+          TOKEN: ${{ secrets.CALENDAR_WORKER_TOKEN }}
+          # Jen pro preview za ochranou Vercel Authentication (Protection Bypass for Automation), jinak prázdné.
+          BYPASS: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: |
+          if [ -z "$WIKI_URL" ] || [ -z "$TOKEN" ]; then
+            echo "Plánovač není nastavený (WIKI_URL nebo CALENDAR_WORKER_TOKEN chybí), nic se nevolá."
+            exit 0
+          fi
+          # Tělo odpovědi se nevypisuje, log nese jen stavový kód.
+          bypass=()
+          [ -z "$BYPASS" ] || bypass=(-H "x-vercel-protection-bypass: $BYPASS")
+          code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 90 --retry 2 --retry-delay 20 \
+            -X POST -H "Authorization: Bearer $TOKEN" "${bypass[@]}" "${WIKI_URL%/}/api/kalendar/fronta")
+          echo "HTTP $code"
+          [ "$code" = "200" ]
+
+  udrzet-zapnuty:
+    # GitHub vypne plánované workflow veřejného repa po 60 dnech bez aktivity. Jednou denně ho
+    # proto znovu zapne přes API (neověřeno, že tím odpočet skutečně začne znovu; Správa výpadek ohlásí).
+    name: Udržet plánovač zapnutý
+    if: github.event_name == 'schedule' && github.event.schedule == '*/10 * * * *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions:
+      actions: write
+    steps:
+      - name: Zapnout workflow (jednou denně)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [ "$(date -u +%H%M)" \< "0010" ] || exit 0
+          gh api -X PUT "repos/${{ github.repository }}/actions/workflows/kalendar-fronta.yml/enable" --silent

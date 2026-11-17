@@ -339,4 +339,46 @@ ALTER TABLE personal_calendars ADD COLUMN event_format integer NOT NULL DEFAULT 
 ALTER TABLE personal_calendars ADD COLUMN setup_code text;
 `,
   },
+  {
+    id: "0011_calendar_outbox_rsvp",
+    sql: `
+-- Jen přidání sloupců a tabulek, nic se nemaže ani nepřepisuje.
+-- Fronta Kalendáře: kdy se má přechodně neúspěšná vazba zkusit znovu a od kdy se nedaří (upozornění správci).
+ALTER TABLE calendar_links ADD COLUMN next_attempt_at timestamptz;
+ALTER TABLE calendar_links ADD COLUMN failing_since timestamptz;
+
+-- Odpovědi pozvaných (RSVP) přečtené z kalendáře organizátora. Wiki je jen čte, do Googlu je nikdy nezapisuje.
+CREATE TABLE calendar_responses (
+  event_id text NOT NULL,
+  email text NOT NULL,
+  response text NOT NULL CHECK (response IN ('needsAction', 'accepted', 'tentative', 'declined')),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (event_id, email)
+);
+CREATE INDEX calendar_responses_email_idx ON calendar_responses (email);
+
+-- Přírůstková synchronizace odpovědí (events.list se syncToken). Bez tokenu proběhne úplná synchronizace.
+CREATE TABLE calendar_sync_state (
+  org_id text NOT NULL,
+  calendar_id text NOT NULL,
+  sync_token text,
+  full_sync_at timestamptz,
+  synced_at timestamptz,
+  error_code text,
+  failing_since timestamptz,
+  lease_until timestamptz,
+  PRIMARY KEY (org_id, calendar_id)
+);
+
+-- Poslední běhy zpracování fronty podle zdroje (github, vercel-cron, visit, publish). Výpadek plánovače ukáže Správa.
+CREATE TABLE calendar_worker_runs (
+  org_id text NOT NULL,
+  source text NOT NULL,
+  last_started_at timestamptz,
+  last_success_at timestamptz,
+  last_error_code text,
+  PRIMARY KEY (org_id, source)
+);
+`,
+  },
 ];

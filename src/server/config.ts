@@ -96,23 +96,33 @@ export function attendeeSource(): AttendeeSource {
  */
 export const oauthConsentExpiryDays = (): number | null => (process.env.GOOGLE_OAUTH_PUBLISHED?.trim() === "1" ? null : 7);
 
-export type CalendarDelivery = "personal" | "invites";
+export type CalendarDelivery = "personal" | "organizer";
 
 /**
  * Jak se akce dostanou účastníkům, když běží Google Kalendář:
- * – `personal`: Wiki zapisuje do vlastního kalendáře „Vzdělávání ZBC“ v účtu každého uživatele, bez hostů
- *   a bez pozvánkových e-mailů (rozsah `calendar.app.created`),
- * – `invites`: pozvánky z kalendáře správce (původní chování).
- * Výchozí je `invites`, dokud není hotové UI stavu a úklid starých pozvánek. V simulaci vždy `invites`.
+ * – `organizer` (výchozí): jeden organizátor (dedikovaný účet Google) zapisuje akce do svého kalendáře a zve
+ *   účastníky skutečnými pozvánkami. Starší hodnota `invites` znamená totéž.
+ * – `personal`: Wiki zapisuje do vlastního kalendáře „Vzdělávání ZBC“ v účtu každého uživatele (dočasně, odstraní PR B).
+ * Režimy se vylučují: v `organizer` se osobní kalendáře nečtou ani nemění, v `personal` se nezve. V simulaci vždy `organizer`.
  */
 export function calendarDelivery(): CalendarDelivery {
-  if (calendarMode() !== "google-test") return "invites";
-  const value = process.env.CALENDAR_DELIVERY?.trim();
-  if (value === "personal" || value === "invites") return value;
-  return "invites";
+  if (calendarMode() !== "google-test") return "organizer";
+  return process.env.CALENDAR_DELIVERY?.trim() === "personal" ? "personal" : "organizer";
 }
 
 export const personalDelivery = () => calendarDelivery() === "personal";
+export const organizerDelivery = () => calendarDelivery() === "organizer";
+
+/**
+ * Tajné tokeny, kterými se prokazuje plánovač fronty Kalendáře (`/api/kalendar/fronta`):
+ * `CALENDAR_WORKER_TOKEN` pro GitHub Actions a `CRON_SECRET`, který Vercel sám posílá svému cronu.
+ * Kratší než 32 znaků se nepřijímá. Bez obou endpoint odmítá každý požadavek.
+ */
+export function calendarWorkerTokens(): string[] {
+  return [process.env.CALENDAR_WORKER_TOKEN, process.env.CRON_SECRET]
+    .map((value) => value?.trim() ?? "")
+    .filter((value) => value.length >= 32);
+}
 
 /**
  * Zkušební režim upozornění v osobním kalendáři (`CALENDAR_PERSONAL_NOTIFY=self-invite`, výchozí vypnuto):

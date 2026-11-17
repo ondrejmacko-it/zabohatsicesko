@@ -20,6 +20,42 @@ import { targetCalendarId } from "./target";
 const MAX_ATTEMPTS = 3;
 const LEASE_SEC = 60;
 
+export type ErrorKind = "config" | "access" | "transient" | "data";
+
+/**
+ * Druh chyby vazby pro frontu a Správu:
+ * – `transient`: výpadek nebo limit Googlu, fronta zkouší znovu s rostoucí prodlevou,
+ * – `access`: účet organizátora nesmí zapisovat (odvolání, 403, cizí kalendář), zkouší se zřídka a správce dostane upozornění,
+ * – `config`: chybí nebo nesedí nastavení serveru, bez zásahu se nezkouší,
+ * – `data`: ruční změna, chybějící pozvánka nebo cizí originál, rozhoduje správce.
+ */
+export function errorKind(code: string | null): ErrorKind {
+  switch (code) {
+    case "calendar_unavailable":
+      return "transient";
+    case "calendar_revoked":
+    case "calendar_forbidden":
+    case "calendar_no_access":
+      return "access";
+    case "calendar_not_configured":
+    case "calendar_not_allowed":
+    case "attendee_not_allowed":
+      return "config";
+    default:
+      return "data";
+  }
+}
+
+/**
+ * Prodleva dalšího pokusu fronty v minutách: přechodná chyba 5, 10, 20… nejvýš 6 h, chyba přístupu
+ * nejdřív za hodinu. Ostatní druhy se samy neopakují (`null`).
+ */
+export function retryDelayMinutes(kind: ErrorKind, attempts: number): number | null {
+  if (kind === "transient") return Math.min(360, 5 * 2 ** Math.max(0, attempts - MAX_ATTEMPTS));
+  if (kind === "access") return Math.min(360, 60 * 2 ** Math.max(0, attempts - 1));
+  return null;
+}
+
 /** Poskytovatel, který při každém volání ohlásí chybějící konfiguraci. Nikdy nespadne zpět do simulace. */
 const unconfigured = new Proxy({} as CalendarProvider, {
   get: () => async () => {
@@ -106,9 +142,19 @@ const releaseLease = (db: Db, eventId: string) =>
   db.update(calendarLinks).set({ leaseUntil: null }).where(eq(calendarLinks.eventId, eventId));
 
 async function markAttention(db: Db, eventId: string, errorCode: string, attempts: number, conflict: ManagedFields | null = null) {
+  // Čas fronty běží podle databáze (`now()`), ne podle ukázkových hodin Wiki.
+  const delay = retryDelayMinutes(errorKind(errorCode), attempts);
   await db
     .update(calendarLinks)
-    .set({ syncStatus: "attention", errorCode, attempts, conflict, updatedAt: new Date() })
+    .set({
+      syncStatus: "attention",
+      errorCode,
+      attempts,
+      conflict,
+      nextAttemptAt: delay === null ? null : sql`now() + make_interval(mins => ${delay})`,
+      failingSince: sql`coalesce(${calendarLinks.failingSince}, now())`,
+      updatedAt: new Date(),
+    })
     .where(eq(calendarLinks.eventId, eventId));
 }
 
@@ -155,7 +201,7 @@ export async function syncEvent(eventId: string, options: { force?: boolean } = 
         if (!orphan) {
           await db
             .update(calendarLinks)
-            .set({ syncedRevision: revision, syncStatus: "synced", errorCode: null, conflict: null, attempts: 0, updatedAt: new Date() })
+            .set({ syncedRevision: revision, syncStatus: "synced", errorCode: null, conflict: null, attempts: 0, nextAttemptAt: null, failingSince: null, updatedAt: new Date() })
             .where(eq(calendarLinks.eventId, eventId));
           await audit(db, null, "calendar.cancel_without_invite", "event", eventId);
           return;
@@ -177,7 +223,10 @@ export async function syncEvent(eventId: string, options: { force?: boolean } = 
           await markAttention(db, eventId, error.code, attempts);
           return;
         }
-        await db.update(calendarLinks).set({ attempts, errorCode: error.code }).where(eq(calendarLinks.eventId, eventId));
+        await db
+          .update(calendarLinks)
+          .set({ attempts, errorCode: error.code, failingSince: sql`coalesce(${calendarLinks.failingSince}, now())` })
+          .where(eq(calendarLinks.eventId, eventId));
         await new Promise((resolve) => setTimeout(resolve, 400 * 2 ** attempts));
         continue;
       }
@@ -194,6 +243,8 @@ export async function syncEvent(eventId: string, options: { force?: boolean } = 
           errorCode: null,
           conflict: null,
           attempts: 0,
+          nextAttemptAt: null,
+          failingSince: null,
           updatedAt: new Date(),
         })
         .where(and(eq(calendarLinks.eventId, eventId), lt(calendarLinks.syncedRevision, revision + 1)));
@@ -237,7 +288,9 @@ async function pushToCalendar(
       ? planGuests(guests, external.attendees, previouslyManaged)
       : { add: [], remove: [], managed: previouslyManaged };
     const data = { ...desired, description: mergeDescription(external.description, desired.description, eventUrl(link.eventId)) };
-    if (sameManaged(managed(external), managed(data)) && external.description === data.description && samePlan(plan)) {
+    // Pozvánka bez soukromí hostů (založená dřív nebo ručně změněná) se srovná i bez jiné změny.
+    const privacyOk = external.guestsPrivate !== false;
+    if (sameManaged(managed(external), managed(data)) && external.description === data.description && samePlan(plan) && privacyOk) {
       return { external, managedAttendees: plan.managed };
     }
     return { external: await provider.patch(link.calendarId, external.id, data, plan), managedAttendees: plan.managed };
@@ -269,11 +322,17 @@ export async function syncPending(): Promise<void> {
     await syncPersonalCalendars(db);
     return;
   }
-  const pending = await db
+  // Fronta: čekající změny a vazby, jejichž plánovaný další pokus po chybě už nastal.
+  const due = await db
     .select({ eventId: calendarLinks.eventId })
     .from(calendarLinks)
-    .where(eq(calendarLinks.syncStatus, "pending"));
-  for (const { eventId } of pending) await syncEvent(eventId);
+    .where(
+      or(
+        eq(calendarLinks.syncStatus, "pending"),
+        and(eq(calendarLinks.syncStatus, "attention"), isNotNull(calendarLinks.nextAttemptAt), lt(calendarLinks.nextAttemptAt, sql`now()`)),
+      ),
+    );
+  for (const { eventId } of due) await syncEvent(eventId);
 }
 
 /** Jak daleko od začátku akce se cizí pozvánka ještě považuje za možný posunutý originál. */
@@ -395,7 +454,7 @@ export async function requestRetry(viewer: Viewer, eventId: string): Promise<voi
  * Chyby, které může vyřešit nové propojení: jiný účet, nový token nebo opravené nastavení kalendáře.
  * Ruční změnu v Kalendáři, chybějící pozvánku nebo spor o originál dál rozhoduje správce.
  */
-const FIXED_BY_RECONNECT = ["calendar_revoked", "calendar_unavailable", "calendar_no_access", "calendar_not_allowed", "calendar_not_configured"];
+const FIXED_BY_RECONNECT = ["calendar_revoked", "calendar_forbidden", "calendar_unavailable", "calendar_no_access", "calendar_not_allowed", "calendar_not_configured"];
 
 /**
  * Po novém připojení účtu vrátí do fronty akce, které zastavil přístup ke Kalendáři.

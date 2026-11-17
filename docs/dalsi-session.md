@@ -16,6 +16,58 @@ kroky pro mě piš úplně, pod sebe, s přesnými kliky (Windows, PowerShell).
   `GOOGLE_OAUTH_PUBLISHED=1` (nastaveno 15. 11., platí od dalšího nasazení Production).
 * Úkoly z auditu jsou v `docs/audit-ukoly.md`. Audit ZIP stačí přiložit, jen když je potřeba `textove-upravy.csv`.
 
+**Stav 17. 11. noc 2, PR A téměř hotový (poslední):** větev `claude/kalendar-pozvanky-organizator`, commit „PR A: RSVP, worker, endpoint…“.
+Ověřeno v této relaci: `npm ci`, `npx tsc --noEmit`, `npm run lint`, `npm test` (235/235) prošly. **Neověřeno:** `npm run build`, `npm run e2e`.
+* Hotové navíc proti WIP: `src/server/calendar/rsvp.ts` (`syncResponses` se zámkem, úplná/přírůstková, 410 → úplná, stránkování,
+  jen GET; `invitationsFor`, `gmailSearchHref`), `worker.ts` (`runCalendarWorker`, `runWorkerIfDue` 5 min s atomickým nárokem,
+  `workerHealth`), `worker-auth.ts` (sha256 + `timingSafeEqual`), endpoint `src/app/api/kalendar/fronta/route.ts` (GET cron, POST GitHub),
+  `vercel.json` (cron `17 5 * * *`), `.github/workflows/kalendar-fronta.yml` (`*/10`, bez tajemství exit 0, denní `enable`),
+  Úvod: `InvitesCard` + `RefreshOnReturn` + `after(runWorkerIfDue)`, Správa: `CalendarWorkerHealth`. `FakeGoogle` přesunutý do
+  `tests/fake-google.ts` (umí syncToken, 410, `pageSize`). Testy `tests/kalendar-organizator.test.ts` (23, všechny scénáře ze zadání).
+* **Zbývá v PR A:** (1) `docs/kalendar-organizator.md`: provoz, kroky pro uživatele (účet organizátora, OAuth, `CALENDAR_WORKER_TOKEN`
+  a `CRON_SECRET` ve Vercelu, secret `CALENDAR_WORKER_TOKEN` a proměnná `WIKI_URL` v GitHub Actions, přesné kliky Windows),
+  náklady (GitHub Actions zdarma pro veřejné repo; Vercel Pro 20 USD/měs. s cronem po minutách; cron-job.org zdarma), README tabulka
+  proměnných (`CALENDAR_WORKER_TOKEN`, `CRON_SECRET`). (2) `npm run build`, `npm run e2e` (na pozadí, porty 3310/3311 uvolnit).
+  (3) Preview proměnné na Vercelu: ověřit `GET /v9/projects/<prj>/env` (jen názvy), nesecretní nic nového nepotřebuje.
+  (4) Draft PR (base `main`) s výsledky a upřímným přehledem simulace vs. živě. (5) PR B: jen příprava a dry-run.
+* Otevřené pro živý test: zda `sendUpdates=all` při pouhém přidání hosta pošle e-mail i ostatním hostům; zda denní `enable`
+  workflow skutečně resetuje 60denní odpočet.
+
+**Stav 17. 11. noc, PR A rozpracovaný (předchozí):** větev `claude/kalendar-pozvanky-organizator`, commit „WIP PR A“.
+Relace skončila na limitu kontextu. **Neověřeno:** v kontejneru chyběly `node_modules`, nejdřív `npm ci`, pak `npx tsc --noEmit`.
+* Hotové v kódu (jen napsané): `CALENDAR_DELIVERY` = `organizer` (výchozí, `invites` = totéž) | `personal`, `organizerDelivery()`,
+  `calendarWorkerTokens()` (`CALENDAR_WORKER_TOKEN`, `CRON_SECRET`, min. 32 znaků), `.env.example`. Migrace `0011_calendar_outbox_rsvp`
+  (jen ADD: `calendar_links.next_attempt_at`, `failing_since`; tabulky `calendar_responses`, `calendar_sync_state`,
+  `calendar_worker_runs`) + schéma + reset dema. `google.ts`: 401 po obnově a 403 už nejsou odvolání (`calendar_forbidden`,
+  `ACCESS_403` → `calendar_no_access`, kvóty přechodné), `GUEST_PRIVACY` při založení i úpravě, `guestsPrivate`, `listChanges`
+  (events.list, `showDeleted`, `syncToken`, stránkování, 410 → `null`). `simulated.ts`: `listChanges`. `sync.ts`: `errorKind`,
+  `retryDelayMinutes`, `markAttention` plánuje `next_attempt_at` podle času DB, `syncPending` bere i splatné `attention`,
+  srovná pozvánku bez soukromí hostů, `calendar_forbidden` v `FIXED_BY_RECONNECT`. Štítek `calendar_forbidden` v `labels.ts`.
+  Test `google-calendar.test.ts`: 403 `forbidden` → `calendar_forbidden:permanent`.
+* **Zbývá v PR A:** (1) `src/server/calendar/rsvp.ts`: `syncResponses(db)` (zámek na `calendar_sync_state`, úplná/přírůstková,
+  410 → znovu úplná, mapování přes `calendar_links.external_event_id`, zrušená = smazat odpovědi, jen GET) a `invitationsFor(viewer)`
+  (stavy čeká/přijata/možná/odmítnuto, „nelze ověřit“ při chybě nebo `synced_at` starším 3 h). (2) `worker.ts`:
+  `runCalendarWorker(source)` (v `personal` nic nedělá), záznam běhu do `calendar_worker_runs`, `runWorkerIfDue("visit")` (5 min),
+  `workerHealth()` (výpadek = žádný úspěch github/vercel-cron 30 min, chyby fronty starší 1 h podle druhu). (3) Endpoint
+  `src/app/api/kalendar/fronta/route.ts`: GET = Vercel cron, POST = GitHub, `Authorization: Bearer`, porovnání sha256 + `timingSafeEqual`,
+  odpověď jen počty, `no-store`. (4) `vercel.json` cron 1× denně; `.github/workflows/kalendar-fronta.yml` (`*/10`, `workflow_dispatch`,
+  bez tajemství skončí 0, výstup curl do `/dev/null`, jednou denně `PUT …/actions/workflows/kalendar-fronta.yml/enable`
+  s `permissions: actions: write` proti vypnutí po 60 dnech, neověřené). (5) Úvod: karta `InvitesCard` (červeně jen do 7 dní,
+  „Otevřít Gmail“ = `https://mail.google.com/mail/u/0/#search/` + `from:<účet organizátora> in:anywhere`, v simulaci bez odkazu,
+  souhrn vyřízených), klientský `RefreshOnReturn` (návrat do okna, max. 1×/min, jinak 5 min), `after(runWorkerIfDue)`.
+  (6) Správa: stav běhů a upozornění při výpadku/chybách. (7) Testy `tests/kalendar-organizator.test.ts` (FakeGoogle z
+  `google-calendar.test.ts`): 401/403/404/409/410/429/5xx, timeout, zachování `responseStatus`, soukromí hostů, nový zaměstnanec,
+  změna skupiny, zrušení `cancelled`, RSVP stavy, nedostupné RSVP, bez duplicit, čtení RSVP bez zápisu, endpoint bez tokenu 401,
+  souběh s `personal` vyloučen. Upravit `plan.test.ts` jen pokud spadne kvůli frontě. (8) `docs/kalendar-organizator.md` (provoz,
+  náklady: GitHub Actions zdarma pro veřejné repo, Vercel Pro 20 USD/měs. s cronem po minutách, alternativa cron-job.org zdarma),
+  README tabulka proměnných. (9) lint, tsc, test, build, e2e, draft PR (base `main`), pak PR B jen příprava a dry-run.
+* Otevřené pro živý test: zda `sendUpdates=all` při pouhém přidání hosta pošle e-mail i ostatním hostům (dokumentace to neříká).
+
+**Stav 17. 11. pozdě, schválený plán Kalendáře (předchozí):** závazné zadání je `docs/plan-kalendar-pozvanky.md`
+(jeden organizátor s pozvánkami, RSVP, outbox, úklid osobního režimu, UX). #53 je v `main`, self-invite vypnutý.
+* **Další krok:** implementovat PR A ve větvi `claude/kalendar-pozvanky-organizator` podle plánu, pak PR B, C1, C2, D.
+  Produkční přepnutí, pozvánky, mazání a destruktivní migrace jen po výslovném souhlasu uživatele.
+
 **Stav:** PR 4b část 2 je draft [#33](https://github.com/ondrejmacko-it/zabohatsicesko/pull/33) z větve
 `claude/vibrant-ritchie-d100a3` (úvod s kartami, záložky Plán | Zápisy | Témata, Plán bez řádku Kalendáře,
 Správa na 320/360 px). Uživatel ho mergne sám.

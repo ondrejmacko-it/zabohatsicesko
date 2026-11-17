@@ -127,8 +127,55 @@ export const calendarLinks = pgTable("calendar_links", {
   managedAttendees: text("managed_attendees").array(),
   attempts: integer("attempts").notNull(),
   leaseUntil: ts("lease_until"),
+  /** Přechodná chyba: nejdřívější čas dalšího pokusu fronty. */
+  nextAttemptAt: ts("next_attempt_at"),
+  /** Od kdy se vazbu nedaří propsat. Po úspěchu prázdné. */
+  failingSince: ts("failing_since"),
   updatedAt: ts("updated_at").notNull().defaultNow(),
 });
+
+export type ResponseStatus = "needsAction" | "accepted" | "tentative" | "declined";
+
+/** Odpovědi pozvaných přečtené z kalendáře organizátora. Wiki je jen čte. */
+export const calendarResponses = pgTable(
+  "calendar_responses",
+  {
+    eventId: text("event_id").notNull(),
+    email: text("email").notNull(),
+    response: text("response").$type<ResponseStatus>().notNull(),
+    updatedAt: ts("updated_at").notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.eventId, t.email] })],
+);
+
+export const calendarSyncState = pgTable(
+  "calendar_sync_state",
+  {
+    orgId: text("org_id").notNull(),
+    calendarId: text("calendar_id").notNull(),
+    syncToken: text("sync_token"),
+    fullSyncAt: ts("full_sync_at"),
+    syncedAt: ts("synced_at"),
+    errorCode: text("error_code"),
+    failingSince: ts("failing_since"),
+    leaseUntil: ts("lease_until"),
+  },
+  (t) => [primaryKey({ columns: [t.orgId, t.calendarId] })],
+);
+
+export type WorkerSource = "github" | "vercel-cron" | "visit" | "publish";
+
+export const calendarWorkerRuns = pgTable(
+  "calendar_worker_runs",
+  {
+    orgId: text("org_id").notNull(),
+    source: text("source").$type<WorkerSource>().notNull(),
+    lastStartedAt: ts("last_started_at"),
+    lastSuccessAt: ts("last_success_at"),
+    lastErrorCode: text("last_error_code"),
+  },
+  (t) => [primaryKey({ columns: [t.orgId, t.source] })],
+);
 
 export const integrationSettings = pgTable(
   "integration_settings",

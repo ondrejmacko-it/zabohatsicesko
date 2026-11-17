@@ -4,7 +4,7 @@ import type { SimAttendee } from "@/lib/types";
 import type { Executor } from "@/server/db/client";
 import { simCalendarEvents, simCalendarNotifications } from "@/server/db/schema";
 import { readSwitch, simulatedLatency } from "@/server/settings";
-import { CalendarError, type CalendarProvider, type ExternalEvent, type GuestChange, type ManagedEventData } from "./provider";
+import { CalendarError, type CalendarProvider, type ChangePage, type ExternalEvent, type GuestChange, type ManagedEventData } from "./provider";
 
 type SimRow = typeof simCalendarEvents.$inferSelect;
 
@@ -113,6 +113,17 @@ export class SimulatedCalendar implements CalendarProvider {
       .from(simCalendarEvents)
       .where(and(eq(simCalendarEvents.calendarId, calendarId), lt(simCalendarEvents.startsAt, to), gte(simCalendarEvents.endsAt, from)));
     return rows.map(toExternal);
+  }
+
+  /** Simulace nemá přírůstkové změny: každé čtení vrátí celý kalendář jako jednu stránku. */
+  async listChanges(calendarId: string): Promise<ChangePage> {
+    await this.gate();
+    const rows = await this.db.select().from(simCalendarEvents).where(eq(simCalendarEvents.calendarId, calendarId));
+    return {
+      events: rows.map((row) => ({ id: row.id, cancelled: row.status === "cancelled", attendees: row.attendees })),
+      nextPageToken: null,
+      nextSyncToken: "sim",
+    };
   }
 
   /** Odpovídá sendUpdates=all. Jedna zpráva na sekvenci, opakování ji nezdvojí. */
