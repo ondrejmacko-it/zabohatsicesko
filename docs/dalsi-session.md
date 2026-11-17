@@ -5,29 +5,30 @@ session_01HpUiru5P4yB2SxRCiVSjHt. Uživatel dal plné právo pokračovat bez pta
 (merge do main dělá on, Kalendář nepřepínat, produkční data nemazat).
 
 **Hotovo:**
-* **Draft PR [#63](https://github.com/ondrejmacko-it/zabohatsicesko/pull/63) „Final A“** (`claude/final-akce-navrhy`): jednotné
-  okno akce (`EventPeek` → `EventWindow`, přímé úpravy, Uložit jako návrh / Zveřejnit, Další možnosti s odkazem „Stav v Kalendáři“
-  nebo „Nahrávka a zápis“), bez „Podrobnosti akce“ a `MoveEventButton`; detail akce má jen odkaz „Upravit akci“ do Plánu; Úvod
-  otevírá akci v okně (`/?akce=`), „Zobrazit celý plán“ pod seznamem; filtr „Návrhy“; svátky pevné (UI + server `holiday_locked`);
-  termín proběhlé akce zamčený i na serveru (`invalid_state`); sbalená pole přejmenována na „Další údaje“. Lint, tsc, unit 268/268,
-  build, cílené e2e 73/73 (1280 + 320). PR je sledovaný (subscribe).
-* **Větev `claude/final-hromadne-navrhy`** (stojí na #63, PR zatím NENÍ): `deleteDrafts` (server, jedna transakce, přeskočí
-  zveřejněné/svátek/změněné) + `deleteDraftsAction`; okno „Vybrat návrhy“ (`DraftSelection.tsx`) v Plánu vedle Přidat akci:
-  výběr, Vybrat vše, Zveřejnit vybrané (přes `publishMonthAction`, potvrzení v liště) a Smazat vybrané (potvrzení). Unit testy
-  v `tests/pevne-svatky.test.ts` (5/5). tsc a lint čisté. **Neověřeno:** e2e a screenshot okna Vybrat návrhy.
+* **Draft PR [#63](https://github.com/ondrejmacko-it/zabohatsicesko/pull/63) „Final A“** (`claude/final-akce-navrhy`): jednotné okno
+  akce, Úvod otevírá akci v okně, filtr „Návrhy“, pevné svátky (UI + server), zamčený termín proběhlé akce. Sledovaný.
+* **Draft PR [#64](https://github.com/ondrejmacko-it/zabohatsicesko/pull/64) „Final B“** (`claude/final-hromadne-navrhy`, stojí na #63,
+  sledovaný): Vybrat návrhy (výběr, Zveřejnit/Smazat vybrané, server `deleteDrafts` v jedné transakci); lišta Plánu (Měsíc/Seznam
+  vlevo, měsíc uprostřed, Přidat akci · Připravit měsíc · Vybrat návrhy · ⋯ vpravo, filtry ve 2. řádku, „Zobrazit jako“ s nápovědou);
+  **oprava chyby**: „Zpět“ v potvrzovací liště odeslal formulář (React znovu použil tlačítko) – lišty mají `key` (i `EventDialog`),
+  po Zpět se fokus vrátí; výběr návrhů se při zavření neptá na rozepsané změny. E2e okna/plán (1280, 1920, 320) prošly, unit 270/270,
+  screenshoty 320–1920 lišty prohlédnuté (bez vodorovného posunu).
+* **Větev `claude/final-zapisy-temata`** (stojí na #64, PR zatím NENÍ, commit 3c0eeb7): `/vstup` bez 3 vět (slogan „Plán…na jednom
+  místě“, „Heslo… nikdy nevidí“, notice „Pozvánka je ověřená…“ v ukázce); Zápisy: okno „Nedokončené zápisy“ (správce) / „Moje zápisy
+  k dokončení“ (vedoucí), u akce „Odpovědný: jméno“; seed `publishedMinutes` (ev-11-6, RM: nahrávka 1 s ticha, úloha, zveřejněný zápis,
+  `src/server/seed.ts` `insertPublishedMinutes`), e2e čtenáře RM „Zobrazit zápis“ z okna akce (`e2e/zapisy.spec.ts`), unit testy
+  `recordings`/`journey` filtrují na vlastní akci; Témata: záhlaví „Navrhněte téma nebo podpořte návrh kolegů.“, archiv jako karty
+  s Obnovit (`.topic-archived`). Cílené e2e (zapisy, okna, stranky; 1280 + 320) 203 passed / 1 skipped / 0 failed, unit 270/270,
+  lint, tsc. **Neověřeno:** screenshot archivu témat a `/vstup`.
 
 **Další kroky:**
-1. Na `claude/final-hromadne-navrhy`: e2e pro Vybrat návrhy (otevřít, vybrat 1, Smazat vybrané → potvrdit; jen projekt
-   windows-1280, jinde jen otevřít/zavřít), screenshot 390/1280 (`scripts/audit-screenshoty.mjs`, server `node e2e/server.mjs`,
-   před e2e ho ukonči). Pak horní lišta Plánu (Měsíc/Seznam vlevo, měsíce uprostřed, Přidat akci + Připravit měsíc + Vybrat
-   návrhy vpravo, filtry ve 2. řádku, „Zobrazit jako“ s nápovědou „Ukáže, co vidí vybraný kolega. Nic se nezmění.“).
-   Draft PR „Final B: hromadné návrhy a lišta Plánu“ (base main, v popisu: stojí na #63).
-2. Další PR: `/vstup` bez 3 nadbytečných vět, Zápisy (Odpovědný: vedoucí, „Nedokončené zápisy“ / „Moje zápisy k dokončení“,
-   ukázkový zveřejněný zápis v `demo/seed.json` + e2e čtenáře „Zobrazit zápis“ z okna akce), Témata (záhlaví „Navrhněte téma nebo
-   podpořte návrh kolegů.“, archiv jako karty s Obnovit), Správa (menu účtu: Upravit přístup / Přihlašování se zařízeními po řádcích /
-   Odebrat přístup; sjednotit panel Kalendář), revize textů.
-3. Nakonec: lint, tsc, `npm test`, build, úplné `npm run e2e`, screenshoty 320–1920 (prohlédnout), závěrečný report
-   (passed/failed/skipped, simulace vs. živý test, otevřené body; dlouhé nahrávky jen jako otevřený bod `docs/nahravky-moznosti.md`).
+1. Na `claude/final-zapisy-temata`: Správa (menu účtu: Upravit přístup / Přihlašování se zařízeními po řádcích / Odebrat přístup;
+   sjednotit panel Kalendář), revize textů; screenshot Témata (archiv), `/vstup`, Zápisy 390/1280. Pak draft PR „Final C: vstup,
+   zápisy, témata, správa“ (base main, v popisu: stojí na #64) a subscribe.
+2. Nakonec: lint, tsc, `npm test`, build, úplné `npm run e2e` (před ním ukonči `node e2e/server.mjs` a `next start`, jinak běží starý
+   build), screenshoty 320–1920 (`scripts/audit-screenshoty.mjs`, prohlédnout), závěrečný report (passed/failed/skipped, simulace vs.
+   živý test, otevřené body; dlouhé nahrávky jen jako otevřený bod `docs/nahravky-moznosti.md`). Výsledky dopsat do popisů #64 a C.
+3. Otevřené: výklad „3 nadbytečné věty na /vstup“ je můj (viz výše) – uvést v reportu, ať ho uživatel potvrdí.
 
 Kontext limit: na začátku čti jen tento blok, README a měněné soubory.
 
