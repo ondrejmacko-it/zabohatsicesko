@@ -970,7 +970,7 @@ fieldset.field > legend {
 }
 
 /* Okno otevřené z jiného okna to první po dobu práce nahradí. Po zavření se první vrátí. */
-body > .dialog[open]:has(~ .dialog[open]) {
+body > .dialog[open]:has(~ .dialog[open]:not(.confirm-dialog)) {
   visibility: hidden;
 }
 
@@ -982,16 +982,45 @@ body > .dialog[open]:has(~ .dialog[open]) {
   margin: 0;
 }
 
-.dialog-confirm {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: center;
-  justify-content: space-between;
+/* Potvrzení rozhodnutí: malé samostatné okno nad pracovním oknem, to zůstává vidět a nic se v něm neposune. */
+.confirm-dialog {
+  width: min(440px, calc(100vw - 32px));
 }
 
-.dialog-confirm p {
+.confirm-body {
+  gap: 12px;
+}
+
+.confirm-body h2 {
   margin: 0;
+  font-size: 20px;
+}
+
+.confirm-description p {
+  margin: 0;
+}
+
+.confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+/* Destruktivní volba stojí odděleně od bezpečných. */
+.confirm-destructive {
+  margin-left: auto;
+}
+
+@media (max-width: 480px) {
+  .confirm-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .confirm-destructive {
+    margin-left: 0;
+  }
 }
 
 /* ——— Tabulky ——— */
@@ -1311,9 +1340,16 @@ body > .dialog[open]:has(~ .dialog[open]) {
 }
 
 /* Volba zdroje zápisu: stejné dlaždice jako výběr osoby, na širším okně ve dvou sloupcích. */
+/* Čtyři zdroje: 2 × 2 na šířku okna, jeden sloupec na telefonu. Nikdy 3 + 1. */
 .source-list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 560px) {
+  .source-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .source-list legend {
@@ -2036,6 +2072,16 @@ a.brief-link:hover {
 .status-regular {
   border-left-color: var(--ok);
   background: var(--ok-soft);
+}
+
+.status-danger {
+  border-left-color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.status-attention {
+  border-left-color: var(--ochre);
+  background: var(--beige-strong);
 }
 
 .status-extra {

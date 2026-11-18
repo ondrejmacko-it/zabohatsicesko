@@ -157,10 +157,15 @@ describe("zápis bez nahrávky", () => {
   test("souběh dvou založení: druhé neprojde, nahrazení musí znát aktuální zápis", async () => {
     const first = await createMinutesDraft(lead, PAST_FP, { source: "notes", text: NOTES }, null);
     expect(await code(createMinutesDraft(admin, PAST_FP, { source: "manual" }, null))).toBe("conflict");
-    const second = await createMinutesDraft(admin, PAST_FP, { source: "transcript", text: "Probrali jsme podklady." }, first);
+    // Rozepsaný návrh s obsahem nejde nahradit bez výslovného potvrzení (Z-02, hlídá server).
+    expect(await code(createMinutesDraft(admin, PAST_FP, { source: "manual" }, first))).toBe("replace_unconfirmed");
+    const second = await createMinutesDraft(admin, PAST_FP, { source: "transcript", text: "Probrali jsme podklady." }, first, true);
     expect(await panelOf(lead)).toMatchObject({ minutes: { id: second, source: "transcript" } });
-    // Nahrazený rozpracovaný návrh bez nahrávky se smaže.
-    expect(await (await getDb()).select().from(minutes).where(eq(minutes.id, first))).toHaveLength(0);
+    // Nahrazený návrh se nemaže, zůstává jako starší verze.
+    expect(await (await getDb()).select().from(minutes).where(eq(minutes.id, first))).toHaveLength(1);
+    // Prázdný ruční návrh jde nahradit bez potvrzení, nic se neztratí.
+    const empty = await createMinutesDraft(admin, PAST_FP, { source: "manual" }, second, true);
+    expect(await code(createMinutesDraft(admin, PAST_FP, { source: "notes", text: NOTES }, empty))).toBe("ok");
   });
 });
 
@@ -179,7 +184,7 @@ describe("schválení a zveřejnění", () => {
     // Kontrolor i správce návrh upraví, každá změna je nová verze.
     const byReviewer = await updateMinutes(reviewer, PAST_FP, row.id, 1, { ...row.content, summary: "Upravil kontrolor" });
     const byAdmin = await updateMinutes(admin, PAST_FP, row.id, byReviewer.version, { ...row.content, summary: "Upravil správce" });
-    expect(byAdmin).toEqual({ version: 3, revoked: false });
+    expect(byAdmin).toMatchObject({ version: 3, newDraft: false });
     expect(await listPublishedMinutes(participant)).not.toContainEqual(expect.objectContaining({ eventId: PAST_FP }));
 
     await approveMinutes(lead, PAST_FP, row.id, 3);
@@ -206,20 +211,28 @@ describe("schválení a zveřejnění", () => {
     expect(await code(approveMinutes(lead, PAST_FP, row.id, 2))).toBe("invalid_state");
   });
 
-  test("změna obsahu po schválení schválení zruší, uložení beze změny ne", async () => {
+  test("úprava schváleného zápisu založí nový návrh, publikum dál vidí schválenou verzi (Z-01)", async () => {
     const row = await notesDraft();
     await approveMinutes(lead, PAST_FP, row.id, 1);
-    expect(await updateMinutes(admin, PAST_FP, row.id, 1, row.content)).toEqual({ version: 1, revoked: false });
+    expect(await updateMinutes(admin, PAST_FP, row.id, 1, row.content)).toEqual({ id: row.id, version: 1, newDraft: false });
     expect(await panelOf(participant)).toMatchObject({ access: "reader", state: "available" });
 
-    expect(await updateMinutes(admin, PAST_FP, row.id, 1, { ...row.content, summary: "Oprava po schválení" })).toEqual({ version: 2, revoked: true });
-    const [after] = await (await getDb()).select().from(minutes).where(eq(minutes.id, row.id));
-    expect(after).toMatchObject({ status: "draft", version: 2, approvedVersion: 1, publishedAt: null });
-    expect(await panelOf(participant)).toMatchObject({ access: "reader", minutes: null });
-    expect(await panelOf(lead)).toMatchObject({ state: "review", minutes: { version: 2, approvedVersion: 1, status: "draft" } });
-    expect(await auditActions()).toEqual(expect.arrayContaining(["minutes.approve", "minutes.edit", "minutes.approval_revoked"]));
-    await approveMinutes(lead, PAST_FP, row.id, 2);
+    const saved = await updateMinutes(admin, PAST_FP, row.id, 1, { ...row.content, summary: "Oprava po schválení" });
+    expect(saved).toMatchObject({ version: 2, newDraft: true });
+    expect(saved.id).not.toBe(row.id);
+    const [old] = await (await getDb()).select().from(minutes).where(eq(minutes.id, row.id));
+    expect(old).toMatchObject({ status: "published", version: 1, approvedVersion: 1 });
+    // Čtenář dál vidí schválenou verzi, ne rozpracovanou opravu.
+    expect(await panelOf(participant)).toMatchObject({ access: "reader", state: "available", minutes: { summary: row.content.summary } });
+    expect(await panelOf(lead)).toMatchObject({ state: "review", publicMinutes: true, minutes: { id: saved.id, version: 2, approvedVersion: 1, status: "draft" } });
+    expect(await auditActions()).toEqual(expect.arrayContaining(["minutes.approve", "minutes.edit_published"]));
+    // Souběh: druhá úprava stejné schválené verze neprojde.
+    expect(await code(updateMinutes(lead, PAST_FP, row.id, 1, { ...row.content, summary: "Jiná oprava" }))).toBe("conflict");
+    // Teprve schválení vedoucím novou verzi zveřejní a starou stáhne.
+    await approveMinutes(lead, PAST_FP, saved.id, 2);
     expect((await listPublishedMinutes(participant)).find((m) => m.eventId === PAST_FP)?.summary).toBe("Oprava po schválení");
+    const [replaced] = await (await getDb()).select().from(minutes).where(eq(minutes.id, row.id));
+    expect(replaced?.status).toBe("draft");
   });
 
   test("bez vedoucího zápis schválit nejde", async () => {

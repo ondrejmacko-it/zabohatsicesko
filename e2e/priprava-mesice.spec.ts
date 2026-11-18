@@ -68,8 +68,8 @@ test.describe("Připravit měsíc: přehled a hromadné doplnění vedoucího", 
 
     // Doplnění je rozepsaná změna: zavření se zeptá a bez uložení nic nezmění.
     await page.keyboard.press("Escape");
-    await expect(page.getByRole("alertdialog", { name: "Zavřít bez uložení" })).toBeVisible();
-    await page.getByRole("button", { name: "Zavřít bez uložení" }).click();
+    await expect(page.getByRole("alertdialog", { name: "Neuložené změny" })).toBeVisible();
+    await page.getByRole("button", { name: "Zahodit změny" }).click();
     await expect(prepare).toBeHidden();
   });
 
@@ -91,7 +91,7 @@ test.describe("okno akce: ochrana neuložených změn", () => {
     await settle(page);
     const open = page.getByRole("button", { name: "Přidat akci", exact: true });
     const add = dialog(page, "Přidat akci");
-    const confirm = page.getByRole("alertdialog", { name: "Zavřít bez uložení" });
+    const confirm = page.getByRole("alertdialog", { name: "Neuložené změny" });
 
     await open.click();
     await page.keyboard.press("Escape");
@@ -122,18 +122,18 @@ test.describe("okno akce: ochrana neuložených změn", () => {
     await expect(window.getByLabel(/^Téma/)).toHaveValue("Týmové priority");
     await page.keyboard.press("Escape");
     await expect(window).toBeHidden();
-    await expect(page.getByRole("alertdialog", { name: "Zavřít bez uložení" })).toHaveCount(0);
+    await expect(page.getByRole("alertdialog", { name: "Neuložené změny" })).toHaveCount(0);
   });
 
-  test("okno akce: změna se při zavření ohlásí, Zavřít bez uložení ji zahodí", async ({ page }) => {
+  test("okno akce: změna se při zavření ohlásí, Zahodit změny je zahodí", async ({ page }) => {
     await page.goto("/vzdelavani/harmonogram?mesic=2026-11&akce=ev-11-24");
     await settle(page);
     const window = page.getByRole("dialog").filter({ has: page.getByLabel(/^Téma/) });
     await window.getByLabel(/^Téma/).fill("Neuložená změna");
     await page.keyboard.press("Escape");
-    const confirm = page.getByRole("alertdialog", { name: "Zavřít bez uložení" });
+    const confirm = page.getByRole("alertdialog", { name: "Neuložené změny" });
     await expect(confirm).toBeVisible();
-    await confirm.getByRole("button", { name: "Zavřít bez uložení" }).click();
+    await confirm.getByRole("button", { name: "Zahodit změny" }).click();
     await expect(window).toBeHidden();
     await page.goto("/vzdelavani/harmonogram?mesic=2026-11&akce=ev-11-24");
     await settle(page);

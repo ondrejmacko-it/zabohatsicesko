@@ -476,14 +476,13 @@ export async function saveMinutesAction(_prev: ActionResult | null, formData: Fo
       decisions: lines(formData.get("decisions")),
       nextSteps: lines(formData.get("nextSteps")),
     });
-    if (saved.revoked) after(() => syncEvent(data.id));
     if (data.intent === "approve") {
       // Schvaluje se přesně verze, která právě vznikla uložením (nebo zůstala beze změny).
-      await approveMinutes(user, data.id, data.minutesId, saved.version);
+      await approveMinutes(user, data.id, saved.id, saved.version);
       after(() => syncEvent(data.id));
       return { ok: true, message: `Verze ${saved.version} je schválená a zveřejněná pro publikum akce.` };
     }
-    if (saved.revoked) return { ok: true, message: "Úpravy jsou uložené. Schválení se zrušilo, zápis čeká na nové schválení vedoucím." };
+    if (saved.newDraft) return { ok: true, message: "Nová verze je uložená jako návrh. Kolegové do schválení vidí dosavadní zápis." };
     return { ok: true, message: "Úpravy zápisu jsou uložené." };
   });
 }
@@ -496,20 +495,22 @@ export async function createMinutesDraftAction(_prev: ActionResult | null, formD
         id: z.string().max(80),
         source: z.enum(["transcript", "notes", "file", "manual"]),
         replaceId: z.string().max(80),
+        confirmReplace: z.enum(["", "on"]),
       })
-      .parse({ id: formData.get("id"), source: formData.get("source"), replaceId: formData.get("replaceId") ?? "" });
+      .parse({ id: formData.get("id"), source: formData.get("source"), replaceId: formData.get("replaceId") ?? "", confirmReplace: formData.get("confirmReplace") ?? "" });
     const replaceId = data.replaceId || null;
+    const confirmReplace = data.confirmReplace === "on";
     if (data.source === "file") {
       const file = formData.get("file");
       if (!(file instanceof File) || file.size === 0) return { ok: false, error: "Vyberte textový soubor." };
       const bytes = new Uint8Array(await file.arrayBuffer());
-      await createMinutesDraft(user, data.id, { source: "file", fileName: file.name, bytes }, replaceId);
+      await createMinutesDraft(user, data.id, { source: "file", fileName: file.name, bytes }, replaceId, confirmReplace);
     } else if (data.source === "manual") {
-      await createMinutesDraft(user, data.id, { source: "manual" }, replaceId);
+      await createMinutesDraft(user, data.id, { source: "manual" }, replaceId, confirmReplace);
     } else {
       const text = formData.get("text");
       if (typeof text !== "string") throw new DomainError("text_empty");
-      await createMinutesDraft(user, data.id, { source: data.source, text }, replaceId);
+      await createMinutesDraft(user, data.id, { source: data.source, text }, replaceId, confirmReplace);
     }
     return { ok: true, message: "Návrh zápisu je připravený. Zkontrolujte ho a uložte." };
   });

@@ -9,7 +9,7 @@ const NOTES = ["Shrnutí: Akce týmu A, rozbor oslovení klientů.", "Hlavní bo
 test.describe("Zápisy: schválení vedoucím @desktop", () => {
   test.use({ storageState: authFile("vedouci") });
 
-  test("vložit text → upravit → vedoucí schválí → zveřejněno → úprava schválení zruší", async ({ page, browser }, testInfo) => {
+  test("vložit text → upravit → vedoucí schválí → zveřejněno → oprava je nový návrh, schválená verze zůstává", async ({ page, browser }, testInfo) => {
     test.skip(testInfo.project.name !== "windows-1280", "zápis jen jednou");
     await page.goto(`/vzdelavani/akce/${EVENT}#nahravka`);
     await settle(page);
@@ -58,7 +58,8 @@ test.describe("Zápisy: schválení vedoucím @desktop", () => {
 
     await admin.goto("/vzdelavani/zapisy");
     await settle(admin);
-    await expect(admin.getByRole("main")).not.toContainText("tři kontakty na osobu");
+    // Z-01: rozpracovaná oprava schválený zápis neschová, publikum čte poslední schválenou verzi.
+    await expect(admin.getByRole("main")).toContainText("tři kontakty na osobu");
     await expect(admin.getByRole("main")).not.toContainText("opraveno správcem");
     await ctx.close();
 

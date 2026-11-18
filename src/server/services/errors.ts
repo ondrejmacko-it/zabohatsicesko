@@ -31,7 +31,8 @@ export type DomainErrorCode =
   | "text_empty"
   | "no_lead"
   | "not_lead"
-  | "minutes_incomplete";
+  | "minutes_incomplete"
+  | "replace_unconfirmed";
 
 export const DOMAIN_ERROR_MESSAGES: Record<DomainErrorCode, string> = {
   forbidden: "K této akci nemáte oprávnění.",
@@ -59,4 +60,5 @@ export const DOMAIN_ERROR_MESSAGES: Record<DomainErrorCode, string> = {
   no_lead: "Doplňte vedoucího akce. Zápis schvaluje a zveřejňuje vedoucí.",
   not_lead: "Zápis schvaluje a zveřejňuje jen vedoucí akce. Návrh můžete upravit a uložit.",
   minutes_incomplete: "Zápis potřebuje aspoň shrnutí. Body mají nejvýš 500 znaků, v každé části nejvýš 20.",
+  replace_unconfirmed: "Rozepsaný zápis by se nahradil. Potvrďte nahrazení, nebo pokračujte v úpravách.",
 };

@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useState, type ReactNode } from "react";
+import { useActionState, useRef, useState, type ReactNode } from "react";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { ActionMessage } from "@/components/ActionForm";
 import { createMinutesDraftAction } from "../actions";
 import { UploadForm } from "./UploadForm";
@@ -17,20 +18,37 @@ const CHOICES: Array<{ id: Choice; title: string; detail: string }> = [
 ];
 
 /** Formulář, ze kterého vznikne návrh zápisu bez nahrávky. Server zdroj znovu ověří (přípona, velikost, UTF-8). */
-function DraftForm({ eventId, source, replaceId, children, submitLabel, disabled }: {
+function DraftForm({ eventId, source, replaceId, replacingDraft, children, submitLabel, disabled }: {
   eventId: string;
   /** Bez hodnoty vybírá zdroj pole formuláře (přepis / poznámky). */
   source?: "file" | "manual";
   replaceId: string | null;
+  /** Aktuální rozepsaný návrh má obsah: nahrazení se potvrdí v samostatném okně (server ho bez potvrzení odmítne). */
+  replacingDraft?: boolean;
   children?: ReactNode;
   submitLabel: string;
   disabled?: boolean;
 }) {
   const [state, action, pending] = useActionState(createMinutesDraftAction, null);
+  const [asking, setAsking] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+  const confirmedRef = useRef(false);
   return (
-    <form action={action} className="stack">
+    <form
+      ref={formRef}
+      action={action}
+      className="stack"
+      onSubmit={(event) => {
+        if (replacingDraft && !confirmedRef.current) {
+          event.preventDefault();
+          setAsking(true);
+        }
+        confirmedRef.current = false;
+      }}
+    >
       <input type="hidden" name="id" value={eventId} />
       <input type="hidden" name="replaceId" value={replaceId ?? ""} />
+      <input type="hidden" name="confirmReplace" value={replacingDraft ? "on" : ""} />
       {source && <input type="hidden" name="source" value={source} />}
       {children}
       <ActionMessage state={state} />
@@ -39,6 +57,27 @@ function DraftForm({ eventId, source, replaceId, children, submitLabel, disabled
           {pending ? "Připravuji…" : submitLabel}
         </button>
       </div>
+      <ConfirmDialog
+        open={asking}
+        title="Nahradit rozepsaný zápis?"
+        description={<p>Nový návrh nahradí rozepsaný zápis. Starší verze zůstane uložená v historii, v okně už ji neuvidíte.</p>}
+        onCancel={() => setAsking(false)}
+      >
+        <button type="button" className="btn btn-primary" onClick={() => setAsking(false)} autoFocus>
+          Ponechat rozepsaný zápis
+        </button>
+        <button
+          type="button"
+          className="btn btn-danger confirm-destructive"
+          onClick={() => {
+            setAsking(false);
+            confirmedRef.current = true;
+            formRef.current?.requestSubmit();
+          }}
+        >
+          Nahradit zápis
+        </button>
+      </ConfirmDialog>
     </form>
   );
 }
@@ -82,7 +121,7 @@ export function MinutesSourceForm({ eventId, eventLabel, hasRecording, replaceId
       {choice === "recording" && <UploadForm eventId={eventId} eventLabel={eventLabel} replacing={hasRecording} />}
 
       {choice === "text" && (
-        <DraftForm eventId={eventId} replaceId={replaceId} submitLabel="Připravit návrh zápisu" disabled={!text.trim() || textTooLarge}>
+        <DraftForm eventId={eventId} replaceId={replaceId} replacingDraft={replacingDraft} submitLabel="Připravit návrh zápisu" disabled={!text.trim() || textTooLarge}>
           <label className="field">
             <span className="field-label">Druh textu</span>
             <select className="select" name="source" defaultValue="transcript">
@@ -102,7 +141,7 @@ export function MinutesSourceForm({ eventId, eventLabel, hasRecording, replaceId
       )}
 
       {choice === "file" && (
-        <DraftForm eventId={eventId} source="file" replaceId={replaceId} submitLabel="Připravit návrh ze souboru" disabled={!file || fileTooLarge}>
+        <DraftForm eventId={eventId} source="file" replaceId={replaceId} replacingDraft={replacingDraft} submitLabel="Připravit návrh ze souboru" disabled={!file || fileTooLarge}>
           <label className="field">
             <span className="field-label">Textový soubor</span>
             <input
@@ -124,7 +163,7 @@ export function MinutesSourceForm({ eventId, eventLabel, hasRecording, replaceId
       )}
 
       {choice === "manual" && (
-        <DraftForm eventId={eventId} source="manual" replaceId={replaceId} submitLabel="Napsat zápis ručně">
+        <DraftForm eventId={eventId} source="manual" replaceId={replaceId} replacingDraft={replacingDraft} submitLabel="Napsat zápis ručně">
           <p className="small muted">Otevře se prázdná šablona zápisu: Shrnutí, Hlavní body, Rozhodnutí a Další kroky.</p>
         </DraftForm>
       )}

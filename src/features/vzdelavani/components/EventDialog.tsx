@@ -588,7 +588,7 @@ function EventForm({
           {menu && <div className="event-actions-menu">{menu}</div>}
           {published && !unpublishedChanges && !dirty && <span className="small muted event-actions-note">Beze změn</span>}
           {duplicateOf && <span className="small muted event-actions-note">Kopie se uloží jako návrh, zveřejníte ji po kontrole.</span>}
-          <button type="submit" name="intent" value="draft" className={duplicateOf ? "btn btn-primary" : "btn"} disabled={busy || (mode === "edit" && !dirty)}>
+          <button type="submit" name="intent" value="draft" data-confirm-save="Uložit jako návrh" className={duplicateOf ? "btn btn-primary" : "btn"} disabled={busy || (mode === "edit" && !dirty)}>
             Uložit jako návrh
           </button>
           {duplicateOf ? null : (

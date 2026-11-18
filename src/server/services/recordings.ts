@@ -202,6 +202,10 @@ async function requireCurrentMinutes(db: Executor, eventId: string, minutesId: s
 
 const EMPTY_MINUTES: MinutesContent = { summary: "", keyPoints: [], decisions: [], nextSteps: [] };
 
+/** Zápis má nějaký obsah. Prázdný ruční návrh jde nahradit bez potvrzení, nic se tím neztratí. */
+export const hasContent = (c: MinutesContent) =>
+  c.summary.trim() !== "" || c.keyPoints.length > 0 || c.decisions.length > 0 || c.nextSteps.length > 0;
+
 export type MinutesDraftInput =
   | { source: "transcript" | "notes"; text: string }
   | { source: "file"; fileName: string; bytes: Uint8Array }
@@ -211,12 +215,17 @@ export type MinutesDraftInput =
  * Založí upravitelný návrh zápisu bez nahrávky: z vloženého přepisu či poznámek, z textového souboru
  * nebo prázdný ruční. `replaceId` = aktuální zápis, který uživatel viděl (null = žádný). Když se mezitím
  * změnil, návrh nevznikne (souběh dvou založení). Zveřejněný zápis zůstane vidět, dokud vedoucí neschválí nový.
+ *
+ * Nahrazený návrh se nemaže: zůstane v databázi jako starší verze (obnovitelný), jen přestane být aktuální.
+ * Rozepsaný návrh s obsahem jde nahradit jen s výslovným potvrzením (`confirmReplace`), ne jen podle
+ * upozornění v prohlížeči.
  */
 export async function createMinutesDraft(
   viewer: Viewer,
   eventId: string,
   input: MinutesDraftInput,
   replaceId: string | null,
+  confirmReplace = false,
 ): Promise<string> {
   const db = await getDb();
   const row = await requireHandledEvent(db, viewer, eventId);
@@ -242,10 +251,7 @@ export async function createMinutesDraft(
     await queryRows(tx, sql`SELECT id FROM events WHERE id = ${eventId} FOR UPDATE`);
     const current = await currentMinutes(tx, eventId);
     if ((current?.id ?? null) !== replaceId) throw new DomainError("conflict");
-    // Nahrazený rozpracovaný návrh bez nahrávky už není dosažitelný, proto se smaže (minimalizace dat).
-    if (current && current.status === "draft" && current.recordingId === null) {
-      await tx.delete(minutes).where(eq(minutes.id, current.id));
-    }
+    if (current && current.status === "draft" && hasContent(current.content) && !confirmReplace) throw new DomainError("replace_unconfirmed");
     await tx.insert(minutes).values({
       id,
       orgId: config.orgId,
@@ -279,8 +285,12 @@ async function markCalendarPending(db: Executor, eventId: string) {
 
 /**
  * Úprava aktuálního zápisu (vedoucí, kontrolor, správce), optimisticky proti `expectedVersion`.
- * Každá změna obsahu vytvoří novou verzi. Změna schváleného zápisu schválení zruší: zápis přestane být
- * zveřejněný a čeká na nové schválení vedoucím. Uložení beze změny obsahu novou verzi nevytvoří.
+ * Každá změna obsahu vytvoří novou verzi. Uložení beze změny obsahu novou verzi nevytvoří.
+ *
+ * Zveřejněný (schválený) zápis se nepřepisuje: úprava založí nový neveřejný návrh s další verzí a publikum
+ * dál čte poslední schválenou verzi, dokud vedoucí nový návrh neschválí (`approveMinutes` starou stáhne).
+ * Kopie zápisu z nahrávky nese zdroj „přepis“: úloha přepisu smí patřit jen jednomu zápisu (UNIQUE job_id)
+ * a text přepisu se do kopie přenese. Výslovné stažení zápisu dělá jen `withdrawMinutes`.
  */
 export async function updateMinutes(
   viewer: Viewer,
@@ -288,7 +298,7 @@ export async function updateMinutes(
   minutesId: string,
   expectedVersion: number,
   content: MinutesContent,
-): Promise<{ version: number; revoked: boolean }> {
+): Promise<{ id: string; version: number; newDraft: boolean }> {
   const db = await getDb();
   await requireHandledEvent(db, viewer, eventId);
   const current = await requireCurrentMinutes(db, eventId, minutesId);
@@ -299,23 +309,48 @@ export async function updateMinutes(
   } catch {
     throw new DomainError("minutes_incomplete");
   }
-  if (sameContent(next, current.content)) return { version: current.version, revoked: false };
+  if (sameContent(next, current.content)) return { id: current.id, version: current.version, newDraft: false };
 
-  const revoked = current.status === "published";
+  if (current.status === "published") {
+    const id = randomUUID();
+    await db.transaction(async (tx) => {
+      // Zámek akce: souběžné úpravy schváleného zápisu založí jen jeden nový návrh, druhá narazí na konflikt.
+      await queryRows(tx, sql`SELECT id FROM events WHERE id = ${eventId} FOR UPDATE`);
+      const latest = await currentMinutes(tx, eventId);
+      if (latest?.id !== minutesId || latest.version !== expectedVersion) throw new DomainError("conflict");
+      await tx.insert(minutes).values({
+        id,
+        orgId: config.orgId,
+        eventId,
+        source: current.source === "recording" ? "transcript" : current.source,
+        transcript: current.transcript,
+        content: next,
+        detectedTemplate: current.detectedTemplate,
+        templateMismatch: current.templateMismatch,
+        status: "draft",
+        version: expectedVersion + 1,
+        updatedBy: viewer.id,
+        approvedVersion: current.approvedVersion,
+        approvedBy: current.approvedBy,
+        approvedAt: current.approvedAt,
+        // Nový návrh musí být novější než schválený i při stejném čase (aktuální = nejnověji založený).
+        createdAt: new Date(Math.max(Date.now(), current.createdAt.getTime() + 1)),
+      });
+      await audit(tx, viewer.id, "minutes.edit_published", "event", eventId);
+    });
+    return { id, version: expectedVersion + 1, newDraft: true };
+  }
+
   await db.transaction(async (tx) => {
     const [row] = await tx
       .update(minutes)
-      .set({ content: next, version: sql`${minutes.version} + 1`, updatedBy: viewer.id, status: "draft", publishedBy: null, publishedAt: null })
-      .where(and(eq(minutes.id, minutesId), eq(minutes.version, expectedVersion)))
+      .set({ content: next, version: sql`${minutes.version} + 1`, updatedBy: viewer.id })
+      .where(and(eq(minutes.id, minutesId), eq(minutes.version, expectedVersion), eq(minutes.status, "draft")))
       .returning({ id: minutes.id });
     if (!row) throw new DomainError("conflict");
     await audit(tx, viewer.id, "minutes.edit", "event", eventId);
-    if (revoked) {
-      await audit(tx, viewer.id, "minutes.approval_revoked", "event", eventId);
-      await markCalendarPending(tx, eventId);
-    }
   });
-  return { version: expectedVersion + 1, revoked };
+  return { id: minutesId, version: expectedVersion + 1, newDraft: false };
 }
 
 /**

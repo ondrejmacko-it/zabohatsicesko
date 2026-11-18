@@ -49,7 +49,8 @@ export async function EventPeek({ user, eventId, preview, previewKey, closeHref,
   const handlesRecording = detail.recording.access === "handler" && !preview && card.past;
 
   const statusBand = (
-    <div className={`status-band status-${cardTone(card)}`} role="status">
+    // Tón pásu se řídí hlavním stavem: chyba Kalendáře nikdy nesmí vypadat jako úspěch (S-01).
+    <div className={`status-band status-${status?.tone === "danger" ? "danger" : status?.tone === "ochre" && card.planStatus === "published" ? "attention" : cardTone(card)}`} role="status">
       <strong>
         {card.planStatus === "draft" ? "Návrh · kolegové ho zatím nevidí" : (status?.label ?? PLAN_STATUS_LABELS[card.planStatus])}
         {card.past && card.planStatus === "published" ? " · proběhlo" : ""}
