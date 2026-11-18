@@ -1,5 +1,34 @@
 # Prompt pro další session
 
+**FINÁLNÍ DOLADĚNÍ MOBILNÍHO OVLÁDÁNÍ – UZAVŘENO K REVIZI (18. 11. 2026, relace 2, větev `claude/finalni-doladeni-mobilniho-ovladani`, PR #71).**
+* Hlášení „přidávání akcí odstraněno“: lokálně NEREPRODUKOVÁNO. Ukázka (správce, ref. čas 12. 11.) na 320/390/1280,
+  Měsíc i Seznam: lišta Přidat akci, „+“ u dne (mřížka i agenda), rychlé „+“, Přejít na datum → Přidat akci na tento den
+  otevřou okno se správným datem a akce se uloží. origin/main (8092e27) má na stejných šířkách tutéž lištu (screenshoty
+  před/po). Vercel preview ani jeho logy z cloudu nejdou otevřít (proxy/403), ostrá 3311 vyžaduje Google přihlášení,
+  živý iPhone/WebKit tu není. Uživatele se zeptat: URL, zařízení, role, šířka, co přesně chybělo.
+* Opraveno: filtry 2 × 2 na 320 px (počet „11“ se zalamoval, prvky měly různou výšku 44/52 px).
+* Nový `e2e/mobilni-ovladani.spec.ts` (CDP touch): přidání akce všemi cestami (telefon i desktop, zápis jen telefon-390),
+  podržení a tažení na den v agendě i v `.move-panel`, swipe, puštění mimo, ťuknutí na kartu, picker, Vybrat návrhy
+  skryje úchyty a „+“, potvrzený přesun (jen telefon-390, vlastní návrh v 10/2027), rychlé ovládání, Přejít na datum,
+  filtry bez díry, bez vodorovného posunu.
+* Ověřeno: lint, typecheck, unit 325/325, build, CELÉ e2e 995 passed / 89 skipped / 0 failed (6,8 min).
+**Další krok:** nic bez pokynu; uživatel reviduje a merguje PR #71. Pokud přidávání na preview dál chybí, potřebujeme jeho popis.
+
+**FINÁLNÍ DOLADĚNÍ MOBILNÍHO OVLÁDÁNÍ (18. 11. 2026, větev `claude/finalni-doladeni-mobilniho-ovladani` z main 8092e27, draft PR).**
+Zadání: jen telefon (desktop beze změny kromě textu „Vybrat návrhy“). Merge dělá uživatel.
+* HOTOVO: úchyt přesunu v agendě (`MoveHandle` v `Schedule.tsx`, logika v `MoveDropZone`: podržení 350 ms, zvednutí,
+  okrové zvýraznění dne, posun u okraje, dočasný přehled dnů `MonthDays` dole během tažení, puštění mimo = nic,
+  ťuknutí/Enter = výběr dne v okně, vždy `MoveConfirm`). „+“ u dne v agendě. `QuickActions` (+ a ⋯: Filtry,
+  Vybrat návrhy, Přejít na datum, Skrýt) až po odjetí řádku filtrů; sdílené `ChipLinks`/`FilterFields` v `PlanFilters`.
+  Filtry 2 × 2 (≤560 px), karta: stav vpravo na řádku času. Topbar Google na telefonu v jednom řádku. Štítek Nejžádanější nad názvem (≤640 px).
+* OVĚŘENO: lint, typecheck, unit 325/325, e2e plán+okna+kdo-tema+klávesnice (1280/390/320) 107 passed / 2 skipped.
+  Dotyk ověřen ručním skriptem přes CDP touch (podržení, tažení na prázdný den, mimo cíl, swipe bez přesunu).
+* NEOVĚŘENO: celé e2e, e2e test dotykového přesunu v repu, živý telefon (iOS Safari), topbar ostré Wiki screenshotem.
+**HLÁŠENÍ UŽIVATELE (po PR #71): „odstranil jsi úplně přidávání akcí“.** V kódu `EventDialog` (Přidat akci v liště) zůstal beze změny
+(diff page.tsx se ho netýká). PRVNÍ KROK: ověřit na Vercel preview #71 telefon i desktop jako správce, kde přidávání chybí
+(lišta, „+“ u dne v mřížce/agendě, rychlé „+“), najít příčinu a opravit. Pak teprve zbytek.
+**Další krok:** doplnit e2e `e2e/mobilni-ovladani.spec.ts` (CDP touch), celé e2e, screenshoty 320–1280, pak PR ready.
+
 **DOLADĚNÍ HARMONOGRAMU A TÉMAT (18. 11. 2026, řetězec 3 relací, větev `claude/doladeni-harmonogramu-a-temat` z main 506a2a6).**
 Zadání: jen (1) doporučená témata v Připravit měsíc, (2) kolonky Kdo/Téma v kartách `Schedule.tsx`. Nic jiného neměnit
 (nahrávky/přepisy/zápisy, layout, navigace, paleta, Kalendář, pozvánky…). PR až v relaci 3, merge dělá uživatel.

@@ -99,10 +99,10 @@ test.describe("okna správce", () => {
     await expect(page.getByRole("status").filter({ hasText: "Návrh je uložený. Kolegové ho zatím nevidí, nic se neodeslalo." })).toBeVisible();
   });
 
-  test("Vybrat akce: checkboxy přímo v Plánu, klik kartu označí a Zpět nic neodešle", async ({ page }) => {
+  test("Vybrat návrhy: checkboxy přímo v Plánu, klik kartu označí a Zpět nic neodešle", async ({ page }) => {
     await page.goto("/vzdelavani/harmonogram");
     await settle(page);
-    await page.getByRole("button", { name: "Vybrat akce" }).click();
+    await page.getByRole("button", { name: "Vybrat návrhy" }).click();
     const bar = page.getByRole("region", { name: "Hromadný výběr návrhů" });
     await expect(bar).toContainText("Vybráno 0");
     await expect(bar.getByRole("button", { name: "Smazat vybrané" })).toBeDisabled();
@@ -126,7 +126,7 @@ test.describe("okna správce", () => {
     await expect(page.locator("input.pick-box")).toHaveCount(0);
   });
 
-  test("Vybrat akce: smazání vybraného návrhu s potvrzením", async ({ page }, testInfo) => {
+  test("Vybrat návrhy: smazání vybraného návrhu s potvrzením", async ({ page }, testInfo) => {
     // Zápis do sdílených dat ukázky jen v jednom projektu. Návrh si test založí sám ve vzdáleném měsíci.
     test.skip(testInfo.project.name !== "windows-1280", "zápis jen jednou");
     const label = `Hromadné smazání e2e ${Date.now()}`;
@@ -141,7 +141,7 @@ test.describe("okna správce", () => {
     await page.waitForURL(/mesic=2027-09/);
     await settle(page);
 
-    await page.getByRole("button", { name: "Vybrat akce" }).click();
+    await page.getByRole("button", { name: "Vybrat návrhy" }).click();
     await page.getByRole("checkbox", { name: `Vybrat: ${label}` }).filter({ visible: true }).check();
     const bar = page.getByRole("region", { name: "Hromadný výběr návrhů" });
     await expect(bar).toContainText("Vybráno 1");

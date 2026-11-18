@@ -206,19 +206,23 @@ export function SelectionZone({
   );
 }
 
-/** Tlačítko „Vybrat akce“ v řádku filtrů. Bez návrhů v měsíci (nebo mimo Plán správce) se nevykreslí. */
-export function SelectToggle() {
+/** Stav hromadného výběru pro řádek filtrů a rychlé ovládání. Mimo `SelectionZone` je null. */
+export const useSelection = () => useContext(SelectionContext);
+
+/** Tlačítko „Vybrat návrhy“ v řádku filtrů. Bez návrhů v měsíci (nebo mimo Plán správce) se nevykreslí. */
+export function SelectToggle({ wide }: { wide?: boolean }) {
   const selection = useContext(SelectionContext);
   if (!selection?.available) return null;
   return (
     <button
       type="button"
       className="btn btn-small btn-quiet filter-button"
+      data-wide={wide || undefined}
       aria-pressed={selection.active}
       onClick={selection.active ? selection.stop : selection.start}
     >
       <Icon name="select" />
-      {selection.active ? "Ukončit výběr" : "Vybrat akce"}
+      {selection.active ? "Ukončit výběr" : "Vybrat návrhy"}
     </button>
   );
 }

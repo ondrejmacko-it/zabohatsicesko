@@ -113,6 +113,20 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   // Kdo nemá úkoly ani neplánuje, uvidí na telefonu nejdřív nejbližší akci (měsíční seznam začíná prvním dnem).
   const nextEvent = !managing && tasks.length === 0 ? await nearestEvent(viewer, monthKey === monthOf(todayKey) ? monthCards : []) : null;
   const thisMonth = monthOf(todayKey);
+  // Přesun (mřížka myší, agenda úchytem na telefonu) i „+“ u dne jen pro správce, od dneška dál.
+  const planning = managing ? { addHref, movableFrom: todayKey } : {};
+  const schedule = listView ? (
+    <Agenda monthKey={monthKey} cards={cards} todayKey={todayKey} emptyText={emptyText} hrefFor={peekHref} managing={managing} {...planning} />
+  ) : (
+    <>
+      <div className={styles.desktopOnly}>
+        <ScheduleGrid monthKey={monthKey} cards={cards} todayKey={todayKey} slotTimes={slotTimes} hrefFor={peekHref} managing={managing} {...planning} />
+      </div>
+      <div className={styles.mobileOnly}>
+        <Agenda monthKey={monthKey} cards={cards} todayKey={todayKey} emptyText={emptyText} hrefFor={peekHref} managing={managing} {...planning} />
+      </div>
+    </>
+  );
   return (
     <>
       <AutoRefresh active={syncing} />
@@ -228,6 +242,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
             preview={previewOptions && { ...previewOptions, value: preview ? (params.jako ?? "") : "" }}
             chips={chips}
             state={state}
+            quick={{ monthKey, todayKey, planHref: link({}), addDate: managing ? (monthOf(todayKey) === monthKey ? todayKey : `${monthKey}-01`) : null }}
           />
 
           {summary && !summary.planned && (
@@ -237,33 +252,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
             </div>
           )}
 
-          {listView ? (
-            <Agenda monthKey={monthKey} cards={cards} todayKey={todayKey} emptyText={emptyText} hrefFor={peekHref} managing={managing} />
-          ) : (
-            <>
-              <div className={styles.desktopOnly}>
-                {managing ? (
-                  <MoveDropZone>
-                    <ScheduleGrid
-                      monthKey={monthKey}
-                      cards={cards}
-                      todayKey={todayKey}
-                      slotTimes={slotTimes}
-                      hrefFor={peekHref}
-                      managing
-                      addHref={addHref}
-                      movableFrom={todayKey}
-                    />
-                  </MoveDropZone>
-                ) : (
-                  <ScheduleGrid monthKey={monthKey} cards={cards} todayKey={todayKey} slotTimes={slotTimes} hrefFor={peekHref} managing={managing} />
-                )}
-              </div>
-              <div className={styles.mobileOnly}>
-                <Agenda monthKey={monthKey} cards={cards} todayKey={todayKey} emptyText={emptyText} hrefFor={peekHref} managing={managing} />
-              </div>
-            </>
-          )}
+          {managing ? <MoveDropZone movableFrom={todayKey}>{schedule}</MoveDropZone> : schedule}
         </SelectionZone>
       </section>
     </>

@@ -2927,3 +2927,241 @@ p.cal-status {
 .cancel-notice {
   margin: 0 0 16px;
 }
+
+/* ——— Telefon: zvednutá karta při přesunu, dočasný výběr dne, rychlé ovládání Plánu ——— */
+.move-ghost {
+  position: fixed;
+  z-index: 60;
+  margin: 0;
+  pointer-events: none;
+  background: var(--surface);
+  box-shadow: 0 14px 34px rgba(28, 25, 23, 0.24);
+  rotate: -1deg;
+}
+
+body[data-moving] {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.move-panel {
+  position: fixed;
+  right: max(8px, env(safe-area-inset-right));
+  bottom: max(8px, env(safe-area-inset-bottom));
+  left: max(8px, env(safe-area-inset-left));
+  z-index: 50;
+  padding: 8px 10px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: 0 10px 30px rgba(28, 25, 23, 0.18);
+}
+
+.move-panel-text {
+  margin: 0 0 6px;
+  font-size: 13px;
+}
+
+.month-days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.month-days-head {
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.month-day {
+  display: flex;
+  position: relative;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 40px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+.move-panel .month-day {
+  min-height: 34px;
+}
+
+button.month-day {
+  cursor: pointer;
+}
+
+button.month-day:disabled,
+.month-day[data-disabled] {
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+  cursor: default;
+  opacity: 0.6;
+}
+
+.month-day[aria-current="date"],
+.month-day[data-current] {
+  font-weight: 700;
+}
+
+.month-day[data-has-events]::after {
+  content: "";
+  position: absolute;
+  bottom: 5px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--ochre);
+}
+
+.month-day[aria-pressed="true"],
+.month-day[data-drop-over] {
+  border-color: var(--ochre);
+  background: var(--ochre-soft);
+}
+
+.quick-actions {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .quick-actions {
+    display: flex;
+    position: fixed;
+    right: max(12px, calc(env(safe-area-inset-right) + 8px));
+    bottom: max(12px, calc(env(safe-area-inset-bottom) + 8px));
+    z-index: 30;
+    gap: 2px;
+    padding: 2px;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    background: var(--surface);
+    box-shadow: 0 6px 18px rgba(28, 25, 23, 0.14);
+  }
+
+  .quick-actions > .btn,
+  .quick-actions .menu > .btn {
+    width: 44px;
+    height: 44px;
+    border: 0;
+    border-radius: 999px;
+  }
+}
+
+/* Rychlé ovládání ustoupí oknu, tažení akce i hromadnému výběru. */
+body:has(dialog[open]) .quick-actions,
+body[data-moving] .quick-actions,
+[data-selecting] .quick-actions {
+  display: none;
+}
+
+/* ——— Telefon: filtry Plánu jako mřížka 2 × 2 se stejně vysokými prvky ——— */
+@media (max-width: 560px) {
+  .plan-filters {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  /* Dvouřádkový popisek (320 px) nesmí rozhodit výšky: všechny prvky řádku jsou stejně vysoké. */
+  .plan-filters .filter-menu {
+    display: flex;
+  }
+
+  .plan-filters .filter-menu > summary {
+    flex: 1;
+  }
+
+  .plan-filters-start,
+  .plan-filters-end {
+    display: contents;
+  }
+
+  .plan-filters .pill-count,
+  .plan-filters .filter-button {
+    justify-content: center;
+    width: 100%;
+    min-height: 44px;
+    margin: 0;
+    padding: 4px 10px;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    font-size: 14px;
+  }
+
+  /* Počet se nesmí zalomit („1“ / „1“), zalomit smí jen popisek. */
+  .plan-filters .pill-number {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  .plan-filters [data-wide],
+  .plan-filters .filter-menu[data-wide] {
+    grid-column: 1 / -1;
+  }
+
+  .filter-menu-panel {
+    right: auto;
+    left: 0;
+  }
+
+  .filter-menu:has(+ .filter-button) .filter-menu-panel,
+  .filter-menu[data-wide] .filter-menu-panel {
+    left: 0;
+  }
+}
+
+/* ——— Telefon: kompaktní hlavička s účtem Google a jednotný štítek Nejžádanější ——— */
+@media (max-width: 640px) {
+  .topbar:has(.account-google) {
+    flex-wrap: nowrap;
+  }
+
+  .account.account-google {
+    width: auto;
+    min-width: 0;
+    justify-content: flex-end;
+  }
+
+  .account-google .signed-in {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .account-google .account-name {
+    display: block;
+    min-width: 0;
+    max-width: 42vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .topic-row {
+    gap: 6px 12px;
+    padding: 10px 12px;
+  }
+
+  .topic-main .item-title {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+
+  .topic-main .item-title .topic-badge {
+    order: -1;
+  }
+}
