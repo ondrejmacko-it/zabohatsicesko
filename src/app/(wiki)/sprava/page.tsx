@@ -92,7 +92,15 @@ export default async function AdminPage() {
               live={live}
               personal={personal}
               actions={
-                !a.primary && (a.editable || live) ? (
+                live && a.ownPrimary ? (
+                  // Hlavní správce u sebe: jen odkaz pro další zařízení. Zařízení ani účet tu nemění.
+                  <AccountActions
+                    account={a}
+                    roles={roles}
+                    editable={false}
+                    live={{ inviteWaiting: a.access.invite.kind === "waiting", devices: [] }}
+                  />
+                ) : !a.primary && (a.editable || live) ? (
                   <AccountActions
                     account={a}
                     roles={roles}

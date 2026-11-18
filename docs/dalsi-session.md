@@ -1,5 +1,16 @@
 # Prompt pro další session
 
+**HLAVNÍ SPRÁVCE SI VYTVOŘÍ ODKAZ SÁM SOBĚ (18. 11. 2026, větev `claude/spravce-odkaz-sobe` z main 70c5f1f, draft PR).**
+* „Odkaz“ = zvací odkaz pro přihlášení dalšího zařízení (`createLoginLink`). Rozhodnutí uživatele: ostatním ho dál
+  přiděluje každý správce (beze změny), hlavní správce si ho nově vytvoří i sám sobě.
+* `manageableUser(..., { ownPrimaryLink })` v `src/server/services/users.ts`: výjimka jen pro `createLoginLink` a
+  `revokeLoginLink`, jen když hlavní správce pracuje s vlastním účtem. Jiný správce hlavnímu odkaz dál nevytvoří,
+  zařízení hlavního správce neruší nikdo, účet nemění nikdo. `Account.ownPrimary`; Správa u něj ukáže jen
+  „Nový odkaz pro další zařízení…“ (a zneplatnění čekajícího), bez odhlášení zařízení a úprav.
+* Testy v `tests/pozvanky.test.ts` (3). Ověřeno: lint, typecheck, unit 327/327, build, celé e2e 995 passed / 89 skipped.
+  NEOVĚŘENO: UI menu hlavního správce v ostré Wiki (e2e nemá jeho přihlášenou relaci), živá Wiki.
+**Další krok:** nic bez pokynu; uživatel reviduje a merguje PR. PR #71 se nemění.
+
 **FINÁLNÍ DOLADĚNÍ MOBILNÍHO OVLÁDÁNÍ – UZAVŘENO K REVIZI (18. 11. 2026, relace 2, větev `claude/finalni-doladeni-mobilniho-ovladani`, PR #71).**
 * Hlášení „přidávání akcí odstraněno“: lokálně NEREPRODUKOVÁNO. Ukázka (správce, ref. čas 12. 11.) na 320/390/1280,
   Měsíc i Seznam: lišta Přidat akci, „+“ u dne (mřížka i agenda), rychlé „+“, Přejít na datum → Přidat akci na tento den
