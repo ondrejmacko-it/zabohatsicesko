@@ -17,6 +17,11 @@ Zadání: jen (1) doporučená témata v Připravit měsíc, (2) kolonky Kdo/Té
   226 passed / 12 skipped na všech projektech. Screenshot 1280/390 prohlédnut. Celé e2e NEběželo (relace 3).
 * Poznámka pro relaci 2: rozpracovaný návrh s doporučeným tématem má v kartě Plánu pro správce zatím jen běžný
   `topicTitle`. Pokud má karta u správce rozlišit doporučené téma, jde to přes `suggestionPending` (zeptat se uživatele).
+* RELACE 3 HOTOVO: lint, typecheck, unit 325/325, build OK, CELÉ e2e 962 passed / 45 skipped / 0 failed (5,4 min).
+  Screenshoty 1280/390/320 (plán správce, plán účastníka, doporučení v Připravit měsíc) prohlédnuty, necommitnuty.
+  `docs/prezentacni-data.sql` + `.md`: prezentační data pro ostrou Wiki, NESPUŠTĚNO (až po merge). Rozhodnutí uživatele:
+  doporučení živě (únor 2027 → Připravit měsíc), akce vedou jen fiktivní kolegové. Ověřeno nanečisto v PGlite.
+  PR do main ready k revizi. **Další krok:** nic bez pokynu; uživatel mergne PR, pak případně spustí SQL podle doc.
 * RELACE 2 HOTOVO: bod (2). `cardDetails(card, managing)` v `src/features/vzdelavani/status.ts` (Kdo, Téma;
   svátek a zrušená bez kolonek; prázdné = správce „— doplnit“, účastník „Bude upřesněno“, u proběhlé akce účastník
   prázdné pole nevidí; téma shodné s názvem se neopakuje; Action time = pracovní blok, Téma jen vyplněné, rozhodnuto
