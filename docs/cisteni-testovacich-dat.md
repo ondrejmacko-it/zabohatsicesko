@@ -166,3 +166,9 @@ přepnuté `users.origin='demo'`) se k Neonu nepřipojila, proxy cloudové relac
 
 **Nechané beze změny (nebylo v zadání):** 16. 11. 21:00 Jiná akce, tři akce 17. 11. 9:00 (Trénink RM, Jiná akce
 bez tématu), 18. 11. 9:00 Action time · Tým A, šablonové akce bez tématu.
+
+**Doplněno 18. 11. 2026 (pokyn uživatele):** smazány i podezřelé ruční akce 16.–18. 11. (Jiná akce 16. 11. 21:00,
+Trénink RM a Jiná akce bez tématu 17. 11. 9:00, Action time · Tým A 18. 11. 9:00), jedna transakce, audit
+`event.delete_test_data` ×4, vyžádána osobní synchronizace. Ověřovací větev `br-bold-unit-baoj1w5m` smazána.
+Prezentační plný plán (fiktivní kolegové, Kdo/Téma částečně vyplněné) se do ostré DB nahraje až po merge PR
+`claude/doladeni-harmonogramu-a-temat`.
