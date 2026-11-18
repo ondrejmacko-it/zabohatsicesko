@@ -10,6 +10,9 @@ Zadání: jen telefon (desktop beze změny kromě textu „Vybrat návrhy“). M
 * OVĚŘENO: lint, typecheck, unit 325/325, e2e plán+okna+kdo-tema+klávesnice (1280/390/320) 107 passed / 2 skipped.
   Dotyk ověřen ručním skriptem přes CDP touch (podržení, tažení na prázdný den, mimo cíl, swipe bez přesunu).
 * NEOVĚŘENO: celé e2e, e2e test dotykového přesunu v repu, živý telefon (iOS Safari), topbar ostré Wiki screenshotem.
+**HLÁŠENÍ UŽIVATELE (po PR #71): „odstranil jsi úplně přidávání akcí“.** V kódu `EventDialog` (Přidat akci v liště) zůstal beze změny
+(diff page.tsx se ho netýká). PRVNÍ KROK: ověřit na Vercel preview #71 telefon i desktop jako správce, kde přidávání chybí
+(lišta, „+“ u dne v mřížce/agendě, rychlé „+“), najít příčinu a opravit. Pak teprve zbytek.
 **Další krok:** doplnit e2e `e2e/mobilni-ovladani.spec.ts` (CDP touch), celé e2e, screenshoty 320–1280, pak PR ready.
 
 **DOLADĚNÍ HARMONOGRAMU A TÉMAT (18. 11. 2026, řetězec 3 relací, větev `claude/doladeni-harmonogramu-a-temat` z main 506a2a6).**
