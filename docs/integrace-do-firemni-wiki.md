@@ -21,6 +21,27 @@ Wiki. Onboarding, knihovna, vyhledávání, správa účtů a další funkční 
 | Soubory | Nahrávky a podklady zápisů soukromě v databázi pod generovaným klíčem, vydávání jen autorizovanou cestou, kontrola obsahu a velikosti. |
 | Hosting | Vercel (Production = ostrá Wiki, Preview = ukázka s fiktivními daty), Neon. Plánovač fronty Kalendáře: GitHub Actions + Vercel Cron. |
 | Bezpečnost | CSP s nonce, `frame-ancestors 'none'`, `nosniff`, `noindex`, kontrola původu server actions, Zod validace, parametrizované dotazy, omezení počtu pokusů, audit bez obsahu dat. |
+| Zápisy | Zdroj zápisu: nahrávka (ukázkový přepis), vložený přepis nebo poznámky, textový soubor (.txt, .md, .vtt, .srt, nejvýš 1 MB, striktní UTF-8) nebo ruční zápis. Návrh z textu vzniká lokálně za rozhraním `MinutesDrafter` (`src/server/integrations/minutes-drafter.ts`), bez sítě a bez externí AI. Publikum vidí jen verzi schválenou vedoucím akce. |
+
+### Stav po větvi `claude/rychle-akce-a-planovani-temat`
+* **Migrace** (jen přidávací, spouští se samy při startu, viz bod 5):
+  `0013_topic_priority_and_order` (`topics.priority_rank` 1–3 s částečným unikátním indexem pro
+  nearchivovaná témata, `topics.manual_rank`) a `0014_minutes_sources_and_approval` (`minutes.recording_id`
+  a `job_id` mohou být prázdné, `source` s kontrolou vazby na nahrávku, `approved_version`, `approved_by`,
+  `approved_at`; stávající zveřejněné zápisy dostanou schválení své aktuální verze).
+* **Nové serverové akce** (`src/features/vzdelavani/actions.ts`, všechny ověřují roli na serveru a zapisují
+  audit): `setTopicPriorityAction`, `moveTopicAction`, `resetTopicOrderAction`, `topicPlanOptionsAction`,
+  `assignTopicAction` (jen správce, `canPlan`), `createMinutesDraftAction` (vedoucí, kontrolor, správce
+  u proběhlé zveřejněné akce) a rozšířená `saveMinutesAction` se záměrem `approve`.
+* **Oprávnění:** nové pravidlo `canApproveMinutes` v `src/server/policy.ts`: zápis schvaluje (a tím zveřejňuje)
+  jen vedoucí akce. Kontrolor a správce návrh upraví, schválit ho nemohou. Změna obsahu schválené verze schválení
+  zruší a zápis zmizí publiku do nového schválení. Akce bez vedoucího zápis zveřejnit nemůže.
+* **Garantovaná témata:** správce nastaví nejvýš tři prioritní témata (pořadí 1–3). Doporučení ve formuláři akce
+  i doplnění měsíce je nabízí jako první. Bez nastavení vidí správce úkol „Nastavte garantovaná témata“.
+  Platnost v čase (např. pro čtvrtletí) zatím není, je to otázka pro firmu.
+* **Hranice pro firemní AI/bota:** `MinutesDrafter` (vstup: text a kontext akce, výstup: obsah zápisu v šabloně)
+  a `TranscriptionProvider` (nahrávka → přepis). Dnes jen lokální implementace. Napojení firemního nástroje
+  znamená druhou implementaci rozhraní, výstup zůstává návrhem a zveřejní ho až vedoucí.
 
 ## 2. Varianty začlenění
 
@@ -83,3 +104,8 @@ Kandidáti se posuzují samostatně, až bude známá architektura Wiki.
 * Synchronizace Kalendáře předpokládá jednoho organizátora. Více kalendářů je nutné doplnit.
 * Přepis nahrávek je ukázkový. Skutečný poskytovatel (a firemní AI/bot) má jen připravenou hranici
   (`TranscriptionProvider`, `MinutesDrafter`) a bez schválení se mu neposílají data.
+* Migrace 0013 a 0014 se aplikují při prvním startu nové verze: na Preview (sdílená ukázková DB) hned po pushi
+  větve, na produkční databázi až po merge do main. Obě jsou jen přidávací a nic nemažou. Chování starší verze
+  kódu nad zápisy bez nahrávky (prázdné `recording_id`) **není ověřené**; před případným návratem kódu je
+  vhodné takové zápisy nejdřív zkontrolovat.
+* Souběh zápisů (priorita témat, založení zápisu, schválení verze) je ověřený jen na PGlite, ne na Neonu.
