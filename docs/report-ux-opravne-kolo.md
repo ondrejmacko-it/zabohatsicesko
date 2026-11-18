@@ -21,7 +21,8 @@ kontextu, proto je hotová jen první skupina (P0 + základ potvrzovacích oken)
 * typecheck OK, lint OK, unit **381/381** (vitest, celá sada).
 * e2e `priprava-mesice` + `zapisy-schvaleni` (windows-1280): 11 testů, po úpravě očekávání Z-01 vše prošlo;
   `zapisy-schvaleni` + `zapisy` + `okna` na windows-1280 a telefon-390: 62 passed / 1 skipped.
-* NEOVĚŘENO: build, celé e2e, screenshoty před/po, Firefox/WebKit, Preview, živý Kalendář.
+* build OK.
+* NEOVĚŘENO: celé e2e, screenshoty před/po, Firefox/WebKit, Preview, živý Kalendář.
 
 ## Změněná pravidla (pro integraci do Wiki)
 
