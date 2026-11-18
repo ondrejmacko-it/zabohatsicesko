@@ -1,5 +1,20 @@
 # Prompt pro další session
 
+**RYCHLÉ AKCE, PLÁNOVÁNÍ TÉMAT, ZÁPISY SE SCHVÁLENÍM (18. 11. 2026, větev `claude/rychle-akce-a-planovani-temat` z main 59cadc0).**
+Zadání uživatele: velké UX zadání (Quick Actions, garantovaná témata, Naplánovat téma, doporučení, Připravit měsíc,
+zápisy z více zdrojů s povinným schválením vedoucím, dokumenty pro integraci). Plán a rozhodnutí: `docs/plan-rychle-akce-a-temata.md`.
+Uživatel chce, aby relace pracovaly samostatně, samy zakládaly navazující relace a ozvaly se až na konci (finální relace = report + audit + draft PR).
+* F1 HOTOVO (2968d2f, 0d38512, 59ed98f, 5e88242): `Menu` varianta `card`, `cardActions` ve `status.ts`, `CardMenu.tsx`,
+  `PublishOneDialog` v `PlanSelection`, duplikace `?kopie=` (`duplicateFormValues`, `suggestedCopyDate` v `detail.ts`,
+  server odmítne publish s `duplicateOf`), `e2e/rychle-akce.spec.ts`. Ověřeno: lint, typecheck, unit 339/339, build,
+  e2e (rychle-akce, plan-planovani, mobilni-ovladani, klavesnice, pristupnost, okna) 317 passed / 81 skipped.
+  Otevřené: zalomení času na 320 px u návrhu se štítkem; kopie z okna akce drží jen měsíc.
+* F5 částečně: `docs/integrace-do-firemni-wiki.md`, `docs/podklady-pro-sper.md` (koncept, kdo je SPER neznáme).
+**Další krok:** F2 (témata, migrace 0013), F3 (Připravit měsíc, rozvrh, neuložené změny), F4 (zápisy, migrace 0014),
+F5 (celé e2e, screenshoty, `docs/report-rychle-akce-a-temata.md` podle bodu 19 zadání, draft PR). Každou fázi delegovat
+subagentovi (kontext hlavní relace šetřit), commit + push po fázi, sem zapsat stav.
+
+
 **HLAVNÍ SPRÁVCE SI VYTVOŘÍ ODKAZ SÁM SOBĚ (18. 11. 2026, větev `claude/spravce-odkaz-sobe` z main 70c5f1f, draft PR).**
 * „Odkaz“ = zvací odkaz pro přihlášení dalšího zařízení (`createLoginLink`). Rozhodnutí uživatele: ostatním ho dál
   přiděluje každý správce (beze změny), hlavní správce si ho nově vytvoří i sám sobě.
