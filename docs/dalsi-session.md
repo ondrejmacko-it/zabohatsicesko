@@ -1,5 +1,18 @@
 # Prompt pro další session
 
+**DALŠÍ ZAŘÍZENÍ K ÚČTU (18. 11. 2026, větev `claude/dalsi-zarizeni-k-uctu-1519o9` z main 8092e27, PR #70 sloučený).**
+Jen prověrka čtením, kód beze změny. Zjištění:
+* Správce UMÍ vystavit odkaz pro EXISTUJÍCÍ účet: Správa systému → Lidé → menu ⋯ u účtu → „Nový odkaz pro další
+  zařízení…“ → Vytvořit odkaz (`createLoginLink` → `createInvite`, 7 dní, jednorázový, starší nepoužitý zneplatní).
+  Callback (`scopedAccount`, scope `invite`) pustí už svázaný účet Google jen když `sub` patří témuž uživateli, jinak
+  `wrong_account`; pozvánka se pak nespotřebuje. Funguje i pro vlastní účet správce, který NENÍ hlavní.
+* Hlavní správce (1. adresa `BOOTSTRAP_ADMIN_EMAILS`) odkaz v UI nemá (`manageableUser` → forbidden, menu skryté).
+  Jeho cesta je `/vstup?spravce=1` → e-mail → Pokračovat přes Google → `registerBootstrapDevice` (platí pro všechny
+  adresy zaváděcího seznamu).
+* Samoobsluha „Přidat zařízení“ pro běžného uživatele NEEXISTUJE: další zařízení mu musí vystavit správce.
+**Další krok:** čeká se na rozhodnutí uživatele, jestli přidat samoobsluhu (přihlášený uživatel si na svém zařízení
+vytvoří jednorázový odkaz pro vlastní účet, krátká expirace, stejný Google účet). Bez souhlasu nic neimplementovat.
+
 **DOLADĚNÍ HARMONOGRAMU A TÉMAT (18. 11. 2026, řetězec 3 relací, větev `claude/doladeni-harmonogramu-a-temat` z main 506a2a6).**
 Zadání: jen (1) doporučená témata v Připravit měsíc, (2) kolonky Kdo/Téma v kartách `Schedule.tsx`. Nic jiného neměnit
 (nahrávky/přepisy/zápisy, layout, navigace, paleta, Kalendář, pozvánky…). PR až v relaci 3, merge dělá uživatel.
