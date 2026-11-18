@@ -2866,8 +2866,14 @@ p.cal-status {
 
 .suggestion-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 4px 8px;
+}
+
+/* Úzký displej: doporučení se nesmí roztáhnout přes okno (štítky Garantované / Doporučené se zalomí). */
+.suggestion {
+  max-width: 100%;
 }
 
 /* Správa: stav účtu a akce vpravo v jedné ose s názvem účtu. */
