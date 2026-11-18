@@ -55,9 +55,8 @@ Uživatel chce, aby relace pracovaly samostatně, samy zakládaly navazující r
   zapis-schvaleni, rychle-akce-mobil). Dokončené `docs/integrace-do-firemni-wiki.md` a `docs/podklady-pro-sper.md`
   (migrace 0013/0014, nové akce, `canApproveMinutes`, `MinutesDrafter`; kdo je SPER dál neznáme). Část 06 zadání
   v repu nedohledána (otevřená otázka).
-**Další krok:** draft PR #73 založen; nic bez pokynu, uživatel reviduje a merguje. Původní text:
-Draft PR (zakládá uživatel / hlavní relace, do reportu doplnit řádek „PR:“) a revize uživatelem. Merge jen ručně
-uživatelem. Pozor: migrace 0013/0014 se na Preview spustí po pushi, na produkci po merge.
+**Další krok:** draft PR #73 je založený, nic bez pokynu. Uživatel reviduje a merguje ručně.
+Pozor: migrace 0013/0014 se na Preview spustily po pushi, na produkci se spustí po merge.
 
 
 **HLAVNÍ SPRÁVCE SI VYTVOŘÍ ODKAZ SÁM SOBĚ (18. 11. 2026, větev `claude/spravce-odkaz-sobe` z main 70c5f1f, draft PR).**
