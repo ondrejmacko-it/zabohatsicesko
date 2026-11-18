@@ -31,6 +31,7 @@ import { listMonth, listMonthDrafts, listPeople, loadTemplate, nextEventFor } fr
 import { loadCalendarStatus, loadPersonalCalendar } from "@/server/services/calendar-status";
 import { listTasks } from "@/server/services/journey";
 import { listPreviewOptions, resolvePreview } from "@/server/services/preview";
+import { duplicateFormValues } from "@/server/services/detail";
 import { listTopics } from "@/server/services/topics";
 
 export const metadata: Metadata = { title: "Plán vzdělávání" };
@@ -97,6 +98,10 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   const addDay = managing && params.den && isValidDateKey(params.den) ? params.den : null;
   const addHref = (day: string) => link({ den: day });
   const newDate = addDay ?? (monthOf(todayKey) === monthKey ? todayKey : `${monthKey}-01`);
+  // Duplikovat (`?kopie=`): Přidat akci předvyplněná podle existující akce, uloží se jen jako návrh.
+  // Neznámá akce nebo svátek okno neotevře.
+  const copyId = managing && params.kopie ? params.kopie.slice(0, 120) : null;
+  const copyValues = copyId ? await duplicateFormValues(user, copyId, todayKey) : null;
 
   // Menu ⋯ na kartách: položky podle stavu a role (`cardActions`), adresy se zachovaným měsícem a filtry.
   const fullHref = (card: EventCard) => `/vzdelavani/akce/${encodeURIComponent(card.id)}${current.jako ? `?jako=${encodeURIComponent(current.jako)}` : ""}`;
@@ -225,10 +230,11 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
               )}
               {managing && (
                 <EventDialog
-                  key={addDay ?? "nova"}
-                  openOnMount={addDay !== null}
-                  closeHref={addDay ? link({}) : undefined}
-                  initial={{
+                  key={copyValues ? `kopie-${copyId}` : (addDay ?? "nova")}
+                  openOnMount={addDay !== null || copyValues !== null}
+                  closeHref={addDay || copyValues ? link({}) : undefined}
+                  duplicateOf={copyValues ? copyId! : undefined}
+                  initial={copyValues ?? {
                     type: "other",
                     label: "",
                     date: newDate,

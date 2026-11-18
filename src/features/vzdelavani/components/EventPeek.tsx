@@ -4,7 +4,7 @@ import { Icon } from "@/components/Icon";
 import { RouteModal, UnavailableModal } from "@/components/RouteModal";
 import { Todo, missingText } from "@/components/Todo";
 import { GROUP_LABELS, PLAN_STATUS_LABELS } from "@/lib/labels";
-import { formatEventWhen } from "@/lib/time";
+import { formatEventWhen, toDateKey } from "@/lib/time";
 import type { Viewer } from "@/server/policy";
 import { isOrganizer } from "@/server/policy";
 import { getEventDetail } from "@/server/services/detail";
@@ -82,7 +82,16 @@ export async function EventPeek({ user, eventId, preview, previewKey, closeHref 
         title={card.label}
         closeHref={closeHref}
         intro={intro}
-        menu={<EventMenu id={card.id} revision={detail.revision} canCancel={detail.canCancel} canDelete={detail.canDelete} links={links} />}
+        menu={
+          <EventMenu
+            id={card.id}
+            revision={detail.revision}
+            canCancel={detail.canCancel}
+            canDelete={detail.canDelete}
+            links={links}
+            copyHref={`/vzdelavani/harmonogram?mesic=${toDateKey(new Date(card.startsAt)).slice(0, 7)}&kopie=${encodeURIComponent(card.id)}`}
+          />
+        }
         id={card.id}
         revision={detail.revision}
         initial={detail.form!}

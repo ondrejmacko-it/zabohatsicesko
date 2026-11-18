@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { toDateKey, toTimeKey } from "@/lib/time";
+import { addDays, isoWeekday, toDateKey, toTimeKey } from "@/lib/time";
 import type { EventSnapshot, EventType, Group, SimAttendee } from "@/lib/types";
 import { audienceAttendees } from "@/server/calendar/attendees";
 import { CalendarError, type ExternalEvent } from "@/server/calendar/provider";
@@ -10,8 +10,9 @@ import { attendeeSource, calendarMode, config, now, personalDelivery, type Atten
 import { getDb } from "@/server/db/client";
 import { calendarLinks, users, type ManagedFields } from "@/server/db/schema";
 import { calendarSummary, snapshotOf, type EventRow } from "@/server/domain/snapshot";
-import { isOrganizer, type Viewer } from "@/server/policy";
-import { getEventCard, type EventCard } from "@/server/services/events";
+import { canPlan, isOrganizer, type Viewer } from "@/server/policy";
+import { DomainError } from "@/server/services/errors";
+import { getEventCard, loadEventRow, type EventCard } from "@/server/services/events";
 import { recordingPanel, type RecordingPanel } from "@/server/services/recordings";
 
 /** Hodnoty formuláře akce ve tvaru, který potřebuje dialog. */
@@ -44,6 +45,44 @@ export function formValuesOf(snapshot: EventSnapshot): EventFormValues {
     audience: snapshot.audience,
     leadId: snapshot.leadId ?? "",
     reviewerId: snapshot.reviewerId ?? "",
+  };
+}
+
+/**
+ * Datum kopie: stejný den v týdnu o týden později než zdroj, pokud je to nejdřív zítra. Jinak nejbližší
+ * stejný den v týdnu od zítřka (zdroj z minulosti se tak nikdy nenavrhne do minulosti ani na dnešek).
+ */
+export function suggestedCopyDate(sourceDate: string, todayKey: string): string {
+  const tomorrow = addDays(todayKey, 1);
+  const weekLater = addDays(sourceDate, 7);
+  if (weekLater >= tomorrow) return weekLater;
+  return addDays(tomorrow, (isoWeekday(sourceDate) - isoWeekday(tomorrow) + 7) % 7);
+}
+
+/**
+ * Předvyplnění okna Přidat akci podle existující akce (Duplikovat). Jen správce. Kopíruje se pouze to, co je
+ * ve formuláři: typ, název, téma, skupina, vedoucí, kontrolor a časy. Datum je jen návrh (`suggestedCopyDate`).
+ * Identita, verze, vazby na Kalendář, pozvánky, nahrávky, zápisy, stav ani historie se nepřenáší: nová akce
+ * vznikne běžným `createEvent` jako návrh. Neexistující akce a svátek vrací null.
+ */
+export async function duplicateFormValues(viewer: Viewer, id: string, todayKey: string): Promise<EventFormValues | null> {
+  if (!canPlan(viewer)) throw new DomainError("forbidden");
+  const row = await loadEventRow(await getDb(), id);
+  if (!row || row.type === "holiday") return null;
+  const source = formValuesOf(snapshotOf(row));
+  const date = suggestedCopyDate(source.date, todayKey);
+  const span = source.endDate ? Math.round((Date.parse(source.endDate) - Date.parse(source.date)) / 86_400_000) : 0;
+  return {
+    type: source.type,
+    label: source.label,
+    date,
+    endDate: span > 0 ? addDays(date, span) : null,
+    startTime: source.startTime,
+    endTime: source.endTime,
+    topicTitle: source.topicTitle,
+    audience: source.audience,
+    leadId: source.leadId,
+    reviewerId: source.reviewerId,
   };
 }
 

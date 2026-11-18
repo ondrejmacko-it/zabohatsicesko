@@ -150,6 +150,11 @@ export async function saveEventAction(_prev: ActionResult | null, formData: Form
     }
     const { input, intent, confirmToken } = parsed;
     const id = z.string().max(80).optional().parse(formData.get("id") ?? undefined);
+    // Kopie akce (Duplikovat) vzniká vždy jako návrh. Správce ji zkontroluje a zveřejní běžně v okně akce.
+    const duplicateOf = z.string().max(80).optional().parse(formData.get("duplicateOf") || undefined);
+    if (duplicateOf && (id || intent === "publish")) {
+      return { ok: false, error: "Kopie akce se ukládá jen jako návrh. Zveřejnit ji můžete po kontrole v okně akce. Nic se neuložilo." };
+    }
     if (!id) {
       const created = await createEvent(user, input, intent);
       if (intent === "publish") after(() => syncEvent(created));
