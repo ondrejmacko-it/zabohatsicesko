@@ -25,6 +25,7 @@ import {
   generateMonth,
   publishDrafts,
   IncompleteNotConfirmed,
+  assignTopicToDraft,
   planMove,
   updateEvent,
   updateTemplate,
@@ -39,7 +40,18 @@ import {
   uploadRecording,
   withdrawMinutes,
 } from "@/server/services/recordings";
-import { proposeTopic, setInterest, setTopicArchived, topicIdByName, updateTopic } from "@/server/services/topics";
+import {
+  moveTopic,
+  proposeTopic,
+  resetTopicOrder,
+  setInterest,
+  setTopicArchived,
+  setTopicPriority,
+  topicIdByName,
+  topicPlanOptions,
+  updateTopic,
+  type TopicPlanOptions,
+} from "@/server/services/topics";
 import { SIMULATION_SWITCHES, writeSwitch } from "@/server/settings";
 
 // Každá akce znovu ověří session a oprávnění na serveru a validuje vstup.
@@ -515,6 +527,49 @@ export async function archiveTopicAction(_prev: ActionResult | null, formData: F
     const data = z.object({ topicId: z.string().max(80), archived: z.enum(["true", "false"]) }).parse(formObject(formData));
     await setTopicArchived(user, data.topicId, data.archived === "true");
     return { ok: true };
+  });
+}
+
+export async function setTopicPriorityAction(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
+  return run(async (user) => {
+    const data = z.object({ topicId: z.string().max(80), guaranteed: z.enum(["true", "false"]) }).parse(formObject(formData));
+    await setTopicPriority(user, data.topicId, data.guaranteed === "true");
+    return { ok: true, message: data.guaranteed === "true" ? "Téma je mezi garantovanými." : "Priorita je zrušená, téma je mezi ostatními." };
+  });
+}
+
+export async function moveTopicAction(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
+  return run(async (user) => {
+    const data = z.object({ topicId: z.string().max(80), direction: z.enum(["up", "down"]) }).parse(formObject(formData));
+    await moveTopic(user, data.topicId, data.direction);
+    return { ok: true };
+  });
+}
+
+export async function resetTopicOrderAction(): Promise<ActionResult> {
+  return run(async (user) => {
+    await resetTopicOrder(user);
+    return { ok: true, message: "Ostatní témata jsou znovu seřazená podle zájmu." };
+  });
+}
+
+/** Podklad okna Naplánovat téma. Nic nezapisuje. */
+export async function topicPlanOptionsAction(topicId: string): Promise<ActionResult & { options?: TopicPlanOptions }> {
+  return run(async (user) => ({ ok: true, options: await topicPlanOptions(user, z.string().max(80).parse(topicId)) }));
+}
+
+/** Naplánovat téma do návrhu: uloží jen návrh, nic se nezveřejní ani neodešle. */
+export async function assignTopicAction(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
+  return run(async (user) => {
+    const data = z
+      .object({ topicId: z.string().max(80), eventId: z.string().max(80), revision: z.coerce.number().int().positive() })
+      .parse(formObject(formData));
+    const { dateKey, topicName } = await assignTopicToDraft(user, data.topicId, data.eventId, data.revision);
+    return {
+      ok: true,
+      id: data.eventId,
+      message: `Téma „${topicName}“ je v návrhu na ${formatDayMonth(dateKey)} Kolegové ho zatím nevidí, nic se neodeslalo.`,
+    };
   });
 }
 

@@ -391,4 +391,15 @@ ALTER TABLE personal_calendars ADD CONSTRAINT personal_calendars_status_check
   CHECK (status IN ('active', 'declined', 'revoked', 'calendar_deleted', 'removal_failed'));
 `,
   },
+  {
+    id: "0013_topic_priority_and_order",
+    sql: `
+-- Garantovaná témata (pořadí 1–3) a ruční pořadí ostatních. Jen nové sloupce, stávající data se nemění.
+-- Unikátní index hlídá i souběh: stejné pořadí nedostanou dvě nearchivovaná témata.
+ALTER TABLE topics ADD COLUMN priority_rank smallint CHECK (priority_rank BETWEEN 1 AND 3);
+ALTER TABLE topics ADD COLUMN manual_rank integer;
+CREATE UNIQUE INDEX topics_priority_rank_unique ON topics (org_id, priority_rank)
+  WHERE priority_rank IS NOT NULL AND archived_at IS NULL;
+`,
+  },
 ];

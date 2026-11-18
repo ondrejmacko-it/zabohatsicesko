@@ -4,7 +4,7 @@ import type { EventType, Group } from "@/lib/types";
 import { needsCalendarConnection } from "@/server/calendar/google-auth";
 import { config, now } from "@/server/config";
 import { getDb } from "@/server/db/client";
-import { calendarLinks, events, minutes, recordings, transcriptionJobs, users } from "@/server/db/schema";
+import { calendarLinks, events, minutes, recordings, topics, transcriptionJobs, users } from "@/server/db/schema";
 import { canHandleRecording, canManageUsers, canReadPublishedMinutes, isEventHandler, isOrganizer, type Viewer } from "@/server/policy";
 import { pendingRequestCount } from "@/server/services/users";
 
@@ -197,6 +197,14 @@ export async function listTasks(viewer: Viewer): Promise<JourneyTask[]> {
       .where(and(eq(events.orgId, config.orgId), eq(calendarLinks.syncStatus, "attention")));
     for (const { event } of stuck) {
       tasks.push({ key: `kalendar-${event.id}`, title: event.published?.label ?? "Akce", detail: "Pozvánka v Kalendáři neodpovídá Wiki a čeká na váš zásah.", href: `/vzdelavani/akce/${event.id}?odkud=prehled#kalendar`, action: "Vyřešit pozvánku", eventType: event.published?.type });
+    }
+    // Bez garantovaných témat doporučení i doplnění měsíce vychází jen ze zájmu. Úkol zmizí po nastavení prvního.
+    const [topicState] = await db
+      .select({ active: sql<number>`count(*)::int`, guaranteed: sql<number>`count(${topics.priorityRank})::int` })
+      .from(topics)
+      .where(and(eq(topics.orgId, config.orgId), isNull(topics.archivedAt)));
+    if (topicState && Number(topicState.active) > 0 && Number(topicState.guaranteed) === 0) {
+      tasks.push({ key: "garantovana-temata", title: "Nastavte garantovaná témata", detail: "Vyberte až tři témata, která se mají probrat přednostně. Doporučení u akcí je pak nabídne jako první.", href: "/vzdelavani/temata", action: "Vybrat témata" });
     }
   }
   if (canManageUsers(viewer)) {

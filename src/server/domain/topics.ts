@@ -11,6 +11,12 @@ export type TopicStat = {
   lastHeld: string | null;
   /** Nejbližší budoucí zveřejněné konání (dateKey), nebo null. */
   nextPlanned: string | null;
+  /** ID akce nejbližšího budoucího zveřejněného konání (odkaz ze seznamu Témat). */
+  nextPlannedId?: string | null;
+  /** Garantované téma: pořadí 1–3. Null nebo chybí = běžné téma. */
+  priorityRank?: number | null;
+  /** Ruční pořadí mezi ostatními tématy. Null nebo chybí = podle zájmu. */
+  manualRank?: number | null;
 };
 
 export type RankedTopic = TopicStat & { reason: string };
@@ -56,8 +62,6 @@ export function rankTopics(stats: TopicStat[]): RankedTopic[] {
  */
 export const TOPIC_DRIVEN_TYPES: ReadonlySet<EventType> = new Set<EventType>(["education-fp", "education-rm"]);
 
-/** Téma se hodí k akci stejného publika, téma pro všechny ke každé akci. */
-/** Doporučit jde jen nenaplánované téma, o které projevil zájem aspoň jeden člověk. */
 /**
  * Pořadí seznamu Témat: podle počtu zájemců sestupně, při shodě abecedně a podle ID (stabilní).
  * Jen prezentace. Plánování a předvyplňování termínů dál používá `rankTopics`.
@@ -79,12 +83,133 @@ export function mostWantedIds(topics: readonly Pick<TopicStat, "id" | "name" | "
   );
 }
 
-export function isRecommendable(topic: { interestCount: number; nextPlanned?: string | null }): boolean {
-  return topic.interestCount > 0 && !topic.nextPlanned;
+/** Doporučit jde nenaplánované téma se zájmem aspoň jednoho člověka. Garantované téma i bez zájemců. */
+export function isRecommendable(topic: { interestCount: number; nextPlanned?: string | null; priorityRank?: number | null }): boolean {
+  return (topic.interestCount > 0 || isGuaranteed(topic)) && !topic.nextPlanned;
 }
 
+/** Téma se hodí k akci stejného publika, téma pro všechny ke každé akci. */
 export function topicFitsAudience(topicAudience: string, eventAudience: string): boolean {
   return topicAudience === eventAudience || topicAudience === "vsichni";
+}
+
+// ——— Garantovaná témata a ruční pořadí ———
+
+/** Nejvýš tolik témat může být garantovaných (pořadí 1 až 3). */
+export const MAX_PRIORITY = 3;
+
+type Ordered = Pick<TopicStat, "id" | "name" | "interestCount" | "priorityRank" | "manualRank">;
+
+export const isGuaranteed = (topic: { priorityRank?: number | null }): boolean => topic.priorityRank != null;
+
+/** Garantovaná témata podle pořadí 1–3. */
+export function guaranteedTopics<T extends Ordered>(topics: readonly T[]): T[] {
+  return topics.filter(isGuaranteed).sort((a, b) => a.priorityRank! - b.priorityRank!);
+}
+
+/**
+ * Ostatní témata: nejdřív ta s ručním pořadím (Posunout výš/níž), za nimi zbytek podle zájmu
+ * (`sortByInterest`). Nové téma tak při ručním pořadí přibude na konec.
+ */
+export function otherTopics<T extends Ordered>(topics: readonly T[]): T[] {
+  const rest = sortByInterest(topics.filter((t) => !isGuaranteed(t)));
+  const ranked = rest.filter((t) => t.manualRank != null).sort((a, b) => a.manualRank! - b.manualRank!);
+  return [...ranked, ...rest.filter((t) => t.manualRank == null)];
+}
+
+export const hasManualOrder = (topics: readonly Pick<TopicStat, "priorityRank" | "manualRank">[]): boolean =>
+  topics.some((t) => !isGuaranteed(t) && t.manualRank != null);
+
+/** Nejnižší volné pořadí garantovaného tématu, nebo null, když jsou obsazená všechna tři. */
+export function nextFreePriority(topics: readonly Pick<TopicStat, "priorityRank">[]): number | null {
+  const taken = new Set(topics.map((t) => t.priorityRank));
+  for (let rank = 1; rank <= MAX_PRIORITY; rank += 1) if (!taken.has(rank)) return rank;
+  return null;
+}
+
+/**
+ * Posun o jedno místo v daném pořadí: vrátí nové pořadí ID, nebo null, když téma už je na kraji
+ * (nebo v pořadí není). Výměna se sousedem, ostatní zůstávají.
+ */
+export function moveInOrder(ids: readonly string[], id: string, direction: "up" | "down"): string[] | null {
+  const index = ids.indexOf(id);
+  const other = direction === "up" ? index - 1 : index + 1;
+  if (index < 0 || other < 0 || other >= ids.length) return null;
+  const next = [...ids];
+  [next[index], next[other]] = [next[other]!, next[index]!];
+  return next;
+}
+
+/**
+ * Doporučená témata pro akci dané skupiny: jen vhodná a doporučitelná (`isRecommendable`), v pořadí
+ * garantovaná podle priority → téma přímo pro skupinu (před tématem pro všechny) → pořadí vstupu
+ * (u `rankTopics` zájem a historie). Formulář akce i doplnění měsíce používají stejné pořadí.
+ */
+export function recommendTopics<T extends { id: string; audience: string; interestCount: number; nextPlanned?: string | null; priorityRank?: number | null }>(
+  topics: readonly T[],
+  eventAudience: string,
+): T[] {
+  return topics
+    .map((topic, index) => ({ topic, index }))
+    .filter(({ topic }) => isRecommendable(topic) && topicFitsAudience(topic.audience, eventAudience))
+    .sort(
+      (a, b) =>
+        (a.topic.priorityRank ?? MAX_PRIORITY + 1) - (b.topic.priorityRank ?? MAX_PRIORITY + 1) ||
+        Number(a.topic.audience !== eventAudience) - Number(b.topic.audience !== eventAudience) ||
+        a.index - b.index,
+    )
+    .map(({ topic }) => topic);
+}
+
+/** Budoucí akce, kterou lze pro téma zvážit v okně Naplánovat téma. */
+export type PlanEvent = {
+  id: string;
+  revision: number;
+  type: EventType;
+  label: string;
+  audience: string;
+  status: "draft" | "published" | "cancelled";
+  startsAt: Date;
+  topicId: string | null;
+  topicTitle: string | null;
+};
+
+export type PlanCandidate = PlanEvent & { draft: boolean; reason: string };
+
+/** Kolik akcí okno Naplánovat téma nabídne. */
+export const PLAN_CANDIDATES = 5;
+
+/**
+ * Kam téma naplánovat: budoucí nezrušené akce bez tématu, pro které se téma hodí skupinou. Přednost má
+ * návrh (uloží se jen návrh, nic se neodešle) s typem řízeným tématem a se stejnou skupinou, pak dřívější
+ * termín. Zveřejněná akce je až za návrhy, její změna jde pozvaným a zveřejňuje se s kontrolou dopadu.
+ * `scheduled` = nejbližší budoucí akce, která téma už má (i návrh). Svátek se nenabízí nikdy.
+ */
+export function planCandidates(
+  topic: { id: string; audience: string },
+  upcoming: readonly PlanEvent[],
+  limit = PLAN_CANDIDATES,
+): { scheduled: PlanEvent | null; candidates: PlanCandidate[] } {
+  const live = [...upcoming].filter((e) => e.status !== "cancelled" && e.type !== "holiday").sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
+  const scheduled = live.find((e) => e.topicId === topic.id) ?? null;
+  const rank = (e: PlanEvent) => (e.status === "draft" ? 0 : 2) + (TOPIC_DRIVEN_TYPES.has(e.type) ? 0 : 1);
+  const candidates = live
+    .filter((e) => !e.topicTitle && topicFitsAudience(topic.audience, e.audience))
+    .map((e, index) => ({ e, index }))
+    .sort((a, b) => rank(a.e) - rank(b.e) || Number(a.e.audience !== topic.audience) - Number(b.e.audience !== topic.audience) || a.index - b.index)
+    .slice(0, limit)
+    .map(({ e }) => ({
+      ...e,
+      draft: e.status === "draft",
+      reason: [
+        e.status === "draft" ? "Návrh bez tématu, uloží se jen návrh" : "Zveřejněná akce bez tématu, změnu zveřejníte s kontrolou dopadu",
+        TOPIC_DRIVEN_TYPES.has(e.type) ? "typ akce vychází z témat" : null,
+        e.audience === topic.audience ? "stejná skupina" : "téma je pro všechny",
+      ]
+        .filter(Boolean)
+        .join(" · "),
+    }));
+  return { scheduled, candidates };
 }
 
 /**
@@ -101,9 +226,8 @@ export function suggestTopics(
   const result = new Map<string, RankedTopic>();
   for (const slot of slots) {
     if (!TOPIC_DRIVEN_TYPES.has(slot.type)) continue;
-    const topic = ranked.find(
-      (t) => isRecommendable(t) && !used.has(t.id) && topicFitsAudience(t.audience, slot.audience),
-    );
+    // Stejné pořadí jako doporučení ve formuláři: garantovaná témata skupiny, pak témata skupiny, pak zájem.
+    const topic = recommendTopics(ranked, slot.audience).find((t) => !used.has(t.id));
     if (!topic) continue;
     used.add(topic.id);
     result.set(slot.generationKey, topic);

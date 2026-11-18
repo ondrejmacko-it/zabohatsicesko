@@ -6,6 +6,7 @@ import {
   pgTable,
   primaryKey,
   serial,
+  smallint,
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
@@ -50,6 +51,10 @@ export const topics = pgTable("topics", {
   proposedBy: text("proposed_by"),
   createdAt: ts("created_at").notNull().defaultNow(),
   archivedAt: ts("archived_at"),
+  /** Garantované téma: pořadí 1–3, unikátní mezi nearchivovanými (index v migraci 0013). */
+  priorityRank: smallint("priority_rank"),
+  /** Ruční pořadí ostatních témat. Null = řadí se podle zájmu. */
+  manualRank: integer("manual_rank"),
 });
 
 export const topicInterests = pgTable(

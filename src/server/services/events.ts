@@ -14,11 +14,12 @@ import {
   generationExclusions,
   minutes,
   templateSlots,
+  topics,
   users,
 } from "@/server/db/schema";
 import { planMonth, slotConflict, type Occupant } from "@/server/domain/generation";
 import { snapshotOf, type EventRow } from "@/server/domain/snapshot";
-import { suggestTopics, suggestionPending, TOPIC_ACCEPT, TOPIC_REJECT } from "@/server/domain/topics";
+import { suggestTopics, suggestionPending, topicFitsAudience, TOPIC_ACCEPT, TOPIC_REJECT } from "@/server/domain/topics";
 import { canHandleRecording, canReadPublishedMinutes, isOrganizer, visibleEvent, type Viewer } from "@/server/policy";
 import { DomainError } from "@/server/services/errors";
 import { listTopics, topicIdByName } from "@/server/services/topics";
@@ -368,6 +369,51 @@ export async function updateEvent(
 
 export type MovePlan = { input: EventInput; mode: SaveMode; from: string; label: string };
 
+/** Vstup `updateEvent` z pracovní verze akce: stejné místní časy a počet dní, začátek v den `date`. */
+function inputOfRow(row: EventRow, date: string): EventInput {
+  const from = toDateKey(row.startsAt);
+  const lastDay = toDateKey(row.allDay ? new Date(row.endsAt.getTime() - 1) : row.endsAt);
+  const span = Math.round((Date.parse(lastDay) - Date.parse(from)) / 86_400_000);
+  return {
+    type: row.type as EventType,
+    label: row.label,
+    date,
+    endDate: span > 0 ? addDays(date, span) : null,
+    startTime: row.allDay ? "00:00" : toTimeKey(row.startsAt),
+    endTime: row.allDay ? "23:59" : toTimeKey(row.endsAt),
+    topicTitle: row.topicTitle,
+    topicId: row.topicId,
+    audience: row.audience as Group,
+    leadId: row.leadId,
+    reviewerId: row.reviewerId,
+  };
+}
+
+/**
+ * Naplánovat téma do návrhu: uloží téma do budoucího nezveřejněného návrhu bez tématu, nic se nezveřejní
+ * ani neodešle. Zveřejněnou akci takto měnit nejde, ta se upravuje v okně akce s kontrolou dopadu.
+ * Téma musí být nearchivované a hodit se skupinou. Zápis a souběh (revize) hlídá `updateEvent`.
+ */
+export async function assignTopicToDraft(viewer: Viewer, topicId: string, eventId: string, expectedRevision: number): Promise<{ dateKey: string; topicName: string }> {
+  requireOrganizer(viewer);
+  const db = await getDb();
+  const row = await loadEventRow(db, eventId);
+  if (!row) throw new DomainError("not_found");
+  assertNotHoliday(row.type);
+  if (row.status !== "draft" || row.startsAt <= now()) throw new DomainError("invalid_state");
+  if (row.revision !== expectedRevision || row.topicTitle) throw new DomainError("conflict");
+  const [topic] = await db
+    .select({ id: topics.id, name: topics.name, audience: topics.audience })
+    .from(topics)
+    .where(and(eq(topics.id, topicId), eq(topics.orgId, config.orgId), isNull(topics.archivedAt)))
+    .limit(1);
+  if (!topic) throw new DomainError("not_found");
+  if (!topicFitsAudience(topic.audience, row.audience)) throw new DomainError("invalid_state");
+  const dateKey = toDateKey(row.startsAt);
+  await updateEvent(viewer, eventId, expectedRevision, { ...inputOfRow(row, dateKey), topicTitle: topic.name, topicId: topic.id }, "draft");
+  return { dateKey, topicName: topic.name };
+}
+
 /**
  * Přesun akce na jiný den (tažení v Plánu nebo „Přesunout na jiný den“ v detailu). Stejné místní časy
  * a stejný počet dní, ostatní údaje beze změny. Platí pravidla ruční změny data v Připravit měsíc: cílový
@@ -385,21 +431,7 @@ export async function planMove(viewer: Viewer, id: string, date: string): Promis
   const from = toDateKey(row.startsAt);
   if (date === from) throw new DomainError("invalid_input");
   if (monthOf(date) !== monthOf(from)) throw new DomainError("outside_month");
-  const lastDay = toDateKey(row.allDay ? new Date(row.endsAt.getTime() - 1) : row.endsAt);
-  const span = Math.round((Date.parse(lastDay) - Date.parse(from)) / 86_400_000);
-  const input: EventInput = {
-    type: row.type as EventType,
-    label: row.label,
-    date,
-    endDate: span > 0 ? addDays(date, span) : null,
-    startTime: row.allDay ? "00:00" : toTimeKey(row.startsAt),
-    endTime: row.allDay ? "23:59" : toTimeKey(row.endsAt),
-    topicTitle: row.topicTitle,
-    topicId: row.topicId,
-    audience: row.audience as Group,
-    leadId: row.leadId,
-    reviewerId: row.reviewerId,
-  };
+  const input = inputOfRow(row, date);
   if (resolveTimes(input).startsAt <= now()) throw new DomainError("outside_month");
   const mode: SaveMode = row.status === "published" && row.revision === row.publishedRevision ? "publish" : "draft";
   return { input, mode, from, label: row.label };

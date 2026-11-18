@@ -70,7 +70,9 @@ export async function seedDatabase(tx: Executor): Promise<void> {
 
   await insertWeeklyTemplate(tx);
 
-  await tx.insert(topics).values(seed.topics.map((t) => ({ id: t.id, orgId, name: t.name, audience: t.audience })));
+  await tx.insert(topics).values(
+    seed.topics.map((t) => ({ id: t.id, orgId, name: t.name, audience: t.audience, priorityRank: "priorityRank" in t ? t.priorityRank : null })),
+  );
   const interests = seed.topics.flatMap((t) => t.interestedUserIds.map((userId) => ({ topicId: t.id, userId })));
   if (interests.length) await tx.insert(topicInterests).values(interests);
 

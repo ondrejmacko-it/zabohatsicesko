@@ -23,7 +23,8 @@ export type DomainErrorCode =
   | "file_too_long"
   | "not_past"
   | "holiday_locked"
-  | "outside_month";
+  | "outside_month"
+  | "priority_full";
 
 export const DOMAIN_ERROR_MESSAGES: Record<DomainErrorCode, string> = {
   forbidden: "K této akci nemáte oprávnění.",
@@ -43,4 +44,5 @@ export const DOMAIN_ERROR_MESSAGES: Record<DomainErrorCode, string> = {
   outside_month: "Datum návrhu musí být v budoucnu a ve stejném měsíci.",
   not_past: "Nahrávku lze přidat až po skončení zveřejněné akce.",
   holiday_locked: "Státní svátek je pevně daný. Nejde přesunout ani upravit.",
+  priority_full: "Garantovaná mohou být nejvýš 3 témata. Nejdřív u jiného tématu prioritu zrušte.",
 };
