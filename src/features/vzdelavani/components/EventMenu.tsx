@@ -2,9 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Children, useActionState, useEffect, useState } from "react";
+import { Children, useActionState, useEffect, useRef, useState } from "react";
 import { ActionMessage } from "@/components/ActionForm";
+import { Icon } from "@/components/Icon";
 import { Menu } from "@/components/Menu";
+import { flash } from "@/components/FlashMessage";
 import { Modal } from "@/components/Modal";
 import { submitKeepingValues } from "@/features/shared/keep-values";
 import type { CancelImpact } from "@/server/services/impact";
@@ -17,14 +19,16 @@ type Props = {
   canDelete: boolean;
   /** Odkazy nahoře v nabídce (zápis, celý detail). */
   links?: Array<{ href: string; label: string }>;
+  /** Odkaz na Přidat akci předvyplněnou podle této akce (`?kopie=`). */
+  copyHref?: string;
   /** Další položky připravené serverem, například „Nahradit pravidelný termín“. */
   children?: React.ReactNode;
 };
 
 /** Další možnosti akce v jedné nabídce: odkazy, méně časté úpravy a pod čarou zrušení nebo smazání. */
-export function EventMenu({ id, revision, canCancel, canDelete, links = [], children }: Props) {
+export function EventMenu({ id, revision, canCancel, canDelete, links = [], copyHref, children }: Props) {
   const [dialog, setDialog] = useState<"cancel" | "delete" | null>(null);
-  const hasExtra = Children.toArray(children).length > 0;
+  const hasExtra = Children.toArray(children).length > 0 || Boolean(copyHref);
   if (!canCancel && !canDelete && links.length === 0 && !hasExtra) return null;
   return (
     <>
@@ -34,15 +38,23 @@ export function EventMenu({ id, revision, canCancel, canDelete, links = [], chil
             {link.label}
           </Link>
         ))}
+        {copyHref && (
+          <Link className="btn" href={copyHref} scroll={false}>
+            <Icon name="copy" />
+            Duplikovat akci
+          </Link>
+        )}
         {children}
         {(canCancel || canDelete) && (links.length > 0 || hasExtra) && <hr className="menu-divider" />}
         {canCancel && (
           <button type="button" className="btn menu-danger" onClick={() => setDialog("cancel")}>
+            <Icon name="ban" />
             Zrušit akci…
           </button>
         )}
         {canDelete && (
           <button type="button" className="btn menu-danger" onClick={() => setDialog("delete")}>
+            <Icon name="trash" />
             Smazat návrh…
           </button>
         )}
@@ -53,7 +65,7 @@ export function EventMenu({ id, revision, canCancel, canDelete, links = [], chil
   );
 }
 
-function CancelDialog({ id, revision, onClose }: { id: string; revision: number; onClose: () => void }) {
+export function CancelDialog({ id, revision, onClose }: { id: string; revision: number; onClose: () => void }) {
   const [state, action, pending] = useActionState(async (prev: ActionResult | null, formData: FormData) => {
     const result = await cancelEventAction(prev, formData);
     if (result.ok) onClose();
@@ -132,12 +144,23 @@ function CancelDialog({ id, revision, onClose }: { id: string; revision: number;
   );
 }
 
-function DeleteDialog({ id, revision, onClose }: { id: string; revision: number; onClose: () => void }) {
+/**
+ * Potvrzení smazání návrhu. Z okna akce vede po smazání na Plán, z menu karty (`stay`) zůstane na aktuální
+ * adrese Plánu (měsíc, pohled, filtry) a jen ji obnoví.
+ */
+export function DeleteDialog({ id, revision, onClose, stay = false }: { id: string; revision: number; onClose: () => void; stay?: boolean }) {
   const router = useRouter();
   const [state, action, pending] = useActionState(deleteDraftAction, null);
+  const handled = useRef<ActionResult | null>(null);
   useEffect(() => {
-    if (state?.ok) router.push("/vzdelavani/harmonogram");
-  }, [state, router]);
+    if (!state?.ok || handled.current === state) return;
+    handled.current = state;
+    if (stay) {
+      flash(state.message);
+      onClose();
+      router.refresh();
+    } else router.push("/vzdelavani/harmonogram");
+  }, [state, router, stay, onClose]);
   return (
     <Modal open title="Smazat návrh" onRequestClose={onClose}>
       <form action={action} className="stack">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { ActionMessage } from "@/components/ActionForm";
 import { Modal } from "@/components/Modal";
@@ -97,6 +97,10 @@ function MoveConfirm({ target, to, onClose }: { target: MoveTarget; to: string; 
     </div>
   );
 }
+
+/** Přesun bez tažení z jiného ovládání (menu ⋯ karty): otevře výběr dne a pak stejné potvrzení. Mimo zónu null. */
+const MoveRequestContext = createContext<((target: MoveTarget) => void) | null>(null);
+export const useMoveRequest = () => useContext(MoveRequestContext);
 
 const DRAG_TYPE = "application/x-zbc-akce";
 /** Jak dlouho podržet úchyt prstem, než se karta zvedne. Kratší dotyk je ťuknutí, pohyb dřív je posun stránky. */
@@ -322,6 +326,7 @@ export function MoveDropZone({ children, movableFrom }: { children: React.ReactN
   }, []);
 
   return (
+    <MoveRequestContext.Provider value={(target) => setDialog({ target, to: null })}>
     <div
       onPointerDown={(event) => {
         // Nový dotyk: případné kliknutí z minulého puštění už nepřijde, nic dalšího se nepotlačí.
@@ -418,5 +423,6 @@ export function MoveDropZone({ children, movableFrom }: { children: React.ReactN
         </Modal>
       )}
     </div>
+    </MoveRequestContext.Provider>
   );
 }

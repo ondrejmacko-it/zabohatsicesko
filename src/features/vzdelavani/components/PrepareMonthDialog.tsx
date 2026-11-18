@@ -4,7 +4,7 @@ import { useActionState, useState } from "react";
 import { ActionForm, ActionMessage } from "@/components/ActionForm";
 import { Modal } from "@/components/Modal";
 import { submitKeepingValues } from "@/features/shared/keep-values";
-import type { InviteMode } from "@/lib/invite-mode";
+import { publishInviteNote, type InviteMode } from "@/lib/invite-mode";
 import { GROUP_LABELS } from "@/lib/labels";
 import { addDays, formatDayMonth, formatEventTime, shiftMonth, toDateKey, weekdayShort } from "@/lib/time";
 import { GROUPS, type Group } from "@/lib/types";
@@ -145,7 +145,6 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
   const clashCount = drafts.filter((d) => d.clash).length;
   const [allowIncomplete, setAllowIncomplete] = useState(false);
   const audiences = [...new Set(chosen.map((d) => current(d).audience))];
-  const invited = new Set(audiences.flatMap((g) => recipients[g].map((r) => r.email)));
 
   // Ruční datum zůstává v připravovaném měsíci a ne v minulosti (server to hlídá znovu).
   const monthStart = `${monthKey}-01`;
@@ -283,12 +282,7 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
               : "Ke zveřejnění není vybraný žádný návrh"}
           </strong>
           <span className="small">
-            {chosen.length > 0 && inviteMode === "simulation" && "Simulace: skutečné e-maily se neodesílají."}
-            {chosen.length > 0 && inviteMode === "disconnected" && "Pozvánky počkají na propojení Kalendáře."}
-            {chosen.length > 0 && inviteMode === "allowlist" && `Pozvánky jen na testovací adresu (${[...invited].join(", ") || "žádná"}), kolegům ne.`}
-            {chosen.length > 0 &&
-              inviteMode === "audience" &&
-              `Po zveřejnění dostane e-mail s pozvánkou od Googlu ${plural(invited.size, "člověk", "lidé", "lidí")}: ${audiences.map((g) => `${GROUP_LABELS[g]} (${recipients[g].length})`).join(", ")}.`}
+            {chosen.length > 0 && publishInviteNote(inviteMode, audiences, recipients)}
           </span>
         </div>
         {incomplete > 0 && (

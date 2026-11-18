@@ -12,13 +12,14 @@ import {
   eventRevisions,
   events,
   generationExclusions,
+  minutes,
   templateSlots,
   users,
 } from "@/server/db/schema";
 import { planMonth, slotConflict, type Occupant } from "@/server/domain/generation";
 import { snapshotOf, type EventRow } from "@/server/domain/snapshot";
 import { suggestTopics, suggestionPending, TOPIC_ACCEPT, TOPIC_REJECT } from "@/server/domain/topics";
-import { isOrganizer, visibleEvent, type Viewer } from "@/server/policy";
+import { canHandleRecording, canReadPublishedMinutes, isOrganizer, visibleEvent, type Viewer } from "@/server/policy";
 import { DomainError } from "@/server/services/errors";
 import { listTopics, topicIdByName } from "@/server/services/topics";
 
@@ -45,6 +46,10 @@ export type EventCard = {
   movedFrom: { startsAt: string; endsAt: string; allDay: boolean } | null;
   /** Jen pro správce: verze akce, kterou přesun tažením posílá serveru jako kontrolu souběhu. */
   revision: number | null;
+  /** Divák smí obsluhovat nahrávku a zápis (vedoucí, kontrolor, správce; `canHandleRecording`). */
+  handler: boolean;
+  /** Akce má zveřejněný zápis a divák ho smí číst (`canReadPublishedMinutes`). */
+  minutesPublished: boolean;
 };
 
 async function userNames(db: Executor): Promise<Map<string, string>> {
@@ -66,6 +71,7 @@ function toCard(
   link: { syncStatus: SyncStatus } | undefined,
   names: Map<string, string>,
   slotDays: Set<number>,
+  withMinutes: ReadonlySet<string>,
 ): EventCard | null {
   const view = visibleEvent(viewer, row);
   if (!view) return null;
@@ -95,7 +101,23 @@ function toCard(
     syncStatus,
     movedFrom: moved ? { startsAt: last.startsAt, endsAt: last.endsAt, allDay: last.allDay } : null,
     revision: organizer ? row.revision : null,
+    handler: canHandleRecording(viewer, row),
+    minutesPublished: withMinutes.has(row.id) && canReadPublishedMinutes(viewer, row),
   };
+}
+
+/**
+ * Akce se zveřejněným zápisem: jedním dotazem pro celý seznam, jen u proběhlých zveřejněných akcí
+ * (jinde zápis být nemůže). Bez takových akcí se nedotazuje vůbec.
+ */
+async function publishedMinutesOf(db: Executor, rows: EventRow[]): Promise<Set<string>> {
+  const ids = rows.filter((row) => row.published !== null && row.startsAt <= now()).map((row) => row.id);
+  if (!ids.length) return new Set();
+  const found = await db
+    .selectDistinct({ eventId: minutes.eventId })
+    .from(minutes)
+    .where(and(inArray(minutes.eventId, ids), eq(minutes.status, "published")));
+  return new Set(found.map((m) => m.eventId));
 }
 
 /** Akce, které uživatel smí vidět, v daném rozsahu. Filtrování práv probíhá tady, ne v UI. */
@@ -122,10 +144,10 @@ export async function listEvents(viewer: Viewer, from: Date, to: Date): Promise<
     ? await db.select().from(calendarLinks).where(inArray(calendarLinks.eventId, rows.map((r) => r.id)))
     : [];
   const linkByEvent = new Map(links.map((l) => [l.eventId, l]));
-  const [names, slotDays] = await Promise.all([userNames(db), templateWeekdays(db)]);
+  const [names, slotDays, withMinutes] = await Promise.all([userNames(db), templateWeekdays(db), publishedMinutesOf(db, rows)]);
   // Rozsah a pořadí se řídí verzí, kterou uživatel opravdu vidí (správce pracovní, ostatní zveřejněnou).
   return rows
-    .map((row) => toCard(viewer, row, linkByEvent.get(row.id), names, slotDays))
+    .map((row) => toCard(viewer, row, linkByEvent.get(row.id), names, slotDays, withMinutes))
     .filter((card): card is EventCard => card !== null && new Date(card.startsAt) < to && new Date(card.endsAt) >= from)
     .sort((a, b) => a.startsAt.localeCompare(b.startsAt) || a.id.localeCompare(b.id));
 }
@@ -136,8 +158,8 @@ export async function getEventCard(viewer: Viewer, id: string): Promise<{ row: E
   const row = await loadEventRow(db, id);
   if (!row) return null;
   const [link] = await db.select().from(calendarLinks).where(eq(calendarLinks.eventId, id)).limit(1);
-  const [names, slotDays] = await Promise.all([userNames(db), templateWeekdays(db)]);
-  const card = toCard(viewer, row, link, names, slotDays);
+  const [names, slotDays, withMinutes] = await Promise.all([userNames(db), templateWeekdays(db), publishedMinutesOf(db, [row])]);
+  const card = toCard(viewer, row, link, names, slotDays, withMinutes);
   return card ? { row, card } : null;
 }
 

@@ -199,3 +199,47 @@ export function planGaps(cards: EventCard[], monthKey: string): PlanGap[] {
 
 /** Návrh, který jde v Plánu hromadně označit: nikdy nezveřejněná akce (ne svátek). Návrh změny má vlastní potvrzení. */
 export const isPickable = (card: EventCard) => card.planStatus === "draft" && card.type !== "holiday" && card.revision !== null;
+
+/** Akci jde přesunout jen budoucí, nezrušenou a ne svátek. Server totéž ověří znovu (`planMove`). */
+export const isMovable = (card: EventCard) => card.revision !== null && card.type !== "holiday" && card.planStatus !== "cancelled" && !card.past;
+
+export type CardActionKind = "edit" | "move" | "duplicate" | "publish" | "details" | "minutes" | "recording" | "cancel" | "delete";
+export type CardAction = { kind: CardActionKind; label: string; danger?: boolean };
+
+/**
+ * Kdo se dívá: `managing` = správce ve svém pohledu (ne náhled očima skupiny nebo kolegy), `movable` = přesun
+ * je v tomto zobrazení dostupný (od dneška dál), `now` = okamžik pro rozlišení budoucího návrhu.
+ */
+export type CardActionContext = { managing: boolean; preview: boolean; movable: boolean; now: Date };
+
+/**
+ * Rychlé akce v menu ⋯ karty harmonogramu podle stavu akce a role. Pořadí: hlavní akce, úpravy, méně časté
+ * a jako poslední nebezpečná akce. Menu je jen zkratka, každou akci server ověří znovu. Ne-správce dostane menu,
+ * jen když nabízí aspoň dvě položky, jinak stačí klik na kartu. Svátek menu nemá.
+ */
+export function cardActions(card: EventCard, ctx: CardActionContext): CardAction[] {
+  if (card.type === "holiday") return [];
+  const manage = ctx.managing && !ctx.preview;
+  const actions: CardAction[] = [];
+  const add = (kind: CardActionKind, label: string, danger = false) => actions.push(danger ? { kind, label, danger } : { kind, label });
+  const cancelled = card.planStatus === "cancelled";
+  const draft = card.planStatus === "draft";
+  if (manage && !cancelled && (draft || !card.past)) {
+    add("edit", "Upravit akci");
+    if (ctx.movable && isMovable(card)) add("move", "Přesunout termín…");
+    add("duplicate", "Duplikovat akci");
+    if (draft && new Date(card.startsAt) > ctx.now) add("publish", "Zveřejnit návrh…");
+    if (!draft) add("details", "Otevřít podrobnosti");
+    add(draft ? "delete" : "cancel", draft ? "Smazat návrh…" : "Zrušit akci…", true);
+    return actions;
+  }
+  if (draft) return [];
+  add("details", "Otevřít podrobnosti");
+  if (!cancelled && card.past) {
+    if (card.minutesPublished) add("minutes", "Zobrazit zápis");
+    // Nahrávku a zápis obsluhuje vedoucí, kontrolor a správce, nikdy v náhledu očima jiného.
+    if (card.handler && !ctx.preview) add("recording", card.minutesPublished ? "Nahrávka a zápis" : "Doplnit zápis");
+  }
+  if (manage) add("duplicate", "Duplikovat jako novou");
+  return manage || actions.length >= 2 ? actions : [];
+}

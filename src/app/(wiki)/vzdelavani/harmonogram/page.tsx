@@ -16,7 +16,8 @@ import { inviteModeOf } from "@/lib/invite-mode";
 import { PlanFilters, type StateChip } from "@/features/vzdelavani/components/PlanFilters";
 import { Agenda, NextEventsList, ScheduleGrid } from "@/features/vzdelavani/components/Schedule";
 import { TasksCard } from "@/features/vzdelavani/components/TasksCard";
-import { PLAN_STATES, filterCards, isPickable, monthSummary } from "@/features/vzdelavani/status";
+import { PLAN_STATES, cardActions, filterCards, isPickable, monthSummary, type CardActionKind } from "@/features/vzdelavani/status";
+import type { CardMenuFor } from "@/features/vzdelavani/components/Schedule";
 import styles from "@/features/vzdelavani/components/schedule.module.css";
 import { MoveDropZone } from "@/features/vzdelavani/components/MoveEvent";
 import { formatMonth, isValidDateKey, isValidMonthKey, monthOf, shiftMonth, toDateKey } from "@/lib/time";
@@ -34,7 +35,7 @@ import { listTopics } from "@/server/services/topics";
 
 export const metadata: Metadata = { title: "Plán vzdělávání" };
 
-type SearchParams = Promise<{ mesic?: string; pohled?: string; jako?: string; typ?: string; stav?: string; akce?: string; den?: string }>;
+type SearchParams = Promise<{ mesic?: string; pohled?: string; jako?: string; typ?: string; stav?: string; akce?: string; den?: string; kopie?: string }>;
 
 /** Nejbližší zveřejněná akce: z již načteného aktuálního měsíce, jinak jedním dotazem dopředu. */
 async function nearestEvent(viewer: Parameters<typeof nextEventFor>[0], monthCards: EventCard[]): Promise<EventCard | null> {
@@ -84,7 +85,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   if (managing) after(() => syncPublished());
 
   const current = { mesic: monthKey, pohled: listView ? "seznam" : undefined, jako: preview ? params.jako : undefined, typ: type, stav: state };
-  const link = (change: Partial<typeof current> & { akce?: string; den?: string }) => {
+  const link = (change: Partial<typeof current> & { akce?: string; den?: string; kopie?: string }) => {
     const query = new URLSearchParams();
     for (const [key, value] of Object.entries({ ...current, ...change })) if (value) query.set(key, value);
     return `/vzdelavani/harmonogram?${query}`;
@@ -96,6 +97,27 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   const addDay = managing && params.den && isValidDateKey(params.den) ? params.den : null;
   const addHref = (day: string) => link({ den: day });
   const newDate = addDay ?? (monthOf(todayKey) === monthKey ? todayKey : `${monthKey}-01`);
+
+  // Menu ⋯ na kartách: položky podle stavu a role (`cardActions`), adresy se zachovaným měsícem a filtry.
+  const fullHref = (card: EventCard) => `/vzdelavani/akce/${encodeURIComponent(card.id)}${current.jako ? `?jako=${encodeURIComponent(current.jako)}` : ""}`;
+  const actionHref: Partial<Record<CardActionKind, (card: EventCard) => string>> = {
+    edit: peekHref,
+    duplicate: (card) => link({ kopie: card.id }),
+    details: fullHref,
+    minutes: (card) => `/vzdelavani/zapisy?zapis=${encodeURIComponent(card.id)}`,
+    recording: (card) => `${fullHref(card)}#nahravka`,
+  };
+  const menuNow = now();
+  const menuFor: CardMenuFor = (card) =>
+    cardActions(card, {
+      managing,
+      preview: Boolean(preview),
+      movable: managing && monthOf(toDateKey(new Date(card.startsAt))) === monthKey && toDateKey(new Date(card.startsAt)) >= todayKey,
+      now: menuNow,
+    }).map((action) => {
+      const href = actionHref[action.kind]?.(card);
+      return href ? { ...action, href } : action;
+    });
   const emptyText = filtering ? "Filtru v tomto měsíci neodpovídá žádná akce." : undefined;
 
   // Co v měsíci čeká na správce: štítky nad harmonogramem, klik plán zúží (znovu klik filtr zruší).
@@ -116,14 +138,14 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   // Přesun (mřížka myší, agenda úchytem na telefonu) i „+“ u dne jen pro správce, od dneška dál.
   const planning = managing ? { addHref, movableFrom: todayKey } : {};
   const schedule = listView ? (
-    <Agenda monthKey={monthKey} cards={cards} todayKey={todayKey} emptyText={emptyText} hrefFor={peekHref} managing={managing} {...planning} />
+    <Agenda monthKey={monthKey} cards={cards} todayKey={todayKey} emptyText={emptyText} hrefFor={peekHref} managing={managing} menuFor={menuFor} {...planning} />
   ) : (
     <>
       <div className={styles.desktopOnly}>
-        <ScheduleGrid monthKey={monthKey} cards={cards} todayKey={todayKey} slotTimes={slotTimes} hrefFor={peekHref} managing={managing} {...planning} />
+        <ScheduleGrid monthKey={monthKey} cards={cards} todayKey={todayKey} slotTimes={slotTimes} hrefFor={peekHref} managing={managing} menuFor={menuFor} {...planning} />
       </div>
       <div className={styles.mobileOnly}>
-        <Agenda monthKey={monthKey} cards={cards} todayKey={todayKey} emptyText={emptyText} hrefFor={peekHref} managing={managing} {...planning} />
+        <Agenda monthKey={monthKey} cards={cards} todayKey={todayKey} emptyText={emptyText} hrefFor={peekHref} managing={managing} menuFor={menuFor} {...planning} />
       </div>
     </>
   );
@@ -232,6 +254,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
           items={managing ? cards.filter(isPickable).map((c) => ({ id: c.id, revision: c.revision! })) : []}
           publishable={monthDrafts?.drafts ?? []}
           changeDrafts={monthDrafts?.changeDrafts ?? 0}
+          invite={calendar ? { recipients: calendar.recipients, mode: inviteMode } : null}
         >
           <PlanFilters
             key={`${params.jako ?? ""}|${type ?? ""}`}
