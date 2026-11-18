@@ -2814,6 +2814,51 @@ p.cal-status {
   align-self: stretch;
 }
 
+/* Přehled stavu návrhů: kategorie jako malá tlačítka, která skočí na první dotčený řádek. */
+.prepare-overview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.prepare-overview-item strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.prepare-overview-item:not(:disabled)[data-kind="missingLead"],
+.prepare-overview-item:not(:disabled)[data-kind="missingTopic"],
+.prepare-overview-item:not(:disabled)[data-kind="clash"] {
+  border-color: var(--ochre);
+  background: var(--ochre-soft);
+}
+
+/* Hromadné doplnění vedoucího: volba, tlačítko a vysvětlení v jednom zalamovaném řádku. */
+.prepare-bulk {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 4px 8px;
+  align-self: stretch;
+}
+
+.prepare-bulk .field {
+  flex: 0 1 280px;
+  min-width: 0;
+}
+
+.prepare-bulk .field-hint,
+.prepare-bulk-note {
+  flex: 1 0 100%;
+  margin: 0;
+}
+
+.prepare-bulk-note:empty {
+  display: none;
+}
+
 /* Téma doporučené systémem, o kterém správce ještě nerozhodl. Po přijetí vypadá jako každé jiné téma. */
 .publish-row .input[data-suggested] {
   border-color: var(--ochre);

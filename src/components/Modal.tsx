@@ -13,13 +13,24 @@ type Props = {
   wide?: boolean | "extra";
   /** Rodič si rozepsané změny hlídá sám (dialog akce), okno se proto na nic neptá. */
   selfGuarded?: boolean;
+  /**
+   * Rodič porovnává hodnoty formuláře sám (okno akce). Když je zadané, okno se při zavření ptá jen podle
+   * něj, ne podle otisku polí: rozbalení dalších polí nebo změna a vrácení hodnoty se za změnu nepočítá.
+   * Funkce, ne hodnota: čte se až v okamžiku zavření, takže nezávisí na tom, jestli se rodič už překreslil.
+   */
+  hasUnsavedChanges?: () => boolean;
 };
 
 const subscribeNever = () => () => {};
 
-/** Otisk všech polí v okně. Rozepsané změny se poznají podle toho, že se otisk od otevření změnil. */
+/**
+ * Otisk všech polí v okně. Rozepsané změny se poznají podle toho, že se otisk od otevření změnil. Pomocná
+ * pole bez vlastních dat (`data-unsaved-ignore`, např. volba pro hromadné doplnění) se nepočítají.
+ */
 function fieldsFingerprint(root: HTMLElement): string {
-  const fields = root.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>("input:not([type='hidden']), textarea, select");
+  const fields = root.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(
+    "input:not([type='hidden']):not([data-unsaved-ignore]), textarea:not([data-unsaved-ignore]), select:not([data-unsaved-ignore])",
+  );
   return [...fields].map((field) => (field instanceof HTMLInputElement && (field.type === "checkbox" || field.type === "radio") ? String(field.checked) : field.value)).join("\u0001");
 }
 
@@ -40,7 +51,7 @@ function focusBack(origin: HTMLElement | null) {
  * uvnitř jeho rolované části a první okno po dobu práce v druhém schová (pravidlo v globals.css).
  * Zavření s rozepsaným formulářem se nejdřív zeptá.
  */
-export function Modal({ open, title, onRequestClose, children, wide, selfGuarded }: Props) {
+export function Modal({ open, title, onRequestClose, children, wide, selfGuarded, hasUnsavedChanges }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
   const pressedOutside = useRef(false);
   const initialFields = useRef("");
@@ -64,7 +75,8 @@ export function Modal({ open, title, onRequestClose, children, wide, selfGuarded
   if (!shown) return null;
 
   const requestClose = () => {
-    if (!selfGuarded && ref.current && fieldsFingerprint(ref.current) !== initialFields.current) setConfirming(true);
+    const unsaved = hasUnsavedChanges ? hasUnsavedChanges() : ref.current !== null && fieldsFingerprint(ref.current) !== initialFields.current;
+    if (!selfGuarded && unsaved) setConfirming(true);
     else onRequestClose();
   };
 
