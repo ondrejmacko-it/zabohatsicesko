@@ -48,10 +48,16 @@ Uživatel chce, aby relace pracovaly samostatně, samy zakládaly navazující r
   vedoucího (jen doplnit vedoucího); nahrání nahrávky nahradí textový návrh bez zvláštního potvrzení (jen upozornění);
   stav „návrh“ vs. „čeká na schválení“ = jeden stav (návrh čeká na schválení, po zrušení „čeká na nové schválení“);
   vedoucí může schválit i bez kontroly kontrolorem; čtenář nevidí číslo verze.
-* F5 částečně: `docs/integrace-do-firemni-wiki.md`, `docs/podklady-pro-sper.md` (koncept, kdo je SPER neznáme).
+* F5 HOTOVO: lint OK, typecheck OK, unit 380/380, build OK, **celé e2e 1092 passed / 105 skipped / 0 failed** (7,1 min,
+  na d78ce49), žádná regrese. Report `docs/report-rychle-akce-a-temata.md` (scénáře 04 → testy, scénáře 1–12
+  rekonstruované z plánu, kroky před/po, otevřené otázky, migrace). Screenshoty v `docs/screenshots/` (rychle-akce-menu,
+  garantovana-temata, naplanovat-tema, doporuceni-formular, pripravit-mesic-prehled, pravidelny-rozvrh, zapis-zdroj,
+  zapis-schvaleni, rychle-akce-mobil). Dokončené `docs/integrace-do-firemni-wiki.md` a `docs/podklady-pro-sper.md`
+  (migrace 0013/0014, nové akce, `canApproveMinutes`, `MinutesDrafter`; kdo je SPER dál neznáme). Část 06 zadání
+  v repu nedohledána (otevřená otázka).
 **Další krok:**
-F5 (celé e2e, screenshoty, `docs/report-rychle-akce-a-temata.md` podle bodu 19 zadání, draft PR). Každou fázi delegovat
-subagentovi (kontext hlavní relace šetřit), commit + push po fázi, sem zapsat stav.
+Draft PR (zakládá uživatel / hlavní relace, do reportu doplnit řádek „PR:“) a revize uživatelem. Merge jen ručně
+uživatelem. Pozor: migrace 0013/0014 se na Preview spustí po pushi, na produkci po merge.
 
 
 **HLAVNÍ SPRÁVCE SI VYTVOŘÍ ODKAZ SÁM SOBĚ (18. 11. 2026, větev `claude/spravce-odkaz-sobe` z main 70c5f1f, draft PR).**
