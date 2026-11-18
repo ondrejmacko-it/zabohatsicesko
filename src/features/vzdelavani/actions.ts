@@ -394,7 +394,7 @@ export async function updateTemplateAction(_prev: ActionResult | null, formData:
       })),
     );
     await updateTemplate(user, slots);
-    return { ok: true, message: "Šablona je uložená. Projeví se při dalším generování." };
+    return { ok: true, message: "Pravidelný rozvrh je uložený. Projeví se při dalším doplnění termínů." };
   });
 }
 
