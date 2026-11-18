@@ -1,5 +1,26 @@
 # Prompt pro další session
 
+**DOLADĚNÍ HARMONOGRAMU A TÉMAT (18. 11. 2026, řetězec 3 relací, větev `claude/doladeni-harmonogramu-a-temat` z main 506a2a6).**
+Zadání: jen (1) doporučená témata v Připravit měsíc, (2) kolonky Kdo/Téma v kartách `Schedule.tsx`. Nic jiného neměnit
+(nahrávky/přepisy/zápisy, layout, navigace, paleta, Kalendář, pozvánky…). PR až v relaci 3, merge dělá uživatel.
+* RELACE 1 HOTOVO (d9269ea): bod (1). Rozhodnutí uživatele: Přijmout/Odmítnout se uloží hned (varianta A), spolu s
+  úpravami ostatních řádků jako návrh, nic se nezveřejní. Evidence bez migrace: `event_revisions.action`
+  `topic_accept` / `topic_reject` + audit `event.topic_accept|reject`. `suggestionPending(topicId, history)` v
+  `src/server/domain/topics.ts`: čeká jen téma z revize `generate`, které se od té doby nezměnilo a nebylo přijato.
+  `MonthDraft.suggestion` (vysvětlení z `rankTopics().reason`, jen pro správce přes `listMonthDrafts`).
+  `publishDrafts` bere `topicDecision` (platí jen pro čekající doporučení a nezměněné pole). Akce
+  `publishMonthAction`: tlačítko `topicDecision=accept:<id>|reject:<id>`. UI: okrový pruh `.topic-suggestion` přes
+  celý řádek (štítek, název, „1 zájemce · zatím neproběhlo“, Přijmout/Změnit/Odmítnout), pole `data-suggested`.
+  Změnit = vyprázdní pole a dá fokus (pak běžné Uložit změny). Text po doplnění upraven.
+  Testy: `tests/doporucene-tema.test.ts` (8), `e2e/doporucene-tema.spec.ts` (leden 2027, zápis jen windows-1280;
+  účastník nevidí). Ověřeno: lint, typecheck, unit 318/318 (před úpravou textu), build, e2e okna+plán+doporučení
+  226 passed / 12 skipped na všech projektech. Screenshot 1280/390 prohlédnut. Celé e2e NEběželo (relace 3).
+* Poznámka pro relaci 2: rozpracovaný návrh s doporučeným tématem má v kartě Plánu pro správce zatím jen běžný
+  `topicTitle`. Pokud má karta u správce rozlišit doporučené téma, jde to přes `suggestionPending` (zeptat se uživatele).
+**Další krok: RELACE 2** bod (2) Kdo/Téma v `src/features/vzdelavani/components/Schedule.tsx`, testy, commit, push,
+založit relaci 3 (celé ověření, screenshoty, PR ready k revizi, report, SQL prezentačních dat do docs, NESPOUŠTĚT).
+
+
 **#69 UZAVŘENO K REVIZI (17. 11. 2026, relace session_01HpUirvm4JFbBXo1Yy6bER1, větev `claude/focused-tesla-cw2jdt`).**
 Body (0)–(7) zadání níže hotové. Merge dělá uživatel.
 * (0) ac3ce6d: `personalEventDelivery` rozlišuje `current` / `outdated` / `missing` / `failing`, otisk přes
