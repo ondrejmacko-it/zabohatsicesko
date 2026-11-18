@@ -56,6 +56,8 @@ Uživatel chce, aby relace pracovaly samostatně, samy zakládaly navazující r
   (migrace 0013/0014, nové akce, `canApproveMinutes`, `MinutesDrafter`; kdo je SPER dál neznáme). Část 06 zadání
   v repu nedohledána (otevřená otázka).
 **Další krok:** draft PR #73 je založený, nic bez pokynu. Uživatel reviduje a merguje ručně.
+* Po PR: sdílené Preview DB chyběl `demo-spravce` (seed z 12. 11., účet přibyl 15. 11.). Doplněn jen INSERT (souhlas uživatele),
+  pojistka v `listPersonas` (82ecb48): bez něj výběr nabídne `demo-organizator`. Unit 381/381.
 Pozor: migrace 0013/0014 se na Preview spustily po pushi, na produkci se spustí po merge.
 
 
