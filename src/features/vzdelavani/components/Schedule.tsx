@@ -14,7 +14,7 @@ import {
   weekdayShort,
 } from "@/lib/time";
 import type { EventCard } from "@/server/services/events";
-import { badgeClass, cardStatus, cardTone, isPickable, missingDetails, primaryStatus } from "../status";
+import { badgeClass, cardDetails, cardStatus, cardTone, isPickable, missingDetails, primaryStatus } from "../status";
 import { PickBox } from "./PlanSelection";
 import styles from "./schedule.module.css";
 
@@ -101,10 +101,19 @@ function CardWrap({ card, managing, children }: { card: EventCard; managing: boo
   );
 }
 
+/** Kolonky Kdo a Téma pod názvem akce. Prázdná pole jsou tlumená, ať nepřebíjí vyplněné údaje. */
+function CardDetails({ card, managing }: { card: EventCard; managing: boolean }) {
+  return cardDetails(card, managing).map((detail) => (
+    <span key={detail.label} className={styles.topic} data-detail={detail.label}>
+      <span className={styles.detailLabel}>{detail.label}:</span>{" "}
+      <span className={detail.missing ? styles.detailMissing : undefined}>{detail.value}</span>
+    </span>
+  ));
+}
+
 const pickAttr = (card: EventCard, managing: boolean) => (managing && isPickable(card) ? { "data-pick-id": card.id } : {});
 
-// Karta v mřížce: název, téma (je součástí názvu akce), čas a jeden stav. Vedoucího a podrobnosti
-// ukáže okno akce po kliknutí.
+// Karta v mřížce: název, Kdo a Téma, čas a jeden stav. Podrobnosti ukáže okno akce po kliknutí.
 function EventBlock({ card, hrefFor = pageHref, managing = false, movable = false }: { card: EventCard; movable?: boolean } & Linking) {
   const tone = cardTone(card);
   const isHoliday = card.type === "holiday";
@@ -117,7 +126,7 @@ function EventBlock({ card, hrefFor = pageHref, managing = false, movable = fals
     <CardWrap card={card} managing={managing}>
       <Link href={hrefFor(card)} scroll={false} className={`${styles.event} ${styles[tone]}`} {...drag} {...pickAttr(card, managing)}>
         <span className={styles.title}>{card.label}</span>
-        {!isHoliday && !cancelled && card.topicTitle && <span className={styles.topic}>{card.topicTitle}</span>}
+        <CardDetails card={card} managing={managing} />
         {!isHoliday && !cancelled && <span className={styles.line}>{formatEventTime(new Date(card.startsAt), new Date(card.endsAt), card.allDay)}</span>}
         <CardMeta card={card} managing={managing} />
       </Link>
@@ -278,9 +287,7 @@ export function Agenda({
                             </span>
                             <span className={styles.agendaMain}>
                               <span className={styles.title}>{card.label}</span>
-                              {card.type !== "holiday" && card.planStatus !== "cancelled" && card.topicTitle && (
-                                <span className={styles.topic}>{card.topicTitle}</span>
-                              )}
+                              <CardDetails card={card} managing={managing} />
                             </span>
                             <CardMeta card={card} managing={managing} />
                           </Link>

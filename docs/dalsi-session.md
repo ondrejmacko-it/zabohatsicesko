@@ -17,8 +17,20 @@ Zadání: jen (1) doporučená témata v Připravit měsíc, (2) kolonky Kdo/Té
   226 passed / 12 skipped na všech projektech. Screenshot 1280/390 prohlédnut. Celé e2e NEběželo (relace 3).
 * Poznámka pro relaci 2: rozpracovaný návrh s doporučeným tématem má v kartě Plánu pro správce zatím jen běžný
   `topicTitle`. Pokud má karta u správce rozlišit doporučené téma, jde to přes `suggestionPending` (zeptat se uživatele).
-**Další krok: RELACE 2** bod (2) Kdo/Téma v `src/features/vzdelavani/components/Schedule.tsx`, testy, commit, push,
-založit relaci 3 (celé ověření, screenshoty, PR ready k revizi, report, SQL prezentačních dat do docs, NESPOUŠTĚT).
+* RELACE 2 HOTOVO: bod (2). `cardDetails(card, managing)` v `src/features/vzdelavani/status.ts` (Kdo, Téma;
+  svátek a zrušená bez kolonek; prázdné = správce „— doplnit“, účastník „Bude upřesněno“, u proběhlé akce účastník
+  prázdné pole nevidí; téma shodné s názvem se neopakuje; Action time = pracovní blok, Téma jen vyplněné, rozhodnuto
+  po dotazu uživatele). `Schedule.tsx`: komponenta `CardDetails` v mřížce i agendě místo samotného topicTitle
+  (třída `.topic`, popisek `.detailLabel` tlumeně, `data-detail`), na `.extra` tmavší #524c47 kvůli axe kontrastu.
+  Karta s doporučeným nepřijatým tématem u správce zatím běžné „Téma: …“ (bez souhlasu uživatele neměněno).
+  Ikonka „Chybí téma“ u Action time zůstává (beze změny, jen uvést v reportu).
+  Testy: `tests/kdo-tema.test.ts` (7), `e2e/kdo-tema.spec.ts` (správce: vyplněné/doplnit/svátek/zrušená/Action time,
+  klik do detailu, přesun @desktop; účastník bez „— doplnit“ a bez návrhů) na všech projektech 29/29.
+  Ověřeno: lint, typecheck, unit 325/325, build, e2e plán+okna+doporučení+klávesnice 250 passed/12 skipped,
+  stránky+přístupnost+kdo-tema 566 passed/18 skipped. Screenshoty 1280/390/320 prohlédnuty (lokálně, necommitnuto).
+  „Bude upřesněno“ je pokryté jen unit testem (seed nemá zveřejněnou akci bez údajů). Celé e2e NEběželo.
+**Další krok: RELACE 3** celé ověření (celé e2e), screenshoty 1280/390/320, PR ready k revizi (bez merge), report,
+SQL prezentačních dat do docs (NESPOUŠTĚT; vzor v docs/cisteni-testovacich-dat.md na větvi `claude/cisteni-ostre-wiki`).
 
 
 **#69 UZAVŘENO K REVIZI (17. 11. 2026, relace session_01HpUirvm4JFbBXo1Yy6bER1, větev `claude/focused-tesla-cw2jdt`).**
