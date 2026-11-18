@@ -11,6 +11,11 @@ type Props = {
   /** Jen ikona, popisek zůstává pro čtečky. */
   iconOnly?: boolean;
   className?: string;
+  /**
+   * „card“: nenápadné tlačítko ⋯ v rohu karty akce (jen ikona). Na desktopu se zvýrazní při najetí nebo fokusu
+   * na kartu, na dotykovém displeji je vidět vždy. Větší dotyková plocha nemění rozměry karty.
+   */
+  variant?: "card";
 };
 
 const GAP = 6;
@@ -24,7 +29,8 @@ const EDGE = 8;
  * ujede) a volbou položky. Položky zůstávají v dokumentu i po zavření: okna otevřená z menu (Upravit, Zrušit)
  * si tak drží stav.
  */
-export function Menu({ label, children, small, iconOnly, className }: Props) {
+export function Menu({ label, children, small, iconOnly, className, variant }: Props) {
+  const card = variant === "card";
   const [open, setOpen] = useState(false);
   const [place, setPlace] = useState<React.CSSProperties>({ visibility: "hidden" });
   const root = useRef<HTMLDivElement>(null);
@@ -86,22 +92,22 @@ export function Menu({ label, children, small, iconOnly, className }: Props) {
   }, [open]);
 
   return (
-    <div className={`menu${className ? ` ${className}` : ""}`} ref={root}>
+    <div className={`menu${card ? " menu-card" : ""}${className ? ` ${className}` : ""}`} ref={root} data-open={open || undefined}>
       <button
         ref={trigger}
         type="button"
-        className={`btn${small ? " btn-small" : ""}${iconOnly ? " btn-icon" : ""}`}
+        className={card ? "menu-card-trigger" : `btn${small ? " btn-small" : ""}${iconOnly ? " btn-icon" : ""}`}
         aria-expanded={open}
         aria-controls={listId}
-        aria-label={iconOnly ? label : undefined}
-        title={iconOnly ? label : undefined}
+        aria-label={iconOnly || card ? label : undefined}
+        title={iconOnly || card ? label : undefined}
         onClick={() => {
           setPlace({ visibility: "hidden" });
           setOpen((value) => !value);
         }}
       >
-        <Icon name="more" />
-        {!iconOnly && label}
+        <Icon name="more" size={card ? 18 : 16} />
+        {!iconOnly && !card && label}
       </button>
       <div
         ref={list}

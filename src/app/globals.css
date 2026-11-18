@@ -810,18 +810,40 @@ fieldset.field > legend {
   display: none;
 }
 
+/* Položky všech menu vypadají stejně: plná šířka, stejná výška a odsazení, jemná ikona vlevo. Pořadí je
+   hlavní akce, úpravy, méně časté a pod čarou nebezpečné. */
 .menu-list .btn {
   justify-content: flex-start;
+  gap: 10px;
   width: 100%;
+  min-height: 36px;
+  padding: 6px 10px;
   border-color: transparent;
+  border-radius: 6px;
   background: transparent;
+  color: var(--ink);
   font-weight: 500;
   text-align: left;
 }
 
+.menu-list .btn > svg {
+  flex: none;
+  color: var(--muted);
+}
+
 .menu-list .btn:hover,
 .menu-list .btn:focus-visible {
+  border-color: transparent;
   background: var(--beige);
+}
+
+.menu-list .btn:focus-visible {
+  outline: 2px solid var(--ochre);
+  outline-offset: -2px;
+}
+
+.menu-list .btn:disabled {
+  background: transparent;
 }
 
 .menu-list .action-form,
@@ -864,8 +886,72 @@ fieldset.field > legend {
   font-weight: 600;
 }
 
-.menu-list .menu-danger {
+.menu-list .menu-danger,
+.menu-list .menu-danger > svg {
   color: var(--danger);
+}
+
+/* ⋯ v rohu karty akce: malé a tlumené, karta nemění rozměry. Dotyková plocha je větší než viditelná ikona
+   (pseudo-prvek), aby šla trefit prstem. Na desktopu se zvýrazní při najetí nebo fokusu na kartu. */
+.menu-card {
+  position: absolute;
+  z-index: 2;
+}
+
+/* Otevřené menu karty nad sousedními kartami (jejich ⋯ má vlastní vrstvu) i nad plovoucím ovládáním. */
+.menu-card[data-open] {
+  z-index: 60;
+}
+
+.menu-card-trigger {
+  display: inline-flex;
+  position: relative;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.menu-card-trigger::before {
+  position: absolute;
+  inset: -8px -6px;
+  content: "";
+}
+
+.menu-card-trigger:hover,
+.menu-card[data-open] > .menu-card-trigger {
+  border-color: var(--line);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.menu-card-trigger:focus-visible {
+  outline: 2px solid var(--ochre);
+  outline-offset: 1px;
+  color: var(--ink);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .menu-card-trigger {
+    opacity: 0.6;
+  }
+
+  :hover > .menu-card > .menu-card-trigger,
+  :focus-within > .menu-card > .menu-card-trigger,
+  .menu-card[data-open] > .menu-card-trigger {
+    opacity: 1;
+  }
+}
+
+/* Při hromadném výběru má přednost checkbox, menu karty se schová stejně jako úchyt přesunu. */
+[data-selecting] .menu-card {
+  display: none;
 }
 
 .btn-icon {
