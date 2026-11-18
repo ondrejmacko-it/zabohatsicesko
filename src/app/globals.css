@@ -3068,7 +3068,17 @@ body[data-moving] .quick-actions,
   .plan-filters {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
     gap: 8px;
+  }
+
+  /* Dvouřádkový popisek (320 px) nesmí rozhodit výšky: všechny prvky řádku jsou stejně vysoké. */
+  .plan-filters .filter-menu {
+    display: flex;
+  }
+
+  .plan-filters .filter-menu > summary {
+    flex: 1;
   }
 
   .plan-filters-start,
@@ -3086,6 +3096,12 @@ body[data-moving] .quick-actions,
     border: 1px solid var(--line-strong);
     border-radius: 999px;
     font-size: 14px;
+  }
+
+  /* Počet se nesmí zalomit („1“ / „1“), zalomit smí jen popisek. */
+  .plan-filters .pill-number {
+    flex-shrink: 0;
+    white-space: nowrap;
   }
 
   .plan-filters [data-wide],
