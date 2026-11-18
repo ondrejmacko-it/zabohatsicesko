@@ -1,6 +1,6 @@
 import { authFile, expect, settle, test } from "./support";
 
-// Celý průchod zápisu: akce proběhla → vedoucí nahraje nahrávku → návrh zápisu → kontrola → zveřejnění → účastník vidí.
+// Celý průchod zápisu: akce proběhla → vedoucí nahraje nahrávku → návrh zápisu → kontrola → schválení vedoucím = zveřejnění → účastník vidí.
 // Zapisuje do sdílených dat ukázky, proběhne jen v jednom projektu. Přepis je v ukázce jen pro ukázkovou nahrávku.
 test.describe("Zápisy: od nahrávky ke zveřejnění @desktop", () => {
   test.use({ storageState: authFile("vedouci") });
@@ -10,7 +10,7 @@ test.describe("Zápisy: od nahrávky ke zveřejnění @desktop", () => {
     await page.goto("/vzdelavani/zapisy?zapis=tr-fp-1111");
     await settle(page);
     const dialog = page.getByRole("dialog", { name: /Trénink poradců/ });
-    await expect(dialog.getByRole("status").filter({ hasText: "Čeká na nahrávku" })).toBeVisible();
+    await expect(dialog.getByRole("status").filter({ hasText: "Čeká na zápis" })).toBeVisible();
     // UI předem říká, že přepis je jen ukázka, a nabízí ukázkovou nahrávku přímo u nahrávání.
     await expect(dialog).toContainText("Automatický přepis zatím umí jen jednu ukázkovou nahrávku");
     await expect(dialog.getByRole("link", { name: "Stáhnout ukázkovou nahrávku" })).toBeVisible();
@@ -19,11 +19,11 @@ test.describe("Zápisy: od nahrávky ke zveřejnění @desktop", () => {
     await expect(dialog).toContainText("se přiřadí k akci");
     await dialog.getByRole("button", { name: "Nahrát nahrávku" }).click();
 
-    await expect(dialog.getByRole("status").filter({ hasText: "Ke kontrole" })).toBeVisible({ timeout: 20_000 });
+    await expect(dialog.getByRole("status").filter({ hasText: "Čeká na schválení" })).toBeVisible({ timeout: 20_000 });
     const summary = dialog.getByLabel("Shrnutí");
     await expect(summary).not.toHaveValue("");
     await summary.fill("Trénink k úvodní schůzce: kontrola podkladů a tři otevřené otázky.");
-    await dialog.getByRole("button", { name: "Zveřejnit zápis" }).click();
+    await dialog.getByRole("button", { name: "Schválit a zveřejnit" }).click();
     await expect(dialog.getByRole("status").filter({ hasText: "Zápis zveřejněn" })).toBeVisible();
 
     for (const [role, visible] of [["ucastnikFp", true], ["ucastnikRm", false]] as const) {
