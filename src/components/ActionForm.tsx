@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import type { ActionResult } from "@/features/vzdelavani/actions";
+import { Icon, type IconName } from "./Icon";
 import { Modal } from "./Modal";
 
 type Props = {
@@ -14,17 +15,22 @@ type Props = {
   small?: boolean;
   /** Pokud je vyplněno, akce se provede až po potvrzení v dialogu. */
   confirm?: { title: string; text: string; confirmLabel: string };
+  /** Ikona před popiskem (položky v `Menu`). */
+  icon?: IconName;
+  /** Další třída tlačítka (například `menu-danger`). */
+  buttonClassName?: string;
 };
 
 /** Jednotlačítková serverová akce se stavem odeslání, výsledkem a volitelným potvrzením. */
-export function ActionForm({ action, fields = {}, label, pendingLabel, variant = "default", small, confirm }: Props) {
+export function ActionForm({ action, fields = {}, label, pendingLabel, variant = "default", small, confirm, icon, buttonClassName }: Props) {
   const [confirming, setConfirming] = useState(false);
   const [state, formAction, pending] = useActionState(async (prev: ActionResult | null, formData: FormData) => {
     const result = await action(prev, formData);
     setConfirming(false);
     return result;
   }, null);
-  const className = `btn${variant === "primary" ? " btn-primary" : variant === "danger" ? " btn-danger" : ""}${small ? " btn-small" : ""}`;
+  const className = `btn${variant === "primary" ? " btn-primary" : variant === "danger" ? " btn-danger" : ""}${small ? " btn-small" : ""}${buttonClassName ? ` ${buttonClassName}` : ""}`;
+  const iconMark = icon ? <Icon name={icon} /> : null;
 
   const hidden = Object.entries(fields).map(([name, value]) => <input key={name} type="hidden" name={name} value={value} />);
 
@@ -33,6 +39,7 @@ export function ActionForm({ action, fields = {}, label, pendingLabel, variant =
       {confirm ? (
         <>
           <button type="button" className={className} onClick={() => setConfirming(true)} disabled={pending}>
+            {iconMark}
             {label}
           </button>
           <Modal open={confirming} title={confirm.title} onRequestClose={() => setConfirming(false)}>
@@ -52,6 +59,7 @@ export function ActionForm({ action, fields = {}, label, pendingLabel, variant =
         <form action={formAction}>
           {hidden}
           <button type="submit" className={className} disabled={pending}>
+            {iconMark}
             {pending ? (pendingLabel ?? "Probíhá…") : label}
           </button>
         </form>

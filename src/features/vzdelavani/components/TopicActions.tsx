@@ -1,14 +1,28 @@
 "use client";
 
-import { useActionState, useState, useTransition } from "react";
+import Link from "next/link";
+import { useActionState, useEffect, useState, useTransition } from "react";
 import { ActionForm, ActionMessage } from "@/components/ActionForm";
+import { flash } from "@/components/FlashMessage";
 import { Icon } from "@/components/Icon";
 import { Menu } from "@/components/Menu";
 import { Modal } from "@/components/Modal";
 import { submitKeepingValues } from "@/features/shared/keep-values";
 import { GROUP_LABELS } from "@/lib/labels";
+import { formatDayMonth } from "@/lib/time";
 import type { Group } from "@/lib/types";
-import { archiveTopicAction, proposeTopicAction, toggleInterestAction, updateTopicAction, type ActionResult } from "../actions";
+import type { TopicPlanOptions } from "@/server/services/topics";
+import {
+  archiveTopicAction,
+  assignTopicAction,
+  moveTopicAction,
+  proposeTopicAction,
+  setTopicPriorityAction,
+  toggleInterestAction,
+  topicPlanOptionsAction,
+  updateTopicAction,
+  type ActionResult,
+} from "../actions";
 
 /**
  * Přepínač zájmu. Jeden uživatel = nejvýš jeden zájem o téma (hlídá server). Viditelný text i přístupný název
@@ -93,29 +107,162 @@ function ProposeForm({ groups, onClose }: { groups: Group[]; onClose: () => void
   );
 }
 
-/** Správa tématu pro správce: úprava názvu a skupiny, archivace. */
-/** Správa tématu v jedné nabídce: úprava názvu a skupiny, archivace s potvrzením. */
-export function TopicManage({ topic, groups }: { topic: { id: string; name: string; audience: string }; groups: Group[] }) {
-  const [open, setOpen] = useState(false);
+/** Co správce s tématem v nabídce může udělat. Pořadí a meze spočítá server, ověří je znovu při zápisu. */
+export type TopicManageProps = {
+  topic: { id: string; name: string; audience: string; priorityRank?: number | null };
+  groups: Group[];
+  /** Je volné pořadí pro další garantované téma (nejvýš 3). */
+  canGuarantee: boolean;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
+};
+
+/**
+ * Správa tématu v jedné nabídce ⋯: Naplánovat téma, Upravit, Nastavit / Zrušit prioritu, Posunout výš / níž
+ * (místo tažení, ovládá se i klávesnicí) a pod čarou Archivovat s potvrzením.
+ */
+export function TopicManage({ topic, groups, canGuarantee, canMoveUp, canMoveDown }: TopicManageProps) {
+  const [dialog, setDialog] = useState<"edit" | "plan" | null>(null);
+  const guaranteed = topic.priorityRank != null;
   return (
     <>
       <Menu label={`Možnosti tématu ${topic.name}`} small iconOnly>
-        <button type="button" className="btn" onClick={() => setOpen(true)}>
+        <button type="button" className="btn" onClick={() => setDialog("plan")}>
+          <Icon name="calendar" />
+          Naplánovat téma
+        </button>
+        <button type="button" className="btn" onClick={() => setDialog("edit")}>
+          <Icon name="pencil" />
           Upravit téma
         </button>
+        {(guaranteed || canGuarantee) && (
+          <ActionForm
+            action={setTopicPriorityAction}
+            fields={{ topicId: topic.id, guaranteed: guaranteed ? "false" : "true" }}
+            label={guaranteed ? "Zrušit prioritu" : "Nastavit prioritu"}
+            pendingLabel="Ukládám…"
+            icon="star"
+          />
+        )}
+        {canMoveUp && <ActionForm action={moveTopicAction} fields={{ topicId: topic.id, direction: "up" }} label="Posunout výš" pendingLabel="Posouvám…" icon="arrowUp" />}
+        {canMoveDown && <ActionForm action={moveTopicAction} fields={{ topicId: topic.id, direction: "down" }} label="Posunout níž" pendingLabel="Posouvám…" icon="arrowDown" />}
+        <hr className="menu-divider" />
         <ActionForm
           action={archiveTopicAction}
           fields={{ topicId: topic.id, archived: "true" }}
           label="Archivovat…"
+          icon="archive"
+          buttonClassName="menu-danger"
           confirm={{
             title: "Archivovat téma",
-            text: `Téma „${topic.name}“ zmizí z nabídky a z doporučení. Akce, které ho už měly, si vazbu nechají a téma můžete kdykoli obnovit.`,
+            text: `Téma „${topic.name}“ zmizí z nabídky a z doporučení${guaranteed ? " a přestane být garantované" : ""}. Akce, které ho už měly, si vazbu nechají a téma můžete kdykoli obnovit.`,
             confirmLabel: "Archivovat téma",
           }}
         />
       </Menu>
-      {open && <EditTopicForm topic={topic} groups={groups} onClose={() => setOpen(false)} />}
+      {dialog === "edit" && <EditTopicForm topic={topic} groups={groups} onClose={() => setDialog(null)} />}
+      {dialog === "plan" && <PlanTopicDialog topic={topic} onClose={() => setDialog(null)} />}
     </>
+  );
+}
+
+const harmonogramHref = (dateKey: string, query: Record<string, string>) =>
+  `/vzdelavani/harmonogram?${new URLSearchParams({ mesic: dateKey.slice(0, 7), ...query })}`;
+
+/**
+ * Okno Naplánovat téma: vhodné budoucí akce bez tématu s vysvětlením proč (pořadí určuje server), u návrhu
+ * Přidat do návrhu (uloží jen návrh), u zveřejněné akce otevření okna akce s předvyplněným tématem (běžné
+ * zveřejnění s kontrolou dopadu) a Vytvořit novou akci (předvyplněné Přidat akci). Má-li téma budoucí
+ * termín, okno ho ukáže s odkazem.
+ */
+function PlanTopicDialog({ topic, onClose }: { topic: { id: string; name: string }; onClose: () => void }) {
+  const [loaded, setLoaded] = useState<(ActionResult & { options?: TopicPlanOptions }) | null>(null);
+  useEffect(() => {
+    let active = true;
+    void topicPlanOptionsAction(topic.id).then((result) => {
+      if (active) setLoaded(result);
+    });
+    return () => {
+      active = false;
+    };
+  }, [topic.id]);
+  const options = loaded?.ok ? loaded.options : undefined;
+  return (
+    <Modal open title="Naplánovat téma" onRequestClose={onClose} wide>
+      <div className="stack">
+        <p className="small muted">
+          Kam zařadit téma „{topic.name}“. Nejdřív jsou návrhy bez tématu pro stejnou skupinu, uložení do návrhu nic nezveřejní ani neodešle.
+        </p>
+        {!loaded && (
+          <p className="small" role="status">
+            Hledám vhodné termíny…
+          </p>
+        )}
+        {loaded && !loaded.ok && <ActionMessage state={loaded} />}
+        {options?.scheduled && (
+          <p className="notice" role="status">
+            Téma už {options.scheduled.draft ? "je v návrhu" : "je naplánované"} na {formatDayMonth(options.scheduled.dateKey)} ({options.scheduled.label}).{" "}
+            <Link href={harmonogramHref(options.scheduled.dateKey, { akce: options.scheduled.id })}>Otevřít akci</Link>
+          </p>
+        )}
+        {options && options.candidates.length === 0 && <p className="small">Žádná budoucí akce bez tématu se pro skupinu tématu nehodí. Vytvořte novou.</p>}
+        {options && options.candidates.length > 0 && (
+          <ul className="plan-topic-list" aria-label="Vhodné akce">
+            {options.candidates.map((c) => (
+              <li key={c.id} className="plan-topic-item">
+                <div className="topic-main">
+                  <p className="item-title">
+                    {c.label} · {formatDayMonth(c.dateKey)}
+                    {c.draft && <span className="badge badge-draft topic-badge">Návrh</span>}
+                  </p>
+                  <p className="item-meta">
+                    {GROUP_LABELS[c.audience as Group] ?? c.audience} · {c.reason}
+                  </p>
+                </div>
+                {c.draft ? (
+                  <AssignToDraft topicId={topic.id} candidate={c} onDone={onClose} />
+                ) : (
+                  <Link className="btn btn-small" href={harmonogramHref(c.dateKey, { akce: c.id, tema: topic.id })}>
+                    Otevřít s tématem
+                  </Link>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+        <div className="row">
+          <Link className="btn btn-primary" href={`/vzdelavani/harmonogram?tema=${encodeURIComponent(topic.id)}`}>
+            <Icon name="plus" />
+            Vytvořit novou akci
+          </Link>
+          <button type="button" className="btn" onClick={onClose}>
+            Zavřít
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+function AssignToDraft({ topicId, candidate, onDone }: { topicId: string; candidate: TopicPlanOptions["candidates"][number]; onDone: () => void }) {
+  const [state, action, pending] = useActionState(async (prev: ActionResult | null, formData: FormData) => {
+    const result = await assignTopicAction(prev, formData);
+    if (result.ok) {
+      flash(result.message);
+      onDone();
+    }
+    return result;
+  }, null);
+  return (
+    <form action={action} className="plan-topic-action">
+      <input type="hidden" name="topicId" value={topicId} />
+      <input type="hidden" name="eventId" value={candidate.id} />
+      <input type="hidden" name="revision" value={String(candidate.revision)} />
+      <button type="submit" className="btn btn-small" disabled={pending} aria-label={`Přidat do návrhu ${candidate.label} ${formatDayMonth(candidate.dateKey)}`}>
+        {pending ? "Ukládám…" : "Přidat do návrhu"}
+      </button>
+      {state && !state.ok && <ActionMessage state={state} />}
+    </form>
   );
 }
 

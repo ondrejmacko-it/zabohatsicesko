@@ -31,12 +31,12 @@ import { listMonth, listMonthDrafts, listPeople, loadTemplate, nextEventFor } fr
 import { loadCalendarStatus, loadPersonalCalendar } from "@/server/services/calendar-status";
 import { listTasks } from "@/server/services/journey";
 import { listPreviewOptions, resolvePreview } from "@/server/services/preview";
-import { duplicateFormValues } from "@/server/services/detail";
+import { duplicateFormValues, topicFormValues } from "@/server/services/detail";
 import { listTopics } from "@/server/services/topics";
 
 export const metadata: Metadata = { title: "Plán vzdělávání" };
 
-type SearchParams = Promise<{ mesic?: string; pohled?: string; jako?: string; typ?: string; stav?: string; akce?: string; den?: string; kopie?: string }>;
+type SearchParams = Promise<{ mesic?: string; pohled?: string; jako?: string; typ?: string; stav?: string; akce?: string; den?: string; kopie?: string; tema?: string }>;
 
 /** Nejbližší zveřejněná akce: z již načteného aktuálního měsíce, jinak jedním dotazem dopředu. */
 async function nearestEvent(viewer: Parameters<typeof nextEventFor>[0], monthCards: EventCard[]): Promise<EventCard | null> {
@@ -102,6 +102,10 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   // Neznámá akce nebo svátek okno neotevře.
   const copyId = managing && params.kopie ? params.kopie.slice(0, 120) : null;
   const copyValues = copyId ? await duplicateFormValues(user, copyId, todayKey) : null;
+  // Naplánovat téma (`?tema=`): s `akce` předvyplní téma v okně akce, bez ní otevře Přidat akci k tématu.
+  // Uloží se běžnou cestou (návrh, nebo zveřejnění s kontrolou dopadu). Neznámé či archivované téma nic neotevře.
+  const topicParam = managing && params.tema ? params.tema.slice(0, 120) : null;
+  const topicValues = topicParam && !peekId && !copyValues ? await topicFormValues(user, topicParam, todayKey) : null;
 
   // Menu ⋯ na kartách: položky podle stavu a role (`cardActions`), adresy se zachovaným měsícem a filtry.
   const fullHref = (card: EventCard) => `/vzdelavani/akce/${encodeURIComponent(card.id)}${current.jako ? `?jako=${encodeURIComponent(current.jako)}` : ""}`;
@@ -157,7 +161,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   return (
     <>
       <AutoRefresh active={syncing} />
-      {peekId && <EventPeek key={peekId} user={user} eventId={peekId} preview={preview} previewKey={current.jako} closeHref={link({})} />}
+      {peekId && <EventPeek key={`${peekId}|${topicParam ?? ""}`} user={user} eventId={peekId} preview={preview} previewKey={current.jako} closeHref={link({})} presetTopicId={topicParam ?? undefined} />}
       {preview && (
         <p className="notice plan-preview" role="status">
           Pohled: <strong>{preview.label}</strong> · jen ke čtení. <Link href={link({ jako: undefined })}>Zpět na můj pohled</Link>
@@ -230,11 +234,11 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
               )}
               {managing && (
                 <EventDialog
-                  key={copyValues ? `kopie-${copyId}` : (addDay ?? "nova")}
-                  openOnMount={addDay !== null || copyValues !== null}
-                  closeHref={addDay || copyValues ? link({}) : undefined}
+                  key={copyValues ? `kopie-${copyId}` : topicValues ? `tema-${topicParam}` : (addDay ?? "nova")}
+                  openOnMount={addDay !== null || copyValues !== null || topicValues !== null}
+                  closeHref={addDay || copyValues || topicValues ? link({}) : undefined}
                   duplicateOf={copyValues ? copyId! : undefined}
-                  initial={copyValues ?? {
+                  initial={copyValues ?? topicValues ?? {
                     type: "other",
                     label: "",
                     date: newDate,

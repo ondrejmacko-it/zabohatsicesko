@@ -2133,6 +2133,70 @@ a.brief-link:hover {
 }
 
 /* Archiv: stejné řádky, jen tlumené. */
+/* Garantovaná a ostatní témata: stejné řádky, jen malý nadpis skupiny. Garantovaná mají ochrový pruh. */
+.topic-group + .topic-group {
+  margin-top: 20px;
+}
+
+.topic-group-title {
+  margin: 0 0 2px;
+  font-size: 1rem;
+}
+
+.topic-group > .item-meta {
+  margin: 0 0 8px;
+}
+
+.topic-list.topic-guaranteed > .topic-row {
+  box-shadow: inset 3px 0 0 var(--ochre);
+}
+
+.topic-priority-hint {
+  margin-bottom: 12px;
+}
+
+/* Tiché označení ručního pořadí: jen řádek nad seznamem, žádný štítek u témat. */
+.topic-order-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 12px;
+  margin-bottom: 8px;
+}
+
+.topic-order-note .item-meta {
+  margin: 0;
+}
+
+/* Okno Naplánovat téma: kompaktní řádky akcí s vysvětlením a jedním tlačítkem. */
+.plan-topic-list {
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  list-style: none;
+}
+
+.plan-topic-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 10px 14px;
+}
+
+.plan-topic-item + .plan-topic-item {
+  border-top: 1px solid var(--line);
+}
+
+.plan-topic-action {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
 .archived-topics {
   margin-top: 10px;
 }

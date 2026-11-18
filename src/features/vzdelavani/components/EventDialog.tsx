@@ -10,7 +10,7 @@ import { GROUP_LABELS, TYPE_LABELS } from "@/lib/labels";
 import { isoWeekday } from "@/lib/time";
 import { EVENT_TYPES, GROUPS } from "@/lib/types";
 import { defaultAudience } from "@/server/domain/generation";
-import { interestedLabel, isRecommendable, topicFitsAudience } from "@/server/domain/topics";
+import { interestedLabel, isGuaranteed, recommendTopics, topicFitsAudience } from "@/server/domain/topics";
 import type { InviteRecipients } from "@/server/services/calendar-status";
 import type { EventFormValues } from "@/server/services/detail";
 import type { ChangeImpact } from "@/server/services/impact";
@@ -32,7 +32,16 @@ function fieldName(field: FormField): string {
 }
 
 export type Person = { id: string; name: string };
-export type TopicOption = { name: string; audience: string; reason: string; interestCount: number; nextPlanned?: string | null };
+export type TopicOption = {
+  id: string;
+  name: string;
+  audience: string;
+  reason: string;
+  interestCount: number;
+  nextPlanned?: string | null;
+  /** Garantované téma (pořadí 1–3). */
+  priorityRank?: number | null;
+};
 
 /** Svátek vzniká jen při doplnění měsíce, ručně ho založit ani na něj akci změnit nejde (hlídá i server). */
 const FORM_TYPES = EVENT_TYPES.filter((type) => type !== "holiday");
@@ -57,9 +66,14 @@ type FormProps = {
    * se zveřejněním odmítne (`duplicateOf`).
    */
   duplicateOf?: string;
+  /**
+   * Uložený stav akce, když `initial` obsahuje předvyplnění (Naplánovat téma). Neuložená změna se počítá
+   * vůči němu, takže předvyplněné téma jde uložit i jako návrh.
+   */
+  saved?: EventFormValues;
 };
 
-type CreateProps = Omit<FormProps, "mode" | "id" | "revision" | "published"> & {
+type CreateProps = Omit<FormProps, "mode" | "id" | "revision" | "published" | "saved"> & {
   /** Okno se otevře hned (odkaz „+“ na dni v Plánu). Po zavření se adresa vrátí na `closeHref`. */
   openOnMount?: boolean;
   closeHref?: string;
@@ -153,6 +167,7 @@ function EventForm({
   planDays,
   termLocked = false,
   duplicateOf,
+  saved,
   menu,
   onDone,
 }: FormProps & { menu?: React.ReactNode; onDone: (values: EventFormValues, id?: string) => void }) {
@@ -178,7 +193,7 @@ function EventForm({
     return result;
   }, null);
 
-  const dirty = valuesKey !== JSON.stringify(initial);
+  const dirty = valuesKey !== JSON.stringify(saved ?? initial);
   // Potvrzení dopadu platí jen pro hodnoty, pro které vzniklo. Jakákoli další úprava formuláře ho zruší.
   const confirmed = impact?.key === valuesKey ? impact.data : null;
   const missing = [!values.topicTitle.trim() && "téma", !values.leadId && "vedoucí"].filter((m): m is string => Boolean(m));
@@ -238,7 +253,11 @@ function EventForm({
   };
   const weekday = /^\d{4}-\d{2}-\d{2}$/.test(values.date) ? isoWeekday(values.date) : null;
   const unusualDay = planDays !== undefined && planDays.length > 0 && weekday !== null && !planDays.includes(weekday);
-  const suggestions = topics.filter((t) => isRecommendable(t) && topicFitsAudience(t.audience, values.audience)).slice(0, 3);
+  // Pořadí doporučení: garantovaná témata skupiny, pak témata přímo pro skupinu, pak zájem (`recommendTopics`).
+  const suggestions = recommendTopics(topics, values.audience).slice(0, 3);
+  // Vybrané téma je pro jinou skupinu: jen upozornění, rozhoduje správce (téma se uloží i tak).
+  const chosenTopic = topics.find((t) => t.name.toLowerCase() === values.topicTitle.trim().toLowerCase());
+  const audienceMismatch = chosenTopic && !topicFitsAudience(chosenTopic.audience, values.audience) ? chosenTopic : null;
 
   useEffect(() => {
     if (!dirty) return;
@@ -327,6 +346,7 @@ function EventForm({
             <button key={t.name} type="button" className="suggestion" onClick={() => set("topicTitle", t.name)}>
               <span className="suggestion-head">
                 <span className="suggestion-name">{t.name}</span>
+                {isGuaranteed(t) ? <span className="badge badge-ok">Garantované</span> : <span className="badge badge-outline">Doporučené</span>}
                 <span className="badge badge-ochre">{interestedLabel(t.interestCount)}</span>
               </span>
               {/* Počet zájemců je v odznaku, v podtextu zůstává jen historie tématu. */}
@@ -334,6 +354,12 @@ function EventForm({
             </button>
           ))}
         </div>
+      )}
+      {audienceMismatch && (
+        <p className="notice span-2" role="status">
+          Téma „{audienceMismatch.name}“ je pro skupinu {GROUP_LABELS[audienceMismatch.audience as keyof typeof GROUP_LABELS] ?? audienceMismatch.audience}, akce je pro{" "}
+          {GROUP_LABELS[values.audience]}. Zkontrolujte skupinu nebo téma.
+        </p>
       )}
     </>
   );

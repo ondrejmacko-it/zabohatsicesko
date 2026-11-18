@@ -1,12 +1,87 @@
+import Link from "next/link";
+import { ActionForm } from "@/components/ActionForm";
+import { resetTopicOrderAction } from "@/features/vzdelavani/actions";
 import { InterestButton, ProposeTopicDialog, RestoreTopicButton, TopicManage } from "@/features/vzdelavani/components/TopicActions";
 import { GROUP_LABELS } from "@/lib/labels";
 import { formatDayMonth } from "@/lib/time";
 import { GROUPS, type Group } from "@/lib/types";
-import { interestedLabel, mostWantedIds, sortByInterest } from "@/server/domain/topics";
+import {
+  guaranteedTopics,
+  hasManualOrder,
+  interestedLabel,
+  mostWantedIds,
+  nextFreePriority,
+  otherTopics,
+  sortByInterest,
+  type RankedTopic,
+} from "@/server/domain/topics";
 import { isOrganizer, type Viewer } from "@/server/policy";
 import { listArchivedTopics, listTopicInterested, listTopics } from "@/server/services/topics";
 
-/** Témata jako jeden přehledný seznam řádků podle zájmu. Nejžádanější mají štítek, správa je v nabídce u každého řádku. */
+type RowContext = {
+  organizer: boolean;
+  groups: Group[];
+  mostWanted: Set<string>;
+  interested: Map<string, string[]> | null;
+  canGuarantee: boolean;
+  label: (g: string) => string;
+};
+
+/** Jeden řádek tématu. Pořadí v seznamu (a tím i posun výš/níž) určuje volající. */
+function TopicRow({ t, index, count, ctx }: { t: RankedTopic; index: number; count: number; ctx: RowContext }) {
+  const names = ctx.interested?.get(t.id) ?? [];
+  const wanted = ctx.mostWanted.has(t.id);
+  const next = t.nextPlanned && (
+    <>
+      {" · "}
+      {ctx.organizer && t.nextPlannedId ? (
+        <Link href={`/vzdelavani/harmonogram?mesic=${t.nextPlanned.slice(0, 7)}&akce=${encodeURIComponent(t.nextPlannedId)}`}>příště {formatDayMonth(t.nextPlanned)}</Link>
+      ) : (
+        `příště ${formatDayMonth(t.nextPlanned)}`
+      )}
+    </>
+  );
+  return (
+    <li className={wanted ? "topic-row topic-wanted" : "topic-row"}>
+      <div className="topic-main">
+        <p className="item-title">
+          <span id={`tema-${t.id}`}>{t.name}</span>
+          {wanted && <span className="badge badge-ok topic-badge">Nejžádanější</span>}
+        </p>
+        <p className="item-meta">
+          {ctx.label(t.audience)} · {t.lastHeld ? `naposledy ${formatDayMonth(t.lastHeld)}` : "zatím neproběhlo"}
+          {next}
+        </p>
+      </div>
+      <div className="topic-interest">
+        {names.length > 0 ? (
+          <details className="topic-people">
+            <summary>{interestedLabel(t.interestCount)}</summary>
+            <ul className="chip-list">
+              {names.map((name) => (
+                <li key={name} className="chip">
+                  {name}
+                </li>
+              ))}
+            </ul>
+          </details>
+        ) : (
+          <p className="topic-count">{interestedLabel(t.interestCount)}</p>
+        )}
+      </div>
+      <div className="topic-actions">
+        <InterestButton topicId={t.id} interested={t.interestedByViewer} titleId={`tema-${t.id}`} />
+        {ctx.organizer && <TopicManage topic={t} groups={ctx.groups} canGuarantee={ctx.canGuarantee} canMoveUp={index > 0} canMoveDown={index < count - 1} />}
+      </div>
+    </li>
+  );
+}
+
+/**
+ * Témata: nahoře garantovaná (pořadí 1–3 určuje správce), pod nimi ostatní podle zájmu, případně v ručním
+ * pořadí správce. Štítek Nejžádanější zůstává vázaný na skutečný počet zájemců v celém seznamu.
+ * Správa je v nabídce u každého řádku.
+ */
 export async function TopicsSection({ user }: { user: Viewer }) {
   const organizer = isOrganizer(user);
   const [ranked, archived, interested] = await Promise.all([
@@ -17,9 +92,20 @@ export async function TopicsSection({ user }: { user: Viewer }) {
   ]);
   // Server vrací jen témata, která uživatel smí vidět, a bez archivu. Pořadí plánování (`rankTopics`) se tu nepoužívá.
   const topics = sortByInterest(ranked);
-  const mostWanted = mostWantedIds(topics);
+  const guaranteed = guaranteedTopics(topics);
+  const others = otherTopics(topics);
+  const manualOrder = hasManualOrder(topics);
   const groups = GROUPS.filter((g) => organizer || user.groups.includes(g)) as Group[];
-  const label = (g: string) => GROUP_LABELS[g as Group] ?? g;
+  const ctx: RowContext = {
+    organizer,
+    groups,
+    mostWanted: mostWantedIds(topics),
+    interested,
+    // Volné pořadí počítá z nearchivovaných témat celé organizace: správce vidí všechna.
+    canGuarantee: nextFreePriority(topics) !== null,
+    label: (g: string) => GROUP_LABELS[g as Group] ?? g,
+  };
+  const label = ctx.label;
 
   return (
     <section className="section" aria-labelledby="temata">
@@ -36,45 +122,46 @@ export async function TopicsSection({ user }: { user: Viewer }) {
           <p className="item-meta">Navrhněte první tlačítkem Navrhnout téma. Kolegové pak mohou dát najevo zájem.</p>
         </div>
       ) : (
-        <ul className="topic-list">
-          {topics.map((t) => {
-            const names = interested?.get(t.id) ?? [];
-            return (
-              <li key={t.id} className={mostWanted.has(t.id) ? "topic-row topic-wanted" : "topic-row"}>
-                <div className="topic-main">
-                  <p className="item-title">
-                    <span id={`tema-${t.id}`}>{t.name}</span>
-                    {mostWanted.has(t.id) && <span className="badge badge-ok topic-badge">Nejžádanější</span>}
-                  </p>
-                  <p className="item-meta">
-                    {label(t.audience)} · {t.lastHeld ? `naposledy ${formatDayMonth(t.lastHeld)}` : "zatím neproběhlo"}
-                    {t.nextPlanned && ` · příště ${formatDayMonth(t.nextPlanned)}`}
-                  </p>
+        <>
+          {guaranteed.length > 0 && (
+            <div className="topic-group" aria-labelledby="temata-garantovana">
+              <h3 id="temata-garantovana" className="topic-group-title">
+                Garantovaná témata
+              </h3>
+              <p className="item-meta">Správce je chce probrat přednostně, v tomto pořadí.</p>
+              <ol className="topic-list topic-guaranteed">
+                {guaranteed.map((t, index) => (
+                  <TopicRow key={t.id} t={t} index={index} count={guaranteed.length} ctx={ctx} />
+                ))}
+              </ol>
+            </div>
+          )}
+          {organizer && guaranteed.length === 0 && (
+            <p className="notice topic-priority-hint">
+              Zatím nejsou nastavená garantovaná témata. Vyberte až tři, která se mají probrat přednostně: v nabídce tématu zvolte Nastavit prioritu.
+            </p>
+          )}
+          {others.length > 0 && (
+            <div className="topic-group" aria-labelledby={guaranteed.length > 0 ? "temata-ostatni" : undefined}>
+              {guaranteed.length > 0 && (
+                <h3 id="temata-ostatni" className="topic-group-title">
+                  Ostatní témata
+                </h3>
+              )}
+              {manualOrder && (
+                <div className="topic-order-note">
+                  <p className="item-meta">Pořadí upravil správce. Nová témata přibývají na konec.</p>
+                  {organizer && <ActionForm action={resetTopicOrderAction} label="Seřadit podle zájmu" pendingLabel="Řadím…" small />}
                 </div>
-                <div className="topic-interest">
-                  {names.length > 0 ? (
-                    <details className="topic-people">
-                      <summary>{interestedLabel(t.interestCount)}</summary>
-                      <ul className="chip-list">
-                        {names.map((name) => (
-                          <li key={name} className="chip">
-                            {name}
-                          </li>
-                        ))}
-                      </ul>
-                    </details>
-                  ) : (
-                    <p className="topic-count">{interestedLabel(t.interestCount)}</p>
-                  )}
-                </div>
-                <div className="topic-actions">
-                  <InterestButton topicId={t.id} interested={t.interestedByViewer} titleId={`tema-${t.id}`} />
-                  {organizer && <TopicManage topic={t} groups={groups} />}
-                </div>
-              </li>
-            );
-          })}
-        </ul>
+              )}
+              <ul className="topic-list">
+                {others.map((t, index) => (
+                  <TopicRow key={t.id} t={t} index={index} count={others.length} ctx={ctx} />
+                ))}
+              </ul>
+            </div>
+          )}
+        </>
       )}
 
       {archived.length > 0 && (

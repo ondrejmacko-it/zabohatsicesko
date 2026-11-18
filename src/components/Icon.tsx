@@ -25,6 +25,10 @@ const PATHS = {
   file: "M6 3.5h8l4 4v13H6zM14 3.5v4h4M9 12h6M9 15.5h6",
   trash: "M4.5 7h15M9.5 7V4.5h5V7M6.5 7l1 12.5h9l1-12.5M10 11v5M14 11v5",
   ban: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM5.6 5.6l12.8 12.8",
+  arrowUp: "M12 19V5M6 11l6-6 6 6",
+  arrowDown: "M12 5v14M6 13l6 6 6-6",
+  star: "M12 4l2.4 5 5.4.7-4 3.8 1 5.4L12 16.3 7.2 18.9l1-5.4-4-3.8 5.4-.7z",
+  archive: "M4 5h16v4H4zM5.5 9v10h13V9M10 13h4",
 } as const;
 
 export type IconName = keyof typeof PATHS;
