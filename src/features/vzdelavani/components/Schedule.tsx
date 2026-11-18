@@ -91,13 +91,38 @@ function CardMeta({ card, managing }: { card: EventCard; managing: boolean }) {
   );
 }
 
-/** Obal karty: v režimu výběru (jen správce, jen návrhy) k ní přidá checkbox. */
-function CardWrap({ card, managing, children }: { card: EventCard; managing: boolean; children: React.ReactNode }) {
+/** Obal karty: v režimu výběru (jen správce, jen návrhy) k ní přidá checkbox, v agendě případně úchyt přesunu. */
+function CardWrap({ card, managing, handle = false, children }: { card: EventCard; managing: boolean; handle?: boolean; children: React.ReactNode }) {
   return (
     <div className={styles.cardWrap}>
       {children}
+      {handle && <MoveHandle card={card} />}
       {managing && isPickable(card) && <PickBox id={card.id} label={card.label} />}
     </div>
+  );
+}
+
+/** Akci jde přesunout jen budoucí, nezrušenou a ne svátek. Server totéž ověří znovu (`planMove`). */
+const isMovable = (card: EventCard) => card.revision !== null && card.type !== "holiday" && card.planStatus !== "cancelled" && !card.past;
+
+/**
+ * Úchyt přesunu v agendě (telefon): samostatné tlačítko vedle odkazu karty, ne uvnitř něj. Podržení a tažení
+ * i ťuknutí nebo klávesu obsluhuje `MoveDropZone`. Vlastní atributy, aby se nepletl s tažitelnou kartou mřížky.
+ */
+function MoveHandle({ card }: { card: EventCard }) {
+  return (
+    <button
+      type="button"
+      className={styles.handle}
+      data-move-handle={card.id}
+      data-handle-revision={card.revision ?? 0}
+      data-handle-label={card.label}
+      data-handle-from={dayOf(card)}
+      aria-label={`Přesunout akci ${card.label} na jiný den`}
+      title="Podržte a přetáhněte na jiný den"
+    >
+      <Icon name="grip" size={18} />
+    </button>
   );
 }
 
@@ -222,7 +247,7 @@ export function ScheduleGrid({
                           card={card}
                           hrefFor={hrefFor}
                           managing={managing}
-                          movable={plannable && card.revision !== null && card.type !== "holiday" && card.planStatus !== "cancelled" && !card.past}
+                          movable={plannable && isMovable(card)}
                         />
                       ))}
                       {inMonth && (ghosts.get(day) ?? []).map((card) => <GhostBlock key={`stin-${card.id}`} card={card} hrefFor={hrefFor} />)}
@@ -238,7 +263,10 @@ export function ScheduleGrid({
   );
 }
 
-/** Chronologický seznam po týdnech a dnech. Výchozí pohled na úzkém displeji. */
+/**
+ * Chronologický seznam po týdnech a dnech. Výchozí pohled na úzkém displeji. Správce tu na telefonu má „+“
+ * u dne a úchyt přesunu (na širší obrazovce je skrývá CSS, plánuje se v mřížce). Den nese `id` pro Přejít na datum.
+ */
 export function Agenda({
   monthKey,
   cards,
@@ -246,7 +274,9 @@ export function Agenda({
   emptyText,
   hrefFor = pageHref,
   managing = false,
-}: { monthKey: string; cards: EventCard[]; todayKey: string; emptyText?: string } & Linking) {
+  addHref,
+  movableFrom,
+}: { monthKey: string; cards: EventCard[]; todayKey: string; emptyText?: string } & Linking & Planning) {
   const days = byDay(cards.filter((c) => monthOf(dayOf(c)) === monthKey));
   const ghosts = ghostsByDay(cards);
   const weeks = monthWeeks(monthKey)
@@ -270,18 +300,43 @@ export function Agenda({
             {week.current && <span className={styles.weekNow}>tento týden</span>}
           </h3>
           <ol className={styles.agendaDays}>
-            {week.days.map((day) => (
-              <li key={day} className={`${styles.agendaDay} ${day === todayKey ? styles.agendaToday : ""}`}>
+            {week.days.map((day) => {
+              const plannable = managing && movableFrom !== undefined && day >= movableFrom;
+              return (
+              <li
+                key={day}
+                id={`den-${day}`}
+                className={`${styles.agendaDay} ${day === todayKey ? styles.agendaToday : ""}`}
+                data-agenda-day={day}
+                data-drop-day={plannable ? day : undefined}
+              >
                 <div className={styles.agendaDate}>
                   {weekdayShort(day)} {formatDayMonth(day)}
                   {day === todayKey && <span className={styles.today}>dnes</span>}
+                  {plannable && addHref && (
+                    <Link
+                      href={addHref(day)}
+                      scroll={false}
+                      className={styles.agendaAdd}
+                      aria-label={`Přidat akci na ${weekdayLong(day)} ${formatDayMonth(day)}`}
+                      title="Přidat akci na tento den"
+                    >
+                      <Icon name="plus" />
+                    </Link>
+                  )}
                 </div>
                 <ul className={styles.agendaEvents}>
                   {(days.get(day) ?? []).map((card) => {
+                    const handle = plannable && isMovable(card);
                     return (
                       <li key={card.id}>
-                        <CardWrap card={card} managing={managing}>
-                          <Link href={hrefFor(card)} scroll={false} className={`${styles.agendaEvent} ${styles[cardTone(card)]}`} {...pickAttr(card, managing)}>
+                        <CardWrap card={card} managing={managing} handle={handle}>
+                          <Link
+                            href={hrefFor(card)}
+                            scroll={false}
+                            className={`${styles.agendaEvent} ${styles[cardTone(card)]}${handle ? ` ${styles.withHandle}` : ""}`}
+                            {...pickAttr(card, managing)}
+                          >
                             <span className={styles.agendaTime}>
                               {formatEventTime(new Date(card.startsAt), new Date(card.endsAt), card.allDay)}
                             </span>
@@ -302,7 +357,8 @@ export function Agenda({
                   ))}
                 </ul>
               </li>
-            ))}
+              );
+            })}
           </ol>
         </section>
       ))}

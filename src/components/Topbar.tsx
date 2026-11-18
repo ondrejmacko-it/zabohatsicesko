@@ -12,14 +12,14 @@ export function Topbar({ user, personas }: { user: CurrentUser; personas: Person
         <span className="brand-name">Firemní Wiki</span>
         <span className="brand-tagline">Za bohatší Česko – znalosti a procesy na jednom místě</span>
       </Link>
-      <div className="account">
+      <div className={user.signedInWith === "google" ? "account account-google" : "account"}>
         {!isLiveWiki() && (
           <span className="demo-badge" title="Fiktivní data a ukázkové režimy integrací">
             Ukázka<span className="demo-badge-detail"> · fiktivní data</span>
           </span>
         )}
         {user.signedInWith === "google" ? (
-          <span className="small muted" title={user.email}>
+          <span className="small muted signed-in" title={user.email}>
             Přihlášení účtem Google
           </span>
         ) : (
@@ -43,7 +43,7 @@ export function Topbar({ user, personas }: { user: CurrentUser; personas: Person
           </form>
         )}
         {/* U ukázkové role už jméno ukazuje přepínač, proto se neopakuje. */}
-        <span className="account-name">
+        <span className="account-name" title={user.signedInWith === "google" ? `Přihlášení účtem Google: ${user.email}` : undefined}>
           {user.signedInWith === "google" ? `${user.name} · ${ROLE_LABELS[user.role]}` : ROLE_LABELS[user.role]}
         </span>
         <form action={signOut}>
