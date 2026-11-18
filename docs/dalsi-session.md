@@ -1,5 +1,13 @@
 # Prompt pro další session
 
+**PREZENTAČNÍ DATA V OSTRÉ WIKI SPUŠTĚNA (18. 11. 2026, větev `claude/prezentacni-data-ostra-wiki` z main 8092e27).**
+Výsledek a záloha: `docs/prezentacni-data.md`, skript `docs/prezentacni-data.sql` (verze 2). Neon `main` změněn
+jednou transakcí, záloha `zaloha-pred-prezentaci` (br-broad-frog-bav5vdmf). 8 fiktivních kolegů (3 organizátoři),
+listopad–leden zveřejněný bez děr, únor 2027 volný na živé doporučení.
+**Další krok:** uživatel ověří produkční deploy z main a projde Plán a únor → Připravit měsíc. Otevřené:
+smazat dočasnou Neon větev `test-prezentace-nanecisto` (br-noisy-mountain-bah3cwh2); účet „Někdo random“ dál vede
+ruční akce 18. 12. a 8. 1. (skutečný účet, nesahal jsem); PR s docs je k revizi, merge dělá uživatel.
+
 **DOLADĚNÍ HARMONOGRAMU A TÉMAT (18. 11. 2026, řetězec 3 relací, větev `claude/doladeni-harmonogramu-a-temat` z main 506a2a6).**
 Zadání: jen (1) doporučená témata v Připravit měsíc, (2) kolonky Kdo/Téma v kartách `Schedule.tsx`. Nic jiného neměnit
 (nahrávky/přepisy/zápisy, layout, navigace, paleta, Kalendář, pozvánky…). PR až v relaci 3, merge dělá uživatel.

@@ -1,47 +1,50 @@
 # Prezentační data pro ostrou Wiki
 
-Skript: [`prezentacni-data.sql`](prezentacni-data.sql). **Připraveno, nespuštěno.** Rozhodnutí uživatele: data do
-produkce až po merge PR `claude/doladeni-harmonogramu-a-temat`. Doporučení témat se ukáže živě (skript nevkládá
-návrhy, vzniknou skutečným generováním). Akce vedou jen noví fiktivní kolegové.
+Skript: [`prezentacni-data.sql`](prezentacni-data.sql) (verze 2). **SPUŠTĚNO 18. 11. 2026 na Neon `zbc-wiki-produkce`,
+větev `main`, jedna transakce, commit OK.** Před spuštěním ověřeno nanečisto na dočasné větvi
+`test-prezentace-nanecisto` (`br-noisy-mountain-bah3cwh2`, lze smazat).
 
-## Výchozí stav (read-only SELECT, 18. 11. 2026)
+## Záloha
 
-* 3 účty (správce, 2 členové), 12 témat, pravidelný týden út Action time, st Trénink poradců/Portfolio tým,
-  čt Trénink RM, pá Firemní vzdělávání FP/RM.
-* Listopad až leden je vygenerovaný a zveřejněný (revize 2), akce z pravidelného týdne bez vedoucího a tématu.
-  9 ručních akcí s tématem vedou stávající účty. Únor 2027 je prázdný.
+Neon větev `zaloha-pred-prezentaci` (`br-broad-frog-bav5vdmf`), stav `main` k 18. 11. 2026 09:44 UTC, bez compute.
+Návrat: obnovit `main` z této větve (Neon Console → Branches → Restore). Starší záloha `zaloha-pred-cistenim-2026-11-17`.
 
-## Co skript udělá
+## Co se změnilo (ověřeno kontrolním SELECTem po commitu)
 
-1. 6 fiktivních kolegů `*.prezentace@example.invalid` (member; FP: Vašek, Petra, Lucie; RM: Tomáš, Jana; Tým A: Martin).
-2. 3 nová témata od kolegů a zájem kolegů o témata. Únor pak při Připravit měsíc → Doplnit nabídne doporučení
-   (5. 2., 12. 2., 19. 2.), 26. 2. zůstane bez doporučení (ukázka, že bez doporučení nejsou kliknutí navíc).
-3. U 15 budoucích akcí 26. 11. 2026 – 27. 1. 2027 doplní Kdo a u 6 Téma (2× ze seznamu Témata, 5× vlastní text).
-   Ostatní akce zůstávají záměrně prázdné: správce vidí „— doplnit“, kolega „Bude upřesněno“.
-   Zápis ve stejném tvaru jako uložení a zveřejnění v aplikaci (revize, snímek, vazba Kalendáře `pending`, audit).
+* **8 fiktivních kolegů** `*.prezentace@example.invalid` (nefunkční doména, nic nepřijde, nepřihlásí se):
+  organizátor Martin Beneš (vedoucí Týmu A; Všichni, Tým A, FP), Jana Dvořáková (vedoucí RM; Všichni, RM),
+  Petra Svobodová (metodička FP; Všichni, FP); člen Klára Veselá (portfolio manažerka; FP), Vašek Novotný
+  (finanční poradce; FP, Tým A), Lucie Horáková (junior poradkyně; FP), Tomáš Král (relationship manažer; RM),
+  Pavel Marek (senior relationship manažer; RM). Pracovní role je v jméně. Správce zůstává jediný.
+* **Témata:** 3 nová od kolegů (Rozbor schůzky s klientem, Hypotéky pro OSVČ a malé podnikatele, Prezentace
+  výsledků portfolia klientovi) a zájem kolegů o nová i stávající témata.
+* **Harmonogram 3. 11. 2026 – 29. 1. 2027:** 55 zveřejněných akcí, 2 zrušené, 0 návrhů, 46 s Kdo, 37 s Tématem.
+  Každý den pravidelného týdne má zveřejněnou akci (kontrola v transakci).
+  * Prošlé nezveřejněné návrhy 3.–13. 11. (7 akcí) se **nesmazaly**, ale doplnily a zveřejnily (dohoda: bez děr).
+  * Út 24. 11. nová ruční akce Action time (Martin, „Příprava kampaně na konec roku“).
+  * Čt 12. 11. Trénink RM: vedoucí z testovacího účtu nahrazen Tomášem Králem.
+  * Zrušené zbytky testů: důvod „test“ (18. 11. Portfolio tým) a „sds“ (25. 11. Action time) přepsán novou revizí `cancel`.
+  * Záměrně prázdné (správce „— doplnit“, kolega „Bude upřesněno“): 3. 12., 15. 12., 23. 12., 30. 12., 22. 1.;
+    jen Kdo bez tématu 10. 12., 6. 1., 27. 1.
+  * Ruční akce stávajících účtů (Setkání týmu, Ondra, Někdo random) beze změny.
+* Audit: `user.invited` 8, `topic.propose` 3, `event.publish` 36, `event.create_publish` 1, `event.cancel` 2.
+  Revize `publish` 37, `cancel` 2. Snímky sedí s řádky (kontrola v transakci).
+* **Únor 2027 je prázdný.** Na testovací větvi spočteno pořadí doporučení: 5. 2. RM „Komunikace s klienty při
+  výkyvech na trzích“ (6 zájemců), 12. 2. FP „Hypotéky pro OSVČ…“ (5), 19. 2. RM „Péče o klíčové klienty…“
+  (4, naposledy 6. 11.), 26. 2. FP „Rozbor schůzky s klientem“ (3). „Prezentace výsledků…“ zůstane v zásobníku.
+  Živě neověřeno v UI (vyjde při Připravit měsíc → únor → Doplnit).
 
-Nic nemaže. Šablonu týdne, ruční akce, nahrávky, přepisy a zápisy nemění. Opakované spuštění zastaví pojistka.
+## Kalendář
 
-## Postup
+Všech 53 vazeb `calendar_links` je `pending`, zpracuje je běžná synchronizace (osobní režim podle inventury,
+bez e-mailů hostům). Zveřejnění prošlých listopadových akcí je propíše i do osobních kalendářů připojených účtů
+skupin FP / RM / Tým A. Fiktivní adresy kalendář nemají.
 
-1. Merge PR a nasazení na produkci (dělá uživatel).
-2. Záloha: v Neonu větev z `main` (např. `zaloha-pred-prezentaci`).
-3. Spustit celý soubor jako jednu transakci (Neon SQL Editor). Poslední SELECT vypíše doplněné akce.
-4. V ostré Wiki: Plán listopad–leden (Kdo/Téma), pak únor → Připravit měsíc → Doplnit → okrová doporučení
-   (Přijmout / Změnit / Odmítnout). Nezveřejněné návrhy zůstanou návrhy, dokud je správce nezveřejní.
+## Stav UI
 
-**Kalendář:** vazby `pending` zpracuje běžná synchronizace. Podle inventury jde o osobní režim (bez e-mailů hostům).
-Fiktivní adresy nemají kalendář, nic jim nepřijde.
+PR #70 (kolonky Kdo/Téma, doporučení) je v `main` (8092e27). Produkční deploy z `main` v této relaci neověřen.
 
-## Návrat
+## Ruční návrat bez zálohy
 
-Nejjistěji obnovit výchozí větev ze zálohy. Bez zálohy ručně: vedoucí a témata akcí vrátit novou revizí přes UI
-(Upravit → Zveřejnit), pak smazat zájmy, 3 témata `topic-prezentace-*` a uživatele `%.prezentace@example.invalid`
-(jen pokud na ně nic neodkazuje).
-
-## Ověření skriptu
-
-Nanečisto v lokální PGlite s migracemi aplikace a vzorkem akcí ve tvaru produkce: transakce projde, snímek
-odpovídá `snapshotOf` (čas `…T11:30:00.000Z`), revize `publish`, vazby `pending`, akce s vedoucím přeskočena,
-téma u akce s tématem nepřepsáno, audit `user.invited` 6×, `topic.propose` 3×, `event.publish` 1× za akci.
-Proti ostré DB neběžel.
+Kolegy, témata a zájmy lze dohledat podle `%.prezentace@example.invalid` a `topic-prezentace-*`. Akce vrátit
+novou revizí přes UI. Jednodušší je obnova ze zálohy.
