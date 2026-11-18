@@ -33,8 +33,23 @@ Uživatel chce, aby relace pracovaly samostatně, samy zakládaly navazující r
   mobilni-ovladani, rychle-akce, temata-planovani, doporucene-tema) 397 passed / 87 skipped, stranky+kdo-tema 548
   passed. Otevřené: upozornit při zavření neuloženého duplikátu / předvyplněného tématu (teď ne); hromadné doplnění
   do všech prázdných, ne jen vybraných; okno akce nemá tlačítko Zrušit (zavírá Zavřít/Esc/klik mimo).
+* F4 HOTOVO (85fffaa, 63ad8ed, 7bd3c89, 63f9eba): migrace 0014 (`minutes.recording_id`/`job_id` NULL, `source`
+  recording/transcript/notes/file/manual s CHECK vazby na nahrávku, `approved_version/by/at`; stávající zveřejněné
+  zápisy dostanou schválení své verze, nic se neskryje). `text-source.ts` (přípona TXT/MD/VTT/SRT, 1 MB, striktní
+  UTF-8, titulky bez časů), `integrations/minutes-drafter.ts` (`MinutesDrafter`, lokální `draftFromText`).
+  Služby: `createMinutesDraft` (zámek akce + `replaceId` proti souběhu), `updateMinutes` (beze změny obsahu žádná
+  verze, změna schváleného ruší schválení + audit `minutes.approval_revoked`), `approveMinutes` (jen
+  `canApproveMinutes` = vedoucí, kontrola verze, stáhne starší zveřejněný zápis akce). „Aktuální zápis“ = nejnovější
+  mimo vyměněné nahrávky (panel, úkoly, počet, Kalendář). Úkol vedoucímu „Dokončit zápis“ (stejný klíč, bez
+  duplicity), kontrolor „Zkontrolovat zápis“. UI: `MinutesSourceForm`, stav verze, Schválit a zveřejnit jen vedoucí,
+  „Doplňte vedoucího akce“. Ověřeno: lint, typecheck, unit 380/380, build, e2e (zapisy-schvaleni, zapisy,
+  rychle-akce, okna, pristupnost, domu-ukoly, unik-dat) 310 passed / 40 skipped, (stranky, mobilni-ovladani,
+  klavesnice) 580 passed / 44 skipped. Otevřené: správce, který není vedoucí, neschválí ani při nepřítomnosti
+  vedoucího (jen doplnit vedoucího); nahrání nahrávky nahradí textový návrh bez zvláštního potvrzení (jen upozornění);
+  stav „návrh“ vs. „čeká na schválení“ = jeden stav (návrh čeká na schválení, po zrušení „čeká na nové schválení“);
+  vedoucí může schválit i bez kontroly kontrolorem; čtenář nevidí číslo verze.
 * F5 částečně: `docs/integrace-do-firemni-wiki.md`, `docs/podklady-pro-sper.md` (koncept, kdo je SPER neznáme).
-**Další krok:** F4 (zápisy, migrace 0014),
+**Další krok:**
 F5 (celé e2e, screenshoty, `docs/report-rychle-akce-a-temata.md` podle bodu 19 zadání, draft PR). Každou fázi delegovat
 subagentovi (kontext hlavní relace šetřit), commit + push po fázi, sem zapsat stav.
 
