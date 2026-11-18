@@ -1,5 +1,24 @@
 # Prompt pro další session
 
+**OPRAVNÉ KOLO UX/UI K PR #73 (18. 11. 2026, relace 1, větev `claude/focused-cerf-gr1tdi` z `ff7ac54` = HEAD PR #73).**
+Zadání: `ZBC_KOMPLETNI_PROMPT_CLAUDE_CODE_PR73.md` + 22 screenshotů (ZIP u uživatele, do repa ne). Report: `docs/report-ux-opravne-kolo.md`.
+* HOTOVO (25839c2): Z-01 (oprava schváleného zápisu = nový neveřejný návrh, schválená verze zůstává), Z-02 (bez mazání,
+  `confirmReplace` na serveru), `src/components/ConfirmDialog.tsx` + Modal bez banneru (Z-14), S-01 (tón pásu v `EventPeek`),
+  Z-03 (zdroje 2 × 2). Ověřeno: typecheck, lint, unit 381/381, e2e zapisy-schvaleni/zapisy/okna/priprava-mesice (1280+390).
+* DALŠÍ KROKY v pořadí (každý malý commit + cílené e2e):
+  1. `EventDialog.tsx`: potvrzení „incomplete“ a „impact“ z lišty `confirm-bar` do `ConfirmDialog` (tlačítka `type=submit`
+     s `form={id}`, protože portál je mimo formulář; Zpět k úpravám / Potvrdit zveřejnění). Totéž `PlanSelection.tsx` (zveřejnit/smazat).
+  2. Combobox témat místo `<datalist id="topic-options">` (vlastní `src/components/Combobox.tsx`, vzor ARIA combobox +
+     listbox, `aria-activedescendant`, garantovaná/doporučená nahoře, ruční text povolen, panel uvnitř dialogu). U `label` ověřit autocomplete.
+  3. `⋯` (A-01): `Menu.tsx`/`globals.css` 28×24 → 36–40 px, bez `opacity:.6`, jemný rámeček; `.menuGrid` v `schedule.module.css`.
+     A-08 zarovnání menu podle strany; A-02 `.addDay` decentně viditelné (opacity ~.35 v prázdných dnech).
+  4. EventDialog layout A-05/A-06/A-07/A-13 (příjemci k „Pro koho“, „Další údaje“ bez druhého rámečku), A-10 Technické informace jen správě.
+  5. Témata: T-01 DnD (pointer events, jen správce, v rámci skupiny, server `moveTopic` na cílovou pozici + rollback), T-02 text, T-03 čísla 1–3, T-04, T-07, T-08.
+  6. Zápisy: Z-04–Z-13 (kratší texty, file input přes label, Z-08 stav „Rozpracováno“ u prázdného, nižší textarea, Z-12 „Zápis“).
+  7. Build, celé e2e, screenshoty před/po (1440/1280/1024/390/360/320), report, push, aktualizace PR #73.
+* OTEVŘENÉ: push do větve PR #73 (`claude/rychle-akce-a-planovani-temat`) jen se souhlasem uživatele; zatím jen `claude/focused-cerf-gr1tdi`.
+  DEP-01 (migrace 0013/0014 při startu) rozhoduje uživatel.
+
 **RYCHLÉ AKCE, PLÁNOVÁNÍ TÉMAT, ZÁPISY SE SCHVÁLENÍM (18. 11. 2026, větev `claude/rychle-akce-a-planovani-temat` z main 59cadc0).**
 Zadání uživatele: velké UX zadání (Quick Actions, garantovaná témata, Naplánovat téma, doporučení, Připravit měsíc,
 zápisy z více zdrojů s povinným schválením vedoucím, dokumenty pro integraci). Plán a rozhodnutí: `docs/plan-rychle-akce-a-temata.md`.
