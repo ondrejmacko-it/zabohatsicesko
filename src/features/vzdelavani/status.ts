@@ -62,6 +62,27 @@ export function missingDetails(card: EventCard, managing: boolean): string[] {
   return [!card.topicTitle && "téma", !card.leadName && "vedoucí"].filter((m): m is string => Boolean(m));
 }
 
+export type CardDetail = { label: "Kdo" | "Téma"; value: string; missing: boolean };
+
+const sameText = (a: string, b: string) => a.trim().toLocaleLowerCase("cs") === b.trim().toLocaleLowerCase("cs");
+
+/**
+ * Kolonky Kdo a Téma na kartě harmonogramu. Svátek a zrušená akce je nemají. Nevyplněné pole správce
+ * vidí jako „— doplnit“, účastník jako „Bude upřesněno“; u proběhlé akce účastník prázdné pole nevidí.
+ * Téma shodné s názvem akce se neopakuje. Action time je pracovní blok bez tématu: Téma ukáže, jen když je vyplněné.
+ */
+export function cardDetails(card: EventCard, managing: boolean): CardDetail[] {
+  if (card.type === "holiday" || card.planStatus === "cancelled") return [];
+  const placeholder = managing ? "— doplnit" : card.past ? null : "Bude upřesněno";
+  const field = (label: CardDetail["label"], value: string | null, optional = false): CardDetail | null =>
+    value ? { label, value, missing: false } : placeholder && !optional ? { label, value: placeholder, missing: true } : null;
+  const topic = card.topicTitle?.trim() || null;
+  return [
+    field("Kdo", card.leadName?.trim() || null),
+    topic && sameText(topic, card.label) ? null : field("Téma", topic, card.type === "action"),
+  ].filter((d): d is CardDetail => d !== null);
+}
+
 /**
  * Krátká rada správci k danému stavu. Účastník a vedoucí mají své úkoly v Přehledu,
  * proto pro ně (syncStatus je null a návrhy nevidí) vrací null.

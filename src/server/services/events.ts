@@ -17,7 +17,7 @@ import {
 } from "@/server/db/schema";
 import { planMonth, slotConflict, type Occupant } from "@/server/domain/generation";
 import { snapshotOf, type EventRow } from "@/server/domain/snapshot";
-import { suggestTopics } from "@/server/domain/topics";
+import { suggestTopics, suggestionPending, TOPIC_ACCEPT, TOPIC_REJECT } from "@/server/domain/topics";
 import { isOrganizer, visibleEvent, type Viewer } from "@/server/policy";
 import { DomainError } from "@/server/services/errors";
 import { listTopics, topicIdByName } from "@/server/services/topics";
@@ -536,7 +536,27 @@ export type MonthDraft = {
   fromTemplate: boolean;
   /** Souběh s jinou akcí v měsíci: „group“ = stejná skupina ve stejný čas, „shared“ = stejní lidé ve stejný den nebo čas. */
   clash: "group" | "shared" | null;
+  /**
+   * Téma předvyplnilo generování a správce o něm zatím nerozhodl: krátké vysvětlení doporučení
+   * (např. „4 zájemci · zatím neproběhlo“). Po přijetí, změně nebo odmítnutí null.
+   */
+  suggestion: string | null;
 };
+
+/** Návrhy, u kterých téma z generování ještě čeká na rozhodnutí správce (podle historie revizí). */
+async function pendingSuggestions(db: Executor, rows: ReadonlyArray<Pick<EventRow, "id" | "topicId">>): Promise<Set<string>> {
+  const candidates = rows.filter((row) => row.topicId);
+  if (!candidates.length) return new Set();
+  const history = await db
+    .select({ eventId: eventRevisions.eventId, action: eventRevisions.action, topicId: sql<string | null>`${eventRevisions.snapshot}->>'topicId'` })
+    .from(eventRevisions)
+    .where(inArray(eventRevisions.eventId, candidates.map((row) => row.id)));
+  return new Set(
+    candidates
+      .filter((row) => suggestionPending(row.topicId, history.filter((h) => h.eventId === row.id)))
+      .map((row) => row.id),
+  );
+}
 
 /** Podmínka hromadného zveřejnění: budoucí, nikdy nezveřejněný návrh akce v daném měsíci. */
 function monthDraftFilter(monthKey: string) {
@@ -587,6 +607,8 @@ export async function listMonthDrafts(viewer: Viewer, monthKey: string): Promise
         sql`${events.publishedRevision} IS NOT NULL AND ${events.revision} <> ${events.publishedRevision}`,
       ),
     );
+  const pending = await pendingSuggestions(db, rows);
+  const reasons = pending.size ? new Map((await listTopics(viewer)).map((t) => [t.id, t.reason])) : new Map<string, string>();
   return {
     drafts: rows.map((row) => ({
       id: row.id,
@@ -600,13 +622,23 @@ export async function listMonthDrafts(viewer: Viewer, monthKey: string): Promise
       leadId: row.leadId,
       fromTemplate: row.generationKey !== null,
       clash: clashOf(row),
+      suggestion: pending.has(row.id) ? (reasons.get(row.topicId as string) ?? "doporučeno podle zájmu kolegů") : null,
     })),
     changeDrafts: changes?.count ?? 0,
   };
 }
 
 /** Úprava návrhu v okně Připravit měsíc. Datum (místní, bez času) a publikum jsou volitelné. */
-export type DraftPublish = { id: string; revision: number; topicTitle: string | null; leadId: string | null; date?: string; audience?: Group };
+export type DraftPublish = {
+  id: string;
+  revision: number;
+  topicTitle: string | null;
+  leadId: string | null;
+  date?: string;
+  audience?: Group;
+  /** Rozhodnutí o doporučeném tématu. Platí jen, dokud doporučení čeká a správce téma v poli nezměnil. */
+  topicDecision?: "accept" | "reject";
+};
 
 /** Hromadné zveřejnění obsahuje neúplné termíny, jejichž počet správce nepotvrdil. */
 export class IncompleteNotConfirmed extends Error {
@@ -659,16 +691,22 @@ export async function publishDrafts(
     if (publish && incomplete > 0 && incomplete !== confirmedIncomplete) throw new IncompleteNotConfirmed(incomplete);
     const published: string[] = [];
     let skipped = 0;
-    for (const item of items) {
+    for (let item of items) {
       const [current] = await tx.select().from(events).where(and(monthDraftFilter(monthKey), eq(events.id, item.id))).limit(1);
       if (!current || current.revision !== item.revision) {
         skipped++;
         continue;
       }
+      // Rozhodnutí o doporučení platí jen pro téma, které správce viděl jako doporučené.
+      const decision =
+        item.topicDecision && item.topicTitle === current.topicTitle && (await pendingSuggestions(tx, [current])).has(current.id)
+          ? item.topicDecision
+          : null;
+      if (decision === "reject") item = { ...item, topicTitle: null };
       const moved = movedTimes(current, item.date, monthKey);
       const audience = item.audience ?? (current.audience as Group);
       const edited =
-        moved !== null || audience !== current.audience || item.topicTitle !== current.topicTitle || item.leadId !== current.leadId;
+        decision !== null || moved !== null || audience !== current.audience || item.topicTitle !== current.topicTitle || item.leadId !== current.leadId;
       // Uložení bez zveřejnění nezakládá novou verzi, když se nic nezměnilo.
       if (!publish && !edited) continue;
       const topicId = item.topicTitle === current.topicTitle ? current.topicId : await topicIdByName(tx, item.topicTitle);
@@ -691,7 +729,9 @@ export async function publishDrafts(
         skipped++;
         continue;
       }
-      await tx.insert(eventRevisions).values({ eventId: row.id, revision: row.revision, action: "save", snapshot: snapshotOf(row), actorId: viewer.id });
+      const action = decision === "accept" ? TOPIC_ACCEPT : decision === "reject" ? TOPIC_REJECT : "save";
+      await tx.insert(eventRevisions).values({ eventId: row.id, revision: row.revision, action, snapshot: snapshotOf(row), actorId: viewer.id });
+      if (decision) await audit(tx, viewer.id, decision === "accept" ? "event.topic_accept" : "event.topic_reject", "event", row.id);
       if (publish) {
         await publishInTx(tx, row, viewer.id, "publish");
         await audit(tx, viewer.id, "event.publish", "event", row.id);

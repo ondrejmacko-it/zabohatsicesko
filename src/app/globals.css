@@ -2664,6 +2664,37 @@ p.cal-status {
   align-self: stretch;
 }
 
+/* Téma doporučené systémem, o kterém správce ještě nerozhodl. Po přijetí vypadá jako každé jiné téma. */
+.publish-row .input[data-suggested] {
+  border-color: var(--ochre);
+  background: var(--ochre-soft);
+}
+
+.topic-suggestion {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+  padding: 6px 10px;
+  border-left: 3px solid var(--ochre);
+  border-radius: 4px;
+  background: var(--ochre-soft);
+}
+
+.topic-suggestion-tag {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--ochre-dark);
+}
+
+.topic-suggestion-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .publish-gap,
 .publish-clash {
   font-size: 0.8125rem;

@@ -41,7 +41,8 @@ export function PrepareMonthDialog(props: Props) {
   // Výsledek akce drží obal: po uložení se stránka obnoví a formulář s novými verzemi návrhů se založí znovu.
   const [state, action, pending] = useActionState(async (prev: ActionResult | null, formData: FormData) => {
     const result = await publishMonthAction(prev, formData);
-    if (result.ok && formData.get("intent") !== "save") setOpen(false);
+    // Uložení i rozhodnutí o doporučeném tématu nechají okno otevřené, zavře ho jen zveřejnění.
+    if (result.ok && formData.get("intent") !== "save" && !formData.get("topicDecision")) setOpen(false);
     return result;
   }, null);
   const draftsKey = props.drafts.map((d) => `${d.id}:${d.revision}`).join("|");
@@ -103,7 +104,7 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
     });
 
   // Pole řádků jsou neřízená, mezery a publikum se proto čtou z formuláře.
-  type Filled = { topic: boolean; lead: boolean; audience: Group };
+  type Filled = { topic: boolean; topicText: string; lead: boolean; audience: Group };
   const [filled, setFilled] = useState<Record<string, Filled>>({});
   const readFilled = (form: HTMLFormElement) => {
     const data = new FormData(form);
@@ -113,6 +114,7 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
           d.id,
           {
             topic: Boolean(String(data.get(`topic-${d.id}`) ?? "").trim()),
+            topicText: String(data.get(`topic-${d.id}`) ?? "").trim(),
             lead: Boolean(data.get(`lead-${d.id}`)),
             audience: (data.get(`aud-${d.id}`) as Group | null) ?? d.audience,
           },
@@ -120,7 +122,18 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
       ),
     );
   };
-  const current = (d: MonthDraft): Filled => filled[d.id] ?? { topic: Boolean(d.topicTitle), lead: Boolean(d.leadId), audience: d.audience };
+  const current = (d: MonthDraft): Filled =>
+    filled[d.id] ?? { topic: Boolean(d.topicTitle), topicText: d.topicTitle ?? "", lead: Boolean(d.leadId), audience: d.audience };
+  // Doporučení systému platí, dokud správce téma v poli nepřepsal. Pak jde o jeho vlastní volbu.
+  const suggested = (d: MonthDraft) => d.suggestion !== null && current(d).topicText === (d.topicTitle ?? "");
+  const changeTopic = (event: React.MouseEvent<HTMLButtonElement>, id: string) => {
+    const form = event.currentTarget.form;
+    const input = form?.elements.namedItem(`topic-${id}`);
+    if (!form || !(input instanceof HTMLInputElement)) return;
+    input.value = "";
+    input.focus();
+    readFilled(form);
+  };
   const missing = (d: MonthDraft) => {
     if (d.type === "holiday") return [];
     const f = current(d);
@@ -185,7 +198,17 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
                     </option>
                   ))}
                 </select>
-                <input className="input" name={`topic-${d.id}`} defaultValue={d.topicTitle ?? ""} placeholder="Téma" aria-label={`Téma: ${name}`} list="publish-topics" maxLength={120} />
+                <input
+                  className="input"
+                  name={`topic-${d.id}`}
+                  defaultValue={d.topicTitle ?? ""}
+                  placeholder="Téma"
+                  aria-label={`Téma: ${name}`}
+                  aria-describedby={suggested(d) ? `suggest-${d.id}` : undefined}
+                  data-suggested={suggested(d) || undefined}
+                  list="publish-topics"
+                  maxLength={120}
+                />
                 <select className="select" name={`lead-${d.id}`} defaultValue={d.leadId ?? ""} aria-label={`Vedoucí: ${name}`}>
                   <option value="">Bez vedoucího</option>
                   {people.map((p) => (
@@ -194,6 +217,25 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
                     </option>
                   ))}
                 </select>
+                {suggested(d) && (
+                  <div className="topic-suggestion" id={`suggest-${d.id}`}>
+                    <span className="topic-suggestion-text">
+                      <span className="topic-suggestion-tag">✦ Doporučeno</span> {d.topicTitle}
+                      <span className="small muted"> · {d.suggestion}</span>
+                    </span>
+                    <span className="topic-suggestion-actions">
+                      <button type="submit" name="topicDecision" value={`accept:${d.id}`} className="btn btn-small" disabled={pending} aria-label={`Přijmout doporučené téma: ${name}`}>
+                        Přijmout
+                      </button>
+                      <button type="button" className="btn btn-small" onClick={(e) => changeTopic(e, d.id)} aria-label={`Změnit téma: ${name}`}>
+                        Změnit
+                      </button>
+                      <button type="submit" name="topicDecision" value={`reject:${d.id}`} className="btn btn-small" disabled={pending} aria-label={`Odmítnout doporučené téma: ${name}`}>
+                        Odmítnout
+                      </button>
+                    </span>
+                  </div>
+                )}
               </li>
             );
           })}

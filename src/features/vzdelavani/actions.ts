@@ -273,7 +273,7 @@ export async function generateMonthAction(_prev: ActionResult | null, formData: 
     if (!created) return { ok: true, message: `Nic nového k doplnění.${skippedNote || " Všechny pravidelné termíny už v plánu jsou."}` };
     const places = `${created} ${created === 1 ? "termín" : created < 5 ? "termíny" : "termínů"}`;
     const topicNote = withTopic
-      ? ` U ${withTopic} ${withTopic === 1 ? "termínu" : "termínů"} je předvyplněné doporučené téma, můžete ho změnit.`
+      ? ` U ${withTopic} ${withTopic === 1 ? "termínu" : "termínů"} je předvyplněné doporučené téma (✦), přijměte, změňte nebo odmítněte ho.`
       : "";
     const reviewNote = review.length
       ? ` Zkontrolujte ${review.map((d) => formatDayMonth(d)).join(", ")}: ve stejný den nebo čas už mají stejní lidé jinou akci.`
@@ -285,12 +285,16 @@ export async function generateMonthAction(_prev: ActionResult | null, formData: 
 /**
  * Okno Připravit měsíc. `intent=save` uloží úpravy všech řádků (`row`) bez zveřejnění a nic neodešle,
  * jinak se zveřejní vybrané návrhy (`pick`). Pole řádku: `rev-<id>`, `topic-<id>`, `lead-<id>`,
- * `date-<id>` (místní datum) a `aud-<id>` (skupina).
+ * `date-<id>` (místní datum) a `aud-<id>` (skupina). Tlačítko Přijmout/Odmítnout u doporučeného tématu
+ * pošle `topicDecision=accept:<id>` nebo `reject:<id>`: rozhodnutí se uloží hned spolu s úpravami ostatních
+ * řádků jako při Uložit změny, nic se nezveřejní.
  */
 export async function publishMonthAction(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
   return run(async (user) => {
     const month = z.string().refine(isValidMonthKey).parse(formData.get("month"));
-    const publish = formData.get("intent") !== "save";
+    const match = /^(accept|reject):(.{1,80})$/.exec(String(formData.get("topicDecision") ?? ""));
+    const decided = match ? { kind: match[1] as "accept" | "reject", id: match[2] as string } : null;
+    const publish = !decided && formData.get("intent") !== "save";
     const ids = z.array(z.string().min(1).max(80)).min(1).max(100).safeParse(formData.getAll(publish ? "pick" : "row"));
     if (!ids.success) return { ok: false, error: publish ? "Vyberte aspoň jeden návrh." : "V měsíci nejsou žádné návrhy k uložení." };
     const items = ids.data.map((id) => ({
@@ -300,6 +304,7 @@ export async function publishMonthAction(_prev: ActionResult | null, formData: F
       leadId: optionalId.parse(formData.get(`lead-${id}`) ?? ""),
       date: optionalDate.parse(formData.get(`date-${id}`) ?? ""),
       audience: z.enum(GROUPS).optional().parse(formData.get(`aud-${id}`) || undefined),
+      topicDecision: decided?.id === id ? decided.kind : undefined,
     }));
     const skippedNote = (skipped: number) =>
       skipped
@@ -307,6 +312,13 @@ export async function publishMonthAction(_prev: ActionResult | null, formData: F
         : "";
     if (!publish) {
       const { published: saved, skipped } = await publishDrafts(user, month, items, 0, { publish: false });
+      if (decided) {
+        if (!saved.includes(decided.id)) return { ok: false, error: `Rozhodnutí se neuložilo, doporučení už neplatí. Zkontrolujte téma.${skippedNote(skipped)}` };
+        const others = saved.length - 1;
+        const note = others ? ` Uloženy i úpravy dalších návrhů (${others}).` : "";
+        const done = decided.kind === "accept" ? "Doporučené téma přijato." : "Doporučení odmítnuto, téma zůstává prázdné.";
+        return { ok: true, message: `${done} Zůstává v návrhu, nic se neodeslalo.${note}${skippedNote(skipped)}` };
+      }
       if (!saved.length) return skipped ? { ok: false, error: `Nic se neuložilo.${skippedNote(skipped)}` } : { ok: true, message: "Žádné změny k uložení." };
       const count = `${saved.length} ${saved.length === 1 ? "návrh" : saved.length < 5 ? "návrhy" : "návrhů"}`;
       return { ok: true, message: `Uloženo: ${count}. Zůstávají v návrhu, nic se neodeslalo.${skippedNote(skipped)}` };

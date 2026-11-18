@@ -232,6 +232,11 @@
   -webkit-line-clamp: 2;
 }
 
+.detailLabel,
+.detailMissing {
+  color: var(--muted);
+}
+
 .line {
   color: var(--muted);
   font-size: 13px;
@@ -252,7 +257,9 @@
 }
 
 /* Na tmavší béžové by běžná šedá neměla kontrast 4,5 : 1. */
-.extra .line {
+.extra .line,
+.extra .detailLabel,
+.extra .detailMissing {
   color: #524c47;
 }
 
