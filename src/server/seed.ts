@@ -211,6 +211,10 @@ async function insertPublishedMinutes(tx: Executor, orgId: string): Promise<void
       updatedBy: m.uploadedBy,
       publishedBy: m.uploadedBy,
       publishedAt,
+      source: "recording",
+      approvedVersion: 1,
+      approvedBy: m.uploadedBy,
+      approvedAt: publishedAt,
       createdAt: publishedAt,
     });
   }

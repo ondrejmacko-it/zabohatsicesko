@@ -10,7 +10,7 @@ import {
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
-import type { EventSnapshot, MinutesContent, Role, SimAttendee, UserOrigin, UserStatus } from "@/lib/types";
+import type { EventSnapshot, MinutesContent, MinutesSource, Role, SimAttendee, UserOrigin, UserStatus } from "@/lib/types";
 
 // Typy tabulek odpovídají SQL v migrations.ts. Při změně uprav obojí.
 const ts = (name: string) => timestamp(name, { withTimezone: true, mode: "date" });
@@ -282,9 +282,12 @@ export const minutes = pgTable("minutes", {
   id: text("id").primaryKey(),
   orgId: text("org_id").notNull(),
   eventId: text("event_id").notNull(),
-  recordingId: text("recording_id").notNull(),
-  jobId: text("job_id").notNull(),
-  transcript: text("transcript").notNull(),
+  /** Jen u zápisu z nahrávky (`source = 'recording'`). */
+  recordingId: text("recording_id"),
+  jobId: text("job_id"),
+  /** Pracovní text zdroje (přepis, vložený text, obsah souboru). Vidí ho jen vedoucí, kontrolor a správce. */
+  transcript: text("transcript").notNull().default(""),
+  source: text("source").$type<MinutesSource>().notNull().default("recording"),
   content: jsonb("content").$type<MinutesContent>().notNull(),
   detectedTemplate: text("detected_template").notNull(),
   templateMismatch: boolean("template_mismatch").notNull(),
@@ -293,6 +296,10 @@ export const minutes = pgTable("minutes", {
   updatedBy: text("updated_by"),
   publishedBy: text("published_by"),
   publishedAt: ts("published_at"),
+  /** Poslední schválení vedoucím akce. Zveřejněný zápis má `approvedVersion = version`, po změně obsahu zůstane jako historie. */
+  approvedVersion: integer("approved_version"),
+  approvedBy: text("approved_by"),
+  approvedAt: ts("approved_at"),
   createdAt: ts("created_at").notNull().defaultNow(),
 });
 
