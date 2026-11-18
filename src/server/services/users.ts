@@ -27,6 +27,8 @@ export type Account = {
   editable: boolean;
   /** Hlavní správce (`BOOTSTRAP_ADMIN_EMAILS`): účet nikdo nemění, ani on sám. */
   primary: boolean;
+  /** Hlavní správce se dívá na vlastní účet: smí si vytvořit odkaz pro další zařízení. */
+  ownPrimary: boolean;
   /** Poslední zvací odkaz a platná zařízení (ostrá Wiki). */
   access: UserAccess;
 };
@@ -56,6 +58,7 @@ export async function listAccounts(viewer: Viewer): Promise<Account[]> {
       googleLinked: subject !== null,
       lastLoginAt,
       primary: isPrimaryAdmin(user),
+      ownPrimary: isPrimaryAdmin(user) && user.id === viewer.id,
       editable: canManageAccount(viewer, user) && !isPrimaryAdmin(user),
       access: accessByUser.get(user.id) ?? { invite: { kind: "none" as const }, devices: [] },
     }))
@@ -92,8 +95,11 @@ export async function inviteUser(
   });
 }
 
-/** Účet, se kterým správce smí pracovat: odkazy a zařízení i pro sebe (třeba druhé zařízení). */
-async function manageableUser(tx: Executor, viewer: Viewer, userId: string) {
+/**
+ * Účet, se kterým správce smí pracovat: odkazy a zařízení i pro sebe (třeba druhé zařízení).
+ * `ownPrimaryLink`: hlavní správce smí pracovat s odkazem jen pro vlastní účet, nikdo jiný.
+ */
+async function manageableUser(tx: Executor, viewer: Viewer, userId: string, { ownPrimaryLink = false } = {}) {
   if (!canManageUsers(viewer)) throw new DomainError("forbidden");
   const [target] = await tx
     .select({ id: users.id, status: users.status, origin: users.origin, email: users.email })
@@ -101,8 +107,9 @@ async function manageableUser(tx: Executor, viewer: Viewer, userId: string) {
     .where(and(eq(users.id, userId), eq(users.orgId, config.orgId)))
     .limit(1);
   if (!target) throw new DomainError("not_found");
-  // Hlavnímu správci nikdo nevytvoří odkaz ani nezruší zařízení, aby se z Wiki nedal vyřadit.
-  if (isPrimaryAdmin(target)) throw new DomainError("forbidden");
+  // Hlavnímu správci nikdo jiný nevytvoří odkaz ani nezruší zařízení, aby se z Wiki nedal vyřadit.
+  // Odkaz pro další zařízení si smí vytvořit (a zneplatnit) jen on sám. Zařízení mu nezruší nikdo.
+  if (isPrimaryAdmin(target) && !(ownPrimaryLink && target.id === viewer.id)) throw new DomainError("forbidden");
   return target;
 }
 
@@ -111,7 +118,7 @@ export async function createLoginLink(viewer: Viewer, userId: string): Promise<{
   if (!inviteOnlyLogin()) throw new DomainError("forbidden");
   const db = await getDb();
   return db.transaction(async (tx) => {
-    const target = await manageableUser(tx, viewer, userId);
+    const target = await manageableUser(tx, viewer, userId, { ownPrimaryLink: true });
     if (target.status !== "active" || target.origin === "demo") throw new DomainError("forbidden");
     await pruneOldAccess(tx);
     return createInvite(tx, viewer.id, userId);
@@ -121,7 +128,7 @@ export async function createLoginLink(viewer: Viewer, userId: string): Promise<{
 export async function revokeLoginLink(viewer: Viewer, userId: string): Promise<void> {
   const db = await getDb();
   await db.transaction(async (tx) => {
-    await manageableUser(tx, viewer, userId);
+    await manageableUser(tx, viewer, userId, { ownPrimaryLink: true });
     await revokeInvites(tx, viewer.id, userId);
   });
 }

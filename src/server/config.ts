@@ -257,7 +257,8 @@ export function googleLoginConfigProblems(): string[] {
 
 /**
  * Hlavní správce: první adresa z `BOOTSTRAP_ADMIN_EMAILS`. Dovnitř se dostane vždy (`/vstup?spravce=1`),
- * jeho přihlášení platí dlouhodobě a jeho účet, odkazy ani zařízení nikdo ve Wiki nemění, ani on sám.
+ * jeho přihlášení platí dlouhodobě a jeho účet, odkazy ani zařízení nikdo ve Wiki nemění. Jediná výjimka:
+ * odkaz pro další zařízení si smí vytvořit (a zneplatnit) on sám.
  */
 export function primaryAdminEmail(): string | null {
   return list(process.env.BOOTSTRAP_ADMIN_EMAILS)[0]?.toLowerCase() ?? null;

@@ -43,6 +43,11 @@ async function invitedWithDevice() {
   return { id, token: link!.token, cookie: claimed.cookieValue, device, scope: { kind: "device", deviceId: device.id, userId: id } as LoginScope };
 }
 
+async function viewerOf(id: string) {
+  const [row] = await (await getDb()).select().from(users).where(eq(users.id, id));
+  return { id, role: row!.role, groups: row!.groups };
+}
+
 beforeAll(() => {
   vi.stubEnv("LOGIN_MODE", "google-test");
   vi.stubEnv("GOOGLE_OAUTH_CLIENT_ID", CLIENT_ID);
@@ -149,22 +154,60 @@ describe("pozvánka na jedno zařízení", () => {
     expect(await findDevice(await getDb(), cookie, yearLater)).not.toBeNull();
   });
 
-  test("hlavního správce nikdo neodebere, nezruší mu zařízení ani mu nevytvoří odkaz, ani on sám", async () => {
+  test("hlavního správce nikdo jiný neodebere, nezruší mu zařízení ani mu nevytvoří odkaz", async () => {
     const result = await login(BOOT, "sub-boot", { kind: "bootstrap" });
     if (!result.ok) throw new Error("hlavní správce se měl přihlásit");
     const primaryId = result.userId;
     const primary = (await listAccounts(admin)).find((a) => a.id === primaryId)!;
-    expect(primary).toMatchObject({ primary: true, editable: false });
-    const [self] = await (await getDb()).select().from(users).where(eq(users.id, primaryId));
-    const primaryViewer = { id: primaryId, role: self!.role, groups: self!.groups };
+    expect(primary).toMatchObject({ primary: true, ownPrimary: false, editable: false });
+    await expect(createLoginLink(admin, primaryId)).rejects.toMatchObject({ code: "forbidden" });
+    await expect(revokeLoginLink(admin, primaryId)).rejects.toMatchObject({ code: "forbidden" });
+    await expect(createLoginLink(participant, primaryId)).rejects.toMatchObject({ code: "forbidden" });
+    const primaryViewer = await viewerOf(primaryId);
     for (const viewer of [admin, primaryViewer]) {
-      await expect(createLoginLink(viewer, primaryId)).rejects.toMatchObject({ code: "forbidden" });
-      await expect(revokeLoginLink(viewer, primaryId)).rejects.toMatchObject({ code: "forbidden" });
       await expect(revokeUserDevice(viewer, primaryId, "d-cokoli")).rejects.toMatchObject({ code: "forbidden" });
     }
     await expect(updateAccess(admin, primaryId, { role: "member", groups: [], status: "disabled" })).rejects.toMatchObject({ code: "forbidden" });
+    await expect(updateAccess(primaryViewer, primaryId, { role: "member", groups: [], status: "disabled" })).rejects.toMatchObject({ code: "forbidden" });
     const [after] = await (await getDb()).select().from(users).where(eq(users.id, primaryId));
     expect(after).toMatchObject({ status: "active", role: "admin" });
+  });
+
+  test("hlavní správce si vytvoří odkaz sám sobě a přihlásí se jím na dalším zařízení", async () => {
+    const result = await login(BOOT, "sub-boot", { kind: "bootstrap" });
+    if (!result.ok) throw new Error("hlavní správce se měl přihlásit");
+    const primaryId = result.userId;
+    const primaryViewer = await viewerOf(primaryId);
+    const own = (await listAccounts(primaryViewer)).find((a) => a.id === primaryId)!;
+    expect(own).toMatchObject({ primary: true, ownPrimary: true, editable: false });
+
+    // Zneplatnění vlastního čekajícího odkazu: starý přestane platit, nový funguje.
+    const first = await createLoginLink(primaryViewer, primaryId);
+    await revokeLoginLink(primaryViewer, primaryId);
+    const db = await getDb();
+    expect(await checkInvite(db, first.token)).toBeNull();
+
+    const link = await createLoginLink(primaryViewer, primaryId);
+    expect(await checkInvite(db, link.token)).toEqual({ userId: primaryId, email: BOOT });
+    const claimed = await claim(link.token);
+    if (!claimed.ok) throw new Error("odkaz měl platit");
+    const device = (await findDevice(db, claimed.cookieValue))!;
+    expect(device.userId).toBe(primaryId);
+    expect(await login(BOOT, "sub-boot", { kind: "device", deviceId: device.id, userId: primaryId })).toEqual({ ok: true, userId: primaryId });
+    // Výjimka platí jen pro odkaz: zařízení si hlavní správce ve Wiki neruší ani sám.
+    await expect(revokeUserDevice(primaryViewer, primaryId, device.id)).rejects.toMatchObject({ code: "forbidden" });
+  });
+
+  test("ostatním dál přiděluje odkazy každý správce, hlavní správce také", async () => {
+    const result = await login(BOOT, "sub-boot", { kind: "bootstrap" });
+    if (!result.ok) throw new Error("hlavní správce se měl přihlásit");
+    const primaryViewer = await viewerOf(result.userId);
+    const { id } = await invitedWithDevice();
+    for (const viewer of [admin, primaryViewer]) {
+      const link = await createLoginLink(viewer, id);
+      expect(await checkInvite(await getDb(), link.token)).toEqual({ userId: id, email: KOLEGA });
+    }
+    await expect(createLoginLink(participant, id)).rejects.toMatchObject({ code: "forbidden" });
   });
 });
 
