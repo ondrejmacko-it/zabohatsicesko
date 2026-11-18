@@ -87,6 +87,7 @@ export function EventDialog(props: CreateProps) {
   const router = useRouter();
   const [open, setOpen] = useState(Boolean(props.openOnMount));
   const [session, setSession] = useState(0);
+  const edited = useRef(false);
   const close = () => {
     setOpen(false);
     if (props.closeHref) router.replace(props.closeHref, { scroll: false });
@@ -105,12 +106,15 @@ export function EventDialog(props: CreateProps) {
         Přidat akci
       </button>
       {open && (
-        <Modal open title={props.duplicateOf ? "Duplikovat akci" : "Přidat akci"} onRequestClose={close} wide>
+        <Modal open title={props.duplicateOf ? "Duplikovat akci" : "Přidat akci"} onRequestClose={close} wide hasUnsavedChanges={() => edited.current}>
           <EventForm
             key={session}
             {...props}
             mode="create"
             published={null}
+            onEditedChange={(value) => {
+              edited.current = value;
+            }}
             onDone={(values, id) => {
               setOpen(false);
               // Nová akce se ukáže v měsíci, do kterého patří. Žádná další potvrzovací stránka. Kopie rovnou
@@ -131,10 +135,19 @@ export function EventDialog(props: CreateProps) {
 export function EventWindow({ title, closeHref, intro, menu, ...props }: Omit<FormProps, "mode"> & { title: string; closeHref: string; intro: React.ReactNode; menu: React.ReactNode }) {
   const router = useRouter();
   const close = () => router.replace(closeHref, { scroll: false });
+  const edited = useRef(false);
   return (
-    <Modal open title={title} onRequestClose={close} wide>
+    <Modal open title={title} onRequestClose={close} wide hasUnsavedChanges={() => edited.current}>
       {intro}
-      <EventForm {...props} mode="edit" menu={menu} onDone={close} />
+      <EventForm
+        {...props}
+        mode="edit"
+        menu={menu}
+        onDone={close}
+        onEditedChange={(value) => {
+          edited.current = value;
+        }}
+      />
     </Modal>
   );
 }
@@ -170,7 +183,13 @@ function EventForm({
   saved,
   menu,
   onDone,
-}: FormProps & { menu?: React.ReactNode; onDone: (values: EventFormValues, id?: string) => void }) {
+  onEditedChange,
+}: FormProps & {
+  menu?: React.ReactNode;
+  onDone: (values: EventFormValues, id?: string) => void;
+  /** Hlásí oknu, jestli se hodnoty liší od otevření. Okno se podle toho při zavření zeptá. */
+  onEditedChange?: (edited: boolean) => void;
+}) {
   const [values, setValues] = useState(initial);
   const [multiDay, setMultiDay] = useState(initial.endDate !== null);
   // Méně časté údaje jsou sbalené. Otevřené jsou, když je správce už vyplnil jinak než výchozím způsobem.
@@ -194,6 +213,12 @@ function EventForm({
   }, null);
 
   const dirty = valuesKey !== JSON.stringify(saved ?? initial);
+  // Dotaz při zavření porovnává s tím, co okno ukázalo při otevření. Předvyplnění (kopie, téma) je výchozí
+  // stav: zavření bez další úpravy se neptá, i když předvyplněný návrh není uložený (`saved`).
+  const edited = valuesKey !== JSON.stringify(initial);
+  useEffect(() => {
+    onEditedChange?.(edited);
+  }, [edited, onEditedChange]);
   // Potvrzení dopadu platí jen pro hodnoty, pro které vzniklo. Jakákoli další úprava formuláře ho zruší.
   const confirmed = impact?.key === valuesKey ? impact.data : null;
   const missing = [!values.topicTitle.trim() && "téma", !values.leadId && "vedoucí"].filter((m): m is string => Boolean(m));
