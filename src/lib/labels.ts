@@ -1,4 +1,4 @@
-import type { EventType, Group, PlanStatus, RecordingState, Role, SyncStatus, UserStatus } from "./types";
+import type { EventType, Group, MinutesSource, PlanStatus, RecordingState, Role, SyncStatus, UserStatus } from "./types";
 
 export const TYPE_LABELS: Record<EventType, string> = {
   action: "Action time",
@@ -50,11 +50,20 @@ export const SYNC_STATUS_LABELS: Record<SyncStatus, string> = {
 };
 
 export const RECORDING_STATE_LABELS: Record<RecordingState, string> = {
-  awaiting: "Čeká na nahrávku",
+  awaiting: "Čeká na zápis",
   processing: "Zpracovává se",
-  review: "Ke kontrole",
+  review: "Čeká na schválení",
   available: "Zápis zveřejněn",
   failed: "Přepis se nepovedl",
+};
+
+/** Zdroj zápisu, jak ho vidí vedoucí, kontrolor a správce. */
+export const MINUTES_SOURCE_LABELS: Record<MinutesSource, string> = {
+  recording: "nahrávka",
+  transcript: "vložený přepis",
+  notes: "vložené poznámky",
+  file: "textový soubor",
+  manual: "ruční zápis",
 };
 
 export const TEMPLATE_LABELS: Record<string, string> = {

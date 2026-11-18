@@ -8,15 +8,15 @@ import type { MissingMinutesItem } from "@/server/services/journey";
 import { RecordingSection } from "./RecordingSection";
 
 const STATE_TEXT: Record<MissingMinutesItem["state"], string> = {
-  none: "bez nahrávky",
+  none: "bez zápisu",
   processing: "nahrávka se přepisuje",
   failed: "přepis se nepovedl",
   unsupported: "ukázkový přepis soubor nepřepíše",
-  draft: "návrh čeká na kontrolu",
+  draft: "návrh čeká na schválení",
 };
 
 const STATE_ACTION: Record<MissingMinutesItem["state"], string> = {
-  none: "Nahrát nahrávku",
+  none: "Připravit zápis",
   processing: "Zobrazit stav",
   failed: "Zkusit přepis znovu",
   unsupported: "Vybrat jinou nahrávku",

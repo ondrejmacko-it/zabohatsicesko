@@ -1310,6 +1310,16 @@ body > .dialog[open]:has(~ .dialog[open]) {
   display: block;
 }
 
+/* Volba zdroje zápisu: stejné dlaždice jako výběr osoby, na širším okně ve dvou sloupcích. */
+.source-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.source-list legend {
+  grid-column: 1 / -1;
+}
+
 /* Přepínač osoby je `.select-small`, v liště jen s užším písmem. Dvojitá třída přebije `.select-small`
    níž v souboru, dotyková zařízení ji stejnou silou vrátí na 16 px. */
 .select-small.persona-select {
