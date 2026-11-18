@@ -3,7 +3,7 @@
 Větev `claude/rychle-akce-a-planovani-temat` z main 59cadc0 (18. 11. 2026). Plán a rozhodnutí:
 [plan-rychle-akce-a-temata.md](plan-rychle-akce-a-temata.md). Merge dělá uživatel přes PR.
 
-PR: _doplní se_
+PR: https://github.com/ondrejmacko-it/zabohatsicesko/pull/73 (draft)
 
 Zásada celé větve: vzhled skoro beze změny, přínos je v práci. Rozšiřují se stávající `Menu`, `EventMenu`,
 `MovePicker`, `EventDialog`, `PrepareMonthDialog`, služby a `policy.ts`. Mazání, přesun ani zveřejnění nemají
