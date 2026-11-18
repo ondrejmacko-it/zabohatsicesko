@@ -48,6 +48,14 @@ export function canHandleRecording(viewer: Viewer, row: EventRow): boolean {
   return row.published !== null && (canPlan(viewer) || isEventHandler(viewer, row.published));
 }
 
+/**
+ * Schválení (= zveřejnění) konkrétní verze zápisu: jen vedoucí zveřejněné akce. Kontrolor a správce návrh
+ * upravují, schválit ho nemohou. Akce bez vedoucího nemá kdo schválit, UI vyzve k doplnění vedoucího.
+ */
+export function canApproveMinutes(viewer: Viewer, row: EventRow): boolean {
+  return row.published !== null && row.published.leadId !== null && row.published.leadId === viewer.id;
+}
+
 /** Zveřejněný zápis: publikum akce, její vedoucí či kontrolor a správce. */
 export function canReadPublishedMinutes(viewer: Viewer, row: EventRow): boolean {
   const snapshot = row.published;

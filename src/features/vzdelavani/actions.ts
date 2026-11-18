@@ -33,8 +33,9 @@ import {
 } from "@/server/services/events";
 import { ImpactNotConfirmed, assertImpactConfirmed, cancelImpact, changeImpact, type CancelImpact, type ChangeImpact } from "@/server/services/impact";
 import {
+  approveMinutes,
+  createMinutesDraft,
   processTranscriptionJob,
-  publishMinutes,
   retryTranscription,
   updateMinutes,
   uploadRecording,
@@ -466,20 +467,51 @@ export async function saveMinutesAction(_prev: ActionResult | null, formData: Fo
         id: z.string().max(80),
         minutesId: z.string().max(80),
         version: z.coerce.number().int().positive(),
-        intent: z.enum(["save", "publish"]),
+        intent: z.enum(["save", "approve"]),
       })
       .parse(formObject(formData));
-    await updateMinutes(user, data.id, data.minutesId, data.version, {
+    const saved = await updateMinutes(user, data.id, data.minutesId, data.version, {
       summary: String(formData.get("summary") ?? "").trim(),
       keyPoints: lines(formData.get("keyPoints")),
       decisions: lines(formData.get("decisions")),
       nextSteps: lines(formData.get("nextSteps")),
     });
-    if (data.intent === "publish") {
-      await publishMinutes(user, data.id, data.minutesId, data.version + 1);
+    if (saved.revoked) after(() => syncEvent(data.id));
+    if (data.intent === "approve") {
+      // Schvaluje se přesně verze, která právě vznikla uložením (nebo zůstala beze změny).
+      await approveMinutes(user, data.id, data.minutesId, saved.version);
       after(() => syncEvent(data.id));
+      return { ok: true, message: `Verze ${saved.version} je schválená a zveřejněná pro publikum akce.` };
     }
-    return { ok: true, message: data.intent === "publish" ? "Zápis je zveřejněný pro publikum akce." : "Úpravy zápisu jsou uložené." };
+    if (saved.revoked) return { ok: true, message: "Úpravy jsou uložené. Schválení se zrušilo, zápis čeká na nové schválení vedoucím." };
+    return { ok: true, message: "Úpravy zápisu jsou uložené." };
+  });
+}
+
+/** Nový návrh zápisu bez nahrávky: vložený text, textový soubor nebo ruční zápis. */
+export async function createMinutesDraftAction(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
+  return run(async (user) => {
+    const data = z
+      .object({
+        id: z.string().max(80),
+        source: z.enum(["transcript", "notes", "file", "manual"]),
+        replaceId: z.string().max(80),
+      })
+      .parse({ id: formData.get("id"), source: formData.get("source"), replaceId: formData.get("replaceId") ?? "" });
+    const replaceId = data.replaceId || null;
+    if (data.source === "file") {
+      const file = formData.get("file");
+      if (!(file instanceof File) || file.size === 0) return { ok: false, error: "Vyberte textový soubor." };
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      await createMinutesDraft(user, data.id, { source: "file", fileName: file.name, bytes }, replaceId);
+    } else if (data.source === "manual") {
+      await createMinutesDraft(user, data.id, { source: "manual" }, replaceId);
+    } else {
+      const text = formData.get("text");
+      if (typeof text !== "string") throw new DomainError("text_empty");
+      await createMinutesDraft(user, data.id, { source: data.source, text }, replaceId);
+    }
+    return { ok: true, message: "Návrh zápisu je připravený. Zkontrolujte ho a uložte." };
   });
 }
 

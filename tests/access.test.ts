@@ -4,7 +4,7 @@ import { getDb } from "@/server/db/client";
 import { getEventDetail } from "@/server/services/detail";
 import { DomainError } from "@/server/services/errors";
 import { listMonth } from "@/server/services/events";
-import { processTranscriptionJob, publishMinutes, readRecording, recordingPanel, uploadRecording } from "@/server/services/recordings";
+import { processTranscriptionJob, approveMinutes, readRecording, recordingPanel, uploadRecording } from "@/server/services/recordings";
 import { loadEventRow } from "@/server/services/events";
 import { PAST_FP, asFile, fixtureWav, lead, organizer, outsider, participant, resetDemo } from "./helpers";
 
@@ -60,7 +60,7 @@ describe("přístup k nahrávce a zápisu", () => {
 
     const handler = await recordingPanel(lead, row);
     if (handler.access !== "handler" || !handler.minutes) throw new Error("chybí návrh zápisu");
-    await publishMinutes(lead, PAST_FP, handler.minutes.id, handler.minutes.version);
+    await approveMinutes(lead, PAST_FP, handler.minutes.id, handler.minutes.version);
 
     const published = await recordingPanel(participant, row);
     expect(published.access === "reader" && published.minutes?.summary).toBeTruthy();

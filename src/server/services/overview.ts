@@ -17,10 +17,15 @@ export async function pendingTaskCount(viewer: Viewer): Promise<number> {
       )
     : await queryRows<{ count: number }>(
         db,
-        sql`SELECT count(*)::int AS count FROM minutes m
-            JOIN recordings r ON r.id = m.recording_id AND r.superseded_at IS NULL
-            JOIN events e ON e.id = m.event_id
-            WHERE e.org_id = ${config.orgId} AND m.status = 'draft'
+        // Aktuální zápis akce (nejnovější mimo vyměněné nahrávky, i bez nahrávky), který čeká na schválení.
+        sql`SELECT count(*)::int AS count FROM (
+              SELECT DISTINCT ON (m.event_id) m.event_id, m.status FROM minutes m
+              LEFT JOIN recordings r ON r.id = m.recording_id
+              WHERE m.org_id = ${config.orgId} AND (m.recording_id IS NULL OR r.superseded_at IS NULL)
+              ORDER BY m.event_id, m.created_at DESC, m.id DESC
+            ) c
+            JOIN events e ON e.id = c.event_id
+            WHERE e.org_id = ${config.orgId} AND c.status = 'draft'
               AND (e.published->>'leadId' = ${viewer.id} OR e.published->>'reviewerId' = ${viewer.id})`,
       );
   return row?.count ?? 0;

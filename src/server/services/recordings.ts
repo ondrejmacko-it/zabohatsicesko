@@ -1,20 +1,23 @@
 import { createHash, randomUUID } from "node:crypto";
-import { and, desc, eq, inArray, isNull, lt, or, sql } from "drizzle-orm";
-import type { MinutesContent, RecordingState } from "@/lib/types";
+import { and, desc, eq, inArray, isNull, lt, ne, or, sql } from "drizzle-orm";
+import type { MinutesContent, MinutesSource, RecordingState } from "@/lib/types";
 import { audit, logError, withinRateLimit } from "@/server/audit";
 import { config, now } from "@/server/config";
 import { getDb, queryRows, type Executor } from "@/server/db/client";
 import { calendarLinks, minutes, recordingBlobs, recordings, transcriptionJobs } from "@/server/db/schema";
 import type { EventRow } from "@/server/domain/snapshot";
-import { canHandleRecording, canReadPublishedMinutes, visibleEvent, type Viewer } from "@/server/policy";
+import { minutesDrafter } from "@/server/integrations/minutes-drafter";
+import { canApproveMinutes, canHandleRecording, canReadPublishedMinutes, visibleEvent, type Viewer } from "@/server/policy";
 import { MAX_UPLOAD_BYTES, displayName, inspectAudio } from "@/server/recordings/audio";
 import {
   TranscriptionError,
   detectTemplate,
   expectedTemplate,
+  minutesSchema,
   transcriptionProvider,
   validateMinutes,
 } from "@/server/recordings/transcription";
+import { readPastedText, readTextFile } from "@/server/recordings/text-source";
 import { DomainError } from "@/server/services/errors";
 import { loadEventRow } from "@/server/services/events";
 
@@ -30,11 +33,7 @@ async function requireHandledEvent(db: Executor, viewer: Viewer, eventId: string
 
 export async function uploadRecording(viewer: Viewer, eventId: string, file: File): Promise<string> {
   const db = await getDb();
-  const row = await requireHandledEvent(db, viewer, eventId);
-  const snapshot = row.published!;
-  if (snapshot.status !== "published" || snapshot.type === "holiday" || new Date(snapshot.endsAt) > now()) {
-    throw new DomainError("not_past");
-  }
+  requirePastPublished(await requireHandledEvent(db, viewer, eventId));
   if (!(await withinRateLimit(db, `upload:${viewer.id}`, 10, 3600))) throw new DomainError("rate_limited");
   if (file.size > MAX_UPLOAD_BYTES) throw new DomainError("file_too_large");
 
@@ -171,51 +170,184 @@ export async function retryTranscription(viewer: Viewer, eventId: string): Promi
   return job.id;
 }
 
-async function requireDraftMinutes(db: Executor, viewer: Viewer, eventId: string, minutesId: string) {
-  await requireHandledEvent(db, viewer, eventId);
+/** Akce, ke které jde přidat zápis: zveřejněná, proběhlá, ne svátek (stejně jako nahrávka). */
+function requirePastPublished(row: EventRow) {
+  const snapshot = row.published!;
+  if (snapshot.status !== "published" || snapshot.type === "holiday" || new Date(snapshot.endsAt) > now()) {
+    throw new DomainError("not_past");
+  }
+  return snapshot;
+}
+
+/**
+ * Aktuální zápis akce: nejnověji založený zápis, který nepatří k vyměněné nahrávce. Zápisy bez nahrávky
+ * (text, soubor, ručně) jsou aktuální, dokud nevznikne novější. Ostatní řádky zůstávají jen jako historie.
+ */
+async function currentMinutes(db: Executor, eventId: string) {
   const [row] = await db
-    .select()
+    .select({ minutes })
     .from(minutes)
-    .where(and(eq(minutes.id, minutesId), eq(minutes.eventId, eventId)))
+    .leftJoin(recordings, eq(recordings.id, minutes.recordingId))
+    .where(and(eq(minutes.eventId, eventId), or(isNull(minutes.recordingId), isNull(recordings.supersededAt))))
+    .orderBy(desc(minutes.createdAt), desc(minutes.id))
     .limit(1);
-  if (!row) throw new DomainError("not_found");
-  if (row.status !== "draft") throw new DomainError("invalid_state");
+  return row?.minutes ?? null;
+}
+
+async function requireCurrentMinutes(db: Executor, eventId: string, minutesId: string) {
+  const row = await currentMinutes(db, eventId);
+  if (!row || row.id !== minutesId) throw new DomainError(row ? "conflict" : "not_found");
   return row;
 }
 
+const EMPTY_MINUTES: MinutesContent = { summary: "", keyPoints: [], decisions: [], nextSteps: [] };
+
+export type MinutesDraftInput =
+  | { source: "transcript" | "notes"; text: string }
+  | { source: "file"; fileName: string; bytes: Uint8Array }
+  | { source: "manual" };
+
+/**
+ * Založí upravitelný návrh zápisu bez nahrávky: z vloženého přepisu či poznámek, z textového souboru
+ * nebo prázdný ruční. `replaceId` = aktuální zápis, který uživatel viděl (null = žádný). Když se mezitím
+ * změnil, návrh nevznikne (souběh dvou založení). Zveřejněný zápis zůstane vidět, dokud vedoucí neschválí nový.
+ */
+export async function createMinutesDraft(
+  viewer: Viewer,
+  eventId: string,
+  input: MinutesDraftInput,
+  replaceId: string | null,
+): Promise<string> {
+  const db = await getDb();
+  const row = await requireHandledEvent(db, viewer, eventId);
+  const snapshot = requirePastPublished(row);
+  if (!(await withinRateLimit(db, `minutes-draft:${viewer.id}`, 20, 3600))) throw new DomainError("rate_limited");
+
+  const text =
+    input.source === "manual" ? "" : input.source === "file" ? readTextFile(input.fileName, input.bytes) : readPastedText(input.text);
+  let content = EMPTY_MINUTES;
+  if (text) {
+    try {
+      content = validateMinutes(await minutesDrafter().draft(text, { label: snapshot.label, topicTitle: snapshot.topicTitle }));
+    } catch (error) {
+      logError("minutes.draft", error instanceof TranscriptionError ? error.code : "drafter_failed", error);
+      throw new DomainError("invalid_input");
+    }
+  }
+  const detected = text ? detectTemplate(text) : "unknown";
+  const id = randomUUID();
+
+  await db.transaction(async (tx) => {
+    // Zámek akce: dvě souběžná založení se seřadí a druhé narazí na změněný aktuální zápis.
+    await queryRows(tx, sql`SELECT id FROM events WHERE id = ${eventId} FOR UPDATE`);
+    const current = await currentMinutes(tx, eventId);
+    if ((current?.id ?? null) !== replaceId) throw new DomainError("conflict");
+    // Nahrazený rozpracovaný návrh bez nahrávky už není dosažitelný, proto se smaže (minimalizace dat).
+    if (current && current.status === "draft" && current.recordingId === null) {
+      await tx.delete(minutes).where(eq(minutes.id, current.id));
+    }
+    await tx.insert(minutes).values({
+      id,
+      orgId: config.orgId,
+      eventId,
+      source: input.source,
+      transcript: text,
+      content,
+      detectedTemplate: detected,
+      templateMismatch: detected !== "unknown" && detected !== expectedTemplate(snapshot.type),
+      status: "draft",
+      version: 1,
+      updatedBy: viewer.id,
+    });
+    await audit(tx, viewer.id, `minutes.create.${input.source}`, "event", eventId);
+  });
+  return id;
+}
+
+/** Porovnání po polích: jsonb v databázi nedrží pořadí klíčů. */
+const sameContent = (a: MinutesContent, b: MinutesContent) =>
+  a.summary === b.summary &&
+  (["keyPoints", "decisions", "nextSteps"] as const).every((k) => a[k].length === b[k].length && a[k].every((item, i) => item === b[k][i]));
+
+/** Pozvánka dostane nebo ztratí odkaz na zápis a Kalendář o změně informuje pozvané. Odeslání spouští volající. */
+async function markCalendarPending(db: Executor, eventId: string) {
+  await db
+    .update(calendarLinks)
+    .set({ syncStatus: "pending", attempts: 0, errorCode: null, updatedAt: new Date() })
+    .where(and(eq(calendarLinks.eventId, eventId), eq(calendarLinks.syncStatus, "synced")));
+}
+
+/**
+ * Úprava aktuálního zápisu (vedoucí, kontrolor, správce), optimisticky proti `expectedVersion`.
+ * Každá změna obsahu vytvoří novou verzi. Změna schváleného zápisu schválení zruší: zápis přestane být
+ * zveřejněný a čeká na nové schválení vedoucím. Uložení beze změny obsahu novou verzi nevytvoří.
+ */
 export async function updateMinutes(
   viewer: Viewer,
   eventId: string,
   minutesId: string,
   expectedVersion: number,
   content: MinutesContent,
-): Promise<void> {
+): Promise<{ version: number; revoked: boolean }> {
   const db = await getDb();
-  await requireDraftMinutes(db, viewer, eventId, minutesId);
-  const [row] = await db
-    .update(minutes)
-    .set({ content: validateMinutes(content), version: sql`${minutes.version} + 1`, updatedBy: viewer.id })
-    .where(and(eq(minutes.id, minutesId), eq(minutes.version, expectedVersion), eq(minutes.status, "draft")))
-    .returning({ id: minutes.id });
-  if (!row) throw new DomainError("conflict");
-  await audit(db, viewer.id, "minutes.edit", "event", eventId);
+  await requireHandledEvent(db, viewer, eventId);
+  const current = await requireCurrentMinutes(db, eventId, minutesId);
+  if (current.version !== expectedVersion) throw new DomainError("conflict");
+  let next: MinutesContent;
+  try {
+    next = validateMinutes(content);
+  } catch {
+    throw new DomainError("minutes_incomplete");
+  }
+  if (sameContent(next, current.content)) return { version: current.version, revoked: false };
+
+  const revoked = current.status === "published";
+  await db.transaction(async (tx) => {
+    const [row] = await tx
+      .update(minutes)
+      .set({ content: next, version: sql`${minutes.version} + 1`, updatedBy: viewer.id, status: "draft", publishedBy: null, publishedAt: null })
+      .where(and(eq(minutes.id, minutesId), eq(minutes.version, expectedVersion)))
+      .returning({ id: minutes.id });
+    if (!row) throw new DomainError("conflict");
+    await audit(tx, viewer.id, "minutes.edit", "event", eventId);
+    if (revoked) {
+      await audit(tx, viewer.id, "minutes.approval_revoked", "event", eventId);
+      await markCalendarPending(tx, eventId);
+    }
+  });
+  return { version: expectedVersion + 1, revoked };
 }
 
-export async function publishMinutes(viewer: Viewer, eventId: string, minutesId: string, expectedVersion: number): Promise<void> {
+/**
+ * Schválení konkrétní verze aktuálního zápisu = zveřejnění pro publikum akce. Smí jen vedoucí akce
+ * (`canApproveMinutes`) a jen verzi, kterou viděl: novější verze od jiného uživatele vrátí `conflict`.
+ * Dříve zveřejněný zápis akce (z vyměněné nahrávky nebo nahrazeného zdroje) se tím stáhne.
+ */
+export async function approveMinutes(viewer: Viewer, eventId: string, minutesId: string, expectedVersion: number): Promise<void> {
   const db = await getDb();
-  await requireDraftMinutes(db, viewer, eventId, minutesId);
-  const [row] = await db
-    .update(minutes)
-    .set({ status: "published", publishedBy: viewer.id, publishedAt: new Date() })
-    .where(and(eq(minutes.id, minutesId), eq(minutes.version, expectedVersion), eq(minutes.status, "draft")))
-    .returning({ id: minutes.id });
-  if (!row) throw new DomainError("conflict");
-  await audit(db, viewer.id, "minutes.publish", "event", eventId);
-  // Pozvánka dostane odkaz na zápis a Kalendář o změně informuje pozvané. Odeslání spouští volající.
-  await db
-    .update(calendarLinks)
-    .set({ syncStatus: "pending", attempts: 0, errorCode: null, updatedAt: new Date() })
-    .where(and(eq(calendarLinks.eventId, eventId), eq(calendarLinks.syncStatus, "synced")));
+  const event = await requireHandledEvent(db, viewer, eventId);
+  if (!event.published!.leadId) throw new DomainError("no_lead");
+  if (!canApproveMinutes(viewer, event)) throw new DomainError("not_lead");
+  const current = await requireCurrentMinutes(db, eventId, minutesId);
+  if (current.version !== expectedVersion) throw new DomainError("conflict");
+  if (current.status === "published") throw new DomainError("invalid_state");
+  if (!minutesSchema.safeParse(current.content).success) throw new DomainError("minutes_incomplete");
+
+  await db.transaction(async (tx) => {
+    const at = new Date();
+    const [row] = await tx
+      .update(minutes)
+      .set({ status: "published", publishedBy: viewer.id, publishedAt: at, approvedVersion: expectedVersion, approvedBy: viewer.id, approvedAt: at })
+      .where(and(eq(minutes.id, minutesId), eq(minutes.version, expectedVersion), eq(minutes.status, "draft")))
+      .returning({ id: minutes.id });
+    if (!row) throw new DomainError("conflict");
+    await tx
+      .update(minutes)
+      .set({ status: "draft", publishedBy: null, publishedAt: null })
+      .where(and(eq(minutes.eventId, eventId), eq(minutes.status, "published"), ne(minutes.id, minutesId)));
+    await audit(tx, viewer.id, "minutes.approve", "event", eventId);
+    await markCalendarPending(tx, eventId);
+  });
 }
 
 /**
@@ -232,12 +364,24 @@ export async function withdrawMinutes(viewer: Viewer, eventId: string): Promise<
     .returning({ id: minutes.id });
   if (!rows.length) throw new DomainError("invalid_state");
   await audit(db, viewer.id, "minutes.withdraw", "event", eventId);
-  // Pozvánka přijde o odkaz na zápis. Odeslání spouští volající.
-  await db
-    .update(calendarLinks)
-    .set({ syncStatus: "pending", attempts: 0, errorCode: null, updatedAt: new Date() })
-    .where(and(eq(calendarLinks.eventId, eventId), eq(calendarLinks.syncStatus, "synced")));
+  // Pozvánka přijde o odkaz na zápis.
+  await markCalendarPending(db, eventId);
 }
+
+export type HandlerMinutes = {
+  id: string;
+  version: number;
+  status: "draft" | "published";
+  source: MinutesSource;
+  content: MinutesContent;
+  transcript: string;
+  detectedTemplate: string;
+  templateMismatch: boolean;
+  publishedAt: string | null;
+  /** Poslední schválená verze. U návrhu po změně schváleného zápisu zůstává jako historie. */
+  approvedVersion: number | null;
+  approvedAt: string | null;
+};
 
 export type RecordingPanel =
   | { access: "none" }
@@ -249,16 +393,11 @@ export type RecordingPanel =
       errorCode: string | null;
       /** Publikum právě vidí nějaký zveřejněný zápis akce (i z dříve vyměněné nahrávky). */
       publicMinutes: boolean;
-      minutes: {
-        id: string;
-        version: number;
-        status: "draft" | "published";
-        content: MinutesContent;
-        transcript: string;
-        detectedTemplate: string;
-        templateMismatch: boolean;
-        publishedAt: string | null;
-      } | null;
+      /** Akce má vedoucího. Bez něj zápis nejde schválit ani zveřejnit. */
+      hasLead: boolean;
+      /** Uživatel je vedoucí akce a smí aktuální verzi schválit. */
+      canApprove: boolean;
+      minutes: HandlerMinutes | null;
     };
 
 /** Sekce nahrávky a zápisu v detailu akce, podle oprávnění uživatele. */
@@ -277,25 +416,29 @@ export async function recordingPanel(viewer: Viewer, row: EventRow): Promise<Rec
   const [job] = recording
     ? await db.select().from(transcriptionJobs).where(eq(transcriptionJobs.recordingId, recording.id)).limit(1)
     : [];
-  const [draft] = recording
-    ? await db.select().from(minutes).where(eq(minutes.recordingId, recording.id)).limit(1)
-    : [];
-
-  let state: RecordingState = "awaiting";
-  if (draft) state = draft.status === "published" ? "available" : "review";
-  else if (job?.status === "failed") state = "failed";
-  else if (job) state = "processing";
 
   if (canHandleRecording(viewer, row)) {
-    const [visible] = await db
-      .select({ id: minutes.id })
-      .from(minutes)
-      .where(and(eq(minutes.eventId, row.id), eq(minutes.status, "published")))
-      .limit(1);
+    const [draft, [visible]] = await Promise.all([
+      currentMinutes(db, row.id),
+      db
+        .select({ id: minutes.id })
+        .from(minutes)
+        .where(and(eq(minutes.eventId, row.id), eq(minutes.status, "published")))
+        .limit(1),
+    ]);
+    // Nově nahraná nahrávka se zpracovává: dokud z ní nevznikne zápis, platí stav přepisu.
+    const jobRunning = job !== undefined && (job.status === "queued" || job.status === "processing");
+    let state: RecordingState = "awaiting";
+    if (jobRunning && (!draft || draft.createdAt < job.createdAt)) state = "processing";
+    else if (draft) state = draft.status === "published" ? "available" : "review";
+    else if (job?.status === "failed") state = "failed";
+    else if (job) state = "processing";
     return {
       access: "handler",
       state,
       publicMinutes: visible !== undefined,
+      hasLead: snapshot.leadId !== null,
+      canApprove: canApproveMinutes(viewer, row),
       recording: recording
         ? { name: recording.originalName, sizeBytes: recording.sizeBytes, durationSec: recording.durationSec, uploadedAt: recording.createdAt.toISOString() }
         : null,
@@ -305,17 +448,20 @@ export async function recordingPanel(viewer: Viewer, row: EventRow): Promise<Rec
             id: draft.id,
             version: draft.version,
             status: draft.status,
+            source: draft.source,
             content: draft.content,
             transcript: draft.transcript,
             detectedTemplate: draft.detectedTemplate,
             templateMismatch: draft.templateMismatch,
             publishedAt: draft.publishedAt?.toISOString() ?? null,
+            approvedVersion: draft.approvedVersion,
+            approvedAt: draft.approvedAt?.toISOString() ?? null,
           }
         : null,
     };
   }
   if (!canReadPublishedMinutes(viewer, row)) return { access: "none" };
-  // Výměna nahrávky zveřejněný zápis neschová: publikum ho čte dál, dokud vedoucí neschválí zápis z náhrady.
+  // Výměna zdroje zveřejněný zápis neschová: publikum ho čte dál, dokud vedoucí neschválí nový.
   const [published] = await db
     .select()
     .from(minutes)

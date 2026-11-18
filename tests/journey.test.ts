@@ -5,7 +5,7 @@ import { getDb } from "@/server/db/client";
 import { calendarLinks, minutes, simCalendarEvents, users } from "@/server/db/schema";
 import { config } from "@/server/config";
 import { listPublishedMinutes, listTasks } from "@/server/services/journey";
-import { processTranscriptionJob, publishMinutes, uploadRecording } from "@/server/services/recordings";
+import { processTranscriptionJob, approveMinutes, uploadRecording } from "@/server/services/recordings";
 import { PAST_FP, admin, asFile, fixtureWav, lead, organizer, outsider, participant, resetDemo } from "./helpers";
 
 beforeEach(resetDemo);
@@ -24,9 +24,9 @@ describe("Moje cesta a Zápisy", () => {
   test("zápis je v seznamu až po zveřejnění a jen pro publikum akce, hledání ignoruje diakritiku", async () => {
     const draft = await draftMinutes();
     expect(await ownMinutes(participant)).toHaveLength(0);
-    expect((await listTasks(lead)).map((t) => t.action)).toContain("Zkontrolovat zápis");
+    expect((await listTasks(lead)).map((t) => t.action)).toContain("Dokončit zápis");
 
-    await publishMinutes(lead, PAST_FP, draft.id, draft.version);
+    await approveMinutes(lead, PAST_FP, draft.id, draft.version);
     const visible = await ownMinutes(participant);
     expect(visible.map((m) => m.eventId)).toEqual([PAST_FP]);
     expect(await ownMinutes(outsider)).toHaveLength(0);
@@ -44,7 +44,7 @@ describe("Moje cesta a Zápisy", () => {
     const [link] = await db.select().from(calendarLinks).where(eq(calendarLinks.eventId, PAST_FP));
     if (!link?.externalEventId) return; // ukázková data bez pozvánky u této akce: není co ověřovat
     const draft = await draftMinutes();
-    await publishMinutes(lead, PAST_FP, draft.id, draft.version);
+    await approveMinutes(lead, PAST_FP, draft.id, draft.version);
     await syncEvent(PAST_FP);
     const [invite] = await db.select().from(simCalendarEvents).where(eq(simCalendarEvents.id, link.externalEventId));
     expect(invite!.description).toContain(`/vzdelavani/akce/${PAST_FP}#zapis`);

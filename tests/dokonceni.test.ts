@@ -7,7 +7,7 @@ import { DomainError } from "@/server/services/errors";
 import { listMonth, loadEventRow, updateEvent, type EventInput } from "@/server/services/events";
 import { cancelImpact } from "@/server/services/impact";
 import { writeSwitch } from "@/server/settings";
-import { processTranscriptionJob, publishMinutes, recordingPanel, uploadRecording, withdrawMinutes } from "@/server/services/recordings";
+import { processTranscriptionJob, approveMinutes, recordingPanel, uploadRecording, withdrawMinutes } from "@/server/services/recordings";
 import { PAST_FP, PUBLISHED_RM, asFile, fixtureWav, lead, organizer, outsider, participant, resetDemo } from "./helpers";
 
 beforeEach(resetDemo);
@@ -37,7 +37,7 @@ describe("stažení zveřejněného zápisu", () => {
     await processTranscriptionJob(await uploadRecording(lead, PAST_FP, asFile(fixtureWav(), "trenink.wav")));
     const panel = await recordingPanel(lead, await row(PAST_FP));
     if (panel.access !== "handler" || !panel.minutes) throw new Error("chybí návrh zápisu");
-    await publishMinutes(lead, PAST_FP, panel.minutes.id, panel.minutes.version);
+    await approveMinutes(lead, PAST_FP, panel.minutes.id, panel.minutes.version);
   }
 
   test("publikum zápis přestane vidět, vedoucí ho má zpět jako návrh a může ho zveřejnit znovu", async () => {
@@ -52,7 +52,7 @@ describe("stažení zveřejněného zápisu", () => {
     expect(handler.publicMinutes).toBe(false);
     expect(handler.minutes.status).toBe("draft");
 
-    await publishMinutes(lead, PAST_FP, handler.minutes.id, handler.minutes.version);
+    await approveMinutes(lead, PAST_FP, handler.minutes.id, handler.minutes.version);
     expect(await recordingPanel(participant, await row(PAST_FP))).toMatchObject({ access: "reader", state: "available" });
   });
 
