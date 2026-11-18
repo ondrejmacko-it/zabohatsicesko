@@ -110,3 +110,21 @@ export function suggestTopics(
   }
   return result;
 }
+
+/** Akce v historii revizí, kterými správce rozhodne o tématu doporučeném při generování. */
+export const TOPIC_ACCEPT = "topic_accept";
+export const TOPIC_REJECT = "topic_reject";
+
+/**
+ * Doporučení čeká na rozhodnutí správce, když téma předvyplnilo generování a od té doby se nezměnilo
+ * ani nebylo přijato. Ruční změna tématu (i na prázdné) nebo odmítnutí doporučení ukončí natrvalo,
+ * stejné téma zadané později znovu už je rozhodnutí správce. Historie stačí, nová struktura v DB není potřeba.
+ */
+export function suggestionPending(
+  topicId: string | null,
+  history: ReadonlyArray<{ action: string; topicId: string | null }>,
+): boolean {
+  if (!topicId) return false;
+  const generated = history.find((h) => h.action === "generate");
+  return generated?.topicId === topicId && history.every((h) => h.topicId === topicId && h.action !== TOPIC_ACCEPT);
+}
