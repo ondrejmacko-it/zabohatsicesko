@@ -23,8 +23,18 @@ Uživatel chce, aby relace pracovaly samostatně, samy zakládaly navazující r
   temata-planovani 243 passed / 27 skipped. Otevřené: archivace prioritu ruší (obnova ji nevrací); nová témata při
   ručním pořadí na konec; okno Naplánovat téma nabízí max. 5 akcí (zveřejněné až za návrhy); typ nové akce k tématu
   pro „Všichni“/Tým A = Jiná akce; předvyplněné téma v okně akce se nehlásí jako neuložená změna při zavření (F3).
+* F3 HOTOVO (03f753c, 9bd2e52, 8de1a72, 10591bb, 5b53068): `prepare-month.ts` (`draftGaps`, `prepareOverview`,
+  `rowsMissingLead`, `fillEmptyLeads`); v `PrepareMonthDialog` přehled Připraveno/Chybí vedoucí/Chybí téma/Kolize/
+  Vybráno s přechodem na pole a hromadné doplnění vedoucího jen do prázdných (uloží až Uložit/Zveřejnit, server beze
+  změny). Přijmout/Změnit/Odmítnout jen vizuálně (Přijmout hlavní), sloučení by ztratilo funkci nebo audit. „Nastavit
+  pravidelný rozvrh“ + vysvětlení. Okno akce: dotaz při zavření podle hodnot (`Modal.hasUnsavedChanges`), předvyplnění
+  = výchozí stav. `.select-small` jediná menší varianta (lišta 30→32 px, filtry 34→32 px, dotyk 38 px/16 px).
+  Ověřeno: lint, typecheck, unit 365/365, build, e2e (priprava-mesice, plan-planovani, okna, klavesnice, pristupnost,
+  mobilni-ovladani, rychle-akce, temata-planovani, doporucene-tema) 397 passed / 87 skipped, stranky+kdo-tema 548
+  passed. Otevřené: upozornit při zavření neuloženého duplikátu / předvyplněného tématu (teď ne); hromadné doplnění
+  do všech prázdných, ne jen vybraných; okno akce nemá tlačítko Zrušit (zavírá Zavřít/Esc/klik mimo).
 * F5 částečně: `docs/integrace-do-firemni-wiki.md`, `docs/podklady-pro-sper.md` (koncept, kdo je SPER neznáme).
-**Další krok:** F3 (Připravit měsíc, rozvrh, neuložené změny), F4 (zápisy, migrace 0014),
+**Další krok:** F4 (zápisy, migrace 0014),
 F5 (celé e2e, screenshoty, `docs/report-rychle-akce-a-temata.md` podle bodu 19 zadání, draft PR). Každou fázi delegovat
 subagentovi (kontext hlavní relace šetřit), commit + push po fázi, sem zapsat stav.
 
