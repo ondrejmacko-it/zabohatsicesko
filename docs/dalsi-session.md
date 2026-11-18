@@ -9,8 +9,22 @@ Uživatel chce, aby relace pracovaly samostatně, samy zakládaly navazující r
   server odmítne publish s `duplicateOf`), `e2e/rychle-akce.spec.ts`. Ověřeno: lint, typecheck, unit 339/339, build,
   e2e (rychle-akce, plan-planovani, mobilni-ovladani, klavesnice, pristupnost, okna) 317 passed / 81 skipped.
   Otevřené: zalomení času na 320 px u návrhu se štítkem; kopie z okna akce drží jen měsíc.
+* F2 HOTOVO (1f27d10, 011263e, edf652b, d2c25e0): migrace 0013 (`topics.priority_rank` 1–3 + partial unique index,
+  `topics.manual_rank`), seed 2 garantovaná (Otevřené otázky 1, Návaznost po konzultaci 2). Domény v
+  `src/server/domain/topics.ts`: `recommendTopics` (garantovaná → skupina → zájem, sdílí formulář i `suggestTopics`),
+  `planCandidates`, `guaranteedTopics`/`otherTopics`/`moveInOrder`/`nextFreePriority`. Služby (jen `canPlan`, audit):
+  `setTopicPriority`, `moveTopic`, `resetTopicOrder`, `topicPlanOptions` (topics.ts), `assignTopicToDraft` (events.ts,
+  přes `updateEvent`), `topicFormValues` (detail.ts, `?tema=`); okno akce s `?akce=&tema=` předvyplní téma (`saved`
+  prop formuláře). UI: `TopicsSection` (Garantovaná/Ostatní, tichá poznámka ručního pořadí), `TopicManage` +
+  `PlanTopicDialog` v `TopicActions.tsx`, štítky Garantované/Doporučené a upozornění na skupinu v `EventDialog`.
+  Úkol správce „Nastavte garantovaná témata“ (`listTasks`), rozpočet dotazů Plánu 16 → 17. Ověřeno: lint, typecheck,
+  unit 359/359, build, e2e (temata-planovani, doporucene-tema, kdo-tema, klavesnice, pristupnost, okna, stranky,
+  rychle-akce, plan-planovani, domu-ukoly, unik-dat) 934 passed / 43 skipped + po opravě 320 px okna/pristupnost/
+  temata-planovani 243 passed / 27 skipped. Otevřené: archivace prioritu ruší (obnova ji nevrací); nová témata při
+  ručním pořadí na konec; okno Naplánovat téma nabízí max. 5 akcí (zveřejněné až za návrhy); typ nové akce k tématu
+  pro „Všichni“/Tým A = Jiná akce; předvyplněné téma v okně akce se nehlásí jako neuložená změna při zavření (F3).
 * F5 částečně: `docs/integrace-do-firemni-wiki.md`, `docs/podklady-pro-sper.md` (koncept, kdo je SPER neznáme).
-**Další krok:** F2 (témata, migrace 0013), F3 (Připravit měsíc, rozvrh, neuložené změny), F4 (zápisy, migrace 0014),
+**Další krok:** F3 (Připravit měsíc, rozvrh, neuložené změny), F4 (zápisy, migrace 0014),
 F5 (celé e2e, screenshoty, `docs/report-rychle-akce-a-temata.md` podle bodu 19 zadání, draft PR). Každou fázi delegovat
 subagentovi (kontext hlavní relace šetřit), commit + push po fázi, sem zapsat stav.
 
