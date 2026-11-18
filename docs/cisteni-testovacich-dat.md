@@ -114,3 +114,55 @@ se neověřovala). Akce „Ahoj“ 17. 11. už proběhla. **Nic neprovedeno, če
 „Týmové priority“, „Návaznost po konzultaci“; role s názvy rolí, e-maily `@example.invalid`. Seed je v ostré
 Wiki zakázaný (`isLiveWiki()` → chyba při seedu i obnově), ostrá Wiki dostane jen pravidelný týden. Úprava
 seedu není potřeba.
+
+## Provedeno: čištění a vzorná data pro prezentaci (18. 11. 2026)
+
+Na pokyn uživatele (data i kolegové fiktivní, e-maily ani kalendáře nevadí) přímo v Neon `zbc-wiki-produkce`,
+výchozí větev `main`, **jedna transakce** (22 příkazů s pojistkami: transakce spadne, pokud nesedí 6 akcí
+s testovacím tématem nebo pokud by testovací téma ještě mělo akci).
+
+**Záloha:** Neon větev `zaloha-pred-cistenim-2026-11-17` (`br-shy-dawn-bafiido4`, bez compute, stav před změnou).
+Obnova: v Neonu „Restore“ výchozí větve z této větve, případně porovnat přes `compare_database_schema`/SELECT.
+
+**Smazáno:**
+* 6 akcí z tabulky výše. Kaskádou `event_revisions`, `calendar_links`, nahrávky, přepisy a zápisy (žádné nebyly),
+  ručně `calendar_responses` (0). Pro 5 vygenerovaných slotů zapsané `generation_exclusions`, jako to dělá
+  `deleteDraft`, aby je generování měsíce nevrátilo.
+* Témata Test, Něco, Ahoj, Ahojda, Tos, Ahojky, Tym A; zájmy kaskádou.
+* Proběhlá akce 12. 11. Trénink RM měla téma „Tym A“: téma odebráno a zveřejněna revize 3 (snímek, `event_revisions`,
+  vazba `pending`, audit `event.publish`), jinak by v plánu zůstal název smazaného tématu.
+* Audit: `event.delete_test_data` ×6, `topic.delete_test_data` ×7 (aktér správce).
+
+**`personal_calendar_entries` (5 řádků) záměrně nesmazané.** Odkazují na události v Google kalendářích
+„Vzdělávání ZBC“. Při smazání by tam události zůstaly bez vazby. Osobní synchronizace (`syncPersonalCalendars`)
+je pozná jako `stale`, smaže je v Googlu a pak smaže i řádky. Synchronizace je vyžádaná
+(`personal_calendars.sync_requested_at = now()`), proběhne při návštěvě Wiki nebo denním cronu. Stav
+18. 11. 5:25 UTC: 5 řádků a 10 vazeb `pending` ještě čeká.
+
+**Založeno (vše jako `proposeTopic` / `createEvent(..., "publish")`):** 11 témat (proposed_by správce, zájem
+navrhovatele + fiktivních kolegů podle skupiny, audit `topic.propose`) a 9 zveřejněných akcí (`origin=manual`,
+`calendar_intent=create`, revize 1 = `published_revision`, `published` ve tvaru `snapshotOf`, shodný se snímkem
+v `event_revisions` akce `publish`, vazba `calendar_links` `primary`/`pending`, audit `event.create_publish`).
+
+| Datum (Praha) | Akce | Téma | Publikum | Vede |
+|---|---|---|---|---|
+| po 23. 11. 2026 9:00–10:30 | Setkání týmu | Roční revize finančního plánu klienta | Všichni | správce |
+| st 25. 11. 2026 8:30–11:00 | Trénink poradců | Zajištění příjmu a finanční rezerva rodiny | FP | Ondra |
+| pá 11. 12. 2026 8:30–10:30 | Firemní vzdělávání FP | Investiční dotazník a rizikový profil klienta | FP | Ondra |
+| po 14. 12. 2026 9:00–10:30 | Setkání týmu | Refinancování hypoték v roce 2027 | Všichni | správce |
+| pá 18. 12. 2026 8:30–10:30 | Firemní vzdělávání RM | Správa portfolia movitých klientů | RM | „Někdo random“ |
+| pá 8. 1. 2027 8:30–10:30 | Firemní vzdělávání RM | Generační předání rodinného majetku | RM | „Někdo random“ |
+| po 11. 1. 2027 9:00–10:30 | Setkání týmu | Penzijní spoření a DIP v praxi | Všichni | správce |
+| pá 15. 1. 2027 8:30–10:30 | Firemní vzdělávání FP | Pravidelné investování pro mladé rodiny | FP | Ondra |
+| pá 29. 1. 2027 8:30–10:30 | Firemní vzdělávání FP | Daňové souvislosti investic a pojištění | FP | Ondra |
+
+Témata bez akce (zásobník na stránce Témata): Péče o klíčové klienty a pravidelný servis (RM), Komunikace s klienty
+při výkyvech na trzích (Všichni). Zůstává původní „Návaznost po konzultaci“.
+
+**Ověření:** kontrolní SELECT po transakci: 0 testovacích témat, 0 z 6 akcí, 0 akcí s názvem testovacího tématu
+(ani ve snímku), 9 nových akcí `snap_ok=true`, `rev 1/1`. **V aplikaci ověřeno nebylo:** do ostré Wiki se agent
+nepřihlásí (Google), lokální Wiki nad kopií (`overeni-po-cisteni-2026-11-18`, `br-bold-unit-baoj1w5m`, u kopie
+přepnuté `users.origin='demo'`) se k Neonu nepřipojila, proxy cloudové relace hostitele Neon odmítá. Kopii lze smazat.
+
+**Nechané beze změny (nebylo v zadání):** 16. 11. 21:00 Jiná akce, tři akce 17. 11. 9:00 (Trénink RM, Jiná akce
+bez tématu), 18. 11. 9:00 Action time · Tým A, šablonové akce bez tématu.

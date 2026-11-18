@@ -1,5 +1,14 @@
 # Prompt pro další session
 
+**ČIŠTĚNÍ OSTRÉ WIKI PROVEDENO (18. 11. 2026, větev `claude/cisteni-ostre-wiki`).** Detail v
+`docs/cisteni-testovacich-dat.md`, oddíl „Provedeno“. Záloha Neon `br-shy-dawn-bafiido4`. Smazáno 6 testovacích akcí
+a 7 témat, založeno 11 témat a 9 zveřejněných akcí (23. 11.–29. 1., FP/RM/Všichni) ve tvaru `snapshotOf`.
+**Další krok:** (1) uživatel otevře ostrou Wiki jako správce a zkontroluje Plán (listopad–leden) a Témata; návštěva
+spustí synchronizaci. (2) Pak SELECT: `calendar_links` vše `synced`, `personal_calendar_entries` bez akce = 0
+(stav 5:25 UTC: 10 pending, 5 osiřelých čeká na sync). (3) Po potvrzení smazat Neon větev
+`overeni-po-cisteni-2026-11-18` (`br-bold-unit-baoj1w5m`), zálohu nechat do prezentace.
+**Otevřené:** ponechat podezřelé akce 16.–18. 11.? Ověření v aplikaci agent neudělal (přihlášení Googlem, proxy).
+
 **#69 UZAVŘENO K REVIZI (17. 11. 2026, relace session_01HpUirvm4JFbBXo1Yy6bER1, větev `claude/focused-tesla-cw2jdt`).**
 Body (0)–(7) zadání níže hotové. Merge dělá uživatel.
 * (0) ac3ce6d: `personalEventDelivery` rozlišuje `current` / `outdated` / `missing` / `failing`, otisk přes
