@@ -147,6 +147,16 @@ describe("skutečné účty a ukázka", () => {
     expect(await session(id, "demo")).toBeNull();
   });
 
+  test("starší ukázková DB bez prvního správce nabídne ve výběru druhého správce", async () => {
+    const db = await getDb();
+    expect((await listPersonas()).map((p) => p.id)).not.toContain("demo-organizator");
+    await db.delete(users).where(eq(users.id, "demo-spravce"));
+    const ids = (await listPersonas()).map((p) => p.id);
+    expect(ids[0]).toBe("demo-organizator");
+    expect(ids).toEqual(["demo-organizator", "demo-vedouci", "demo-ucastnik", "demo-mimo-skupinu"]);
+    await resetDemo();
+  });
+
   test("obnova ukázkových dat skutečné účty, jejich role i vazby zachová", async () => {
     const { id } = await inviteUser(admin, { email: KOLEGA, name: "Kolegyně", role: "organizer", groups: ["vsichni", "fp"] });
     await login(KOLEGA, "sub-kolegyne");

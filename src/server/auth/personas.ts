@@ -24,8 +24,11 @@ export async function listPersonas(): Promise<Persona[]> {
     .orderBy(asc(users.id));
   const order = Object.keys(DESCRIPTIONS);
   // Druhý účet správce má stejná práva jako první, ve výběru by jen mátl. Účet zůstává (váže se na něj testovací účet Google).
+  // Starší sdílená DB (seed z doby před `demo-spravce`) prvního správce nemá; pak výběr ukáže druhého, ať správce nechybí.
+  const hasPrimaryAdmin = rows.some((u) => u.id === "demo-spravce");
+  const slotOf = (id: string) => (!hasPrimaryAdmin && id === "demo-organizator" ? "demo-spravce" : id);
   return rows
-    .filter((u) => u.id in DESCRIPTIONS)
-    .map((u) => ({ ...u, description: DESCRIPTIONS[u.id] ?? "" }))
-    .sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+    .filter((u) => slotOf(u.id) in DESCRIPTIONS)
+    .map((u) => ({ ...u, description: DESCRIPTIONS[slotOf(u.id)] ?? "" }))
+    .sort((a, b) => order.indexOf(slotOf(a.id)) - order.indexOf(slotOf(b.id)));
 }
