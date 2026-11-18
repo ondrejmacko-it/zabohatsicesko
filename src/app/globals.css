@@ -664,8 +664,11 @@ a.item-card:hover {
   color: var(--ink);
 }
 
+/* Jediný vzhled výběru v aplikaci: stejná výška, rámeček, šipka a fokus jako ostatní pole. Menší
+   varianta je jen `.select-small` (filtry Plánu, přepínač osoby v liště). */
 .select {
   padding-right: 30px;
+  cursor: pointer;
   background-image:
     linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
   background-position:
@@ -704,6 +707,14 @@ fieldset.field > legend {
   box-shadow: none;
   outline: 2px solid var(--ink);
   outline-offset: -1px;
+}
+
+.input:disabled,
+.select:disabled,
+.textarea:disabled {
+  background-color: var(--line);
+  color: var(--muted);
+  cursor: not-allowed;
 }
 
 .check {
@@ -1299,10 +1310,9 @@ body > .dialog[open]:has(~ .dialog[open]) {
   display: block;
 }
 
-.persona-select {
-  width: auto;
-  min-height: 30px;
-  padding: 3px 28px 3px 8px;
+/* Přepínač osoby je `.select-small`, v liště jen s užším písmem. Dvojitá třída přebije `.select-small`
+   níž v souboru, dotyková zařízení ji stejnou silou vrátí na 16 px. */
+.select-small.persona-select {
   font-size: 13px;
 }
 
@@ -1717,8 +1727,8 @@ details > summary {
 @media (pointer: coarse) {
   .input,
   .select,
+  .select.select-small,
   .textarea,
-  .persona-select,
   .sidebar-search {
     font-size: 16px;
   }
@@ -1728,7 +1738,7 @@ details > summary {
   }
 
   .btn-small,
-  .persona-select {
+  .select-small {
     min-height: 38px;
   }
 
@@ -2630,8 +2640,8 @@ p.cal-status {
 .select-small {
   width: auto;
   max-width: 100%;
-  min-height: 34px;
-  padding-block: 4px;
+  min-height: 32px;
+  padding: 4px 28px 4px 8px;
   font-size: 14px;
 }
 

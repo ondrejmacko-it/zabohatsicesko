@@ -27,7 +27,7 @@ export function Topbar({ user, personas }: { user: CurrentUser; personas: Person
             <label className="visually-hidden" htmlFor="persona">
               Přepnout ukázkovou roli
             </label>
-            <select id="persona" name="persona" className="select persona-select" defaultValue={user.id}>
+            <select id="persona" name="persona" className="select select-small persona-select" defaultValue={user.id}>
               {personas.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
