@@ -163,8 +163,8 @@ test.describe("Plán: souhrn měsíce (A-03)", () => {
     expect(both).toBeLessThanOrEqual(all);
 
     // Dva typy v nabídce Filtry: nabídka zůstane otevřená, každý typ má vlastní štítek s křížkem.
-    await page.getByText("Filtry", { exact: true }).click();
-    const menu = page.locator(".filter-menu-panel");
+    await page.locator(".plan-filters .filter-button").click();
+    const menu = page.locator(".plan-filters .filter-menu-panel");
     const typeBoxes = menu.getByRole("group", { name: "Typ akce" }).getByRole("checkbox");
     const first = (await typeBoxes.nth(0).getAttribute("value"))!;
     const second = (await typeBoxes.nth(1).getAttribute("value"))!;

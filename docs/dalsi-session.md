@@ -8,7 +8,9 @@ poslední user zpráva „ZBČ – PR #74: sjednocení Wiki…“). Report: `doc
   `filterCards({types, states})` NEBO v kategorii / A mezi, `filterValues` (opakovaný parametr i čárky), checkboxy
   v nabídce Filtry (router.push, nabídka zůstává otevřená), štítky typů s křížkem, „Zrušit filtry“; unit + e2e
   test „více filtrů…“ v `plan-planovani.spec.ts`. Ověřeno: typecheck, unit dokonceni, build OK; výsledek cílených
-  e2e (temata 2× samostatně, plan-planovani) v relaci 8 nedoběhl do konce – NEJDŘÍV je spusť a oprav.
+  e2e: temata-planovani + plan-planovani 81 passed / 4 failed – selhal jen nový test „více filtrů…“ (klik na „Filtry“
+  přes getByText byl nejednoznačný); lokátor opraven na `.plan-filters .filter-button`, NEOVĚŘENO – NEJDŘÍV spusť
+  `plan-planovani.spec.ts` a pak 2× samostatně `temata-planovani.spec.ts` (po teardown úpravě zatím 1× OK).
 * P2: analýza a návrh v reportu (cookie `zbc_nahled`, `currentPreview`, lišta Účet vs. Pohled, okrový pruh, stránky
   Domů/Témata/Zápisy jen ke čtení). Návrh poslán uživateli v relaci 8, odpověď zatím žádná → implementuj až na konci,
   pokud uživatel nenamítne; při implementaci odstraň „Zobrazit jako“ z `PlanFilters` (je tam zatím dál).
