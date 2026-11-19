@@ -274,7 +274,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
           invite={calendar ? { recipients: calendar.recipients, mode: inviteMode } : null}
         >
           <PlanFilters
-            key={`${params.jako ?? ""}|${selectedTypes.join(",")}`}
+            key={params.jako ?? ""}
             keep={[["mesic", monthKey], ...(current.pohled ? [["pohled", current.pohled] as [string, string]] : []), ...states.map((s): [string, string] => ["stav", s])]}
             types={types}
             selectedTypes={selectedTypes.map((t) => ({ type: t, removeHref: link({ typ: selectedTypes.filter((x) => x !== t) }) }))}
