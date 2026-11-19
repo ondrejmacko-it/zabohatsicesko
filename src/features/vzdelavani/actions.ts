@@ -470,12 +470,16 @@ export async function saveMinutesAction(_prev: ActionResult | null, formData: Fo
         intent: z.enum(["save", "approve"]),
       })
       .parse(formObject(formData));
-    const saved = await updateMinutes(user, data.id, data.minutesId, data.version, {
+    const content = {
       summary: String(formData.get("summary") ?? "").trim(),
       keyPoints: lines(formData.get("keyPoints")),
       decisions: lines(formData.get("decisions")),
       nextSteps: lines(formData.get("nextSteps")),
-    });
+    };
+    // Neúplný zápis se při Schválit neuloží napůl: jinak by formulář držel starou verzi a další pokus
+    // skončil konfliktem. Uživatel doplní Shrnutí, nebo návrh uloží tlačítkem Uložit.
+    if (data.intent === "approve" && !content.summary) throw new DomainError("minutes_incomplete");
+    const saved = await updateMinutes(user, data.id, data.minutesId, data.version, content);
     if (data.intent === "approve") {
       // Schvaluje se přesně verze, která právě vznikla uložením (nebo zůstala beze změny).
       await approveMinutes(user, data.id, saved.id, saved.version);

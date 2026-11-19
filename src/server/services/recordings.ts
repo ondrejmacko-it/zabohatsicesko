@@ -14,6 +14,7 @@ import {
   TranscriptionError,
   detectTemplate,
   expectedTemplate,
+  minutesDraftSchema,
   minutesSchema,
   transcriptionProvider,
   validateMinutes,
@@ -121,6 +122,8 @@ export async function processTranscriptionJob(jobId: string): Promise<void> {
     const detected = detectTemplate(transcript.text);
 
     await db.transaction(async (tx) => {
+      // Zámek akce (stejné pořadí zámků jako u zápisů): souběžné schválení nezveřejní verzi, kterou nový zápis z nahrávky právě nahrazuje.
+      await queryRows(tx, sql`SELECT id FROM events WHERE id = ${job.eventId} FOR UPDATE`);
       // Zápis vznikne jen pro nahrávku, která je pořád aktuální. Starší úloha novější výsledek nepřepíše.
       const current = await queryRows<{ id: string }>(
         tx,
@@ -303,12 +306,10 @@ export async function updateMinutes(
   await requireHandledEvent(db, viewer, eventId);
   const current = await requireCurrentMinutes(db, eventId, minutesId);
   if (current.version !== expectedVersion) throw new DomainError("conflict");
-  let next: MinutesContent;
-  try {
-    next = validateMinutes(content);
-  } catch {
-    throw new DomainError("minutes_incomplete");
-  }
+  // Návrh smí být neúplný (jen body bez Shrnutí). Úplnost hlídá až `approveMinutes`.
+  const parsed = minutesDraftSchema.safeParse(content);
+  if (!parsed.success) throw new DomainError("minutes_invalid");
+  const next: MinutesContent = parsed.data;
   if (sameContent(next, current.content)) return { id: current.id, version: current.version, newDraft: false };
 
   if (current.status === "published") {
@@ -369,6 +370,10 @@ export async function approveMinutes(viewer: Viewer, eventId: string, minutesId:
   if (!minutesSchema.safeParse(current.content).success) throw new DomainError("minutes_incomplete");
 
   await db.transaction(async (tx) => {
+    // Zámek akce jako u založení návrhu a úpravy schváleného zápisu: mezitím založený novější návrh
+    // (nahrazení zdroje, nová verze) znamená, že schvalovaná verze už není aktuální.
+    await queryRows(tx, sql`SELECT id FROM events WHERE id = ${eventId} FOR UPDATE`);
+    if ((await currentMinutes(tx, eventId))?.id !== minutesId) throw new DomainError("conflict");
     const at = new Date();
     const [row] = await tx
       .update(minutes)

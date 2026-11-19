@@ -32,6 +32,7 @@ export type DomainErrorCode =
   | "no_lead"
   | "not_lead"
   | "minutes_incomplete"
+  | "minutes_invalid"
   | "replace_unconfirmed";
 
 export const DOMAIN_ERROR_MESSAGES: Record<DomainErrorCode, string> = {
@@ -59,6 +60,7 @@ export const DOMAIN_ERROR_MESSAGES: Record<DomainErrorCode, string> = {
   text_empty: "Text je prázdný. Vložte přepis nebo poznámky.",
   no_lead: "Doplňte vedoucího akce. Zápis schvaluje a zveřejňuje vedoucí.",
   not_lead: "Zápis schvaluje a zveřejňuje jen vedoucí akce. Návrh můžete upravit a uložit.",
-  minutes_incomplete: "Zápis potřebuje aspoň shrnutí. Body mají nejvýš 500 znaků, v každé části nejvýš 20.",
+  minutes_incomplete: "Ke schválení doplňte Shrnutí. Body mají nejvýš 500 znaků, v každé části nejvýš 20.",
+  minutes_invalid: "Zápis je příliš dlouhý. Shrnutí má nejvýš 2000 znaků, body nejvýš 500 znaků, v každé části nejvýš 20.",
   replace_unconfirmed: "Rozepsaný zápis by se nahradil. Potvrďte nahrazení, nebo pokračujte v úpravách.",
 };

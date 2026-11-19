@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 import { getDb } from "@/server/db/client";
 import { minutesSectionLabel } from "@/lib/minutes";
 import { auditLog, events, minutes } from "@/server/db/schema";
@@ -261,6 +261,55 @@ describe("schválení a zveřejnění", () => {
     expect(published.map((m) => m.id)).toEqual([second]);
     await withdrawMinutes(admin, PAST_FP);
     expect(await listPublishedMinutes(participant)).not.toContainEqual(expect.objectContaining({ eventId: PAST_FP }));
+  });
+});
+
+describe("neúplný návrh a souběh schválení (finální kontrola 4A–4C)", () => {
+  test("návrh jen s Hlavními body se uloží, schválit bez Shrnutí nejde", async () => {
+    const id = await createMinutesDraft(lead, PAST_FP, { source: "manual" }, null);
+    const partial = { summary: "", keyPoints: ["Připravit otázky"], decisions: ["Seznam je povinný"], nextSteps: [] };
+    expect(await updateMinutes(lead, PAST_FP, id, 1, partial)).toMatchObject({ id, version: 2, newDraft: false });
+    expect(await panelOf(lead)).toMatchObject({ state: "review", minutes: { version: 2, content: partial } });
+    expect(await code(approveMinutes(lead, PAST_FP, id, 2))).toBe("minutes_incomplete");
+    // Limity platí i pro návrh, jen s vlastní chybou.
+    expect(await code(updateMinutes(lead, PAST_FP, id, 2, { ...partial, keyPoints: ["x".repeat(501)] }))).toBe("minutes_invalid");
+    expect(await code(updateMinutes(lead, PAST_FP, id, 2, { ...partial, nextSteps: Array(21).fill("bod") }))).toBe("minutes_invalid");
+    expect(await panelOf(participant)).toMatchObject({ access: "reader", minutes: null });
+  });
+
+  test("schválené A zůstane publiku vidět během práce na B, i po neúspěšném uložení B", async () => {
+    const a = await notesDraft();
+    await approveMinutes(lead, PAST_FP, a.id, 1);
+    const b = await updateMinutes(admin, PAST_FP, a.id, 1, { ...a.content, summary: "Verze B" });
+    expect(b).toMatchObject({ newDraft: true, version: 2 });
+    expect(await code(updateMinutes(admin, PAST_FP, b.id, 2, { ...a.content, summary: "y".repeat(2001) }))).toBe("minutes_invalid");
+    // Druhý uživatel se starou verzí B nepřepíše.
+    await updateMinutes(lead, PAST_FP, b.id, 2, { ...a.content, summary: "Verze B2" });
+    expect(await code(updateMinutes(admin, PAST_FP, b.id, 2, { ...a.content, summary: "Stará B" }))).toBe("conflict");
+    expect(await panelOf(participant)).toMatchObject({ minutes: { summary: a.content.summary } });
+    await approveMinutes(lead, PAST_FP, b.id, 3);
+    expect(await panelOf(participant)).toMatchObject({ minutes: { summary: "Verze B2" } });
+    // A zůstane v databázi jako historie, jen už není zveřejněné.
+    const rows = await (await getDb()).select().from(minutes).where(eq(minutes.eventId, PAST_FP));
+    expect(rows.map((r) => [r.id, r.status]).sort()).toEqual([[a.id, "draft"], [b.id, "published"]].sort());
+  });
+
+  test("schválení verze, kterou mezitím nahradil nový návrh, skončí konfliktem", async () => {
+    const b = await notesDraft();
+    const db = await getDb();
+    let replacedId: string | null = null;
+    // Souběh: kontroly schválení proběhnou, pak druhý uživatel stihne nahradit zdroj, a teprve pak začne transakce schválení.
+    const original = db.transaction.bind(db);
+    const spy = vi.spyOn(db, "transaction").mockImplementationOnce(async (fn, ...rest) => {
+      spy.mockRestore();
+      replacedId = await createMinutesDraft(admin, PAST_FP, { source: "notes", text: "Shrnutí: Nová verze z poznámek." }, b.id, true);
+      return original(fn, ...rest);
+    });
+    expect(await code(approveMinutes(lead, PAST_FP, b.id, 1))).toBe("conflict");
+    expect(replacedId).not.toBeNull();
+    const published = await db.select().from(minutes).where(and(eq(minutes.eventId, PAST_FP), eq(minutes.status, "published")));
+    expect(published).toEqual([]);
+    expect(await panelOf(lead)).toMatchObject({ minutes: { id: replacedId } });
   });
 });
 
