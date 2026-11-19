@@ -137,6 +137,7 @@ export function Modal({ open, title, onRequestClose, children, wide, selfGuarded
       <ConfirmDialog
         open={confirming}
         title="Neuložené změny"
+        urgent
         description={<p>Změny ještě nejsou uložené.</p>}
         onCancel={() => setConfirming(false)}
       >

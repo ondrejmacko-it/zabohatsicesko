@@ -166,6 +166,13 @@ test.describe("okno akce: zahození neveřejných změn se potvrzuje @desktop", 
     await window.getByRole("button", { name: "Zahodit změny" }).click();
     const confirm = page.getByRole("dialog", { name: "Zahodit neveřejné změny?" });
     await expect(confirm).toBeVisible();
+    // Sdílené potvrzení: bezpečná volba má fokus, pracovní okno pod ním zůstane vidět a Esc zavře jen potvrzení.
+    await expect(confirm.getByRole("button", { name: "Zpět" })).toBeFocused();
+    await expect(notice).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(confirm).toBeHidden();
+    await expect(notice).toBeVisible();
+    await window.getByRole("button", { name: "Zahodit změny" }).click();
     await confirm.getByRole("button", { name: "Zpět" }).click();
     await expect(confirm).toBeHidden();
     await expect(notice).toBeVisible();

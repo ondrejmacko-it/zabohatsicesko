@@ -171,6 +171,7 @@ export function SelectionZone({
             <ConfirmDialog
               open={ask === "publish"}
               title={`Zveřejnit ${events(toPublish.length)}?`}
+              busy={busy}
               description={
                 <p>
                   Kolegové je uvidí a dostanou pozvánky.
@@ -190,13 +191,15 @@ export function SelectionZone({
             <ConfirmDialog
               open={ask === "delete"}
               title={`Smazat ${drafts(selected.length)}?`}
+              urgent
+              busy={busy}
               description={<p>{pastPicked > 0 && `Z toho ${pastPicked} v minulosti. `}Nic se neodešle a nejde to vrátit.</p>}
               onCancel={back}
             >
               <button type="button" className="btn" onClick={back} autoFocus>
                 Zpět
               </button>
-              <button type="button" className="btn btn-danger" disabled={busy} onClick={() => submit("delete")}>
+              <button type="button" className="btn btn-danger confirm-destructive" disabled={busy} onClick={() => submit("delete")}>
                 {deleting ? "Mažu…" : "Potvrdit smazání"}
               </button>
             </ConfirmDialog>

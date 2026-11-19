@@ -1019,6 +1019,11 @@ body > .dialog[open]:has(~ .dialog[open]:not(.confirm-dialog)) {
   .confirm-destructive {
     margin-left: 0;
   }
+
+  /* Potvrzení přes formulář (ActionForm): tlačítko má stejnou šířku jako ostatní. */
+  .confirm-actions form .btn {
+    width: 100%;
+  }
 }
 
 /* ——— Tabulky ——— */

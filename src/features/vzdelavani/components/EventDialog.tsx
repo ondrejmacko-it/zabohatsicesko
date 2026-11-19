@@ -561,6 +561,7 @@ function EventForm({
         description={<p>Kolegové uvidí obecný název „{values.label.trim() || TYPE_LABELS[values.type]}“. Doplnit to půjde i později.</p>}
         onCancel={back}
         returnFocusTo={publishButton}
+        busy={busy}
       >
         <button type="button" className="btn" onClick={back} autoFocus>
           Zpět k úpravám
@@ -573,6 +574,7 @@ function EventForm({
         open={ask === "impact" && confirmed !== null}
         title="Zveřejnit změny?"
         returnFocusTo={publishButton}
+        busy={busy}
         description={
           confirmed && (
             <>

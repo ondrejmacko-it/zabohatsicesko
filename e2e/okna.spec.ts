@@ -116,11 +116,11 @@ test.describe("okna správce", () => {
     await expect(bar).toContainText("Vybráno 2");
     // První krok jen ptá v samostatném okně, nic neodešle. Lišta výběru pod ním zůstane beze změny.
     await bar.getByRole("button", { name: "Zveřejnit vybrané" }).click();
-    const ask = page.getByRole("alertdialog", { name: /Zveřejnit \d+ akc/ });
+    const ask = page.getByRole("dialog", { name: /Zveřejnit \d+ akc/ });
     await expect(ask).toBeVisible();
     await expect(ask.getByRole("button", { name: "Zpět" })).toBeFocused();
     await ask.getByRole("button", { name: "Zpět" }).click();
-    await expect(page.getByRole("alertdialog")).toHaveCount(0);
+    await expect(ask).toHaveCount(0);
     await expect(bar).toContainText("Vybráno 2");
     await expect(bar.getByRole("button", { name: "Zveřejnit vybrané" })).toBeFocused();
     // Esc v potvrzení zavře jen potvrzení, výběr zůstane.
@@ -181,7 +181,7 @@ test.describe("okna správce", () => {
     await add.getByLabel("Typ").selectOption({ label: "Portfolio tým" });
     await add.getByLabel("Datum").fill("2027-09-15");
     await add.getByRole("button", { name: "Zveřejnit", exact: true }).click();
-    const ask = page.getByRole("alertdialog", { name: "Zveřejnit bez tématu a vedoucího?" });
+    const ask = page.getByRole("dialog", { name: "Zveřejnit bez tématu a vedoucího?" });
     await expect(ask).toContainText("Kolegové uvidí obecný název");
     await expect(ask.getByRole("button", { name: "Zpět k úpravám" })).toBeFocused();
     await expectNoHorizontalScroll(page);
@@ -212,7 +212,7 @@ test.describe("okna správce", () => {
     await expect(win.getByText("Beze změn", { exact: true })).toHaveCount(0);
     await expect(publish).toHaveClass(/btn-primary/);
     await publish.click();
-    const ask = page.getByRole("alertdialog", { name: "Zveřejnit změny?" });
+    const ask = page.getByRole("dialog", { name: "Zveřejnit změny?" });
     await expect(ask).toContainText("Změníte termín");
     await expect(ask.getByRole("button", { name: "Potvrdit zveřejnění" })).toBeVisible();
     await ask.getByRole("button", { name: "Zpět k úpravám" }).click();

@@ -63,6 +63,7 @@ function DraftForm({ eventId, source, replaceId, replacingDraft, children, submi
       <ConfirmDialog
         open={asking}
         title="Nahradit rozepsaný zápis?"
+        urgent
         description={<p>Nový návrh nahradí rozepsaný zápis. Starší verze zůstane uložená v historii, v okně už ji neuvidíte.</p>}
         onCancel={() => setAsking(false)}
       >

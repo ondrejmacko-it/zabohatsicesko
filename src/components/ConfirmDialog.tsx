@@ -14,23 +14,39 @@ type Props = {
   children: React.ReactNode;
   /** Kam vrátit fokus po zavření, když tlačítko, které se ptalo, mezitím zablokovala kontrola na serveru. */
   returnFocusTo?: () => HTMLElement | null | undefined;
+  /**
+   * Varování před ztrátou dat (zahození změn, smazání, nahrazení): role `alertdialog`, čtečka ho ohlásí
+   * hned. Běžné rozhodnutí (zveřejnit, vytvořit) zůstává obyčejný `dialog`.
+   */
+  urgent?: boolean;
+  /** Odesílá se: Esc ani klik mimo okno nezavřou, aby výsledek nezůstal bez ohlášení a nešlo odeslat podruhé. */
+  busy?: boolean;
 };
+
+/** Položka zavřeného menu je skrytá a fokus by nepřijala, fokus se proto vrátí na tlačítko menu. */
+function focusable(target: HTMLElement | null | undefined) {
+  if (!target?.isConnected) return null;
+  return target.closest("[hidden]") ? target.closest(".menu")?.querySelector<HTMLElement>(":scope > button") : target;
+}
 
 /**
  * Samostatné potvrzovací okno nad pracovním oknem (neuložené změny, nahrazení, smazání, zveřejnění).
  *
  * Vlastní nativní <dialog> ve vrchní vrstvě prohlížeče: okno pod ním zůstane vidět, je po dobu rozhodnutí
  * neaktivní (fokus z potvrzení neuteče) a nic se v něm neposune. Po zavření se fokus vrátí tam, kde byl.
- * `alertdialog` je správná role: jde vždy o rozhodnutí, které čeká na odpověď.
+ * Rozměry, odsazení, pořadí tlačítek (bezpečná volba první s fokusem, potvrzení za ní) a chování Esc a kliku
+ * mimo jsou společné pro všechna potvrzení, včetně jednotlačítkových akcí v `ActionForm`.
  */
-export function ConfirmDialog({ open, title, description, onCancel, children, returnFocusTo }: Props) {
+export function ConfirmDialog({ open, title, description, onCancel, children, returnFocusTo, urgent, busy }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
   const pressedOutside = useRef(false);
   const titleId = useId();
   const textId = useId();
   const focusTarget = useRef(returnFocusTo);
+  const busyRef = useRef(busy);
   useEffect(() => {
     focusTarget.current = returnFocusTo;
+    busyRef.current = busy;
   });
 
   useEffect(() => {
@@ -40,8 +56,7 @@ export function ConfirmDialog({ open, title, description, onCancel, children, re
     dialog.showModal();
     return () => {
       dialog.close();
-      const target = focusTarget.current?.() ?? returnFocus;
-      if (target?.isConnected) target.focus();
+      focusable(focusTarget.current?.() ?? returnFocus)?.focus();
     };
   }, [open]);
 
@@ -49,7 +64,7 @@ export function ConfirmDialog({ open, title, description, onCancel, children, re
   return createPortal(
     <dialog
       ref={ref}
-      role="alertdialog"
+      role={urgent ? "alertdialog" : "dialog"}
       className="dialog confirm-dialog"
       aria-labelledby={titleId}
       aria-describedby={textId}
@@ -57,13 +72,13 @@ export function ConfirmDialog({ open, title, description, onCancel, children, re
         // Esc patří jen tomuto rozhodnutí. Pracovní okno pod ním (React předek přes portál) se nezavírá.
         event.preventDefault();
         event.stopPropagation();
-        onCancel();
+        if (!busyRef.current) onCancel();
       }}
       onMouseDown={(event) => {
         pressedOutside.current = event.target === event.currentTarget;
       }}
       onClick={(event) => {
-        if (event.target === event.currentTarget && pressedOutside.current) onCancel();
+        if (event.target === event.currentTarget && pressedOutside.current && !busyRef.current) onCancel();
         pressedOutside.current = false;
       }}
     >
