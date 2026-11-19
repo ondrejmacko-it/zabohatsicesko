@@ -2,8 +2,10 @@
 // Ukázka (port 3310) a ostrá Wiki s falešnými hodnotami Google (port 3311). Všechny hodnoty jsou jen
 // pro lokální test a nikde neplatí. Produkční build, ne `next dev`: chyby CSP se projeví jen v něm.
 import { spawn, spawnSync } from "node:child_process";
-import { rmSync } from "node:fs";
-import { DEMO_CODE, DEMO_PORT, LIVE_PORT } from "./constants.mjs";
+import { mkdirSync, readFileSync, rmSync } from "node:fs";
+import { request as httpRequest } from "node:http";
+import { createServer as createHttpsServer } from "node:https";
+import { DEMO_CODE, DEMO_PORT, DEMO_TLS_PORT, LIVE_PORT } from "./constants.mjs";
 
 
 const shared = {
@@ -57,6 +59,28 @@ for (let i = 0; i < 120; i++) {
   await new Promise((resolve) => setTimeout(resolve, 500));
 }
 const demo = start(demoEnv, DEMO_PORT);
+
+// WebKit přes http://localhost neposílá cookie Secure (__Host-), Chromium a Firefox localhost berou jako
+// bezpečný. Pro projekty webkit-* proto ukázka běží i za lokální TLS proxy s jednorázovým certifikátem,
+// aplikace i její cookie zůstávají stejné jako v produkci.
+if (process.env.E2E_WEBKIT === "1") {
+  const dir = ".data/e2e-tls";
+  mkdirSync(dir, { recursive: true });
+  const cert = spawnSync("openssl", ["req", "-x509", "-newkey", "rsa:2048", "-nodes", "-days", "1", "-subj", "/CN=localhost",
+    "-keyout", `${dir}/key.pem`, "-out", `${dir}/cert.pem`], { stdio: "ignore" });
+  if (cert.status !== 0) process.exit(cert.status ?? 1);
+  createHttpsServer({ key: readFileSync(`${dir}/key.pem`), cert: readFileSync(`${dir}/cert.pem`) }, (req, res) => {
+    const upstream = httpRequest(
+      { host: "127.0.0.1", port: DEMO_PORT, method: req.method, path: req.url, headers: { ...req.headers, "x-forwarded-proto": "https" } },
+      (reply) => {
+        res.writeHead(reply.statusCode ?? 502, reply.headers);
+        reply.pipe(res);
+      },
+    );
+    upstream.on("error", () => res.writeHead(502).end());
+    req.pipe(upstream);
+  }).listen(DEMO_TLS_PORT);
+}
 
 const stop = () => {
   live.kill();

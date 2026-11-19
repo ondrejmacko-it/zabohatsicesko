@@ -1,5 +1,5 @@
 import { defineConfig, devices, type Project } from "@playwright/test";
-import { DEMO_PORT } from "./e2e/constants.mjs";
+import { DEMO_PORT, DEMO_TLS_PORT } from "./e2e/constants.mjs";
 
 // User agenty macOS. Vykresluje vždy Chromium, user agent jen ověří, že aplikace podle něj nic nemění.
 const MAC_CHROME_UA =
@@ -53,12 +53,14 @@ projects.push({
 // E2E_WEBKIT=1 přidá WebKit (1440 Retina, telefon 390 a 320) a Firefox (1280, telefon 390) a Chromium 768 a 1024.
 // Chromium s user agentem Safari (macos-1512) není test Safari; ten dělají jen projekty webkit-*.
 if (process.env.E2E_WEBKIT === "1") {
-  const webkit = { ...devices["Desktop Safari"] };
+  // WebKit jde přes HTTPS proxy (e2e/server.mjs), jinak by nepřijal cookie Secure na http://localhost.
+  const tls = { baseURL: `https://localhost:${DEMO_TLS_PORT}`, ignoreHTTPSErrors: true };
+  const webkit = { ...devices["Desktop Safari"], ...tls };
   const firefox = { ...devices["Desktop Firefox"] };
   projects.push(
     desktop("webkit-1440", 1440, 900, { ...webkit, viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 }),
-    { ...phone("webkit-390", 390), use: { ...devices["iPhone 13"], viewport: { width: 390, height: 760 } } },
-    { ...phone("webkit-320", 320), use: { ...devices["iPhone SE"], viewport: { width: 320, height: 640 } } },
+    { ...phone("webkit-390", 390), use: { ...devices["iPhone 13"], ...tls, viewport: { width: 390, height: 760 } } },
+    { ...phone("webkit-320", 320), use: { ...devices["iPhone SE"], ...tls, viewport: { width: 320, height: 640 } } },
     desktop("firefox-1280", 1280, 800, { ...firefox, viewport: { width: 1280, height: 800 } }),
     // Firefox nepodporuje isMobile, telefon = úzké okno s dotykem.
     { ...phone("firefox-390", 390), use: { ...firefox, viewport: { width: 390, height: 760 }, hasTouch: true } },
