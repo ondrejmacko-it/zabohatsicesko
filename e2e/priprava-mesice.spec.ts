@@ -185,6 +185,11 @@ test.describe("Připravit měsíc: vedoucí vybraný klávesnicí se doplní a u
     const expected = [first, ...Array(count - 2).fill(second), third];
     expect(await values()).toEqual(expected);
 
+    // Téma tu není předmětem testu. Doplnění předvyplní i garantované téma, které čtecí testy Témat čekají
+    // „bez termínu“ (seed), proto se návrhy ukládají bez tématu.
+    const topics = prepare.getByRole("combobox", { name: /^Téma: / });
+    for (let i = 0; i < (await topics.count()); i++) await topics.nth(i).fill("");
+
     await prepare.getByRole("button", { name: "Uložit změny" }).click();
     await expect(prepare.getByText(new RegExp(`^Uloženo: ${count} návrh`))).toBeVisible();
 
