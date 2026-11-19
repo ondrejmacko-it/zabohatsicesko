@@ -111,7 +111,14 @@ export function Modal({ open, title, onRequestClose, children, wide, selfGuarded
         pressedOutside.current = false;
       }}
     >
-      <div className="dialog-body">
+      <div
+        className="dialog-body"
+        // Tlačítko „Zavřít“ dole ve formuláři (`data-modal-close`) se chová stejně jako to v záhlaví: s rozepsanými
+        // změnami se nejdřív zeptá. „Zrušit úpravy“ naopak změny zahodí bez dotazu, říká to samo.
+        onClick={(event) => {
+          if ((event.target as HTMLElement).closest("[data-modal-close]")) requestClose();
+        }}
+      >
         <div className="spread dialog-head">
           <h2 id={titleId}>{title}</h2>
           <button type="button" className="btn btn-small" onClick={requestClose}>

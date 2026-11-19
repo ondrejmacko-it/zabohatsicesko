@@ -71,7 +71,7 @@ export function TemplateDialog({ slots }: { slots: SlotValue[] }) {
               Uložit šablonu
             </button>
             <button type="button" className="btn" onClick={() => setOpen(false)}>
-              Zrušit
+              Zrušit úpravy
             </button>
           </div>
         </form>

@@ -138,7 +138,7 @@ test.describe("Plán na telefonu: přesun úchytem", () => {
   test.use({ storageState: authFile("spravce") });
   test.beforeEach(({ isMobile }) => test.skip(!isMobile, "dotykové ovládání telefonu"));
 
-  test("podržení a tažení na den v agendě otevře potvrzení, Zrušit nic nezmění", async ({ page }) => {
+  test("podržení a tažení na den v agendě otevře potvrzení, Nepřesouvat nic nezmění", async ({ page }) => {
     await openPlan(page);
     const from = agendaDay(page, "2026-11-18");
     await page.evaluate(() => document.querySelector('[data-agenda-day="2026-11-18"]')!.scrollIntoView({ block: "start" }));
@@ -157,7 +157,7 @@ test.describe("Plán na telefonu: přesun úchytem", () => {
     await expect(confirm).toContainText(`Přesunout akci ${label} z st 18. 11. na čt 19. 11.?`);
     await expect(page.locator(".move-panel")).toHaveCount(0);
     await expect(page.locator("body")).not.toHaveAttribute("data-moving", "");
-    await confirm.getByRole("button", { name: "Zrušit" }).click();
+    await confirm.getByRole("button", { name: "Nepřesouvat" }).click();
     await expect(confirm).toBeHidden();
     await expect(from.getByText(label!)).toBeVisible();
     await expect(page).not.toHaveURL(/akce=/);
@@ -220,7 +220,7 @@ test.describe("Plán na telefonu: přesun úchytem", () => {
     await expect(picker.getByRole("button", { name: "středa 18. 11." })).toBeDisabled();
     await picker.getByRole("button", { name: "pátek 20. 11." }).click();
     await expect(picker).toContainText("na pá 20. 11.?");
-    await picker.getByRole("button", { name: "Zrušit" }).click();
+    await picker.getByRole("button", { name: "Nepřesouvat" }).click();
 
     expect(await handles(page).count()).toBeGreaterThan(0);
     await page.getByRole("button", { name: "Vybrat návrhy" }).click();

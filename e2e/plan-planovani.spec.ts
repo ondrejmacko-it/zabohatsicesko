@@ -53,19 +53,19 @@ test.describe("Plán: přidání akce na den @desktop", () => {
     await expect(block(page, "tr-fp-1111")).toHaveCount(0);
   });
 
-  test("Přesun tažením: Zrušit nic nezmění", async ({ page }) => {
+  test("Přesun tažením: Nepřesouvat nic nezmění", async ({ page }) => {
     await openPlan(page);
     await block(page, "ev-11-27").dragTo(cell(page, "2026-11-26"));
     const dialog = page.getByRole("dialog", { name: "Přesunout akci" });
     await expect(dialog).toContainText("Přesunout akci Firemní vzdělávání FP z pá 27. 11. na čt 26. 11.?");
     await expect(dialog).toContainText("uloží jako návrh");
-    await dialog.getByRole("button", { name: "Zrušit" }).click();
+    await dialog.getByRole("button", { name: "Nepřesouvat" }).click();
     await expect(dialog).toBeHidden();
     await expect(cell(page, "2026-11-27").locator('[data-move-id="ev-11-27"]')).toHaveCount(1);
   });
 
   test("Přesun tažením s potvrzením a zpět v okně akce", async ({ page }, testInfo) => {
-    // Zápis do sdílených dat ukázky jen v jednom projektu, ostatní projekty ověří Zrušit.
+    // Zápis do sdílených dat ukázky jen v jednom projektu, ostatní projekty ověří Nepřesouvat.
     test.skip(testInfo.project.name !== "windows-1280", "zápis jen jednou");
     await openPlan(page);
     await block(page, "ev-11-25").dragTo(cell(page, "2026-11-24"));

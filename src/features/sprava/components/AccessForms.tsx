@@ -95,7 +95,7 @@ function AccessForm({ userId, roles, role, groups, mode, onDone }: AccessProps) 
           {pending ? "Ukládám…" : mode === "approve" ? "Schválit přístup" : mode === "restore" ? "Vrátit přístup" : "Uložit změny"}
         </button>
         <button type="button" className="btn" onClick={onDone}>
-          Zrušit
+          {mode === "edit" ? "Zrušit úpravy" : "Zavřít"}
         </button>
       </div>
     </form>
@@ -153,8 +153,8 @@ function NewLink({ account: a, onClose }: { account: AccountActionsProps["accoun
             <button type="submit" className="btn btn-primary" disabled={pending}>
               {pending ? "Vytvářím…" : "Vytvořit odkaz"}
             </button>
-            <button type="button" className="btn" onClick={onClose}>
-              Zrušit
+            <button type="button" className="btn" data-modal-close>
+              Zavřít
             </button>
           </div>
         </form>
@@ -280,7 +280,7 @@ function RevokeAccess({ account: a, onClose }: { account: AccountActionsProps["a
             {pending ? "Odebírám…" : "Odebrat přístup"}
           </button>
           <button type="button" className="btn" onClick={onClose}>
-            Zrušit
+            Ponechat přístup
           </button>
         </div>
       </form>

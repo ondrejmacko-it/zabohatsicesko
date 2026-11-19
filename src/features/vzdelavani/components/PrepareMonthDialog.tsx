@@ -371,7 +371,7 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
           Uložit změny
         </button>
         <button type="button" className="btn" onClick={onCancel}>
-          Zrušit
+          Zrušit úpravy
         </button>
       </div>
     </form>

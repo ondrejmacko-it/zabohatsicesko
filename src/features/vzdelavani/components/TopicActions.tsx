@@ -98,8 +98,8 @@ function ProposeForm({ groups, onClose }: { groups: Group[]; onClose: () => void
           <button type="submit" className="btn btn-primary" disabled={pending}>
             Navrhnout téma
           </button>
-          <button type="button" className="btn" onClick={onClose}>
-            Zrušit
+          <button type="button" className="btn" data-modal-close>
+            Zavřít
           </button>
         </div>
       </form>
@@ -328,7 +328,7 @@ function EditTopicForm({ topic, groups, onClose }: { topic: { id: string; name: 
             {pending ? "Ukládám…" : "Uložit"}
           </button>
           <button type="button" className="btn" onClick={onClose}>
-            Zrušit
+            Zrušit úpravy
           </button>
         </div>
       </form>

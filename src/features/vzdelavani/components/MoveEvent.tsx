@@ -91,7 +91,7 @@ function MoveConfirm({ target, to, onClose }: { target: MoveTarget; to: string; 
           {pending ? "Přesouvám…" : "Potvrdit"}
         </button>
         <button type="button" className="btn" onClick={onClose}>
-          Zrušit
+          Nepřesouvat
         </button>
       </div>
     </div>
