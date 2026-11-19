@@ -442,14 +442,15 @@ a.item-card:hover {
   text-transform: uppercase;
 }
 
+/* Hierarchie položky v celé Wiki: název tučně a tmavě, metadata menší a tlumená. */
 .item-title {
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 650;
 }
 
 .item-meta {
   margin-top: 2px;
-  color: var(--ink-soft);
+  color: var(--muted);
   font-size: 14px;
 }
 
@@ -508,6 +509,14 @@ a.item-card:hover {
 .btn:disabled {
   cursor: not-allowed;
   opacity: 0.55;
+}
+
+/* Neaktivní hlavní akce nesmí vypadat jako výzva: šedá plocha místo okrové. */
+.btn-primary:disabled {
+  border-color: var(--line-strong);
+  background: var(--beige);
+  color: var(--muted);
+  opacity: 1;
 }
 
 .btn-primary {
@@ -970,6 +979,17 @@ fieldset.field > legend {
   .menu-card-trigger::before {
     inset: -9px -7px;
   }
+}
+
+/* ⋯ stejného vzhledu jako na kartách Plánu, ale v řádku (Témata): stojí v toku a má výšku tlačítek vedle sebe. */
+.menu-card.menu-inline {
+  position: relative;
+  z-index: auto;
+}
+
+.menu-inline > .menu-card-trigger {
+  width: 32px;
+  height: 32px;
 }
 
 /* Při hromadném výběru má přednost checkbox, menu karty se schová stejně jako úchyt přesunu. */
@@ -1452,9 +1472,80 @@ body > .dialog[open]:has(~ .dialog[open]:not(.confirm-dialog)) {
   flex-direction: column;
   gap: 10px;
   margin: 0;
-  padding: 12px 14px;
+  padding: 12px 14px 14px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-left: 4px solid var(--ochre);
+  border-radius: var(--radius-sm);
+  background: var(--band);
+}
+
+/* Den bez „Používat“ zůstane čitelný, ale ustoupí do pozadí. */
+.slot:has(> .slot-time input[type="checkbox"]:not(:checked)) {
+  border-left-color: var(--line-strong);
+  background: var(--surface);
+}
+
+.slot-day {
+  padding: 0 6px;
+  font-size: 15px;
+  font-weight: 650;
+}
+
+/* Používat / Od / Do jako jeden kompaktní celek. */
+.slot-time {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+
+.slot-types {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.slot-types > legend {
+  float: left;
+  width: 100%;
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* Zaškrtávací volba ve stylu štítku: skutečný checkbox zůstává (klávesnice, čtečka), štítek jen ukáže stav. */
+.check-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 4px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.check-chip:has(input:checked) {
+  border-color: var(--ochre);
+  background: var(--ochre-soft);
+  color: var(--ochre-dark);
+  font-weight: 600;
+}
+
+.check-chip:has(input:focus-visible) {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
+.check-chip input {
+  margin: 0;
+  accent-color: var(--ochre);
 }
 
 .slot .field {
@@ -2556,9 +2647,9 @@ a.brief-link:hover {
 .topic-count,
 .topic-people > summary {
   margin: 0;
-  color: var(--ink-soft);
-  font-size: 14px;
-  font-weight: 600;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
 }
 
 .topic-people > summary {
@@ -2647,6 +2738,13 @@ a.brief-link:hover {
   flex-wrap: wrap;
   gap: 4px 8px;
   align-items: center;
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.topic-main .item-meta {
+  color: var(--muted);
+  font-size: 13px;
 }
 
 .topic-main .item-title .topic-badge {
@@ -3179,11 +3277,15 @@ p.cal-status {
 }
 
 /* Sloupce se skládají podle šířky seznamu v okně, ne obrazovky. */
-.publish-list {
+.publish-group {
   container-type: inline-size;
 }
 
 @container (max-width: 760px) {
+  .publish-head {
+    display: none;
+  }
+
   .publish-row {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
@@ -3193,19 +3295,102 @@ p.cal-status {
   }
 }
 
-/* Okno Připravit měsíc: kroky nad návrhy (doplnění, párování, mezery). */
+/* Okno Připravit měsíc: tři kroky jako sekce podle vzoru Přidat akci (číslo kroku, okrový pruh, světlý podklad). */
 .prepare-step {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 6px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--line);
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--ochre);
+  border-radius: var(--radius-sm);
+  background: var(--band);
 }
 
 .prepare-step h3 {
   margin: 0;
+  font-family: var(--font-sans);
   font-size: 1rem;
+  font-weight: 650;
+}
+
+.prepare-step > .hint {
+  margin-top: -6px;
+}
+
+/* Krok 1: obě tlačítka stojí vždy na stejném místě, hláška o výsledku má vlastní řádek pod nimi. */
+.prepare-fill {
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.prepare-fill > .action-form {
+  display: contents;
+}
+
+.prepare-fill > [role="status"],
+.prepare-fill > .action-form > [role="status"],
+.prepare-fill > .action-form > [role="alert"] {
+  order: 1;
+  flex: 1 0 100%;
+  margin: 0;
+}
+
+/* Výsledek doplnění (např. „Nic nového k doplnění“) jako tichý informační stav, ne jako další nadpis. */
+.prepare-fill > .action-form > [role="status"] {
+  color: var(--muted);
+}
+
+/* Záhlaví sloupců seznamu návrhů (jen na šířku, kde jsou pole v řádku vedle sebe). */
+.publish-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.9fr) minmax(0, 0.9fr) minmax(0, 1fr) minmax(0, 0.9fr);
+  gap: 10px;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.publish-head > :first-child {
+  padding-left: 28px;
+}
+
+.publish-main .item-title {
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.publish-main .item-meta {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* Krok 3: výběr a připravenost odděleně, prázdný stav jen tichým textem. */
+.publish-impact-count strong {
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.publish-impact-state {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.publish-impact-state[data-state="ready"] {
+  color: var(--ok);
+}
+
+.publish-impact-state[data-state="incomplete"] {
+  color: var(--ochre-dark);
+}
+
+.publish-impact[data-empty] {
+  padding: 0;
+  background: none;
+  color: var(--muted);
 }
 
 /* Seznam návrhů vyplní šířku okna (krok jinak zarovnává obsah doleva na šířku obsahu). */
@@ -3243,13 +3428,23 @@ p.cal-status {
   opacity: 1;
 }
 
-/* Hromadné doplnění vedoucího: volba, tlačítko a vysvětlení v jednom zalamovaném řádku. */
+/* Hromadné doplnění vedoucího: samostatný nástroj (název, volba, tlačítko, výsledek) v bílém rámečku. */
 .prepare-bulk {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
-  gap: 4px 8px;
+  gap: 6px 8px;
   align-self: stretch;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.prepare-tool-title {
+  flex: 1 0 100%;
+  font-size: 14px;
+  font-weight: 650;
 }
 
 .prepare-bulk .field {
@@ -3274,10 +3469,10 @@ p.cal-status {
   background-color: var(--ochre-soft);
 }
 
-/* Garantované téma bez termínu: jen zvýrazněný text v řádku, žádný nový panel. */
+/* Garantované téma bez termínu: jen barevný text v řádku, žádný nový panel ani tučné písmo. */
 .topic-unscheduled {
   color: var(--danger);
-  font-weight: 600;
+  font-weight: 500;
 }
 
 /* Téma jen v návrhu akce: oranžově jako ostatní návrhy, ne červeně jako chybějící termín. */
@@ -3736,14 +3931,19 @@ body[data-moving] .quick-actions,
     grid-column: 1 / -1;
   }
 
-  .filter-menu-panel {
-    right: auto;
-    left: 0;
+  /* Panel se kotví k celému řádku filtrů, ne k tlačítku: v pravém sloupci mřížky by přetekl okraj okna. */
+  .plan-filters {
+    position: relative;
   }
 
-  .filter-menu:has(+ .filter-button) .filter-menu-panel,
-  .filter-menu[data-wide] .filter-menu-panel {
+  .plan-filters .filter-menu {
+    position: static;
+  }
+
+  .plan-filters .filter-menu-panel {
+    right: 0;
     left: 0;
+    width: auto;
   }
 }
 
@@ -3977,5 +4177,42 @@ body[data-moving] .quick-actions,
 @media (prefers-reduced-motion: reduce) {
   .change-original-facts {
     animation: none;
+  }
+}
+
+/* ——— Lehké animace (P4): jen otevření okna, rozbalení nabídek a hover karet; při omezení pohybu žádné ——— */
+@media (prefers-reduced-motion: no-preference) {
+  dialog[open] {
+    animation: dialog-in 150ms ease-out;
+  }
+
+  .filter-menu[open] > .filter-menu-panel,
+  details[open] > .change-original-facts {
+    animation: unfold 140ms ease-out;
+  }
+
+  @media (hover: hover) {
+    /* Jen stín bez posunu: transformace by z karty udělala kotvu pro pevně umístěné menu ⋯ uvnitř. */
+    a.item-card {
+      transition: box-shadow 0.15s ease;
+    }
+
+    a.item-card:hover {
+      box-shadow: 0 4px 12px rgb(0 0 0 / 0.08);
+    }
+  }
+}
+
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@keyframes unfold {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
   }
 }

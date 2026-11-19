@@ -123,7 +123,7 @@ export function TopicManage({ topic, groups, canMoveUp, canMoveDown }: TopicMana
   const guaranteed = topic.priorityRank != null;
   return (
     <>
-      <Menu label={`Možnosti tématu ${topic.name}`} small iconOnly>
+      <Menu label={`Možnosti tématu ${topic.name}`} variant="card" className="menu-inline">
         <button type="button" className="btn" onClick={() => setDialog("plan")}>
           <Icon name="calendar" />
           Naplánovat téma

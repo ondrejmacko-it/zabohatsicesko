@@ -102,7 +102,7 @@ test.describe("Připravit měsíc: přehled a hromadné doplnění vedoucího", 
 
     const fill = prepare.getByRole("button", { name: /^Doplnit do \d+ řádk/ });
     await expect(prepare.getByText(/vyplněné vedoucí se nepřepíšou/)).toBeVisible();
-    await prepare.getByLabel("Doplnit vedoucího do prázdných polí").selectOption(bulk);
+    await prepare.getByLabel("Vedoucí do prázdných polí").selectOption(bulk);
     await expect(fill).toHaveText(new RegExp(`Doplnit do ${empty} řádk`));
     await fill.click();
 
@@ -121,9 +121,9 @@ test.describe("Připravit měsíc: přehled a hromadné doplnění vedoucího", 
 
   test("samotná volba pro hromadné doplnění není rozepsaná změna", async ({ page }) => {
     const prepare = await openPrepare(page);
-    const options = prepare.getByLabel("Doplnit vedoucího do prázdných polí").locator("option");
+    const options = prepare.getByLabel("Vedoucí do prázdných polí").locator("option");
     const value = await options.nth(1).getAttribute("value");
-    await prepare.getByLabel("Doplnit vedoucího do prázdných polí").selectOption(value!);
+    await prepare.getByLabel("Vedoucí do prázdných polí").selectOption(value!);
     await page.keyboard.press("Escape");
     await expect(prepare).toBeHidden();
   });
@@ -159,7 +159,7 @@ test.describe("Připravit měsíc: vedoucí vybraný klávesnicí se doplní a u
     await expect(missing).toHaveAccessibleName(new RegExp(`^Chybí vedoucí: ${count - 1}`));
 
     // Hromadný výběr klávesnicí: druhá osoba. Výběr musí zůstat vidět a aktivovat tlačítko.
-    const bulk = prepare.getByLabel("Doplnit vedoucího do prázdných polí");
+    const bulk = prepare.getByLabel("Vedoucí do prázdných polí");
     await bulk.focus();
     await page.keyboard.press("ArrowDown");
     await page.keyboard.press("ArrowDown");

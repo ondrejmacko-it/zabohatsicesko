@@ -29,16 +29,16 @@ export function TemplateDialog({ slots }: { slots: SlotValue[] }) {
       </button>
       {state?.ok && <ActionMessage state={state} />}
       <Modal open={open} title="Nastavit pravidelný rozvrh" onRequestClose={() => setOpen(false)} wide>
-        <p className="small">
+        <p className="hint">
           Dny a časy, kdy se akce konají každý týden. Podle nich se připraví návrhy na měsíc. Změna nic nezveřejní
           a hotové akce nemění. Víc typů v jednom dni se střídá po týdnech.
         </p>
         <form action={action} onSubmit={submitKeepingValues(action)} className="stack">
           {slots.map((slot) => (
             <fieldset key={slot.isoWeekday} className="slot">
-              <legend className="field-label">{WEEKDAYS[slot.isoWeekday]}</legend>
+              <legend className="slot-day">{WEEKDAYS[slot.isoWeekday]}</legend>
               <input type="hidden" name="weekday" value={slot.isoWeekday} />
-              <div className="row">
+              <div className="slot-time">
                 <label className="check">
                   <input type="checkbox" name={`active-${slot.isoWeekday}`} defaultChecked={slot.active} />
                   <span>Používat</span>
@@ -52,14 +52,15 @@ export function TemplateDialog({ slots }: { slots: SlotValue[] }) {
                   <input className="input" type="time" name={`end-${slot.isoWeekday}`} defaultValue={slot.endTime} required />
                 </label>
               </div>
-              <div className="row">
+              <fieldset className="slot-types">
+                <legend className="field-label">Typy akcí</legend>
                 {REGULAR_TYPES.map((type) => (
-                  <label key={type} className="check">
+                  <label key={type} className="check-chip">
                     <input type="checkbox" name={`types-${slot.isoWeekday}`} value={type} defaultChecked={slot.types.includes(type)} />
                     <span>{TYPE_LABELS[type]}</span>
                   </label>
                 ))}
-              </div>
+              </fieldset>
             </fieldset>
           ))}
           {state && !state.ok && <ActionMessage state={state} />}

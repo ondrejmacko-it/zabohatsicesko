@@ -41,7 +41,7 @@ test.describe("okna správce", () => {
     await page.getByRole("button", { name: /^Připravit měsíc/ }).click();
     const prepare = dialog(page, /Připravit měsíc:/);
     // Tři kroky v pořadí, bez diagnostiky Kalendáře.
-    await expect(prepare.getByRole("heading", { level: 3 })).toHaveText(["1. Doplnit termíny", "2. Zkontrolovat", "3. Zveřejnit"]);
+    await expect(prepare.getByRole("heading", { level: 3 })).toHaveText(["1 Doplnit termíny", "2 Zkontrolovat", "3 Zveřejnit"]);
     await expect(prepare.getByRole("button", { name: "Doplnit chybějící termíny" })).toBeVisible();
     await expect(prepare.getByText(/Párování|spárováno/)).toHaveCount(0);
 
