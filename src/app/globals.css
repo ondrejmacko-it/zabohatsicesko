@@ -638,6 +638,13 @@ a.item-card:hover {
   font-size: 12px;
 }
 
+/* Nápověda, na které záleží výsledek (co se přepíše, kdo pozvánku nedostane, limit souboru), je čitelnější (C-01).
+   Ostatní nápovědy zůstávají drobné a tlumené, aby formulář nezhoustl. */
+.field-hint-key {
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+
 .input,
 .select,
 .textarea {
@@ -3125,8 +3132,6 @@ p.cal-status {
 .invitees,
 .invitees-none {
   margin: 0;
-  font-size: 13px;
-  color: var(--muted);
 }
 
 .invitees-names {

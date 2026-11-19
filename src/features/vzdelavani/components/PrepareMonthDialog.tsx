@@ -327,7 +327,7 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
           <button type="button" className="btn" onClick={fillLeads} disabled={!bulkLead || leadTargets === 0}>
             {leadTargets ? `Doplnit do ${plural(leadTargets, "řádku", "řádků", "řádků")}` : "Doplnit"}
           </button>
-          <p className="field-hint" id="prepare-bulk-hint">
+          <p className="field-hint field-hint-key" id="prepare-bulk-hint">
             {leadTargets
               ? `Doplní se jen ${plural(leadTargets, "řádek", "řádky", "řádků")} bez vedoucího, vyplněné vedoucí se nepřepíšou.`
               : "Všechny návrhy už vedoucího mají."}

@@ -449,7 +449,7 @@ function EventForm({
         </label>
       </div>
       {termLocked && <p className="field-hint span-2">Akce už proběhla, termín zůstává.</p>}
-      {duplicateOf && <p className="field-hint span-2">Navržené datum, zkontrolujte.</p>}
+      {duplicateOf && <p className="field-hint field-hint-key span-2">Navržené datum, zkontrolujte.</p>}
       {unusualDay && !termLocked && (
         <p className="notice notice-danger span-2" role="alert">
           <strong>{ON_WEEKDAY[weekday!]} se vzdělávání běžně nekoná.</strong> V Plánu bude akce jako řádek pod týdnem.
@@ -645,7 +645,7 @@ function guestCountLabel(count: number): string {
  */
 function InviteeList({ invite, audience }: { invite: InviteRecipients; audience: EventFormValues["audience"] }) {
   const guests = invite.recipients[audience];
-  if (guests.length === 0) return <p className="field-hint invitees-none">Ze skupiny {GROUP_LABELS[audience]} zatím pozvánku nedostane nikdo.</p>;
+  if (guests.length === 0) return <p className="field-hint field-hint-key invitees-none">Ze skupiny {GROUP_LABELS[audience]} zatím pozvánku nedostane nikdo.</p>;
   const names = guests.map((g) => g.name || g.email);
   const shown = names.slice(0, SHOWN_GUESTS);
   const rest = names.slice(SHOWN_GUESTS);
@@ -655,7 +655,7 @@ function InviteeList({ invite, audience }: { invite: InviteRecipients; audience:
       <div className="invitees-names">
         {shown.join(", ")}
         {rest.length > 0 && <> a další {rest.length}</>}
-        {invite.attendeeSource === "allowlist" && <span className="field-hint"> · testovací režim, jen povolené adresy</span>}
+        {invite.attendeeSource === "allowlist" && <span className="field-hint field-hint-key"> · testovací režim, jen povolené adresy</span>}
       </div>
     </details>
   );

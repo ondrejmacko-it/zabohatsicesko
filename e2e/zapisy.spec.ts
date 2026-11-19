@@ -17,6 +17,10 @@ test.describe("Zápisy: od nahrávky ke zveřejnění @desktop", () => {
     await expect(dialog).toContainText("Automatický přepis zatím umí jen jednu ukázkovou nahrávku");
     await expect(dialog.getByRole("link", { name: "Stáhnout ukázkovou nahrávku" })).toBeVisible();
 
+    // C-01: limit souboru rozhoduje, jestli nahrání projde, proto čitelná nápověda (13 px, tmavší text).
+    const fileHint = dialog.locator(".field-hint-key").first();
+    await expect(fileHint).toHaveCSS("font-size", "13px");
+    await expect(fileHint).toHaveCSS("color", "rgb(74, 70, 66)");
     await dialog.getByLabel("Soubor s nahrávkou").setInputFiles("public/demo/testovaci-nahravka.wav");
     await expect(dialog).toContainText("Přiřadí se k akci");
     await expect(dialog).toContainText("testovaci-nahravka.wav ·");

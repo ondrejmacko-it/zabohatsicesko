@@ -60,7 +60,7 @@ export function FilePicker({
           {file ? `${file.name} · ${formatSize(file.size)}` : "Soubor není vybraný."}
         </span>
       </div>
-      <span className="field-hint" id={`${id}-hint`}>
+      <span className="field-hint field-hint-key" id={`${id}-hint`}>
         {hint}
       </span>
       {tooLarge && <p className="notice notice-danger">{tooLargeText}</p>}

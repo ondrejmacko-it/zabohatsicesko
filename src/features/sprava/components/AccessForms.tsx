@@ -125,7 +125,7 @@ export function InviteLink({ link }: { link: string }) {
           {copied ? "Zkopírováno" : "Kopírovat"}
         </button>
       </div>
-      <p className="field-hint">Odkaz funguje jednou a jen na zařízení, kde ho kolega otevře. Pošlete ho jen jemu.</p>
+      <p className="field-hint field-hint-key">Odkaz funguje jednou a jen na zařízení, kde ho kolega otevře. Pošlete ho jen jemu.</p>
     </div>
   );
 }
