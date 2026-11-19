@@ -104,6 +104,9 @@ test.describe("okno akce: ochrana neuložených změn", () => {
     await topic.fill("Rozepsané téma");
     await add.getByRole("button", { name: "Zavřít", exact: true }).click();
     await expect(confirm).toBeVisible();
+    // Bez názvu nejde uložit: potvrzení uložení nenabídne a formulář pod ním nehlásí chyby (uživatel nic neukládal).
+    await expect(confirm.getByRole("button", { name: "Uložit jako návrh" })).toHaveCount(0);
+    await expect(add.getByText("Akci zatím nejde uložit")).toHaveCount(0);
     await confirm.getByRole("button", { name: "Pokračovat v úpravách" }).click();
     await expect(add).toBeVisible();
     await expect(topic).toHaveValue("Rozepsané téma");

@@ -35,6 +35,11 @@ function fieldsFingerprint(root: HTMLElement): string {
   return [...fields].map((field) => (field instanceof HTMLInputElement && (field.type === "checkbox" || field.type === "radio") ? String(field.checked) : field.value)).join("\u0001");
 }
 
+/** Platnost formuláře bez události `invalid` (na rozdíl od `checkValidity()`). */
+function formIsValid(form: HTMLFormElement): boolean {
+  return Array.from(form.elements).every((element) => !("validity" in element) || (element as HTMLInputElement).validity.valid);
+}
+
 /**
  * Vrátí fokus tam, odkud se okno otevřelo. Položka zavřeného menu je skrytá a fokus by nepřijala,
  * proto se fokus vrátí na tlačítko menu.
@@ -77,9 +82,11 @@ export function Modal({ open, title, onRequestClose, children, wide, selfGuarded
   if (!shown) return null;
 
   // Bezpečné uložení nabídne potvrzení jen tehdy, když ho okno má (`data-confirm-save`) a formulář je platný.
+  // Platnost se čte z `validity` polí, ne přes `checkValidity()`: ta spouští událost `invalid` a formulář by
+  // pod potvrzením ukázal souhrn chyb, i když uživatel nic ukládat nechtěl.
   const saveButton = () => {
     const button = ref.current?.querySelector<HTMLButtonElement>("button[data-confirm-save]");
-    return button && !button.disabled && button.form?.checkValidity() ? button : null;
+    return button && !button.disabled && button.form && formIsValid(button.form) ? button : null;
   };
 
   const requestClose = () => {
