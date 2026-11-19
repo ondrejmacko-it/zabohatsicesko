@@ -111,8 +111,6 @@ function ProposeForm({ groups, onClose }: { groups: Group[]; onClose: () => void
 export type TopicManageProps = {
   topic: { id: string; name: string; audience: string; priorityRank?: number | null };
   groups: Group[];
-  /** Je volné pořadí pro další garantované téma (nejvýš 3). */
-  canGuarantee: boolean;
   canMoveUp: boolean;
   canMoveDown: boolean;
 };
@@ -121,7 +119,7 @@ export type TopicManageProps = {
  * Správa tématu v jedné nabídce ⋯: Naplánovat téma, Upravit, Nastavit / Zrušit prioritu, Posunout výš / níž
  * (vedle přetažení úchytem další cesta bez myši) a pod čarou Archivovat s potvrzením.
  */
-export function TopicManage({ topic, groups, canGuarantee, canMoveUp, canMoveDown }: TopicManageProps) {
+export function TopicManage({ topic, groups, canMoveUp, canMoveDown }: TopicManageProps) {
   const [dialog, setDialog] = useState<"edit" | "plan" | null>(null);
   const guaranteed = topic.priorityRank != null;
   return (
@@ -135,15 +133,13 @@ export function TopicManage({ topic, groups, canGuarantee, canMoveUp, canMoveDow
           <Icon name="pencil" />
           Upravit téma
         </button>
-        {(guaranteed || canGuarantee) && (
-          <ActionForm
-            action={setTopicPriorityAction}
-            fields={{ topicId: topic.id, guaranteed: guaranteed ? "false" : "true" }}
-            label={guaranteed ? "Zrušit prioritu" : "Nastavit prioritu"}
-            pendingLabel="Ukládám…"
-            icon="star"
-          />
-        )}
+        <ActionForm
+          action={setTopicPriorityAction}
+          fields={{ topicId: topic.id, guaranteed: guaranteed ? "false" : "true" }}
+          label={guaranteed ? "Zrušit prioritu" : "Nastavit prioritu"}
+          pendingLabel="Ukládám…"
+          icon="star"
+        />
         {canMoveUp && <ActionForm action={moveTopicAction} fields={{ topicId: topic.id, direction: "up" }} label="Posunout výš" pendingLabel="Posouvám…" icon="arrowUp" />}
         {canMoveDown && <ActionForm action={moveTopicAction} fields={{ topicId: topic.id, direction: "down" }} label="Posunout níž" pendingLabel="Posouvám…" icon="arrowDown" />}
         <hr className="menu-divider" />

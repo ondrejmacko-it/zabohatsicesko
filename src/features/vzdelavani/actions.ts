@@ -43,6 +43,7 @@ import {
 } from "@/server/services/recordings";
 import {
   moveTopic,
+  placeTopic,
   proposeTopic,
   resetTopicOrder,
   setInterest,
@@ -588,6 +589,27 @@ export async function moveTopicAction(_prev: ActionResult | null, formData: Form
       .refine((d) => d.direction !== undefined || d.to !== undefined)
       .parse(formObject(formData));
     await moveTopic(user, data.topicId, data.to ?? data.direction!, data.expected?.split(",").filter(Boolean));
+    return { ok: true };
+  });
+}
+
+/**
+ * Přetažení tématu na stránce Témata, i mezi garantovanými a ostatními. Jedna operace po puštění:
+ * `section` a `to` je cíl, `expectedGuaranteed` a `expectedOthers` pořadí, které správce viděl (souběh).
+ */
+export async function placeTopicAction(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
+  return run(async (user) => {
+    const ids = z.string().max(8000).transform((v) => v.split(",").filter(Boolean));
+    const data = z
+      .object({
+        topicId: z.string().max(80),
+        section: z.enum(["guaranteed", "other"]),
+        to: z.coerce.number().int().min(0).max(500),
+        expectedGuaranteed: ids,
+        expectedOthers: ids,
+      })
+      .parse(formObject(formData));
+    await placeTopic(user, data.topicId, data.section, data.to, { guaranteed: data.expectedGuaranteed, others: data.expectedOthers });
     return { ok: true };
   });
 }

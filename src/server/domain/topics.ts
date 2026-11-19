@@ -95,14 +95,11 @@ export function topicFitsAudience(topicAudience: string, eventAudience: string):
 
 // ——— Garantovaná témata a ruční pořadí ———
 
-/** Nejvýš tolik témat může být garantovaných (pořadí 1 až 3). */
-export const MAX_PRIORITY = 3;
-
 type Ordered = Pick<TopicStat, "id" | "name" | "interestCount" | "priorityRank" | "manualRank">;
 
 export const isGuaranteed = (topic: { priorityRank?: number | null }): boolean => topic.priorityRank != null;
 
-/** Garantovaná témata podle pořadí 1–3. */
+/** Garantovaná témata podle pořadí (1..n, počet není omezený). */
 export function guaranteedTopics<T extends Ordered>(topics: readonly T[]): T[] {
   return topics.filter(isGuaranteed).sort((a, b) => a.priorityRank! - b.priorityRank!);
 }
@@ -120,11 +117,33 @@ export function otherTopics<T extends Ordered>(topics: readonly T[]): T[] {
 export const hasManualOrder = (topics: readonly Pick<TopicStat, "priorityRank" | "manualRank">[]): boolean =>
   topics.some((t) => !isGuaranteed(t) && t.manualRank != null);
 
-/** Nejnižší volné pořadí garantovaného tématu, nebo null, když jsou obsazená všechna tři. */
-export function nextFreePriority(topics: readonly Pick<TopicStat, "priorityRank">[]): number | null {
-  const taken = new Set(topics.map((t) => t.priorityRank));
-  for (let rank = 1; rank <= MAX_PRIORITY; rank += 1) if (!taken.has(rank)) return rank;
-  return null;
+/** Pořadí pro nově garantované téma: na konec garantovaných (pořadí jsou vždy sesypaná na 1..n). */
+export function nextFreePriority(topics: readonly Pick<TopicStat, "priorityRank">[]): number {
+  return topics.reduce((max, t) => Math.max(max, t.priorityRank ?? 0), 0) + 1;
+}
+
+export type TopicSection = "guaranteed" | "other";
+
+/**
+ * Přetažení tématu na cílovou pozici v garantovaných nebo ostatních. Vrátí nové pořadí obou seznamů,
+ * nebo null, když se nic nemění (stejné místo, téma v žádném seznamu není). Ostatní témata si zachovají
+ * vzájemné pořadí, index mimo rozsah se ořízne na začátek nebo konec cílového seznamu.
+ */
+export function placeInSections(
+  order: { guaranteed: readonly string[]; others: readonly string[] },
+  id: string,
+  section: TopicSection,
+  index: number,
+): { guaranteed: string[]; others: string[] } | null {
+  const from: TopicSection | null = order.guaranteed.includes(id) ? "guaranteed" : order.others.includes(id) ? "other" : null;
+  if (!from) return null;
+  const guaranteed = order.guaranteed.filter((t) => t !== id);
+  const others = order.others.filter((t) => t !== id);
+  const target = section === "guaranteed" ? guaranteed : others;
+  const to = Math.min(target.length, Math.max(0, Math.trunc(index)));
+  if (from === section && (section === "guaranteed" ? order.guaranteed : order.others).indexOf(id) === to) return null;
+  target.splice(to, 0, id);
+  return { guaranteed, others };
 }
 
 /**
@@ -157,7 +176,9 @@ export function recommendTopics<T extends { id: string; audience: string; intere
     .filter(({ topic }) => isRecommendable(topic) && topicFitsAudience(topic.audience, eventAudience))
     .sort(
       (a, b) =>
-        (a.topic.priorityRank ?? MAX_PRIORITY + 1) - (b.topic.priorityRank ?? MAX_PRIORITY + 1) ||
+        // Garantované vždy před ostatními bez ohledu na číslo pořadí, mezi sebou podle pořadí.
+        Number(!isGuaranteed(a.topic)) - Number(!isGuaranteed(b.topic)) ||
+        (a.topic.priorityRank ?? 0) - (b.topic.priorityRank ?? 0) ||
         Number(a.topic.audience !== eventAudience) - Number(b.topic.audience !== eventAudience) ||
         a.index - b.index,
     )

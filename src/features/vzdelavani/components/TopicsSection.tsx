@@ -11,7 +11,6 @@ import {
   hasManualOrder,
   interestedLabel,
   mostWantedIds,
-  nextFreePriority,
   otherTopics,
   sortByInterest,
   type RankedTopic,
@@ -24,7 +23,6 @@ type RowContext = {
   groups: Group[];
   mostWanted: Set<string>;
   interested: Map<string, string[]> | null;
-  canGuarantee: boolean;
   label: (g: string) => string;
 };
 
@@ -78,7 +76,7 @@ function topicItem(t: RankedTopic, index: number, count: number, ctx: RowContext
       </div>
       <div className="topic-actions">
         <InterestButton topicId={t.id} interested={t.interestedByViewer} titleId={`tema-${t.id}`} />
-        {ctx.organizer && <TopicManage topic={t} groups={ctx.groups} canGuarantee={ctx.canGuarantee} canMoveUp={index > 0} canMoveDown={index < count - 1} />}
+        {ctx.organizer && <TopicManage topic={t} groups={ctx.groups} canMoveUp={index > 0} canMoveDown={index < count - 1} />}
       </div>
     </>
     ),
@@ -86,7 +84,7 @@ function topicItem(t: RankedTopic, index: number, count: number, ctx: RowContext
 }
 
 /**
- * Témata: nahoře garantovaná (pořadí 1–3 určuje správce), pod nimi ostatní podle zájmu, případně v ručním
+ * Témata: nahoře garantovaná (pořadí určuje správce, počet není omezený), pod nimi ostatní podle zájmu, případně v ručním
  * pořadí správce. Štítek Nejžádanější zůstává vázaný na skutečný počet zájemců v celém seznamu.
  * Správa je v nabídce u každého řádku.
  */
@@ -109,8 +107,6 @@ export async function TopicsSection({ user }: { user: Viewer }) {
     groups,
     mostWanted: mostWantedIds(topics),
     interested,
-    // Volné pořadí počítá z nearchivovaných témat celé organizace: správce vidí všechna.
-    canGuarantee: nextFreePriority(topics) !== null,
     label: (g: string) => GROUP_LABELS[g as Group] ?? g,
   };
   const label = ctx.label;
@@ -141,7 +137,6 @@ export async function TopicsSection({ user }: { user: Viewer }) {
               </h3>
               <p className="item-meta">
                 Při plánování se nabízejí jako první, v tomto pořadí a bez ohledu na počet zájemců.
-                {organizer && ` Nastaveno ${guaranteed.length} ze 3.`}
               </p>
               <TopicOrderList
                 ordered
@@ -153,7 +148,7 @@ export async function TopicsSection({ user }: { user: Viewer }) {
           )}
           {organizer && guaranteed.length === 0 && (
             <p className="notice topic-priority-hint">
-              Zatím nejsou nastavená garantovaná témata. Vyberte až tři, která se mají probrat přednostně: v nabídce tématu zvolte Nastavit prioritu.
+              Zatím nejsou nastavená garantovaná témata. Vyberte ta, která se mají probrat přednostně: v nabídce tématu zvolte Nastavit prioritu.
             </p>
           )}
           {others.length > 0 && (

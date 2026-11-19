@@ -31,6 +31,11 @@ async function connect(): Promise<Db> {
 
 const MIGRATION_LOCK = 724_001;
 
+/** ID migrací povolených pro vzdálenou databázi (viz `approval` v migrations.ts). */
+function approvedMigrations(): Set<string> {
+  return new Set((process.env.APPROVED_MIGRATIONS ?? "").split(",").map((id) => id.trim()).filter(Boolean));
+}
+
 /**
  * Aplikuje chybějící migrace a prázdnou databázi naplní: ukázka fiktivním seedem, ostrá Wiki jen
  * pravidelným týdnem. Prázdná znamená bez uživatelů i bez šablony, aby ostrá Wiki po smazání
@@ -42,8 +47,13 @@ export async function prepareDatabase(db: Db): Promise<void> {
     await tx.execute(sql`CREATE TABLE IF NOT EXISTS schema_migrations (id text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())`);
     const applied = await queryRows<{ id: string }>(tx, sql`SELECT id FROM schema_migrations`);
     const done = new Set(applied.map((row) => row.id));
+    const approved = approvedMigrations();
     for (const migration of migrations) {
       if (done.has(migration.id)) continue;
+      if (migration.approval && config.databaseUrl && !approved.has(migration.id)) {
+        console.warn(`[db] migrace ${migration.id} čeká na schválení (APPROVED_MIGRATIONS), další se nespustí`);
+        break;
+      }
       for (const statement of migration.sql.split(/;\s*\n/).map((s) => s.trim()).filter(Boolean)) {
         await tx.execute(sql.raw(statement));
       }

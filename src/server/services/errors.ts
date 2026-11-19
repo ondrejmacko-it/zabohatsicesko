@@ -24,7 +24,7 @@ export type DomainErrorCode =
   | "not_past"
   | "holiday_locked"
   | "outside_month"
-  | "priority_full"
+  | "priority_pending_migration"
   | "text_file_type"
   | "text_too_large"
   | "text_encoding"
@@ -53,7 +53,7 @@ export const DOMAIN_ERROR_MESSAGES: Record<DomainErrorCode, string> = {
   outside_month: "Datum návrhu musí být v budoucnu a ve stejném měsíci.",
   not_past: "Nahrávku lze přidat až po skončení zveřejněné akce.",
   holiday_locked: "Státní svátek je pevně daný. Nejde přesunout ani upravit.",
-  priority_full: "Garantovaná mohou být nejvýš 3 témata. Nejdřív u jiného tématu prioritu zrušte.",
+  priority_pending_migration: "Víc než 3 garantovaná témata půjdou po schválení úpravy databáze. Zatím u jiného tématu garanci zrušte.",
   text_file_type: "Nepodporovaný formát. Nahrajte textový soubor TXT, MD, VTT nebo SRT.",
   text_too_large: "Text je příliš velký. Limit je 1 MB.",
   text_encoding: "Soubor není čitelný text v kódování UTF-8. Uložte ho jako UTF-8 a zkuste to znovu.",

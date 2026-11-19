@@ -9,11 +9,14 @@ import { events, topicInterests, topics, users } from "@/server/db/schema";
 import {
   guaranteedTopics,
   isGuaranteed,
+  hasManualOrder,
   moveInOrder,
   nextFreePriority,
   otherTopics,
+  placeInSections,
   planCandidates,
   rankTopics,
+  type TopicSection,
   type PlanEvent,
   type RankedTopic,
   type TopicStat,
@@ -206,11 +209,12 @@ async function compactPriorities(tx: Executor) {
   }
 }
 
-function isUniqueViolation(error: unknown): boolean {
+function pgErrorCode(error: unknown): string | null {
   for (let e: unknown = error; e && typeof e === "object"; e = (e as { cause?: unknown }).cause) {
-    if ((e as { code?: unknown }).code === "23505") return true;
+    const code = (e as { code?: unknown }).code;
+    if (typeof code === "string") return code;
   }
-  return false;
+  return null;
 }
 
 /** Transakce pořadí témat: souběh, který by přesto narazil na unikátní index, je běžný konflikt. */
@@ -222,7 +226,10 @@ async function orderTransaction(task: (tx: Executor) => Promise<void>): Promise<
       await task(tx);
     });
   } catch (error) {
-    if (isUniqueViolation(error)) throw new DomainError("conflict");
+    const code = pgErrorCode(error);
+    if (code === "23505") throw new DomainError("conflict");
+    // Databáze bez migrace 0015 (čeká na schválení) má ještě omezení pořadí 1–3.
+    if (code === "23514") throw new DomainError("priority_pending_migration");
     throw error;
   }
 }
@@ -238,8 +245,8 @@ async function requireActiveTopic(tx: Executor, topicId: string) {
 }
 
 /**
- * Nastaví nebo zruší garantovanou prioritu. Nové garantované téma dostane nejnižší volné pořadí (1–3),
- * čtvrté server odmítne. Zrušení ostatní pořadí sesype. Opakované nastavení nic nemění.
+ * Nastaví nebo zruší garantovanou prioritu. Nové garantované téma se zařadí na konec garantovaných
+ * (počet není omezený). Zrušení ostatní pořadí sesype. Opakované nastavení nic nemění.
  */
 export async function setTopicPriority(viewer: Viewer, topicId: string, guaranteed: boolean): Promise<void> {
   if (!isOrganizer(viewer)) throw new DomainError("forbidden");
@@ -248,8 +255,7 @@ export async function setTopicPriority(viewer: Viewer, topicId: string, guarante
     if (guaranteed === isGuaranteed(topic)) return;
     if (guaranteed) {
       const rank = nextFreePriority(await activeTopics(tx));
-      if (rank === null) throw new DomainError("priority_full");
-      await tx.update(topics).set({ priorityRank: rank }).where(eq(topics.id, topicId));
+      await tx.update(topics).set({ priorityRank: rank, manualRank: null }).where(eq(topics.id, topicId));
     } else {
       await tx.update(topics).set({ priorityRank: null }).where(eq(topics.id, topicId));
       await compactPriorities(tx);
@@ -258,11 +264,6 @@ export async function setTopicPriority(viewer: Viewer, topicId: string, guarante
   });
 }
 
-/**
- * Posun o jedno místo: garantované téma mezi garantovanými (výměna priority), ostatní téma mezi
- * ostatními (ruční pořadí). Při prvním ručním posunu se aktuální pořadí podle zájmu uloží celé,
- * aby se ostatní témata nepřeházela. Téma na kraji zůstane, kde je.
- */
 /**
  * Posune téma v jeho skupině (garantovaná / ostatní) o jedno místo, nebo na cílovou pozici (přetažení).
  * Skupinu nikdy nemění. `expected` je pořadí skupiny, jak ho viděl správce při přetažení: když se mezitím
@@ -295,6 +296,60 @@ export async function moveTopic(viewer: Viewer, topicId: string, target: "up" | 
       }
     }
     const action = typeof target === "number" ? "topic.move_to" : target === "up" ? "topic.move_up" : "topic.move_down";
+    await audit(tx, viewer.id, action, "topic", topicId);
+  });
+}
+
+/** Aktuální pořadí obou seznamů tak, jak je vidí správce na stránce Témata. */
+async function sectionOrder(tx: Executor) {
+  const all = await activeTopics(tx);
+  const counts = await interestCounts(tx);
+  const rows = all.map((t) => ({ ...t, interestCount: counts.get(t.id) ?? 0 }));
+  return { rows, guaranteed: guaranteedTopics(rows), others: otherTopics(rows) };
+}
+
+const sameIds = (a: readonly string[], b: readonly string[]) => a.length === b.length && a.every((id, i) => id === b[i]);
+
+/**
+ * Přetažení tématu na cílovou pozici, i mezi garantovanými a ostatními. Jedna transakce pod zámkem pořadí:
+ * přesun do garantovaných nastaví prioritu, přesun mezi ostatní ji zruší, oba seznamy se přečíslují
+ * a ostatní témata si zachovají vzájemné pořadí. Téma zůstává stejným řádkem (ID, zájemci, historie,
+ * akce se nemění). `expected` je pořadí obou seznamů, jak ho správce viděl: když se mezitím změnilo,
+ * server nic nezapíše a vrátí `conflict`.
+ */
+export async function placeTopic(
+  viewer: Viewer,
+  topicId: string,
+  section: TopicSection,
+  index: number,
+  expected?: { guaranteed: readonly string[]; others: readonly string[] },
+): Promise<void> {
+  if (!isOrganizer(viewer)) throw new DomainError("forbidden");
+  await orderTransaction(async (tx) => {
+    const topic = await requireActiveTopic(tx, topicId);
+    const order = await sectionOrder(tx);
+    const ids = { guaranteed: order.guaranteed.map((t) => t.id), others: order.others.map((t) => t.id) };
+    if (expected && !(sameIds(expected.guaranteed, ids.guaranteed) && sameIds(expected.others, ids.others))) throw new DomainError("conflict");
+    const next = placeInSections(ids, topicId, section, index);
+    if (!next) return;
+    const byId = new Map(order.rows.map((t) => [t.id, t]));
+
+    // Garantovaná: nejdřív všechna na prázdnou hodnotu (unikátní index nepovolí ani na okamžik dvě stejná
+    // pořadí), pak 1..n podle nového pořadí. Garantované téma nemá ruční pořadí ostatních.
+    const touched = [...new Set([...ids.guaranteed, topicId])];
+    await tx.update(topics).set({ priorityRank: null }).where(inArray(topics.id, touched));
+    for (const [i, id] of next.guaranteed.entries()) {
+      await tx.update(topics).set({ priorityRank: i + 1, ...(byId.get(id)!.manualRank != null ? { manualRank: null } : {}) }).where(eq(topics.id, id));
+    }
+    // Ostatní: pozice má smysl jen s ručním pořadím. Uloží se, když téma míří mezi ostatní nebo když ruční
+    // pořadí už existovalo (přečíslování po odchodu tématu). Jinak zůstávají řazená podle zájmu.
+    if (section === "other" || hasManualOrder(order.rows)) {
+      for (const [i, id] of next.others.entries()) {
+        if (byId.get(id)!.manualRank !== i + 1 || id === topicId) await tx.update(topics).set({ manualRank: i + 1 }).where(eq(topics.id, id));
+      }
+    }
+    const from: TopicSection = isGuaranteed(topic) ? "guaranteed" : "other";
+    const action = from === section ? "topic.move_to" : section === "guaranteed" ? "topic.priority_set" : "topic.priority_clear";
     await audit(tx, viewer.id, action, "topic", topicId);
   });
 }

@@ -1,6 +1,13 @@
 // Migrace jsou čisté SQL v kódu, aby běžely stejně lokálně (PGlite) i na hostingu
 // (Neon) bez přístupu k souborovému systému. Nové změny přidávej jako další položku.
-export const migrations: ReadonlyArray<{ id: string; sql: string }> = [
+//
+// `approval: true`: migrace běží při startu aplikace, takže by ji každý push spustil i na sdílené databázi
+// Preview. Taková migrace se na vzdálené databázi (DATABASE_URL) provede, jen když je její ID v proměnné
+// `APPROVED_MIGRATIONS` (seznam oddělený čárkou). Lokální PGlite a testy ji provedou vždy. Dokud povolená
+// není, zastaví se na ní i všechny další, aby pořadí migrací zůstalo stejné všude.
+export type Migration = { id: string; sql: string; approval?: true };
+
+export const migrations: ReadonlyArray<Migration> = [
   {
     id: "0001_init",
     sql: `
@@ -422,6 +429,18 @@ ALTER TABLE minutes ADD COLUMN approved_by text REFERENCES users(id);
 ALTER TABLE minutes ADD COLUMN approved_at timestamptz;
 UPDATE minutes SET approved_version = version, approved_by = published_by, approved_at = published_at
   WHERE status = 'published' AND approved_version IS NULL;
+`,
+  },
+  {
+    id: "0015_topic_priority_unlimited",
+    approval: true,
+    sql: `
+-- Garantovaných témat může být libovolně mnoho (dřív nejvýš 3). Pořadí zůstává 1..n a unikátní v organizaci
+-- (index topics_priority_rank_unique se nemění). Nic se nemaže ani nepřepisuje: jen se uvolní omezení
+-- a smallint se rozšíří na integer. Starší kód s novým schématem funguje dál (pořadí 1–3 jsou platná).
+ALTER TABLE topics DROP CONSTRAINT IF EXISTS topics_priority_rank_check;
+ALTER TABLE topics ALTER COLUMN priority_rank TYPE integer;
+ALTER TABLE topics ADD CONSTRAINT topics_priority_rank_positive CHECK (priority_rank >= 1);
 `,
   },
 ];
