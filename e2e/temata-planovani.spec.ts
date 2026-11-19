@@ -20,6 +20,55 @@ async function chooseInMenu(page: Page, topic: string, item: string) {
   await openMenu(page).getByRole("button", { name: item, exact: true }).click();
 }
 
+// ——— Přetažení témat ———
+const SEED_GUARANTEED = ["Otevřené otázky na schůzce", "Návaznost po konzultaci"];
+const guaranteedOf = (page: Page) => page.locator(".topic-group-guaranteed");
+const othersOf = (page: Page) => page.locator(".topic-group").filter({ has: page.getByRole("heading", { name: "Ostatní témata" }) });
+const names = (scope: Locator) => scope.locator(".item-title > span[id]").allTextContents();
+const handleOf = (page: Page, name: string) => page.getByRole("button", { name: `Změnit pořadí: ${name}`, exact: true });
+const moved = (list: string[], from: number, to: number) => {
+  const next = list.filter((_, i) => i !== from);
+  next.splice(to, 0, list[from]!);
+  return next;
+};
+
+async function pressHandle(page: Page, name: string) {
+  const box = (await handleOf(page, name).boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+}
+
+/** Jedno tažení myší na cílové místo `to` ve skupině (počítáno bez taženého tématu), puštění až nad cílem. */
+async function dragTo(page: Page, name: string, section: "guaranteed" | "other", to: number, waitForSave = true) {
+  const scope = section === "guaranteed" ? guaranteedOf(page) : othersOf(page);
+  const rest = scope.locator(".topic-row").filter({ hasNot: page.getByText(name, { exact: true }) });
+  await handleOf(page, name).scrollIntoViewIfNeeded();
+  const count = await rest.count();
+  const over = rest.nth(Math.min(to, count - 1));
+  // Úchyt i cíl musí být v okně už před stiskem, mimo pás autoscrollu (ten testuje zvlášť): střed mezi nimi do středu okna.
+  const handleBox = (await handleOf(page, name).boundingBox())!;
+  const overBox = (await over.boundingBox())!;
+  await page.evaluate((mid) => window.scrollBy(0, mid - window.innerHeight / 2), (handleBox.y + overBox.y + overBox.height) / 2);
+  await pressHandle(page, name);
+  const box = (await over.boundingBox())!;
+  await page.mouse.move(box.x + 40, box.y + box.height * (to < count ? 0.25 : 0.8), { steps: 10 });
+  await page.mouse.up();
+  if (waitForSave) await expect(page.locator(".topic-board[aria-busy=true]")).toHaveCount(0);
+}
+
+/** Pořadí se ukázalo hned a po obnovení stránky platí i ze serveru. */
+async function expectSaved(page: Page, expected: { guaranteed?: string[]; others?: string[] }) {
+  const check = async () => {
+    if (expected.guaranteed) await expect.poll(() => names(guaranteedOf(page))).toEqual(expected.guaranteed);
+    if (expected.others) await expect.poll(() => names(othersOf(page))).toEqual(expected.others);
+  };
+  await check();
+  await page.waitForLoadState("networkidle");
+  await page.reload();
+  await settle(page);
+  await check();
+}
+
 test.describe("Témata: garantovaná a ostatní", () => {
   test.use({ storageState: authFile("spravce") });
 
@@ -137,64 +186,144 @@ test.describe("Témata: zápis priority, pořadí a návrhu @desktop", () => {
   // Oba testy mění stejné sdílené pořadí, nesmí běžet souběžně.
   test.describe.configure({ mode: "serial" });
 
-  test("přetažení pořadí úchytem: myš, klávesnice a prst, jen v rámci skupiny", async ({ page, browser }, testInfo) => {
+  test("přetažení témat: dlouhý seznam, mezi skupinami, prázdná skupina, Esc, klávesnice, prst, souběh a archivace", async ({ page, browser }, testInfo) => {
     test.skip(testInfo.project.name !== "windows-1280", "zápis jen jednou");
+    test.setTimeout(240_000);
     await openTopics(page);
-    const others = page.locator(".topic-group").filter({ has: page.getByRole("heading", { name: "Ostatní témata" }) });
-    const names = () => others.locator(".item-title > span[id]").allTextContents();
-    const handle = (name: string) => page.getByRole("button", { name: `Změnit pořadí: ${name}`, exact: true });
-    // Garantovaná: pořadová čísla a úchyty; ostatní řádky bez čísel.
-    await expect(page.locator(".topic-guaranteed .topic-rank")).toHaveText(["1", "2"]);
-    await expect(others.locator(".topic-rank")).toHaveCount(0);
-    await expect(others.locator(".topic-row").first()).toBeVisible();
-    const start = await names();
-    const [first, second] = start;
-    if (!first || !second) throw new Error("test potřebuje aspoň dvě ostatní témata");
+    const guaranteedRow = (name: string) => page.locator(".topic-guaranteed .topic-row").filter({ hasText: name });
 
-    // Myš: první řádek pod druhý.
-    const from = await handle(first).boundingBox();
-    const over = await rowOf(others, second).boundingBox();
-    await page.mouse.move(from!.x + from!.width / 2, from!.y + from!.height / 2);
-    await page.mouse.down();
-    await page.mouse.move(from!.x + from!.width / 2, over!.y + over!.height * 0.8, { steps: 8 });
+    // Dlouhý seznam: 18 vlastních témat pro Tým A (nedostanou se do doporučení pro FP a RM), ostatních je pak 20.
+    const own = Array.from({ length: 18 }, (_, i) => `DnD téma ${String(i + 1).padStart(2, "0")}`);
+    const propose = page.getByRole("dialog", { name: "Navrhnout téma" });
+    for (const name of own) {
+      await page.getByRole("button", { name: "Navrhnout téma" }).click();
+      await propose.getByLabel("Téma").fill(name);
+      await propose.getByLabel("Pro skupinu").selectOption("tym-a");
+      await propose.getByRole("button", { name: "Navrhnout téma" }).click();
+      await expect(propose).toBeHidden();
+    }
+    await page.reload();
+    await settle(page);
+    expect((await names(othersOf(page))).length).toBeGreaterThanOrEqual(20);
+    expect(await names(guaranteedOf(page))).toEqual(SEED_GUARANTEED);
+
+    // Uvnitř ostatních: o 1, 3, 5 a více míst oběma směry, vždy jedním tažením a s uložením po obnovení.
+    for (const [from, to] of [[2, 3], [4, 7], [12, 7], [3, 9], [14, 6]] as const) {
+      const before = await names(othersOf(page));
+      await dragTo(page, before[from]!, "other", to);
+      await expectSaved(page, { others: moved(before, from, to) });
+    }
+
+    // Poslední → první: úchyt u spodní hrany, pak k horní hraně okna, stránka se sama posune nahoru.
+    let before = await names(othersOf(page));
+    const last = before.at(-1)!;
+    await handleOf(page, last).scrollIntoViewIfNeeded();
+    await pressHandle(page, last);
+    await page.mouse.move(640, 300, { steps: 4 });
+    await page.mouse.move(640, 4, { steps: 6 });
+    await expect.poll(() => page.evaluate(() => window.scrollY), { timeout: 10_000 }).toBe(0);
+    const firstBox = (await othersOf(page).locator(".topic-row").first().boundingBox())!;
+    await page.mouse.move(640, firstBox.y + firstBox.height * 0.25, { steps: 4 });
+    await expect(page.locator(".topic-drag-overlay")).toHaveText(last);
+    await expect(page.locator(".topic-drop-line")).toBeVisible();
     await page.mouse.up();
-    await expect(others.getByText("Pořadí upravil správce.")).toBeVisible();
-    await page.reload();
-    await settle(page);
-    expect((await names()).slice(0, 2)).toEqual([second, first]);
+    await expectSaved(page, { others: moved(before, before.length - 1, 0) });
 
-    // Klávesnice na úchytu v druhém okně: šipka nahoru vrátí téma na první místo, fokus zůstane na úchytu.
-    const other = await page.context().newPage();
-    await openTopics(other);
-    const otherHandle = other.getByRole("button", { name: `Změnit pořadí: ${first}`, exact: true });
-    await otherHandle.focus();
-    await other.keyboard.press("ArrowUp");
-    await expect(otherHandle).toBeFocused();
-    await expect(other.locator("[aria-live=polite]").filter({ hasText: `Téma ${first} je na 1. místě` })).toHaveCount(1);
-    await expect(other.locator(".topic-group .item-title > span[id]").filter({ hasText: second })).toBeVisible();
-    await other.reload();
-    await settle(other);
-    await other.close();
+    // První → poslední: k dolní hraně okna, stránka se posune dolů.
+    before = await names(othersOf(page));
+    await handleOf(page, before[0]!).scrollIntoViewIfNeeded();
+    await pressHandle(page, before[0]!);
+    await page.mouse.move(640, 400, { steps: 4 });
+    await page.mouse.move(640, 796, { steps: 6 });
+    await expect.poll(async () => (await othersOf(page).locator(".topic-row").last().boundingBox())!.y + 40 < 800, { timeout: 10_000 }).toBe(true);
+    const lastBox = (await othersOf(page).locator(".topic-row").last().boundingBox())!;
+    await page.mouse.move(640, lastBox.y + lastBox.height * 0.8, { steps: 4 });
+    await page.mouse.up();
+    await expectSaved(page, { others: moved(before, 0, before.length - 1) });
 
-    // Souběh: první okno má staré pořadí, jeho změnu server odmítne, okno vrátí a načte aktuální pořadí.
-    await handle(first).focus();
+    // Esc během tažení: nic se neuloží ani nepřesune.
+    before = await names(othersOf(page));
+    await handleOf(page, before[1]!).scrollIntoViewIfNeeded();
+    await pressHandle(page, before[1]!);
+    const target = (await othersOf(page).locator(".topic-row").nth(5).boundingBox())!;
+    await page.mouse.move(640, target.y + target.height * 0.8, { steps: 6 });
+    await page.keyboard.press("Escape");
+    await page.mouse.up();
+    await expect(page.locator(".topic-drag-overlay")).toHaveCount(0);
+    await expect(page.locator("[aria-live=polite]").filter({ hasText: "Přesun zrušen." })).toHaveCount(1);
+    await expectSaved(page, { others: before });
+
+    // Ostatní → garantovaná (na 1. místo), garantované → ostatní, garantované v rámci skupiny.
+    const promoted = own[0]!;
+    let others = await names(othersOf(page));
+    await dragTo(page, promoted, "guaranteed", 0);
+    await expectSaved(page, { guaranteed: [promoted, ...SEED_GUARANTEED], others: others.filter((n) => n !== promoted) });
+    await expect(page.locator(".topic-guaranteed .topic-rank")).toHaveText(["1", "2", "3"]);
+    await dragTo(page, promoted, "guaranteed", 2);
+    await expectSaved(page, { guaranteed: [...SEED_GUARANTEED, promoted] });
+    others = await names(othersOf(page));
+    await dragTo(page, promoted, "other", 1);
+    await expectSaved(page, { guaranteed: SEED_GUARANTEED, others: [others[0]!, promoted, ...others.slice(1)] });
+
+    // Prázdná skupina: obě garantovaná mezi ostatní, prázdná plocha je cíl, pak zpět ve stejném pořadí.
+    await dragTo(page, SEED_GUARANTEED[1]!, "other", 0);
+    await dragTo(page, SEED_GUARANTEED[0]!, "other", 0);
+    await expectSaved(page, { guaranteed: [] });
+    const empty = page.locator(".topic-group-guaranteed .topic-drop-empty");
+    await expect(empty).toBeVisible();
+    await pressHandle(page, SEED_GUARANTEED[0]!);
+    const zone = (await empty.boundingBox())!;
+    await page.mouse.move(640, zone.y + zone.height / 2, { steps: 8 });
+    await expect(empty).toHaveClass(/is-target/);
+    await page.mouse.up();
+    await expectSaved(page, { guaranteed: [SEED_GUARANTEED[0]!] });
+    await dragTo(page, SEED_GUARANTEED[1]!, "guaranteed", 1);
+    await expectSaved(page, { guaranteed: SEED_GUARANTEED });
+    await expect(rowOf(guaranteedOf(page), SEED_GUARANTEED[0]!).getByText("Nejžádanější")).toBeVisible();
+
+    // Klávesnice: šipka dolů u posledního garantovaného ho přesune mezi ostatní, šipka nahoru zpět. Fokus zůstává.
+    const kb = handleOf(page, SEED_GUARANTEED[1]!);
+    await kb.focus();
+    await page.keyboard.press("ArrowDown");
+    await expect(page.locator("[aria-live=polite]").filter({ hasText: "už není garantované" })).toHaveCount(1);
+    await expect(kb).toBeFocused();
+    await expect(guaranteedRow(SEED_GUARANTEED[1]!)).toHaveCount(0);
+    // Další přesun až po uložení předchozího (během ukládání seznam další přesun nepřijme).
+    await expect(page.locator(".topic-board[aria-busy=true]")).toHaveCount(0);
     await page.keyboard.press("ArrowUp");
-    await expect(page.getByRole("alert").filter({ hasText: "změnil někdo jiný" })).toBeVisible();
-    await expect.poll(names).toEqual(start);
-    await page.reload();
-    await settle(page);
-    expect(await names()).toEqual(start);
+    await expect(guaranteedRow(SEED_GUARANTEED[1]!)).toHaveCount(1);
+    await expect(kb).toBeFocused();
+    await expectSaved(page, { guaranteed: SEED_GUARANTEED });
 
-    // Prst na telefonu (390 px): úchyt prvního tématu pod druhé, stránka se přitom neposune.
+    // Souběh: druhé okno změní pořadí, první má staré a jeho přetažení server odmítne, okno vrátí a načte aktuální.
+    const second = await page.context().newPage();
+    await openTopics(second);
+    before = await names(othersOf(page));
+    await dragTo(second, before[0]!, "other", 2);
+    await expectSaved(second, { others: moved(before, 0, 2) });
+    await dragTo(page, before[3]!, "other", 0, false);
+    await expect(page.getByRole("alert").filter({ hasText: "změnil někdo jiný" })).toBeVisible();
+    await expect.poll(() => names(othersOf(page))).toEqual(moved(before, 0, 2));
+    await second.close();
+
+    // Po archivaci tématu se přetahuje v aktuálním seznamu.
+    await chooseInMenu(page, own[17]!, "Archivovat…");
+    await page.getByRole("dialog", { name: "Archivovat téma" }).getByRole("button", { name: "Archivovat téma" }).click();
+    await expect(rowOf(othersOf(page), own[17]!)).toHaveCount(0);
+    before = await names(othersOf(page));
+    await dragTo(page, before.at(-1)!, "other", before.length - 6);
+    await expectSaved(page, { others: moved(before, before.length - 1, before.length - 6) });
+
+    // Prst na telefonu (390 px): úchyt o dva řádky dolů, stránka se pod prstem neposune.
     const phone = await browser.newContext({ storageState: authFile("spravce"), viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
     const mobile = await phone.newPage();
     await openTopics(mobile);
-    const mobileOthers = mobile.locator(".topic-group").filter({ has: mobile.getByRole("heading", { name: "Ostatní témata" }) });
-    const mobileHandle = mobile.getByRole("button", { name: `Změnit pořadí: ${first}`, exact: true });
+    before = await names(othersOf(mobile));
+    const mobileHandle = handleOf(mobile, before[0]!);
     await mobileHandle.scrollIntoViewIfNeeded();
     const cdp: CDPSession = await phone.newCDPSession(mobile);
     const a = (await mobileHandle.boundingBox())!;
-    const b = (await rowOf(mobileOthers, second).boundingBox())!;
+    const b = (await othersOf(mobile).locator(".topic-row").nth(2).boundingBox())!;
     const scrollBefore = await mobile.evaluate(() => window.scrollY);
     const x = a.x + a.width / 2;
     await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y: a.y + a.height / 2 }] });
@@ -205,17 +334,21 @@ test.describe("Témata: zápis priority, pořadí a návrhu @desktop", () => {
     }
     await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
     expect(await mobile.evaluate(() => window.scrollY)).toBe(scrollBefore);
-    await expect(mobileOthers.locator(".item-title > span[id]").nth(1)).toHaveText(first);
+    await expectSaved(mobile, { others: moved(before, 0, 2) });
     await expectNoHorizontalScroll(mobile);
     await phone.close();
 
-    // Úklid: zpět podle zájmu.
+    // Úklid: vlastní témata do archivu, ostatní zpět podle zájmu, garantovaná jako v seedu.
     await page.reload();
     await settle(page);
-    expect((await names()).slice(0, 2)).toEqual([second, first]);
-    await others.getByRole("button", { name: "Seřadit podle zájmu" }).click();
-    await expect(others.getByText("Pořadí upravil správce.")).toBeHidden();
-    expect(await names()).toEqual(start);
+    for (const name of own.slice(0, 17)) {
+      await chooseInMenu(page, name, "Archivovat…");
+      await page.getByRole("dialog", { name: "Archivovat téma" }).getByRole("button", { name: "Archivovat téma" }).click();
+      await expect(rowOf(othersOf(page), name)).toHaveCount(0);
+    }
+    await othersOf(page).getByRole("button", { name: "Seřadit podle zájmu" }).click();
+    await expect(othersOf(page).getByText("Pořadí upravil správce.")).toBeHidden();
+    expect(await names(guaranteedOf(page))).toEqual(SEED_GUARANTEED);
   });
 
   test("nastavit a zrušit prioritu, posunout a vrátit pořadí, přidat téma do návrhu", async ({ page }, testInfo) => {

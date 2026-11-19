@@ -2212,8 +2212,6 @@ a.brief-link:hover {
   border-top: 1px solid var(--line);
 }
 
-/* Jeden vizuální signál na kategorii: garantovaná mají ochrový pruh, Nejžádanější je jen textový štítek
-   (bez podbarvení řádku), skupiny odděluje nadpis a linka. */
 
 .topic-main {
   display: flex;
@@ -2286,11 +2284,77 @@ a.brief-link:hover {
   user-select: none;
 }
 
-.topic-list > .topic-row.topic-dragged {
+/* Tažení: řádek zůstává na místě jako zástupné místo, ukazatel sleduje náhled, linka ukazuje místo vložení.
+   Linka je absolutně v `.topic-board`, náhled `fixed` u ukazatele; polohu jim dává `TopicBoard`. */
+.topic-board {
   position: relative;
-  z-index: 1;
+}
+
+.topic-list > .topic-row.topic-dragged {
+  background: var(--band);
+  box-shadow: none;
+}
+
+.topic-row.topic-dragged > * {
+  opacity: 0.35;
+}
+
+.topic-drop-line {
+  position: absolute;
+  top: -2px;
+  left: 0;
+  right: 0;
+  z-index: 3;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--ochre);
+  pointer-events: none;
+}
+
+.topic-drag-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
   background: var(--surface);
-  box-shadow: 0 4px 14px color-mix(in srgb, var(--ink) 18%, transparent), inset 3px 0 0 var(--ochre);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--ink) 22%, transparent);
+  color: var(--ink);
+  font-weight: 650;
+  pointer-events: none;
+}
+
+.topic-drag-overlay > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topic-drop-empty {
+  padding: 16px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius);
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.topic-group-guaranteed .topic-drop-empty {
+  border-color: var(--draft-line);
+  background: color-mix(in srgb, var(--ochre-soft) 60%, transparent);
+}
+
+.topic-drop-empty.is-target {
+  border: 2px solid var(--ochre);
+  padding: 15px;
+  background: var(--ochre-soft);
+  color: var(--ink);
 }
 
 .topic-order-error {
@@ -2308,12 +2372,37 @@ a.brief-link:hover {
   font-size: 1rem;
 }
 
+.topic-group-guaranteed .topic-group-title {
+  color: var(--ochre-dark);
+  font-size: 1.0625rem;
+}
+
 .topic-group > .item-meta {
   margin: 0 0 8px;
 }
 
+/* Tři úrovně (P1-2): garantovaná mají teplý okrový podklad a ochrový pruh, ostatní neutrální, Nejžádanější
+   mezi ostatními zelený pruh a štítek. Garantované a zároveň nejžádanější: hlavní tón zůstává okrový, jen štítek. */
+.topic-list.topic-guaranteed {
+  border-color: var(--draft-line);
+  background: var(--ochre-soft);
+}
+
 .topic-list.topic-guaranteed > .topic-row {
-  box-shadow: inset 3px 0 0 var(--ochre);
+  box-shadow: inset 4px 0 0 var(--ochre);
+}
+
+.topic-list.topic-guaranteed > .topic-row + .topic-row {
+  border-top-color: color-mix(in srgb, var(--draft-line) 70%, transparent);
+}
+
+.topic-list.topic-guaranteed .topic-rank,
+.topic-list.topic-guaranteed .topic-handle {
+  color: var(--ochre-dark);
+}
+
+.topic-list:not(.topic-guaranteed) > .topic-row.topic-wanted {
+  box-shadow: inset 4px 0 0 var(--ok);
 }
 
 .topic-intro {

@@ -84,6 +84,28 @@ describe("garantovaná témata a ruční pořadí: pravidla", () => {
     expect(placeInSections(order, "x", "other", 0)).toBeNull();
   });
 
+  test("přetažení jedním krokem z libovolné pozice na libovolnou v seznamech 1, 3, 10 a 25 témat", () => {
+    for (const size of [1, 3, 10, 25]) {
+      const others = Array.from({ length: size }, (_, i) => `o${i}`);
+      const order = { guaranteed: ["g1"], others };
+      for (let from = 0; from < size; from++) {
+        for (let to = 0; to < size; to++) {
+          const next = placeInSections(order, `o${from}`, "other", to);
+          if (from === to) {
+            expect(next).toBeNull();
+            continue;
+          }
+          expect(next!.others.indexOf(`o${from}`)).toBe(to);
+          expect(next!.others.filter((id) => id !== `o${from}`)).toEqual(others.filter((id) => id !== `o${from}`));
+          expect(next!.guaranteed).toEqual(["g1"]);
+        }
+        // Do garantovaných na začátek i konec, ostatní drží vzájemné pořadí.
+        expect(placeInSections(order, `o${from}`, "guaranteed", 0)!.guaranteed).toEqual([`o${from}`, "g1"]);
+        expect(placeInSections(order, `o${from}`, "guaranteed", 1)!.guaranteed).toEqual(["g1", `o${from}`]);
+      }
+    }
+  });
+
   test("doporučení: garantované s vysokým pořadím předběhne téma s velkým zájmem", () => {
     const ranked = [topic("zajem", { interestCount: 50 }), topic("garant-7", { interestCount: 0, priorityRank: 7 }), topic("garant-2", { interestCount: 0, priorityRank: 2 })];
     expect(recommendTopics(ranked, "fp").map((t) => t.id)).toEqual(["garant-2", "garant-7", "zajem"]);

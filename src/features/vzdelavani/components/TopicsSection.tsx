@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ActionForm } from "@/components/ActionForm";
 import { resetTopicOrderAction } from "@/features/vzdelavani/actions";
-import { TopicOrderList, type TopicOrderItem } from "@/features/vzdelavani/components/TopicOrderList";
+import { TopicBoard, type TopicOrderItem } from "@/features/vzdelavani/components/TopicBoard";
 import { InterestButton, ProposeTopicDialog, RestoreTopicButton, TopicManage } from "@/features/vzdelavani/components/TopicActions";
 import { GROUP_LABELS } from "@/lib/labels";
 import { formatDayMonth } from "@/lib/time";
@@ -130,51 +130,37 @@ export async function TopicsSection({ user }: { user: Viewer }) {
         </div>
       ) : (
         <>
-          {guaranteed.length > 0 && (
-            <div className="topic-group" aria-labelledby="temata-garantovana">
-              <h3 id="temata-garantovana" className="topic-group-title">
-                Garantovaná témata
-              </h3>
-              <p className="item-meta">
-                Při plánování se nabízejí jako první, v tomto pořadí a bez ohledu na počet zájemců.
-              </p>
-              <TopicOrderList
-                ordered
-                sortable={organizer && guaranteed.length > 1}
-                className="topic-list topic-guaranteed"
-                items={guaranteed.map((t, index) => topicItem(t, index, guaranteed.length, ctx))}
-              />
-            </div>
-          )}
-          {organizer && guaranteed.length === 0 && (
-            <p className="notice topic-priority-hint">
-              Zatím nejsou nastavená garantovaná témata. Vyberte ta, která se mají probrat přednostně: v nabídce tématu zvolte Nastavit prioritu.
-            </p>
-          )}
-          {others.length > 0 && (
-            <div className="topic-group" aria-labelledby={guaranteed.length > 0 ? "temata-ostatni" : undefined}>
-              {guaranteed.length > 0 && (
-                <h3 id="temata-ostatni" className="topic-group-title">
-                  Ostatní témata
+          <TopicBoard
+            sortable={organizer}
+            guaranteed={guaranteed.map((t, index) => topicItem(t, index, guaranteed.length, ctx))}
+            others={others.map((t, index) => topicItem(t, index, others.length, ctx))}
+            guaranteedHead={
+              <>
+                <h3 id="temata-garantovana" className="topic-group-title">
+                  Garantovaná témata
                 </h3>
-              )}
-              {manualOrder && (
-                <div className="topic-order-note">
-                  <p className="item-meta">Pořadí upravil správce. Nová témata přibývají na konec.</p>
-                  {organizer && <ActionForm action={resetTopicOrderAction} label="Seřadit podle zájmu" pendingLabel="Řadím…" small />}
-                </div>
-              )}
-              <TopicOrderList
-                ordered={false}
-                sortable={organizer && others.length > 1}
-                className="topic-list"
-                items={others.map((t, index) => topicItem(t, index, others.length, ctx))}
-              />
-            </div>
-          )}
+                <p className="item-meta">Při plánování se nabízejí jako první, v tomto pořadí.</p>
+              </>
+            }
+            othersHead={
+              <>
+                {(organizer || guaranteed.length > 0) && (
+                  <h3 id="temata-ostatni" className="topic-group-title">
+                    Ostatní témata
+                  </h3>
+                )}
+                {manualOrder && (
+                  <div className="topic-order-note">
+                    <p className="item-meta">Pořadí upravil správce. Nová témata přibývají na konec.</p>
+                    {organizer && <ActionForm action={resetTopicOrderAction} label="Seřadit podle zájmu" pendingLabel="Řadím…" small />}
+                  </div>
+                )}
+              </>
+            }
+          />
           {organizer && (
             <p id="tema-poradi-napoveda" className="visually-hidden">
-              Pořadí změníte přetažením úchytu, nebo šipkami nahoru a dolů. Přesouvá se jen v rámci skupiny.
+              Pořadí změníte přetažením úchytu, i mezi garantovanými a ostatními tématy. Šipkami nahoru a dolů posunete téma o jedno místo, přes okraj skupiny do druhé skupiny.
             </p>
           )}
         </>
