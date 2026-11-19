@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { startTransition, useActionState, useEffect, useId, useRef, useState } from "react";
 import { ActionMessage } from "@/components/ActionForm";
+import { Combobox, type ComboboxOption } from "@/components/Combobox";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { flash } from "@/components/FlashMessage";
 import { Icon } from "@/components/Icon";
@@ -274,7 +275,20 @@ function EventForm({
   const weekday = /^\d{4}-\d{2}-\d{2}$/.test(values.date) ? isoWeekday(values.date) : null;
   const unusualDay = planDays !== undefined && planDays.length > 0 && weekday !== null && !planDays.includes(weekday);
   // Pořadí doporučení: garantovaná témata skupiny, pak témata přímo pro skupinu, pak zájem (`recommendTopics`).
-  const suggestions = recommendTopics(topics, values.audience).slice(0, 3);
+  const recommended = recommendTopics(topics, values.audience);
+  const suggestions = recommended.slice(0, 3);
+  // Nabídka tématu: garantovaná a doporučená pro skupinu nahoře (pořadí `recommendTopics`), pak ostatní.
+  const topicId = useId();
+  const recommendedIds = new Set(recommended.map((t) => t.id));
+  const topicOptions: ComboboxOption[] = [
+    ...recommended.map((t) => ({
+      value: t.name,
+      group: `Doporučená pro ${GROUP_LABELS[values.audience]}`,
+      badges: isGuaranteed(t) ? <span className="badge badge-ok">Garantované</span> : <span className="badge badge-outline">Doporučené</span>,
+      hint: interestedLabel(t.interestCount),
+    })),
+    ...topics.filter((t) => !recommendedIds.has(t.id)).map((t) => ({ value: t.name, group: "Ostatní témata", hint: interestedLabel(t.interestCount) })),
+  ].filter((option, index, all) => all.findIndex((o) => o.value === option.value) === index);
   // Vybrané téma je pro jinou skupinu: jen upozornění, rozhoduje správce (téma se uloží i tak).
   const chosenTopic = topics.find((t) => t.name.toLowerCase() === values.topicTitle.trim().toLowerCase());
   const audienceMismatch = chosenTopic && !topicFitsAudience(chosenTopic.audience, values.audience) ? chosenTopic : null;
@@ -342,23 +356,21 @@ function EventForm({
   );
   const topicField = (
     <>
-      <label className="field span-2">
-        <span className="field-label">Téma {mark("topicTitle")}</span>
-        <input
-          className="input"
+      <div className="field span-2">
+        <label className="field-label" htmlFor={topicId}>
+          Téma {mark("topicTitle")}
+        </label>
+        <Combobox
+          id={topicId}
           name="topicTitle"
-          list="topic-options"
           value={values.topicTitle}
-          onChange={(e) => set("topicTitle", e.target.value)}
+          onChange={(topic) => set("topicTitle", topic)}
+          options={topicOptions}
+          listLabel="Nabídka témat"
           maxLength={120}
           placeholder="Napište nebo vyberte téma"
         />
-        <datalist id="topic-options">
-          {topics.map((t) => (
-            <option key={t.name} value={t.name} />
-          ))}
-        </datalist>
-      </label>
+      </div>
       {suggestions.length > 0 && !values.topicTitle.trim() && (
         <div className="span-2 suggestions" aria-label="Doporučená témata">
           <span className="field-hint">Doporučená témata pro {GROUP_LABELS[values.audience]}:</span>

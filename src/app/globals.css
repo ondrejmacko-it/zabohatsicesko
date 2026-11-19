@@ -3416,3 +3416,77 @@ body[data-moving] .quick-actions,
     order: -1;
   }
 }
+
+/* Nabídka tématu (`Combobox`): pole vypadá jako výběr, panel je pod ním uvnitř okna. */
+.combobox {
+  position: relative;
+}
+
+.combobox-input {
+  padding-right: 30px;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position:
+    calc(100% - 16px) 50%,
+    calc(100% - 11px) 50%;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+}
+
+.combobox-panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 4px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  box-shadow: 0 8px 24px rgba(35, 35, 35, 0.12);
+}
+
+.combobox-panel[hidden] {
+  display: none;
+}
+
+.combobox-group {
+  padding: 8px 8px 4px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.combobox-option {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 40px;
+  justify-content: center;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.combobox-option[aria-selected="true"] {
+  background: var(--beige);
+  box-shadow: inset 3px 0 0 var(--ochre);
+}
+
+.combobox-option[data-current] .combobox-option-name {
+  color: var(--ochre-dark);
+}
+
+.combobox-option-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.combobox-option-name {
+  font-size: 14px;
+  font-weight: 600;
+}

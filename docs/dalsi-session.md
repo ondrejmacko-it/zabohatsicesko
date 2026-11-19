@@ -1,21 +1,30 @@
 # Prompt pro další session
 
-**OPRAVNÉ KOLO UX/UI K PR #73 (18. 11. 2026, relace 1, větev `claude/focused-cerf-gr1tdi` z `ff7ac54` = HEAD PR #73).**
+**OPRAVNÉ KOLO UX/UI K PR #73 (19. 11. 2026, po relaci 2, větev `claude/focused-cerf-gr1tdi` z `ff7ac54` = HEAD PR #73).**
 Zadání: `ZBC_KOMPLETNI_PROMPT_CLAUDE_CODE_PR73.md` + 22 screenshotů (ZIP u uživatele, do repa ne). Report: `docs/report-ux-opravne-kolo.md`.
-* HOTOVO (25839c2): Z-01 (oprava schváleného zápisu = nový neveřejný návrh, schválená verze zůstává), Z-02 (bez mazání,
-  `confirmReplace` na serveru), `src/components/ConfirmDialog.tsx` + Modal bez banneru (Z-14), S-01 (tón pásu v `EventPeek`),
-  Z-03 (zdroje 2 × 2). Ověřeno: typecheck, lint, unit 381/381, e2e zapisy-schvaleni/zapisy/okna/priprava-mesice (1280+390).
+Pozor: kontejner nemá `node_modules`, nejdřív `npm ci`. Nepouštěj prettier (repo ho nemá, přeformátoval by soubory).
+* HOTOVO relace 1 (25839c2): Z-01, Z-02, `ConfirmDialog` + Modal bez banneru (Z-14), S-01, Z-03.
+* HOTOVO relace 2 krok 1 (e1a463f): `EventDialog` (chybí téma/vedoucí, dopad změny) a `PlanSelection` (zveřejnit/smazat
+  vybrané) se ptají přes `ConfirmDialog` (tlačítka `form={formId}`, `returnFocusTo` vrací fokus na Zveřejnit, Esc zavře
+  jen potvrzení, chyba zavře potvrzení a ukáže se v liště). Odstraněno CSS `.confirm-bar`/`.confirm-text`. Nové e2e v
+  `e2e/okna.spec.ts`. Ověřeno: typecheck, lint, unit 381/381, e2e okna/rychle-akce/klavesnice/pristupnost/zapisy-schvaleni/
+  priprava-mesice (1280, 390, 320) vše prošlo.
+* ROZPRACOVÁNO krok 2 (commit „WIP combobox“): `src/components/Combobox.tsx` (ARIA combobox + listbox se skupinami,
+  filtr bez diakritiky, šipky/Enter/Esc, panel se schová, když nic neodpovídá), použit v `EventDialog` místo
+  `<datalist id="topic-options">`, CSS `.combobox*` na konci `globals.css`, e2e „nabídka tématu v okně akce“ v `okna.spec.ts`.
+  PADÁ (1280 i 320): `priprava-mesice.spec.ts:89` (po `fill` tématu je nabídka otevřená, první Esc zavře jen ji → v testu
+  stisknout Esc dvakrát nebo nejdřív Tab, chování je záměrné) a nový test `okna.spec.ts:336` (`toBeHidden` – zjistit,
+  který krok; pravděpodobně po Enter/fill zůstane panel). Ostatní (temata-planovani, rychle-akce, pristupnost) prošly.
+  `PrepareMonthDialog` má dál `<datalist id="publish-topics">` (nekontrolované pole + `readFilled`) – rozhodnout, zda převést.
+  Ověřit autocomplete u pole `label` (doplnit `autoComplete="off"`).
 * DALŠÍ KROKY v pořadí (každý malý commit + cílené e2e):
-  1. `EventDialog.tsx`: potvrzení „incomplete“ a „impact“ z lišty `confirm-bar` do `ConfirmDialog` (tlačítka `type=submit`
-     s `form={id}`, protože portál je mimo formulář; Zpět k úpravám / Potvrdit zveřejnění). Totéž `PlanSelection.tsx` (zveřejnit/smazat).
-  2. Combobox témat místo `<datalist id="topic-options">` (vlastní `src/components/Combobox.tsx`, vzor ARIA combobox +
-     listbox, `aria-activedescendant`, garantovaná/doporučená nahoře, ruční text povolen, panel uvnitř dialogu). U `label` ověřit autocomplete.
+  2. Dokončit combobox (výše), typecheck, lint, e2e okna/priprava-mesice/temata-planovani/pristupnost/klavesnice.
   3. `⋯` (A-01): `Menu.tsx`/`globals.css` 28×24 → 36–40 px, bez `opacity:.6`, jemný rámeček; `.menuGrid` v `schedule.module.css`.
      A-08 zarovnání menu podle strany; A-02 `.addDay` decentně viditelné (opacity ~.35 v prázdných dnech).
   4. EventDialog layout A-05/A-06/A-07/A-13 (příjemci k „Pro koho“, „Další údaje“ bez druhého rámečku), A-10 Technické informace jen správě.
   5. Témata: T-01 DnD (pointer events, jen správce, v rámci skupiny, server `moveTopic` na cílovou pozici + rollback), T-02 text, T-03 čísla 1–3, T-04, T-07, T-08.
   6. Zápisy: Z-04–Z-13 (kratší texty, file input přes label, Z-08 stav „Rozpracováno“ u prázdného, nižší textarea, Z-12 „Zápis“).
-  7. Build, celé e2e, screenshoty před/po (1440/1280/1024/390/360/320), report, push, aktualizace PR #73.
+  7. Build, celé e2e, screenshoty před/po (1440/1280/1024/390/360/320), report, push, závěrečná zpráva uživateli.
 * OTEVŘENÉ: push do větve PR #73 (`claude/rychle-akce-a-planovani-temat`) jen se souhlasem uživatele; zatím jen `claude/focused-cerf-gr1tdi`.
   DEP-01 (migrace 0013/0014 při startu) rozhoduje uživatel.
 

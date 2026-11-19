@@ -1,4 +1,4 @@
-# Opravné kolo UX/UI k PR #73 – průběžný report (relace 1)
+# Opravné kolo UX/UI k PR #73 – průběžný report (po relaci 2)
 
 Větev `claude/focused-cerf-gr1tdi` z HEAD PR #73 (`ff7ac54`, shodné s referenčním commitem screenshotů).
 Zadání: `ZBC_KOMPLETNI_PROMPT_CLAUDE_CODE_PR73.md` (u uživatele, do repa se nedává). Relace skončila na limitu
@@ -14,6 +14,8 @@ kontextu, proto je hotová jen první skupina (P0 + základ potvrzovacích oken)
 | S-01 | **Opraveno** | `EventPeek.tsx`: pás stavu bere tón z `primaryStatus` (`status-danger`, `status-attention`), chyba Kalendáře není zelená. Bez e2e screenshotu. |
 | Z-03 | **Opraveno** | `.source-list` 2 × 2, ≤ 560 px jeden sloupec. Neověřeno screenshotem. |
 | DEP-01 | Blokováno (rozhodnutí uživatele) | Migrace 0013/0014 dál běží automaticky při startu. Před merge: staging, záloha Neonu, kontrola schválených zápisů. Tato relace schéma nemění. |
+| Potvrzení v okně akce a výběru | **Opraveno** (e1a463f) | `EventDialog`: „Zveřejnit bez tématu a vedoucího?“ a „Zveřejnit změny?“ (dopad) v `ConfirmDialog` místo lišty `confirm-bar` ve formuláři. `PlanSelection`: zveřejnit/smazat vybrané v `ConfirmDialog`. Důkaz: e2e `okna.spec.ts` (Zpět k úpravám nic nezmění, fokus zpět na Zveřejnit, Esc zavře jen potvrzení), 1280/390/320. |
+| Combobox témat | Rozpracováno | `src/components/Combobox.tsx` v `EventDialog` místo `<datalist>`. 2 e2e testy ještě padají (viz `docs/dalsi-session.md`). `PrepareMonthDialog` má dál datalist. |
 | Ostatní (A-01–A-14, T-01–T-11, Z-04–Z-13, C-01–C-08, combobox témat, impact/incomplete potvrzení v `EventDialog`, `PlanSelection`) | Zatím neřešeno | Pořadí a plán v `docs/dalsi-session.md`. |
 
 ## Ověření (skutečně spuštěno v této relaci)

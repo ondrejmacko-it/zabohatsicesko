@@ -1,0 +1,169 @@
+"use client";
+
+import { useEffect, useId, useRef, useState } from "react";
+
+export type ComboboxOption = {
+  value: string;
+  /** Nadpis skupiny. Sousední možnosti se stejnou skupinou se vykreslí pod jedním nadpisem. */
+  group?: string;
+  /** Štítky za názvem (garantované, doporučené). */
+  badges?: React.ReactNode;
+  /** Krátký doplněk pod názvem, například počet zájemců. */
+  hint?: string;
+};
+
+type Props = {
+  id: string;
+  name: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: ComboboxOption[];
+  placeholder?: string;
+  /** Název nabídky pro čtečky, například „Témata“. */
+  listLabel: string;
+  maxLength?: number;
+};
+
+/** Porovnání bez ohledu na velikost písmen a diakritiku: „uvodni“ najde „Úvodní“. */
+const normalize = (text: string) =>
+  text
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .trim();
+
+/**
+ * Textové pole s nabídkou (vzor ARIA combobox + listbox). Nahrazuje <datalist>: ten se v každém
+ * prohlížeči kreslí jinak, neukáže skupiny ani štítky a na telefonu ho často není vidět.
+ *
+ * Psaní nabídku filtruje, šipky vybírají (`aria-activedescendant`, fokus zůstává v poli), Enter potvrdí
+ * zvýrazněnou možnost, Esc zavře jen nabídku. Ručně napsaný text je platná hodnota, nabídka jen pomáhá.
+ * Panel je pod polem uvnitř okna, ne v portálu: posouvá se s formulářem a nepřekryje jiná okna.
+ */
+export function Combobox({ id, name, value, onChange, options, placeholder, listLabel, maxLength }: Props) {
+  const listId = useId();
+  const listRef = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+  // Filtr platí jen pro text, který člověk právě píše. Otevření šipkou nebo klikem ukáže všechno.
+  const [query, setQuery] = useState<string | null>(null);
+  const [active, setActive] = useState(-1);
+
+  const shown = query ? options.filter((o) => normalize(o.value).includes(normalize(query))) : options;
+  const optionId = (index: number) => `${listId}-${index}`;
+  const visible = open && shown.length > 0;
+
+  const show = (filter: string | null) => {
+    const list = filter ? options.filter((o) => normalize(o.value).includes(normalize(filter))) : options;
+    setQuery(filter);
+    setActive(filter ? (list.length > 0 ? 0 : -1) : list.findIndex((o) => o.value === value));
+    setOpen(true);
+  };
+  const close = () => {
+    setOpen(false);
+    setQuery(null);
+    setActive(-1);
+  };
+  const choose = (option: ComboboxOption) => {
+    onChange(option.value);
+    close();
+  };
+
+  useEffect(() => {
+    if (!open || active < 0) return;
+    listRef.current?.querySelector(`[id="${optionId(active)}"]`)?.scrollIntoView({ block: "nearest" });
+    // optionId závisí jen na listId, který se nemění.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, active]);
+
+  const onKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      if (!open) return show(null);
+      if (shown.length === 0) return;
+      const step = event.key === "ArrowDown" ? 1 : -1;
+      setActive((current) => Math.min(shown.length - 1, Math.max(0, current + step)));
+    } else if (event.key === "Enter" && open && active >= 0 && shown[active]) {
+      // Enter vybere možnost, formulář se neodešle.
+      event.preventDefault();
+      choose(shown[active]);
+    } else if (event.key === "Escape" && visible) {
+      // Esc zavře jen nabídku. Bez preventDefault by se zavřelo i okno, ve kterém pole je.
+      event.preventDefault();
+      event.stopPropagation();
+      close();
+    } else if (event.key === "Tab") {
+      close();
+    }
+  };
+
+  // Sousední možnosti se stejnou skupinou tvoří jednu skupinu listboxu s vlastním nadpisem.
+  const groups: Array<{ label?: string; items: Array<{ option: ComboboxOption; index: number }> }> = [];
+  shown.forEach((option, index) => {
+    const last = groups.at(-1);
+    if (last && last.label === option.group) last.items.push({ option, index });
+    else groups.push({ label: option.group, items: [{ option, index }] });
+  });
+  const renderOption = ({ option, index }: { option: ComboboxOption; index: number }) => (
+    <div
+      key={option.value}
+      id={optionId(index)}
+      role="option"
+      aria-selected={index === active}
+      className="combobox-option"
+      data-current={option.value === value || undefined}
+      // Fokus zůstává v poli, jinak by se nabídka zavřela dřív, než klik doběhne.
+      onMouseDown={(event) => event.preventDefault()}
+      onMouseMove={() => setActive(index)}
+      onClick={() => choose(option)}
+    >
+      <span className="combobox-option-head">
+        <span className="combobox-option-name">{option.value}</span>
+        {option.badges}
+      </span>
+      {option.hint && <span className="field-hint">{option.hint}</span>}
+    </div>
+  );
+
+  return (
+    <div className="combobox">
+      <input
+        id={id}
+        className="input combobox-input"
+        name={name}
+        value={value}
+        role="combobox"
+        aria-autocomplete="list"
+        aria-expanded={visible}
+        aria-controls={listId}
+        aria-activedescendant={visible && active >= 0 ? optionId(active) : undefined}
+        autoComplete="off"
+        maxLength={maxLength}
+        placeholder={placeholder}
+        onChange={(event) => {
+          onChange(event.target.value);
+          show(event.target.value);
+        }}
+        onClick={() => (open ? close() : show(null))}
+        onKeyDown={onKeyDown}
+        onBlur={close}
+      />
+      {/* Když psanému textu nic neodpovídá, nabídka se schová: ručně napsaná hodnota je platná. */}
+      <div ref={listRef} className="combobox-panel" hidden={!visible}>
+        <div id={listId} role="listbox" aria-label={listLabel}>
+          {groups.map((group, g) =>
+            group.label ? (
+              <div key={group.label} role="group" aria-labelledby={`${listId}-g${g}`}>
+                <div id={`${listId}-g${g}`} className="combobox-group" role="presentation">
+                  {group.label}
+                </div>
+                {group.items.map(renderOption)}
+              </div>
+            ) : (
+              group.items.map(renderOption)
+            ),
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

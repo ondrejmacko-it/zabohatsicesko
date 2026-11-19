@@ -328,3 +328,48 @@ test.describe("cizí akce neprozradí obsah", () => {
     await expect(dialog(page, "Zápis není dostupný")).toBeVisible();
   });
 });
+
+test.describe("nabídka tématu v okně akce", () => {
+  test.use({ storageState: authFile("spravce") });
+
+  // Bez zápisu. Combobox: skupiny, filtr bez diakritiky, šipky + Enter, Esc zavře jen nabídku, ruční text platí.
+  test("garantovaná a doporučená nahoře, klávesnice i ruční text", async ({ page }) => {
+    await page.goto("/vzdelavani/harmonogram");
+    await settle(page);
+    await page.getByRole("button", { name: "Přidat akci" }).click();
+    const add = dialog(page, "Přidat akci");
+    const topic = add.getByRole("combobox", { name: /^Téma/ });
+    await topic.click();
+    const list = add.getByRole("listbox", { name: "Nabídka témat" });
+    await expect(list).toBeVisible();
+    await expect(topic).toHaveAttribute("aria-expanded", "true");
+    const groups = list.getByRole("group");
+    await expect(groups.first()).toHaveAccessibleName(/^Doporučená pro /);
+    await expect(groups.first().getByRole("option").first()).toContainText(/Garantované|Doporučené/);
+    await expectNoHorizontalScroll(page);
+    // Esc zavře jen nabídku, okno zůstane.
+    await page.keyboard.press("Escape");
+    await expect(list).toBeHidden();
+    await expect(add).toBeVisible();
+    // Psaní filtruje bez ohledu na diakritiku, šipka a Enter vyberou, formulář se neodešle.
+    await topic.fill("uvodni");
+    await expect(list.getByRole("option").first()).toContainText(/úvodní/i);
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("Enter");
+    await expect(list).toBeHidden();
+    await expect(topic).toHaveValue(/úvodní/i);
+    await expect(add).toBeVisible();
+    // Klik na možnost.
+    await topic.fill("");
+    await topic.click();
+    const first = list.getByRole("option").first();
+    const name = (await first.locator(".combobox-option-name").textContent()) ?? "";
+    await first.click();
+    await expect(topic).toHaveValue(name);
+    // Ruční text: nabídka se schová, hodnota zůstane.
+    await topic.fill("Úplně nové téma e2e");
+    await expect(list).toBeHidden();
+    await expect(topic).toHaveAttribute("aria-expanded", "false");
+    await expect(topic).toHaveValue("Úplně nové téma e2e");
+  });
+});
