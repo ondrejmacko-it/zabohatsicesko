@@ -1,12 +1,13 @@
 import { ActionForm } from "@/components/ActionForm";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { Menu } from "@/components/Menu";
-import { ERROR_LABELS, RECORDING_STATE_LABELS, TEMPLATE_LABELS } from "@/lib/labels";
+import { ERROR_LABELS, MINUTES_SOURCE_LABELS, RECORDING_STATE_LABELS, TEMPLATE_LABELS } from "@/lib/labels";
+import { formatDate, toDateKey } from "@/lib/time";
 import type { MinutesContent, RecordingState } from "@/lib/types";
-import type { RecordingPanel } from "@/server/services/recordings";
+import type { HandlerMinutes, RecordingPanel } from "@/server/services/recordings";
 import { retryTranscriptionAction, withdrawMinutesAction } from "../actions";
 import { MinutesEditor } from "./MinutesEditor";
-import { UploadForm } from "./UploadForm";
+import { MinutesSourceForm } from "./MinutesSourceForm";
 
 const STATE_BADGE: Record<RecordingState, string> = {
   awaiting: "badge badge-outline",
@@ -39,6 +40,23 @@ export function MinutesView({ content }: { content: MinutesContent }) {
       {list("Další kroky", content.nextSteps)}
     </div>
   );
+}
+
+function versionLabel(minutes: HandlerMinutes): string {
+  const date = (iso: string | null) => (iso ? ` · ${formatDate(toDateKey(new Date(iso)))}` : "");
+  if (minutes.status === "published") return `Schváleno: verze ${minutes.version}${date(minutes.approvedAt)}`;
+  if (minutes.approvedVersion !== null) {
+    return `Verze ${minutes.version} čeká na nové schválení (schválena byla verze ${minutes.approvedVersion})`;
+  }
+  return `Návrh, verze ${minutes.version}, čeká na schválení vedoucím`;
+}
+
+function draftHint(minutes: HandlerMinutes): string {
+  if (minutes.source === "recording") {
+    return `Návrh z ukázkového přepisu (šablona ${TEMPLATE_LABELS[minutes.detectedTemplate]}). Přepis je zatím jen demonstrace nad ukázkovou nahrávkou, ne přepis skutečné schůzky. Zkontrolujte návrh a uložte.`;
+  }
+  if (minutes.source === "manual") return "Ruční zápis. Vyplňte šablonu a uložte.";
+  return "Návrh vznikl rozdělením textu do šablony zápisu, nic se nedomýšlí. Zkontrolujte ho a uložte.";
 }
 
 const formatSize = (bytes: number) => `${(bytes / 1024 / 1024).toLocaleString("cs-CZ", { maximumFractionDigits: 1 })} MB`;
@@ -75,6 +93,7 @@ export function RecordingSection({ eventId, eventLabel, panel }: { eventId: stri
   );
   const published = Boolean(panel.publicMinutes) || minutes?.status === "published";
   const wrongFile = state === "failed" && errorCode === "unsupported_fixture";
+  const fromRecording = minutes?.source === "recording";
   return (
     <section className="section" id="nahravka" aria-labelledby="nahravka-title">
       <AutoRefresh active={state === "processing"} />
@@ -93,7 +112,7 @@ export function RecordingSection({ eventId, eventLabel, panel }: { eventId: stri
         </span>
       </div>
       <p className="small muted">
-        Kolegové uvidí až zveřejněný zápis.
+        Kolegové uvidí až zápis schválený vedoucím akce.
       </p>
 
       {recording && (
@@ -107,12 +126,12 @@ export function RecordingSection({ eventId, eventLabel, panel }: { eventId: stri
         </div>
       )}
 
-      {state === "failed" && (
+      {state === "failed" && !minutes && (
         <div className="stack">
           <p className="notice notice-danger">{ERROR_LABELS[errorCode ?? ""] ?? "Přepis se nepovedl."}</p>
-          {/* Špatný soubor nový pokus nespraví, pomůže jen jiná nahrávka (formulář níže). */}
+          {/* Špatný soubor nový pokus nespraví, pomůže jen jiná nahrávka nebo jiný zdroj (formulář níže). */}
           {wrongFile ? (
-            <p className="small">Vyberte jinou nahrávku níže.</p>
+            <p className="small">Vyberte jinou nahrávku nebo jiný zdroj zápisu níže.</p>
           ) : (
             <ActionForm action={retryTranscriptionAction} fields={{ id: eventId }} label="Zkusit přepis znovu" variant="primary" />
           )}
@@ -121,45 +140,72 @@ export function RecordingSection({ eventId, eventLabel, panel }: { eventId: stri
 
       {minutes && (
         <div className="stack">
+          <p className="small minutes-version" data-testid="stav-verze">
+            <strong>{versionLabel(minutes)}</strong> · Zdroj: {MINUTES_SOURCE_LABELS[minutes.source]}
+          </p>
           {minutes.templateMismatch && (
             <p className="notice">
-              Podle obsahu nahrávky to vypadá na typ „{TEMPLATE_LABELS[minutes.detectedTemplate]}“, což nesedí s typem
-              akce. Zkontrolujte, že je nahrávka u správného termínu. Nic se automaticky nepřesouvá.
+              Podle obsahu {fromRecording ? "nahrávky" : "textu"} to vypadá na typ „{TEMPLATE_LABELS[minutes.detectedTemplate]}“, což nesedí s typem
+              akce. Zkontrolujte, že je zápis u správného termínu. Nic se automaticky nepřesouvá.
             </p>
           )}
           {minutes.status === "draft" ? (
             <>
               {panel.publicMinutes && (
-                <p className="notice">Kolegové zatím vidí zápis z původní nahrávky, dokud nezveřejníte tento.</p>
+                <p className="notice">Kolegové zatím vidí dříve zveřejněný zápis, dokud vedoucí neschválí tento.</p>
               )}
-              <p className="notice">
-                Návrh z ukázkového přepisu (šablona {TEMPLATE_LABELS[minutes.detectedTemplate]}). Přepis je zatím jen demonstrace
-                nad ukázkovou nahrávkou, ne přepis skutečné schůzky. Zkontrolujte návrh a zveřejněte.
-              </p>
-              <MinutesEditor eventId={eventId} minutesId={minutes.id} version={minutes.version} content={minutes.content} />
+              <p className="notice">{draftHint(minutes)}</p>
+              <MinutesEditor
+                eventId={eventId}
+                minutesId={minutes.id}
+                version={minutes.version}
+                content={minutes.content}
+                canApprove={panel.canApprove}
+                hasLead={panel.hasLead}
+              />
             </>
           ) : (
             <>
               <p className="notice notice-ok">Zveřejněno pro publikum akce.</p>
               <MinutesView content={minutes.content} />
+              <details className="fold">
+                <summary>Upravit zápis</summary>
+                <MinutesEditor
+                  eventId={eventId}
+                  minutesId={minutes.id}
+                  version={minutes.version}
+                  content={minutes.content}
+                  canApprove={panel.canApprove}
+                  hasLead={panel.hasLead}
+                  published
+                />
+              </details>
             </>
           )}
-          <details>
-            <summary>Pracovní přepis (ukázka)</summary>
-            <p className="transcript">{minutes.transcript}</p>
-          </details>
+          {minutes.transcript && (
+            <details>
+              <summary>{fromRecording ? "Pracovní přepis (ukázka)" : "Pracovní text zdroje"}</summary>
+              <p className="transcript">{minutes.transcript}</p>
+            </details>
+          )}
         </div>
       )}
 
-      {/* Když už je zápis rozpracovaný, je hlavní krok úprava. Výměna nahrávky je sbalená. */}
+      {/* Když už je zápis rozpracovaný, je hlavní krok úprava. Jiný zdroj je sbalený. */}
       {state !== "processing" &&
         (minutes ? (
           <details className="fold">
-            <summary>Nahradit nahrávku</summary>
-            <UploadForm eventId={eventId} eventLabel={eventLabel} replacing />
+            <summary>Připravit zápis z jiného zdroje</summary>
+            <MinutesSourceForm
+              eventId={eventId}
+              eventLabel={eventLabel}
+              hasRecording={recording !== null}
+              replaceId={minutes.id}
+              replacingDraft={minutes.status === "draft"}
+            />
           </details>
         ) : (
-          <UploadForm eventId={eventId} eventLabel={eventLabel} replacing={recording !== null} />
+          <MinutesSourceForm eventId={eventId} eventLabel={eventLabel} hasRecording={recording !== null} replaceId={null} replacingDraft={false} />
         ))}
     </section>
   );

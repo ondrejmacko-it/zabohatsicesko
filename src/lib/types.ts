@@ -57,4 +57,8 @@ export type SimAttendee = {
 };
 
 /** Stav zpracování nahrávky, jak ho vidí uživatel. */
+/** Z čeho zápis vznikl. `recording` = stávající tok nahrávka → přepis, ostatní bez nahrávky. */
+export const MINUTES_SOURCES = ["recording", "transcript", "notes", "file", "manual"] as const;
+export type MinutesSource = (typeof MINUTES_SOURCES)[number];
+
 export type RecordingState = "awaiting" | "processing" | "review" | "available" | "failed";

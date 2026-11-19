@@ -1,5 +1,6 @@
-import { eq } from "drizzle-orm";
-import { toDateKey, toTimeKey } from "@/lib/time";
+import { and, eq, isNull } from "drizzle-orm";
+import { TYPE_LABELS } from "@/lib/labels";
+import { addDays, isoWeekday, toDateKey, toTimeKey } from "@/lib/time";
 import type { EventSnapshot, EventType, Group, SimAttendee } from "@/lib/types";
 import { audienceAttendees } from "@/server/calendar/attendees";
 import { CalendarError, type ExternalEvent } from "@/server/calendar/provider";
@@ -8,10 +9,11 @@ import { listNotifications } from "@/server/calendar/simulated";
 import { calendarProvider, looksLikeSameInvite, pairingCandidates } from "@/server/calendar/sync";
 import { attendeeSource, calendarMode, config, now, personalDelivery, type AttendeeSource, type CalendarMode } from "@/server/config";
 import { getDb } from "@/server/db/client";
-import { calendarLinks, users, type ManagedFields } from "@/server/db/schema";
+import { calendarLinks, topics, users, type ManagedFields } from "@/server/db/schema";
 import { calendarSummary, snapshotOf, type EventRow } from "@/server/domain/snapshot";
-import { isOrganizer, type Viewer } from "@/server/policy";
-import { getEventCard, type EventCard } from "@/server/services/events";
+import { canPlan, isOrganizer, type Viewer } from "@/server/policy";
+import { DomainError } from "@/server/services/errors";
+import { getEventCard, loadEventRow, loadTemplate, type EventCard } from "@/server/services/events";
 import { recordingPanel, type RecordingPanel } from "@/server/services/recordings";
 
 /** Hodnoty formuláře akce ve tvaru, který potřebuje dialog. */
@@ -44,6 +46,89 @@ export function formValuesOf(snapshot: EventSnapshot): EventFormValues {
     audience: snapshot.audience,
     leadId: snapshot.leadId ?? "",
     reviewerId: snapshot.reviewerId ?? "",
+  };
+}
+
+/**
+ * Datum kopie: stejný den v týdnu o týden později než zdroj, pokud je to nejdřív zítra. Jinak nejbližší
+ * stejný den v týdnu od zítřka (zdroj z minulosti se tak nikdy nenavrhne do minulosti ani na dnešek).
+ */
+export function suggestedCopyDate(sourceDate: string, todayKey: string): string {
+  const tomorrow = addDays(todayKey, 1);
+  const weekLater = addDays(sourceDate, 7);
+  if (weekLater >= tomorrow) return weekLater;
+  return addDays(tomorrow, (isoWeekday(sourceDate) - isoWeekday(tomorrow) + 7) % 7);
+}
+
+/**
+ * Předvyplnění okna Přidat akci podle existující akce (Duplikovat). Jen správce. Kopíruje se pouze to, co je
+ * ve formuláři: typ, název, téma, skupina, vedoucí, kontrolor a časy. Datum je jen návrh (`suggestedCopyDate`).
+ * Identita, verze, vazby na Kalendář, pozvánky, nahrávky, zápisy, stav ani historie se nepřenáší: nová akce
+ * vznikne běžným `createEvent` jako návrh. Neexistující akce a svátek vrací null.
+ */
+export async function duplicateFormValues(viewer: Viewer, id: string, todayKey: string): Promise<EventFormValues | null> {
+  if (!canPlan(viewer)) throw new DomainError("forbidden");
+  const row = await loadEventRow(await getDb(), id);
+  if (!row || row.type === "holiday") return null;
+  const source = formValuesOf(snapshotOf(row));
+  const date = suggestedCopyDate(source.date, todayKey);
+  const span = source.endDate ? Math.round((Date.parse(source.endDate) - Date.parse(source.date)) / 86_400_000) : 0;
+  return {
+    type: source.type,
+    label: source.label,
+    date,
+    endDate: span > 0 ? addDays(date, span) : null,
+    startTime: source.startTime,
+    endTime: source.endTime,
+    topicTitle: source.topicTitle,
+    audience: source.audience,
+    leadId: source.leadId,
+    reviewerId: source.reviewerId,
+  };
+}
+
+/** Typ nové akce k tématu: firemní vzdělávání skupiny, jinak jiná akce (typ a název doplní správce). */
+export function topicEventType(audience: string): EventType {
+  return audience === "fp" ? "education-fp" : audience === "rm" ? "education-rm" : "other";
+}
+
+/**
+ * Předvyplnění okna Přidat akci z tématu (Naplánovat téma → Vytvořit novou akci, `?tema=`). Jen správce.
+ * Téma, skupina a typ podle tématu, datum a čas nejbližšího dne šablony s tímto typem od zítřka (do dvou
+ * týdnů), jinak zítřek s výchozím časem. Ukládá se běžně (návrh i zveřejnění s kontrolou), téma se
+ * k akci přiřadí podle názvu jako vždy. Neznámé nebo archivované téma vrací null.
+ */
+export async function topicFormValues(viewer: Viewer, topicId: string, todayKey: string): Promise<EventFormValues | null> {
+  if (!canPlan(viewer)) throw new DomainError("forbidden");
+  const db = await getDb();
+  const [topic] = await db
+    .select({ name: topics.name, audience: topics.audience })
+    .from(topics)
+    .where(and(eq(topics.id, topicId), eq(topics.orgId, config.orgId), isNull(topics.archivedAt)))
+    .limit(1);
+  if (!topic) return null;
+  const type = topicEventType(topic.audience);
+  const slots = (await loadTemplate()).filter((slot) => slot.active && slot.types.includes(type));
+  let date = addDays(todayKey, 1);
+  let times = { startTime: "09:00", endTime: "11:00" };
+  for (let offset = 1; offset <= 14 && slots.length > 0; offset += 1) {
+    const day = addDays(todayKey, offset);
+    const slot = slots.find((s) => s.isoWeekday === isoWeekday(day));
+    if (!slot) continue;
+    date = day;
+    times = { startTime: slot.startTime, endTime: slot.endTime };
+    break;
+  }
+  return {
+    type,
+    label: type === "other" ? "" : TYPE_LABELS[type],
+    date,
+    endDate: null,
+    ...times,
+    topicTitle: topic.name,
+    audience: topic.audience as Group,
+    leadId: "",
+    reviewerId: "",
   };
 }
 

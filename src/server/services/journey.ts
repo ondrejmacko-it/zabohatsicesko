@@ -1,10 +1,10 @@
-import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, or, sql } from "drizzle-orm";
 import { formatDayMonth, toDateKey } from "@/lib/time";
 import type { EventType, Group } from "@/lib/types";
 import { needsCalendarConnection } from "@/server/calendar/google-auth";
 import { config, now } from "@/server/config";
 import { getDb } from "@/server/db/client";
-import { calendarLinks, events, minutes, recordings, transcriptionJobs, users } from "@/server/db/schema";
+import { calendarLinks, events, minutes, recordings, topics, transcriptionJobs, users } from "@/server/db/schema";
 import { canHandleRecording, canManageUsers, canReadPublishedMinutes, isEventHandler, isOrganizer, type Viewer } from "@/server/policy";
 import { pendingRequestCount } from "@/server/services/users";
 
@@ -84,14 +84,32 @@ export function progressOf(minutesStatus: string | null, jobStatus: string | nul
   return "processing";
 }
 
+/**
+ * Stav zápisu podle akce. Aktuální zápis (nejnovější, který nepatří k vyměněné nahrávce, i bez nahrávky)
+ * má přednost, bez něj rozhoduje úloha přepisu aktuální nahrávky.
+ */
 async function recordingProgressByEvent(db: Awaited<ReturnType<typeof getDb>>): Promise<Map<string, RecordingProgress>> {
-  const rows = await db
-    .select({ eventId: recordings.eventId, minutesStatus: minutes.status, jobStatus: transcriptionJobs.status, errorCode: transcriptionJobs.errorCode })
-    .from(recordings)
-    .leftJoin(minutes, eq(minutes.recordingId, recordings.id))
-    .leftJoin(transcriptionJobs, eq(transcriptionJobs.recordingId, recordings.id))
-    .where(and(eq(recordings.orgId, config.orgId), isNull(recordings.supersededAt)));
-  return new Map(rows.map((r) => [r.eventId, progressOf(r.minutesStatus, r.jobStatus, r.errorCode)]));
+  const [recordingRows, minutesRows] = await Promise.all([
+    db
+      .select({ eventId: recordings.eventId, jobStatus: transcriptionJobs.status, errorCode: transcriptionJobs.errorCode })
+      .from(recordings)
+      .leftJoin(transcriptionJobs, eq(transcriptionJobs.recordingId, recordings.id))
+      .where(and(eq(recordings.orgId, config.orgId), isNull(recordings.supersededAt))),
+    db
+      .select({ eventId: minutes.eventId, status: minutes.status })
+      .from(minutes)
+      .leftJoin(recordings, eq(recordings.id, minutes.recordingId))
+      .where(and(eq(minutes.orgId, config.orgId), or(isNull(minutes.recordingId), isNull(recordings.supersededAt))))
+      .orderBy(desc(minutes.createdAt), desc(minutes.id)),
+  ]);
+  const progress = new Map(recordingRows.map((r) => [r.eventId, progressOf(null, r.jobStatus, r.errorCode)]));
+  const seen = new Set<string>();
+  for (const row of minutesRows) {
+    if (seen.has(row.eventId)) continue;
+    seen.add(row.eventId);
+    progress.set(row.eventId, progressOf(row.status, null, null));
+  }
+  return progress;
 }
 
 /**
@@ -140,12 +158,15 @@ const MAX_MINUTES_TASKS = 4;
 
 /** Úkol podle stavu nahrávky. Text i tlačítko odpovídají tomu, co ukazuje detail akce. */
 const MINUTES_TASKS: Record<Exclude<RecordingProgress, "published">, { detail: string; action: string }> = {
-  none: { detail: "Proběhla a nemá zápis. Připraví se z nahrávky.", action: "Nahrát nahrávku" },
+  none: { detail: "Proběhla a nemá zápis. Připravte ho z nahrávky, přepisu nebo poznámek.", action: "Dokončit zápis" },
   processing: { detail: "Nahrávka se přepisuje. Návrh zápisu bude za chvíli ke kontrole.", action: "Zobrazit stav" },
   failed: { detail: "Přepis nahrávky se nepovedl. Zkuste ho znovu.", action: "Zkusit přepis znovu" },
   unsupported: { detail: "Ukázkový přepis tento soubor nepřepíše, umí jen ukázkovou nahrávku.", action: "Vybrat jinou nahrávku" },
-  draft: { detail: "Návrh zápisu čeká na kontrolu a zveřejnění.", action: "Zkontrolovat zápis" },
+  draft: { detail: "Návrh zápisu čeká na kontrolu. Zveřejní ho vedoucí akce.", action: "Zkontrolovat zápis" },
 };
+
+/** Vedoucí akce zápis schvaluje, proto má vlastní úkol „Dokončit zápis“ místo kontroly. */
+const LEAD_DRAFT_TASK = { detail: "Návrh zápisu čeká na vaše schválení. Zveřejní se až po schválení.", action: "Dokončit zápis" };
 
 /** `external`: odkaz vede mimo stránky Wiki (přesměrování na Google), proto běžná navigace prohlížeče. */
 /** `eventType`: úkol patří ke konkrétní akci, filtr Typ akce na Plánu ho podle něj schová nebo nechá. */
@@ -182,7 +203,8 @@ export async function listTasks(viewer: Viewer): Promise<JourneyTask[]> {
         tasks.push({ ...base, key: `nahravka-${row.id}`, title: "Nahrajte nahrávku z dnešní akce", detail: `${title}. Zápis se z nahrávky připraví sám, vy ho jen zkontrolujete.`, action: "Nahrát nahrávku" });
         continue;
       }
-      tasks.push({ ...base, ...MINUTES_TASKS[state], key: `${state === "draft" ? "zapis" : "nahravka"}-${row.id}`, title });
+      const task = state === "draft" && snapshot.leadId === viewer.id ? LEAD_DRAFT_TASK : MINUTES_TASKS[state];
+      tasks.push({ ...base, ...task, key: `${state === "draft" ? "zapis" : "nahravka"}-${row.id}`, title });
     }
   }
 
@@ -197,6 +219,14 @@ export async function listTasks(viewer: Viewer): Promise<JourneyTask[]> {
       .where(and(eq(events.orgId, config.orgId), eq(calendarLinks.syncStatus, "attention")));
     for (const { event } of stuck) {
       tasks.push({ key: `kalendar-${event.id}`, title: event.published?.label ?? "Akce", detail: "Pozvánka v Kalendáři neodpovídá Wiki a čeká na váš zásah.", href: `/vzdelavani/akce/${event.id}?odkud=prehled#kalendar`, action: "Vyřešit pozvánku", eventType: event.published?.type });
+    }
+    // Bez garantovaných témat doporučení i doplnění měsíce vychází jen ze zájmu. Úkol zmizí po nastavení prvního.
+    const [topicState] = await db
+      .select({ active: sql<number>`count(*)::int`, guaranteed: sql<number>`count(${topics.priorityRank})::int` })
+      .from(topics)
+      .where(and(eq(topics.orgId, config.orgId), isNull(topics.archivedAt)));
+    if (topicState && Number(topicState.active) > 0 && Number(topicState.guaranteed) === 0) {
+      tasks.push({ key: "garantovana-temata", title: "Nastavte garantovaná témata", detail: "Vyberte až tři témata, která se mají probrat přednostně. Doporučení u akcí je pak nabídne jako první.", href: "/vzdelavani/temata", action: "Vybrat témata" });
     }
   }
   if (canManageUsers(viewer)) {

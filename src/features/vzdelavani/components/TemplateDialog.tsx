@@ -13,7 +13,7 @@ export type SlotValue = { isoWeekday: number; startTime: string; endTime: string
 const WEEKDAYS = ["", "Pondělí", "Úterý", "Středa", "Čtvrtek", "Pátek", "Sobota", "Neděle"];
 const REGULAR_TYPES: EventType[] = ["action", "training-fp", "portfolio", "training-rm", "education-fp", "education-rm"];
 
-/** Týdenní šablona: z ní vzniká návrh měsíce. Ruční úpravy akcí šablona nepřepisuje. */
+/** Pravidelný rozvrh (týdenní šablona): z něj vzniká návrh měsíce. Ruční úpravy akcí šablona nepřepisuje. */
 export function TemplateDialog({ slots }: { slots: SlotValue[] }) {
   const [open, setOpen] = useState(false);
   const [state, action, pending] = useActionState(async (prev: ActionResult | null, formData: FormData) => {
@@ -25,13 +25,16 @@ export function TemplateDialog({ slots }: { slots: SlotValue[] }) {
   return (
     <>
       <button type="button" className="btn" onClick={() => setOpen(true)}>
-        Pravidelný týden
+        Nastavit pravidelný rozvrh
       </button>
       {state?.ok && <ActionMessage state={state} />}
-      <Modal open={open} title="Pravidelný týden" onRequestClose={() => setOpen(false)} wide>
+      <Modal open={open} title="Nastavit pravidelný rozvrh" onRequestClose={() => setOpen(false)} wide>
+        <p className="small">
+          Pravidelný rozvrh říká, ve které dny a časy se akce konají každý týden. Podle něj „Doplnit chybějící
+          termíny“ připraví návrhy na celý měsíc. Změna rozvrhu nic nezveřejní a už vytvořené akce nemění.
+        </p>
         <p className="small muted">
-          Časy a typy pro pravidelné dny. Když má den víc typů, střídají se po týdnech. Konkrétní akce pak můžete
-          kdykoli upravit ručně.
+          Když má den víc typů, střídají se po týdnech. Konkrétní akce pak můžete kdykoli upravit ručně.
         </p>
         <form action={action} onSubmit={submitKeepingValues(action)} className="stack">
           {slots.map((slot) => (

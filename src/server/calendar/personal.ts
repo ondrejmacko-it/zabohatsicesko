@@ -194,8 +194,9 @@ async function eventsWithMinutes(db: Executor, eventIds?: readonly string[]): Pr
   const rows = await db
     .select({ eventId: minutes.eventId })
     .from(minutes)
-    .innerJoin(recordings, and(eq(recordings.id, minutes.recordingId), isNull(recordings.supersededAt)))
-    .where(eventIds ? and(published, inArray(minutes.eventId, [...eventIds])) : published);
+    .leftJoin(recordings, eq(recordings.id, minutes.recordingId))
+    // Zápis bez nahrávky (text, soubor, ručně) platí vždy, zápis z nahrávky jen k nevyměněné nahrávce.
+    .where(and(published, or(isNull(minutes.recordingId), isNull(recordings.supersededAt)), eventIds ? inArray(minutes.eventId, [...eventIds]) : undefined));
   return new Set(rows.map((m) => m.eventId));
 }
 

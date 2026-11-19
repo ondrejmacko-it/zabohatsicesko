@@ -11,7 +11,7 @@ prostředí není. Tento postup zvládne kolega s Macem za 15 minut, bez instala
 3. Postupně otevřete v levém menu **Vzdělávání** a záložky **Plán**, **Zápisy**, **Témata**.
    U každé stránky ověřte, že nejde posunout do strany (dvěma prsty na touchpadu doleva/doprava).
 4. Na Plánu klikněte na **Přidat akci**. Okno se otevře, klávesa **Esc** ho zavře.
-5. Na Plánu klikněte na **Nástroje správce** → **Pravidelný týden**. Okno se otevře, **Esc** ho zavře.
+5. Na Plánu klikněte na **Připravit měsíc** → **Nastavit pravidelný rozvrh**. Okno se otevře, **Esc** ho zavře.
 6. Klikněte na **Zkontrolovat … návrhů**. Okno se otevře a dá se v něm rolovat, **Esc** ho zavře.
 7. Klikněte na akci **Setkání týmu**. Otevře se náhled. Pak podržte **⌘ (Cmd)** a klikněte na stejnou akci:
    má se otevřít nová karta a na původní stránce se nesmí nic otevřít.

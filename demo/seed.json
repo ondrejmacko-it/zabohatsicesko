@@ -313,6 +313,7 @@
       "id": "topic-questions",
       "name": "Otevřené otázky na schůzce",
       "audience": "fp",
+      "priorityRank": 1,
       "interestedUserIds": [
         "demo-organizator",
         "demo-ucastnik"
@@ -341,6 +342,7 @@
       "id": "topic-rm",
       "name": "Návaznost po konzultaci",
       "audience": "rm",
+      "priorityRank": 2,
       "interestedUserIds": [
         "demo-mimo-skupinu"
       ],

@@ -1,6 +1,7 @@
 # Návrh: ruční zápis bez nahrávky
 
-Stav: **návrh, neimplementováno** (rozhodnutí uživatele 17. 11. 2026). Pro ostrou firmu je to praktičtější cesta než
+Stav: **implementováno ve fázi F4** (větev `claude/rychle-akce-a-planovani-temat`, migrace 0014), rozdíly viz
+„Implementace“ na konci. Původní návrh: rozhodnutí uživatele 17. 11. 2026. Pro ostrou firmu je to praktičtější cesta než
 automatický přepis.
 
 ## Výchozí stav
@@ -20,3 +21,14 @@ automatický přepis.
 5. UI: v pracovním okně zápisu tlačítko „Napsat zápis ručně“ vedle nahrávání.
 6. Testy: oprávnění (vedoucí, kontrolor, správce, kolega), souběh dvou založení, zrušená a budoucí akce, zveřejnění a
    vrácení do návrhu.
+
+## Implementace (F4) a rozdíly od návrhu
+- `source` má hodnoty `recording | transcript | notes | file | manual` (navíc vložený text a textový soubor).
+  CHECK hlídá, že jen zápis z nahrávky má `recording_id` a `job_id`.
+- Místo unikátního indexu „jeden aktuální zápis“: aktuální je nejnovější zápis mimo vyměněné nahrávky. Souběh
+  založení hlídá zámek řádku akce a `replaceId` (aktuální zápis, který uživatel viděl). Nahrazený textový návrh
+  se smaže, návrh z nahrávky zůstává u nahrávky.
+- Zveřejnění = `approveMinutes` (dříve `publishMinutes`): jen vedoucí akce, konkrétní verze. Kontrolor a správce
+  upravují, neschvalují. Zveřejněný zápis jde upravit, změna obsahu schválení zruší (`approved_version` zůstane jako
+  historie). Vrácení do návrhu (`withdrawMinutes`) beze změny.
+- Nahrání nahrávky k ručnímu zápisu: místo potvrzení upozornění „Nový návrh nahradí rozpracovaný návrh zápisu“.

@@ -14,7 +14,8 @@ import {
   weekdayShort,
 } from "@/lib/time";
 import type { EventCard } from "@/server/services/events";
-import { badgeClass, cardDetails, cardStatus, cardTone, isPickable, missingDetails, primaryStatus } from "../status";
+import { badgeClass, cardDetails, cardStatus, cardTone, isMovable, isPickable, missingDetails, primaryStatus } from "../status";
+import { CardMenu, type CardMenuItem } from "./CardMenu";
 import { PickBox } from "./PlanSelection";
 import styles from "./schedule.module.css";
 
@@ -30,7 +31,9 @@ export type SlotTimes = Record<number, string>;
 /** Kam vede klik na akci. Plán posílá odkaz, který otevře náhled v okně a zachová měsíc i filtry. */
 export type CardHref = (card: EventCard) => string;
 const pageHref: CardHref = (card) => `/vzdelavani/akce/${encodeURIComponent(card.id)}`;
-type Linking = { hrefFor?: CardHref; managing?: boolean };
+/** Položky menu ⋯ karty (jen Plán). Server je odvodí z `cardActions` a doplní adresy se zachovaným měsícem a filtry. */
+export type CardMenuFor = (card: EventCard) => CardMenuItem[];
+type Linking = { hrefFor?: CardHref; managing?: boolean; menuFor?: CardMenuFor };
 /** Plánování v mřížce (jen správce): odkaz „+“ pro přidání akce na den a přesun tažením od dneška dál. */
 type Planning = { addHref?: (day: string) => string; movableFrom?: string };
 const dayOf = (card: EventCard) => toDateKey(new Date(card.startsAt));
@@ -91,19 +94,40 @@ function CardMeta({ card, managing }: { card: EventCard; managing: boolean }) {
   );
 }
 
-/** Obal karty: v režimu výběru (jen správce, jen návrhy) k ní přidá checkbox, v agendě případně úchyt přesunu. */
-function CardWrap({ card, managing, handle = false, children }: { card: EventCard; managing: boolean; handle?: boolean; children: React.ReactNode }) {
+/**
+ * Obal karty: v režimu výběru (jen správce, jen návrhy) k ní přidá checkbox, v agendě případně úchyt přesunu
+ * a menu ⋯ s rychlými akcemi. Všechno jsou sourozenci odkazu karty, nikdy ne jeho obsah.
+ */
+function CardWrap({
+  card,
+  managing,
+  handle = false,
+  menu = [],
+  menuClass,
+  children,
+}: {
+  card: EventCard;
+  managing: boolean;
+  handle?: boolean;
+  menu?: CardMenuItem[];
+  menuClass?: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className={styles.cardWrap}>
       {children}
+      {menu.length > 0 && (
+        <CardMenu
+          target={{ id: card.id, revision: card.revision ?? 0, label: card.label, from: dayOf(card) }}
+          items={menu}
+          className={menuClass}
+        />
+      )}
       {handle && <MoveHandle card={card} />}
       {managing && isPickable(card) && <PickBox id={card.id} label={card.label} />}
     </div>
   );
 }
-
-/** Akci jde přesunout jen budoucí, nezrušenou a ne svátek. Server totéž ověří znovu (`planMove`). */
-const isMovable = (card: EventCard) => card.revision !== null && card.type !== "holiday" && card.planStatus !== "cancelled" && !card.past;
 
 /**
  * Úchyt přesunu v agendě (telefon): samostatné tlačítko vedle odkazu karty, ne uvnitř něj. Podržení a tažení
@@ -139,7 +163,7 @@ function CardDetails({ card, managing }: { card: EventCard; managing: boolean })
 const pickAttr = (card: EventCard, managing: boolean) => (managing && isPickable(card) ? { "data-pick-id": card.id } : {});
 
 // Karta v mřížce: název, Kdo a Téma, čas a jeden stav. Podrobnosti ukáže okno akce po kliknutí.
-function EventBlock({ card, hrefFor = pageHref, managing = false, movable = false }: { card: EventCard; movable?: boolean } & Linking) {
+function EventBlock({ card, hrefFor = pageHref, managing = false, movable = false, menuFor }: { card: EventCard; movable?: boolean } & Linking) {
   const tone = cardTone(card);
   const isHoliday = card.type === "holiday";
   const cancelled = card.planStatus === "cancelled";
@@ -148,7 +172,7 @@ function EventBlock({ card, hrefFor = pageHref, managing = false, movable = fals
     ? { draggable: true, "data-move-id": card.id, "data-move-revision": card.revision ?? 0, "data-move-label": card.label, "data-move-from": dayOf(card) }
     : {};
   return (
-    <CardWrap card={card} managing={managing}>
+    <CardWrap card={card} managing={managing} menu={menuFor?.(card)} menuClass={styles.menuGrid}>
       <Link href={hrefFor(card)} scroll={false} className={`${styles.event} ${styles[tone]}`} {...drag} {...pickAttr(card, managing)}>
         <span className={styles.title}>{card.label}</span>
         <CardDetails card={card} managing={managing} />
@@ -168,6 +192,7 @@ export function ScheduleGrid({
   managing = false,
   addHref,
   movableFrom,
+  menuFor,
 }: {
   monthKey: string;
   cards: EventCard[];
@@ -248,6 +273,7 @@ export function ScheduleGrid({
                           hrefFor={hrefFor}
                           managing={managing}
                           movable={plannable && isMovable(card)}
+                          menuFor={menuFor}
                         />
                       ))}
                       {inMonth && (ghosts.get(day) ?? []).map((card) => <GhostBlock key={`stin-${card.id}`} card={card} hrefFor={hrefFor} />)}
@@ -276,6 +302,7 @@ export function Agenda({
   managing = false,
   addHref,
   movableFrom,
+  menuFor,
 }: { monthKey: string; cards: EventCard[]; todayKey: string; emptyText?: string } & Linking & Planning) {
   const days = byDay(cards.filter((c) => monthOf(dayOf(c)) === monthKey));
   const ghosts = ghostsByDay(cards);
@@ -328,13 +355,14 @@ export function Agenda({
                 <ul className={styles.agendaEvents}>
                   {(days.get(day) ?? []).map((card) => {
                     const handle = plannable && isMovable(card);
+                    const menu = menuFor?.(card) ?? [];
                     return (
                       <li key={card.id}>
-                        <CardWrap card={card} managing={managing} handle={handle}>
+                        <CardWrap card={card} managing={managing} handle={handle} menu={menu} menuClass={handle ? styles.menuAgendaHandle : styles.menuAgenda}>
                           <Link
                             href={hrefFor(card)}
                             scroll={false}
-                            className={`${styles.agendaEvent} ${styles[cardTone(card)]}${handle ? ` ${styles.withHandle}` : ""}`}
+                            className={`${styles.agendaEvent} ${styles[cardTone(card)]}${handle ? ` ${styles.withHandle}` : ""}${menu.length ? ` ${styles.withMenu}` : ""}`}
                             {...pickAttr(card, managing)}
                           >
                             <span className={styles.agendaTime}>

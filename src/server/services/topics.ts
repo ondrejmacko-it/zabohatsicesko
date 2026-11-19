@@ -1,11 +1,22 @@
 import { randomUUID } from "node:crypto";
-import { and, asc, eq, isNotNull, isNull, ne, sql } from "drizzle-orm";
+import { and, asc, eq, gt, isNotNull, isNull, ne, sql } from "drizzle-orm";
 import { toDateKey } from "@/lib/time";
 import { audit } from "@/server/audit";
 import { config, now } from "@/server/config";
 import { getDb, queryRows, type Executor } from "@/server/db/client";
-import { topicInterests, topics, users } from "@/server/db/schema";
-import { rankTopics, type RankedTopic, type TopicStat } from "@/server/domain/topics";
+import { events, topicInterests, topics, users } from "@/server/db/schema";
+import {
+  guaranteedTopics,
+  isGuaranteed,
+  moveInOrder,
+  nextFreePriority,
+  otherTopics,
+  planCandidates,
+  rankTopics,
+  type PlanEvent,
+  type RankedTopic,
+  type TopicStat,
+} from "@/server/domain/topics";
 import { canSeeAudience, isOrganizer, type Viewer } from "@/server/policy";
 import { DomainError } from "@/server/services/errors";
 
@@ -21,9 +32,12 @@ export async function listTopics(viewer: Viewer): Promise<RankedTopic[]> {
     interested: boolean;
     last_held: Date | string | null;
     next_planned: Date | string | null;
+    next_planned_id: string | null;
+    priority_rank: number | null;
+    manual_rank: number | null;
   }>(
     db,
-    sql`SELECT t.id, t.name, t.audience,
+    sql`SELECT t.id, t.name, t.audience, t.priority_rank, t.manual_rank,
           (SELECT count(*)::int FROM topic_interests i WHERE i.topic_id = t.id) AS interest_count,
           EXISTS (SELECT 1 FROM topic_interests i WHERE i.topic_id = t.id AND i.user_id = ${viewer.id}) AS interested,
           (SELECT max((e.published->>'endsAt')::timestamptz) FROM events e
@@ -31,7 +45,11 @@ export async function listTopics(viewer: Viewer): Promise<RankedTopic[]> {
                AND (e.published->>'endsAt')::timestamptz <= ${reference}::timestamptz) AS last_held,
           (SELECT min((e.published->>'startsAt')::timestamptz) FROM events e
              WHERE e.published->>'topicId' = t.id AND e.published->>'status' = 'published'
-               AND (e.published->>'startsAt')::timestamptz > ${reference}::timestamptz) AS next_planned
+               AND (e.published->>'startsAt')::timestamptz > ${reference}::timestamptz) AS next_planned,
+          (SELECT e.id FROM events e
+             WHERE e.published->>'topicId' = t.id AND e.published->>'status' = 'published'
+               AND (e.published->>'startsAt')::timestamptz > ${reference}::timestamptz
+             ORDER BY (e.published->>'startsAt')::timestamptz, e.id LIMIT 1) AS next_planned_id
         FROM topics t WHERE t.org_id = ${config.orgId} AND t.archived_at IS NULL`,
   );
   const stats: TopicStat[] = rows
@@ -44,6 +62,9 @@ export async function listTopics(viewer: Viewer): Promise<RankedTopic[]> {
       interestedByViewer: r.interested,
       lastHeld: r.last_held ? toDateKey(new Date(r.last_held)) : null,
       nextPlanned: r.next_planned ? toDateKey(new Date(r.next_planned)) : null,
+      nextPlannedId: r.next_planned_id,
+      priorityRank: r.priority_rank,
+      manualRank: r.manual_rank,
     }));
   return rankTopics(stats);
 }
@@ -144,13 +165,187 @@ export async function updateTopic(viewer: Viewer, topicId: string, name: string,
 export async function setTopicArchived(viewer: Viewer, topicId: string, archived: boolean): Promise<void> {
   if (!isOrganizer(viewer)) throw new DomainError("forbidden");
   const db = await getDb();
-  const [updated] = await db
-    .update(topics)
-    .set({ archivedAt: archived ? now() : null })
-    .where(and(eq(topics.id, topicId), eq(topics.orgId, config.orgId)))
-    .returning({ id: topics.id });
-  if (!updated) throw new DomainError("not_found");
-  await audit(db, viewer.id, archived ? "topic.archive" : "topic.restore", "topic", topicId);
+  await db.transaction(async (tx) => {
+    await lockTopicOrder(tx);
+    // Archivace zruší garantovanou prioritu i ruční pořadí: obnovené téma se vrátí mezi ostatní podle zájmu
+    // a nezabere pořadí, které mezitím dostalo jiné téma.
+    const [updated] = await tx
+      .update(topics)
+      .set(archived ? { archivedAt: now(), priorityRank: null, manualRank: null } : { archivedAt: null })
+      .where(and(eq(topics.id, topicId), eq(topics.orgId, config.orgId)))
+      .returning({ id: topics.id });
+    if (!updated) throw new DomainError("not_found");
+    if (archived) await compactPriorities(tx);
+    await audit(tx, viewer.id, archived ? "topic.archive" : "topic.restore", "topic", topicId);
+  });
+}
+
+// ——— Garantovaná témata a ruční pořadí (jen správce) ———
+
+/**
+ * Zápisy pořadí témat jdou za sebou: zámek řádků témat organizace v transakci. Unikátní index
+ * `topics_priority_rank_unique` je druhá pojistka, jeho porušení se ukáže jako čitelný konflikt.
+ */
+async function lockTopicOrder(tx: Executor) {
+  await tx.execute(sql`SELECT id FROM topics WHERE org_id = ${config.orgId} FOR UPDATE`);
+}
+
+async function activeTopics(tx: Executor) {
+  return tx
+    .select({ id: topics.id, name: topics.name, priorityRank: topics.priorityRank, manualRank: topics.manualRank })
+    .from(topics)
+    .where(and(eq(topics.orgId, config.orgId), isNull(topics.archivedAt)));
+}
+
+/** Po zrušení nebo archivaci se pořadí garantovaných sesypou na 1..n (vzestupně, takže bez kolize indexu). */
+async function compactPriorities(tx: Executor) {
+  const ordered = guaranteedTopics((await activeTopics(tx)).map((t) => ({ ...t, interestCount: 0 })));
+  for (const [index, topic] of ordered.entries()) {
+    if (topic.priorityRank !== index + 1) await tx.update(topics).set({ priorityRank: index + 1 }).where(eq(topics.id, topic.id));
+  }
+}
+
+function isUniqueViolation(error: unknown): boolean {
+  for (let e: unknown = error; e && typeof e === "object"; e = (e as { cause?: unknown }).cause) {
+    if ((e as { code?: unknown }).code === "23505") return true;
+  }
+  return false;
+}
+
+/** Transakce pořadí témat: souběh, který by přesto narazil na unikátní index, je běžný konflikt. */
+async function orderTransaction(task: (tx: Executor) => Promise<void>): Promise<void> {
+  const db = await getDb();
+  try {
+    await db.transaction(async (tx) => {
+      await lockTopicOrder(tx);
+      await task(tx);
+    });
+  } catch (error) {
+    if (isUniqueViolation(error)) throw new DomainError("conflict");
+    throw error;
+  }
+}
+
+async function requireActiveTopic(tx: Executor, topicId: string) {
+  const [topic] = await tx
+    .select()
+    .from(topics)
+    .where(and(eq(topics.id, topicId), eq(topics.orgId, config.orgId), isNull(topics.archivedAt)))
+    .limit(1);
+  if (!topic) throw new DomainError("not_found");
+  return topic;
+}
+
+/**
+ * Nastaví nebo zruší garantovanou prioritu. Nové garantované téma dostane nejnižší volné pořadí (1–3),
+ * čtvrté server odmítne. Zrušení ostatní pořadí sesype. Opakované nastavení nic nemění.
+ */
+export async function setTopicPriority(viewer: Viewer, topicId: string, guaranteed: boolean): Promise<void> {
+  if (!isOrganizer(viewer)) throw new DomainError("forbidden");
+  await orderTransaction(async (tx) => {
+    const topic = await requireActiveTopic(tx, topicId);
+    if (guaranteed === isGuaranteed(topic)) return;
+    if (guaranteed) {
+      const rank = nextFreePriority(await activeTopics(tx));
+      if (rank === null) throw new DomainError("priority_full");
+      await tx.update(topics).set({ priorityRank: rank }).where(eq(topics.id, topicId));
+    } else {
+      await tx.update(topics).set({ priorityRank: null }).where(eq(topics.id, topicId));
+      await compactPriorities(tx);
+    }
+    await audit(tx, viewer.id, guaranteed ? "topic.priority_set" : "topic.priority_clear", "topic", topicId);
+  });
+}
+
+/**
+ * Posun o jedno místo: garantované téma mezi garantovanými (výměna priority), ostatní téma mezi
+ * ostatními (ruční pořadí). Při prvním ručním posunu se aktuální pořadí podle zájmu uloží celé,
+ * aby se ostatní témata nepřeházela. Téma na kraji zůstane, kde je.
+ */
+export async function moveTopic(viewer: Viewer, topicId: string, direction: "up" | "down"): Promise<void> {
+  if (!isOrganizer(viewer)) throw new DomainError("forbidden");
+  await orderTransaction(async (tx) => {
+    const topic = await requireActiveTopic(tx, topicId);
+    const all = await activeTopics(tx);
+    if (isGuaranteed(topic)) {
+      const order = guaranteedTopics(all.map((t) => ({ ...t, interestCount: 0 })));
+      const next = moveInOrder(order.map((t) => t.id), topicId, direction);
+      if (!next) return;
+      // Soused, se kterým se téma vymění, stojí v novém pořadí na původním místě tématu.
+      const other = order.find((t) => t.id === next[order.findIndex((o) => o.id === topicId)])!;
+      // Výměna přes prázdnou hodnotu: unikátní index nepovolí ani na okamžik dvě stejná pořadí.
+      await tx.update(topics).set({ priorityRank: null }).where(eq(topics.id, topicId));
+      await tx.update(topics).set({ priorityRank: topic.priorityRank }).where(eq(topics.id, other.id));
+      await tx.update(topics).set({ priorityRank: other.priorityRank }).where(eq(topics.id, topicId));
+    } else {
+      const counts = await interestCounts(tx);
+      const order = otherTopics(all.map((t) => ({ ...t, interestCount: counts.get(t.id) ?? 0 })));
+      const next = moveInOrder(order.map((t) => t.id), topicId, direction);
+      if (!next) return;
+      for (const [index, id] of next.entries()) {
+        const current = order.find((t) => t.id === id)!;
+        if (current.manualRank !== index + 1) await tx.update(topics).set({ manualRank: index + 1 }).where(eq(topics.id, id));
+      }
+    }
+    await audit(tx, viewer.id, direction === "up" ? "topic.move_up" : "topic.move_down", "topic", topicId);
+  });
+}
+
+/** Zruší ruční pořadí ostatních témat, seznam se znovu řadí podle zájmu. */
+export async function resetTopicOrder(viewer: Viewer): Promise<void> {
+  if (!isOrganizer(viewer)) throw new DomainError("forbidden");
+  await orderTransaction(async (tx) => {
+    await tx.update(topics).set({ manualRank: null }).where(and(eq(topics.orgId, config.orgId), isNotNull(topics.manualRank)));
+    await audit(tx, viewer.id, "topic.order_reset", "org", config.orgId);
+  });
+}
+
+async function interestCounts(tx: Executor): Promise<Map<string, number>> {
+  const rows = await tx
+    .select({ topicId: topicInterests.topicId, count: sql<number>`count(*)::int` })
+    .from(topicInterests)
+    .innerJoin(topics, eq(topics.id, topicInterests.topicId))
+    .where(eq(topics.orgId, config.orgId))
+    .groupBy(topicInterests.topicId);
+  return new Map(rows.map((r) => [r.topicId, Number(r.count)]));
+}
+
+export type TopicPlanOptions = {
+  topic: { id: string; name: string; audience: string };
+  /** Nejbližší budoucí akce, která téma už má (zveřejněná i návrh). */
+  scheduled: { id: string; label: string; dateKey: string; draft: boolean } | null;
+  candidates: Array<{ id: string; revision: number; label: string; dateKey: string; audience: string; draft: boolean; reason: string }>;
+};
+
+/**
+ * Podklad okna Naplánovat téma: kam téma zařadit (`planCandidates`) a zda už má budoucí termín.
+ * Jen správce, jen nearchivované téma. Čte pracovní verzi akcí (návrhy i rozpracované změny).
+ */
+export async function topicPlanOptions(viewer: Viewer, topicId: string): Promise<TopicPlanOptions> {
+  if (!isOrganizer(viewer)) throw new DomainError("forbidden");
+  const db = await getDb();
+  const topic = await requireActiveTopic(db, topicId);
+  const upcoming = await db
+    .select({
+      id: events.id,
+      revision: events.revision,
+      type: events.type,
+      label: events.label,
+      audience: events.audience,
+      status: events.status,
+      startsAt: events.startsAt,
+      topicId: events.topicId,
+      topicTitle: events.topicTitle,
+    })
+    .from(events)
+    .where(and(eq(events.orgId, config.orgId), ne(events.status, "cancelled"), gt(events.startsAt, now())))
+    .orderBy(asc(events.startsAt), asc(events.id));
+  const { scheduled, candidates } = planCandidates(topic, upcoming as PlanEvent[]);
+  return {
+    topic: { id: topic.id, name: topic.name, audience: topic.audience },
+    scheduled: scheduled && { id: scheduled.id, label: scheduled.label, dateKey: toDateKey(scheduled.startsAt), draft: scheduled.status === "draft" },
+    candidates: candidates.map((c) => ({ id: c.id, revision: c.revision, label: c.label, dateKey: toDateKey(c.startsAt), audience: c.audience, draft: c.draft, reason: c.reason })),
+  };
 }
 
 export async function listArchivedTopics(viewer: Viewer): Promise<Array<{ id: string; name: string; audience: string }>> {

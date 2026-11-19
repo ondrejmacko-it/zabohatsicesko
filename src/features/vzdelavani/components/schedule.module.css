@@ -548,3 +548,44 @@
   opacity: 0.35;
   outline: 2px dashed var(--line-strong);
 }
+
+/* ——— Menu ⋯ s rychlými akcemi (sourozenec odkazu karty). Karta kvůli němu nemění výšku. ——— */
+.menuGrid {
+  right: 2px;
+  bottom: 2px;
+}
+
+.menuAgenda,
+.menuAgendaHandle {
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+}
+
+.withMenu {
+  padding-right: 44px;
+}
+
+@media (max-width: 760px) {
+  /* Telefon: ⋯ vpravo nahoře, úchyt přesunu pod ním vpravo dole. Oba mají vlastní dotykovou plochu. */
+  .menuAgendaHandle {
+    top: 6px;
+    right: 8px;
+    transform: none;
+  }
+
+  .withMenu.withHandle {
+    min-height: 88px;
+    padding-right: 48px;
+  }
+
+  .cardWrap:has(> .menuAgendaHandle) > .handle {
+    top: auto;
+    bottom: 0;
+    transform: none;
+  }
+}
+
+:global([data-selecting]) .withMenu {
+  padding-right: 36px;
+}

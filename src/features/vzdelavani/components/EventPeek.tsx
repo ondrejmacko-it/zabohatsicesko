@@ -4,7 +4,7 @@ import { Icon } from "@/components/Icon";
 import { RouteModal, UnavailableModal } from "@/components/RouteModal";
 import { Todo, missingText } from "@/components/Todo";
 import { GROUP_LABELS, PLAN_STATUS_LABELS } from "@/lib/labels";
-import { formatEventWhen } from "@/lib/time";
+import { formatEventWhen, toDateKey } from "@/lib/time";
 import type { Viewer } from "@/server/policy";
 import { isOrganizer } from "@/server/policy";
 import { getEventDetail } from "@/server/services/detail";
@@ -17,14 +17,22 @@ import { cardTone, primaryStatus, statusAdvice } from "../status";
 import { EventWindow } from "./EventDialog";
 import { EventMenu } from "./EventMenu";
 
-type Props = { user: Viewer; eventId: string; preview: PlanPreview | null; previewKey?: string; closeHref: string };
+type Props = {
+  user: Viewer;
+  eventId: string;
+  preview: PlanPreview | null;
+  previewKey?: string;
+  closeHref: string;
+  /** Naplánovat téma u zveřejněné akce: téma je ve formuláři předvyplněné, uloží se až běžným uložením. */
+  presetTopicId?: string;
+};
 
 /**
  * Okno akce nad Plánem nebo Úvodem. Správce v něm akci rovnou upravuje a ukládá (jediné místo úprav),
  * ostatní vidí údaje a odkaz na zápis. Nahrávka a stav v Kalendáři zůstávají na celé stránce akce.
  * Neviditelná nebo neexistující akce ukáže neutrální „Akce není dostupná“.
  */
-export async function EventPeek({ user, eventId, preview, previewKey, closeHref }: Props) {
+export async function EventPeek({ user, eventId, preview, previewKey, closeHref, presetTopicId }: Props) {
   const detail = await getEventDetail(preview?.viewer ?? user, eventId);
   if (!detail) return <UnavailableModal title="Akce není dostupná" closeHref={closeHref} backLabel="Zpět na plán" />;
   const { card } = detail;
@@ -60,9 +68,16 @@ export async function EventPeek({ user, eventId, preview, previewKey, closeHref 
       // U proběhlé akce už příjemci pozvánky nic neřeší.
       card.past ? null : loadInviteRecipients(user).catch(() => null),
     ]);
+    // Předvyplněné téma jen u budoucí akce bez tématu. Nic se neukládá, dokud správce změnu neuloží či nezveřejní.
+    const preset = presetTopicId && !card.past && !detail.form!.topicTitle ? topics.find((t) => t.id === presetTopicId) : undefined;
     const intro = (
       <>
         {statusBand}
+        {preset && (
+          <p className="notice small" role="status">
+            Téma „{preset.name}“ je předvyplněné. Změnu uložte jako návrh, nebo ji zveřejněte s kontrolou dopadu na pozvané.
+          </p>
+        )}
         {card.unpublishedChanges && (
           <div className="notice spread">
             <p className="small">Kolegové a Kalendář zatím vidí zveřejněnou verzi.</p>
@@ -82,10 +97,20 @@ export async function EventPeek({ user, eventId, preview, previewKey, closeHref 
         title={card.label}
         closeHref={closeHref}
         intro={intro}
-        menu={<EventMenu id={card.id} revision={detail.revision} canCancel={detail.canCancel} canDelete={detail.canDelete} links={links} />}
+        menu={
+          <EventMenu
+            id={card.id}
+            revision={detail.revision}
+            canCancel={detail.canCancel}
+            canDelete={detail.canDelete}
+            links={links}
+            copyHref={`/vzdelavani/harmonogram?mesic=${toDateKey(new Date(card.startsAt)).slice(0, 7)}&kopie=${encodeURIComponent(card.id)}`}
+          />
+        }
         id={card.id}
         revision={detail.revision}
-        initial={detail.form!}
+        initial={preset ? { ...detail.form!, topicTitle: preset.name } : detail.form!}
+        saved={preset ? detail.form! : undefined}
         published={detail.publishedForm}
         people={people}
         topics={topics}

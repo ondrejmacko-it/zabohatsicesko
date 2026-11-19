@@ -32,11 +32,11 @@ describe("stav nahrávky napříč obrazovkami", () => {
     expect(await recordingPanel(participant, row)).toMatchObject({ access: "reader", minutes: null });
   });
 
-  it("návrh zápisu je ve výběru i v úkolech ke kontrole", async () => {
+  it("návrh zápisu je ve výběru i v úkolech vedoucího k dokončení", async () => {
     const jobId = await uploadRecording(lead, PAST_FP, asFile(fixtureWav(), "trenink.wav"));
     await processTranscriptionJob(jobId);
     expect((await listMissingMinutes(lead)).items.find((i) => i.eventId === PAST_FP)?.state).toBe("draft");
-    expect((await listTasks(lead)).find((t) => t.href.includes(PAST_FP))?.action).toBe("Zkontrolovat zápis");
+    expect((await listTasks(lead)).find((t) => t.href.includes(PAST_FP))?.action).toBe("Dokončit zápis");
   });
 });
 

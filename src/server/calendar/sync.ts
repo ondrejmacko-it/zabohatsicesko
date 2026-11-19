@@ -78,8 +78,9 @@ async function hasPublishedMinutes(db: Db, eventId: string): Promise<boolean> {
   const [row] = await db
     .select({ id: minutes.id })
     .from(minutes)
-    .innerJoin(recordings, and(eq(recordings.id, minutes.recordingId), isNull(recordings.supersededAt)))
-    .where(and(eq(minutes.eventId, eventId), eq(minutes.status, "published")))
+    .leftJoin(recordings, eq(recordings.id, minutes.recordingId))
+    // Zápis bez nahrávky (text, soubor, ručně) platí vždy, zápis z nahrávky jen k nevyměněné nahrávce.
+    .where(and(eq(minutes.eventId, eventId), eq(minutes.status, "published"), or(isNull(minutes.recordingId), isNull(recordings.supersededAt))))
     .limit(1);
   return Boolean(row);
 }

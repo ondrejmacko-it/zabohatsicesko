@@ -197,7 +197,7 @@ describe("zahození návrhu změny a zápis po výměně nahrávky", () => {
       panel = await rec.recordingPanel(lead, await load());
       if (panel.access !== "handler" || !panel.minutes) throw new Error("chybí návrh zápisu");
     }
-    if (panel.minutes.status !== "published") await rec.publishMinutes(lead, PAST_FP, panel.minutes.id, panel.minutes.version);
+    if (panel.minutes.status !== "published") await rec.approveMinutes(lead, PAST_FP, panel.minutes.id, panel.minutes.version);
     expect((await listPublishedMinutes(participant)).filter((m) => m.eventId === PAST_FP)).toHaveLength(1);
 
     await rec.uploadRecording(lead, PAST_FP, asFile(fixtureWav(), "b.wav"));

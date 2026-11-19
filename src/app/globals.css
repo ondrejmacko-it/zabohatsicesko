@@ -664,8 +664,11 @@ a.item-card:hover {
   color: var(--ink);
 }
 
+/* Jediný vzhled výběru v aplikaci: stejná výška, rámeček, šipka a fokus jako ostatní pole. Menší
+   varianta je jen `.select-small` (filtry Plánu, přepínač osoby v liště). */
 .select {
   padding-right: 30px;
+  cursor: pointer;
   background-image:
     linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
   background-position:
@@ -704,6 +707,14 @@ fieldset.field > legend {
   box-shadow: none;
   outline: 2px solid var(--ink);
   outline-offset: -1px;
+}
+
+.input:disabled,
+.select:disabled,
+.textarea:disabled {
+  background-color: var(--line);
+  color: var(--muted);
+  cursor: not-allowed;
 }
 
 .check {
@@ -810,18 +821,40 @@ fieldset.field > legend {
   display: none;
 }
 
+/* Položky všech menu vypadají stejně: plná šířka, stejná výška a odsazení, jemná ikona vlevo. Pořadí je
+   hlavní akce, úpravy, méně časté a pod čarou nebezpečné. */
 .menu-list .btn {
   justify-content: flex-start;
+  gap: 10px;
   width: 100%;
+  min-height: 36px;
+  padding: 6px 10px;
   border-color: transparent;
+  border-radius: 6px;
   background: transparent;
+  color: var(--ink);
   font-weight: 500;
   text-align: left;
 }
 
+.menu-list .btn > svg {
+  flex: none;
+  color: var(--muted);
+}
+
 .menu-list .btn:hover,
 .menu-list .btn:focus-visible {
+  border-color: transparent;
   background: var(--beige);
+}
+
+.menu-list .btn:focus-visible {
+  outline: 2px solid var(--ochre);
+  outline-offset: -2px;
+}
+
+.menu-list .btn:disabled {
+  background: transparent;
 }
 
 .menu-list .action-form,
@@ -864,8 +897,72 @@ fieldset.field > legend {
   font-weight: 600;
 }
 
-.menu-list .menu-danger {
+.menu-list .menu-danger,
+.menu-list .menu-danger > svg {
   color: var(--danger);
+}
+
+/* ⋯ v rohu karty akce: malé a tlumené, karta nemění rozměry. Dotyková plocha je větší než viditelná ikona
+   (pseudo-prvek), aby šla trefit prstem. Na desktopu se zvýrazní při najetí nebo fokusu na kartu. */
+.menu-card {
+  position: absolute;
+  z-index: 2;
+}
+
+/* Otevřené menu karty nad sousedními kartami (jejich ⋯ má vlastní vrstvu) i nad plovoucím ovládáním. */
+.menu-card[data-open] {
+  z-index: 60;
+}
+
+.menu-card-trigger {
+  display: inline-flex;
+  position: relative;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.menu-card-trigger::before {
+  position: absolute;
+  inset: -8px -6px;
+  content: "";
+}
+
+.menu-card-trigger:hover,
+.menu-card[data-open] > .menu-card-trigger {
+  border-color: var(--line);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.menu-card-trigger:focus-visible {
+  outline: 2px solid var(--ochre);
+  outline-offset: 1px;
+  color: var(--ink);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .menu-card-trigger {
+    opacity: 0.6;
+  }
+
+  :hover > .menu-card > .menu-card-trigger,
+  :focus-within > .menu-card > .menu-card-trigger,
+  .menu-card[data-open] > .menu-card-trigger {
+    opacity: 1;
+  }
+}
+
+/* Při hromadném výběru má přednost checkbox, menu karty se schová stejně jako úchyt přesunu. */
+[data-selecting] .menu-card {
+  display: none;
 }
 
 .btn-icon {
@@ -1213,10 +1310,19 @@ body > .dialog[open]:has(~ .dialog[open]) {
   display: block;
 }
 
-.persona-select {
-  width: auto;
-  min-height: 30px;
-  padding: 3px 28px 3px 8px;
+/* Volba zdroje zápisu: stejné dlaždice jako výběr osoby, na širším okně ve dvou sloupcích. */
+.source-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.source-list legend {
+  grid-column: 1 / -1;
+}
+
+/* Přepínač osoby je `.select-small`, v liště jen s užším písmem. Dvojitá třída přebije `.select-small`
+   níž v souboru, dotyková zařízení ji stejnou silou vrátí na 16 px. */
+.select-small.persona-select {
   font-size: 13px;
 }
 
@@ -1631,8 +1737,8 @@ details > summary {
 @media (pointer: coarse) {
   .input,
   .select,
+  .select.select-small,
   .textarea,
-  .persona-select,
   .sidebar-search {
     font-size: 16px;
   }
@@ -1642,7 +1748,7 @@ details > summary {
   }
 
   .btn-small,
-  .persona-select {
+  .select-small {
     min-height: 38px;
   }
 
@@ -2047,6 +2153,70 @@ a.brief-link:hover {
 }
 
 /* Archiv: stejné řádky, jen tlumené. */
+/* Garantovaná a ostatní témata: stejné řádky, jen malý nadpis skupiny. Garantovaná mají ochrový pruh. */
+.topic-group + .topic-group {
+  margin-top: 20px;
+}
+
+.topic-group-title {
+  margin: 0 0 2px;
+  font-size: 1rem;
+}
+
+.topic-group > .item-meta {
+  margin: 0 0 8px;
+}
+
+.topic-list.topic-guaranteed > .topic-row {
+  box-shadow: inset 3px 0 0 var(--ochre);
+}
+
+.topic-priority-hint {
+  margin-bottom: 12px;
+}
+
+/* Tiché označení ručního pořadí: jen řádek nad seznamem, žádný štítek u témat. */
+.topic-order-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 12px;
+  margin-bottom: 8px;
+}
+
+.topic-order-note .item-meta {
+  margin: 0;
+}
+
+/* Okno Naplánovat téma: kompaktní řádky akcí s vysvětlením a jedním tlačítkem. */
+.plan-topic-list {
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  list-style: none;
+}
+
+.plan-topic-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 10px 14px;
+}
+
+.plan-topic-item + .plan-topic-item {
+  border-top: 1px solid var(--line);
+}
+
+.plan-topic-action {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
 .archived-topics {
   margin-top: 10px;
 }
@@ -2480,8 +2650,8 @@ p.cal-status {
 .select-small {
   width: auto;
   max-width: 100%;
-  min-height: 34px;
-  padding-block: 4px;
+  min-height: 32px;
+  padding: 4px 28px 4px 8px;
   font-size: 14px;
 }
 
@@ -2664,6 +2834,51 @@ p.cal-status {
   align-self: stretch;
 }
 
+/* Přehled stavu návrhů: kategorie jako malá tlačítka, která skočí na první dotčený řádek. */
+.prepare-overview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.prepare-overview-item strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.prepare-overview-item:not(:disabled)[data-kind="missingLead"],
+.prepare-overview-item:not(:disabled)[data-kind="missingTopic"],
+.prepare-overview-item:not(:disabled)[data-kind="clash"] {
+  border-color: var(--ochre);
+  background: var(--ochre-soft);
+}
+
+/* Hromadné doplnění vedoucího: volba, tlačítko a vysvětlení v jednom zalamovaném řádku. */
+.prepare-bulk {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 4px 8px;
+  align-self: stretch;
+}
+
+.prepare-bulk .field {
+  flex: 0 1 280px;
+  min-width: 0;
+}
+
+.prepare-bulk .field-hint,
+.prepare-bulk-note {
+  flex: 1 0 100%;
+  margin: 0;
+}
+
+.prepare-bulk-note:empty {
+  display: none;
+}
+
 /* Téma doporučené systémem, o kterém správce ještě nerozhodl. Po přijetí vypadá jako každé jiné téma. */
 .publish-row .input[data-suggested] {
   border-color: var(--ochre);
@@ -2716,8 +2931,14 @@ p.cal-status {
 
 .suggestion-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 4px 8px;
+}
+
+/* Úzký displej: doporučení se nesmí roztáhnout přes okno (štítky Garantované / Doporučené se zalomí). */
+.suggestion {
+  max-width: 100%;
 }
 
 /* Správa: stav účtu a akce vpravo v jedné ose s názvem účtu. */

@@ -1,5 +1,66 @@
 # Prompt pro další session
 
+**RYCHLÉ AKCE, PLÁNOVÁNÍ TÉMAT, ZÁPISY SE SCHVÁLENÍM (18. 11. 2026, větev `claude/rychle-akce-a-planovani-temat` z main 59cadc0).**
+Zadání uživatele: velké UX zadání (Quick Actions, garantovaná témata, Naplánovat téma, doporučení, Připravit měsíc,
+zápisy z více zdrojů s povinným schválením vedoucím, dokumenty pro integraci). Plán a rozhodnutí: `docs/plan-rychle-akce-a-temata.md`.
+Uživatel chce, aby relace pracovaly samostatně, samy zakládaly navazující relace a ozvaly se až na konci (finální relace = report + audit + draft PR).
+* F1 HOTOVO (2968d2f, 0d38512, 59ed98f, 5e88242): `Menu` varianta `card`, `cardActions` ve `status.ts`, `CardMenu.tsx`,
+  `PublishOneDialog` v `PlanSelection`, duplikace `?kopie=` (`duplicateFormValues`, `suggestedCopyDate` v `detail.ts`,
+  server odmítne publish s `duplicateOf`), `e2e/rychle-akce.spec.ts`. Ověřeno: lint, typecheck, unit 339/339, build,
+  e2e (rychle-akce, plan-planovani, mobilni-ovladani, klavesnice, pristupnost, okna) 317 passed / 81 skipped.
+  Otevřené: zalomení času na 320 px u návrhu se štítkem; kopie z okna akce drží jen měsíc.
+* F2 HOTOVO (1f27d10, 011263e, edf652b, d2c25e0): migrace 0013 (`topics.priority_rank` 1–3 + partial unique index,
+  `topics.manual_rank`), seed 2 garantovaná (Otevřené otázky 1, Návaznost po konzultaci 2). Domény v
+  `src/server/domain/topics.ts`: `recommendTopics` (garantovaná → skupina → zájem, sdílí formulář i `suggestTopics`),
+  `planCandidates`, `guaranteedTopics`/`otherTopics`/`moveInOrder`/`nextFreePriority`. Služby (jen `canPlan`, audit):
+  `setTopicPriority`, `moveTopic`, `resetTopicOrder`, `topicPlanOptions` (topics.ts), `assignTopicToDraft` (events.ts,
+  přes `updateEvent`), `topicFormValues` (detail.ts, `?tema=`); okno akce s `?akce=&tema=` předvyplní téma (`saved`
+  prop formuláře). UI: `TopicsSection` (Garantovaná/Ostatní, tichá poznámka ručního pořadí), `TopicManage` +
+  `PlanTopicDialog` v `TopicActions.tsx`, štítky Garantované/Doporučené a upozornění na skupinu v `EventDialog`.
+  Úkol správce „Nastavte garantovaná témata“ (`listTasks`), rozpočet dotazů Plánu 16 → 17. Ověřeno: lint, typecheck,
+  unit 359/359, build, e2e (temata-planovani, doporucene-tema, kdo-tema, klavesnice, pristupnost, okna, stranky,
+  rychle-akce, plan-planovani, domu-ukoly, unik-dat) 934 passed / 43 skipped + po opravě 320 px okna/pristupnost/
+  temata-planovani 243 passed / 27 skipped. Otevřené: archivace prioritu ruší (obnova ji nevrací); nová témata při
+  ručním pořadí na konec; okno Naplánovat téma nabízí max. 5 akcí (zveřejněné až za návrhy); typ nové akce k tématu
+  pro „Všichni“/Tým A = Jiná akce; předvyplněné téma v okně akce se nehlásí jako neuložená změna při zavření (F3).
+* F3 HOTOVO (03f753c, 9bd2e52, 8de1a72, 10591bb, 5b53068): `prepare-month.ts` (`draftGaps`, `prepareOverview`,
+  `rowsMissingLead`, `fillEmptyLeads`); v `PrepareMonthDialog` přehled Připraveno/Chybí vedoucí/Chybí téma/Kolize/
+  Vybráno s přechodem na pole a hromadné doplnění vedoucího jen do prázdných (uloží až Uložit/Zveřejnit, server beze
+  změny). Přijmout/Změnit/Odmítnout jen vizuálně (Přijmout hlavní), sloučení by ztratilo funkci nebo audit. „Nastavit
+  pravidelný rozvrh“ + vysvětlení. Okno akce: dotaz při zavření podle hodnot (`Modal.hasUnsavedChanges`), předvyplnění
+  = výchozí stav. `.select-small` jediná menší varianta (lišta 30→32 px, filtry 34→32 px, dotyk 38 px/16 px).
+  Ověřeno: lint, typecheck, unit 365/365, build, e2e (priprava-mesice, plan-planovani, okna, klavesnice, pristupnost,
+  mobilni-ovladani, rychle-akce, temata-planovani, doporucene-tema) 397 passed / 87 skipped, stranky+kdo-tema 548
+  passed. Otevřené: upozornit při zavření neuloženého duplikátu / předvyplněného tématu (teď ne); hromadné doplnění
+  do všech prázdných, ne jen vybraných; okno akce nemá tlačítko Zrušit (zavírá Zavřít/Esc/klik mimo).
+* F4 HOTOVO (85fffaa, 63ad8ed, 7bd3c89, 63f9eba): migrace 0014 (`minutes.recording_id`/`job_id` NULL, `source`
+  recording/transcript/notes/file/manual s CHECK vazby na nahrávku, `approved_version/by/at`; stávající zveřejněné
+  zápisy dostanou schválení své verze, nic se neskryje). `text-source.ts` (přípona TXT/MD/VTT/SRT, 1 MB, striktní
+  UTF-8, titulky bez časů), `integrations/minutes-drafter.ts` (`MinutesDrafter`, lokální `draftFromText`).
+  Služby: `createMinutesDraft` (zámek akce + `replaceId` proti souběhu), `updateMinutes` (beze změny obsahu žádná
+  verze, změna schváleného ruší schválení + audit `minutes.approval_revoked`), `approveMinutes` (jen
+  `canApproveMinutes` = vedoucí, kontrola verze, stáhne starší zveřejněný zápis akce). „Aktuální zápis“ = nejnovější
+  mimo vyměněné nahrávky (panel, úkoly, počet, Kalendář). Úkol vedoucímu „Dokončit zápis“ (stejný klíč, bez
+  duplicity), kontrolor „Zkontrolovat zápis“. UI: `MinutesSourceForm`, stav verze, Schválit a zveřejnit jen vedoucí,
+  „Doplňte vedoucího akce“. Ověřeno: lint, typecheck, unit 380/380, build, e2e (zapisy-schvaleni, zapisy,
+  rychle-akce, okna, pristupnost, domu-ukoly, unik-dat) 310 passed / 40 skipped, (stranky, mobilni-ovladani,
+  klavesnice) 580 passed / 44 skipped. Otevřené: správce, který není vedoucí, neschválí ani při nepřítomnosti
+  vedoucího (jen doplnit vedoucího); nahrání nahrávky nahradí textový návrh bez zvláštního potvrzení (jen upozornění);
+  stav „návrh“ vs. „čeká na schválení“ = jeden stav (návrh čeká na schválení, po zrušení „čeká na nové schválení“);
+  vedoucí může schválit i bez kontroly kontrolorem; čtenář nevidí číslo verze.
+* F5 HOTOVO: lint OK, typecheck OK, unit 380/380, build OK, **celé e2e 1092 passed / 105 skipped / 0 failed** (7,1 min,
+  na d78ce49), žádná regrese. Report `docs/report-rychle-akce-a-temata.md` (scénáře 04 → testy, scénáře 1–12
+  rekonstruované z plánu, kroky před/po, otevřené otázky, migrace). Screenshoty v `docs/screenshots/` (rychle-akce-menu,
+  garantovana-temata, naplanovat-tema, doporuceni-formular, pripravit-mesic-prehled, pravidelny-rozvrh, zapis-zdroj,
+  zapis-schvaleni, rychle-akce-mobil). Dokončené `docs/integrace-do-firemni-wiki.md` a `docs/podklady-pro-sper.md`
+  (migrace 0013/0014, nové akce, `canApproveMinutes`, `MinutesDrafter`; kdo je SPER dál neznáme). Část 06 zadání
+  v repu nedohledána (otevřená otázka).
+**Další krok:** draft PR #73 je založený, nic bez pokynu. Uživatel reviduje a merguje ručně.
+* Po PR: sdílené Preview DB chyběl `demo-spravce` (seed z 12. 11., účet přibyl 15. 11.). Doplněn jen INSERT (souhlas uživatele),
+  pojistka v `listPersonas` (82ecb48): bez něj výběr nabídne `demo-organizator`. Unit 381/381.
+Pozor: migrace 0013/0014 se na Preview spustily po pushi, na produkci se spustí po merge.
+
+
 **HLAVNÍ SPRÁVCE SI VYTVOŘÍ ODKAZ SÁM SOBĚ (18. 11. 2026, větev `claude/spravce-odkaz-sobe` z main 70c5f1f, draft PR).**
 * „Odkaz“ = zvací odkaz pro přihlášení dalšího zařízení (`createLoginLink`). Rozhodnutí uživatele: ostatním ho dál
   přiděluje každý správce (beze změny), hlavní správce si ho nově vytvoří i sám sobě.

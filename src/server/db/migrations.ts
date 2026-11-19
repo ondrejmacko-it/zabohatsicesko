@@ -391,4 +391,37 @@ ALTER TABLE personal_calendars ADD CONSTRAINT personal_calendars_status_check
   CHECK (status IN ('active', 'declined', 'revoked', 'calendar_deleted', 'removal_failed'));
 `,
   },
+  {
+    id: "0013_topic_priority_and_order",
+    sql: `
+-- Garantovaná témata (pořadí 1–3) a ruční pořadí ostatních. Jen nové sloupce, stávající data se nemění.
+-- Unikátní index hlídá i souběh: stejné pořadí nedostanou dvě nearchivovaná témata.
+ALTER TABLE topics ADD COLUMN priority_rank smallint CHECK (priority_rank BETWEEN 1 AND 3);
+ALTER TABLE topics ADD COLUMN manual_rank integer;
+CREATE UNIQUE INDEX topics_priority_rank_unique ON topics (org_id, priority_rank)
+  WHERE priority_rank IS NOT NULL AND archived_at IS NULL;
+`,
+  },
+  {
+    id: "0014_minutes_sources_and_approval",
+    sql: `
+-- Zápis bez nahrávky (vložený přepis, poznámky, textový soubor, ruční zápis) a schválení konkrétní verze
+-- vedoucím akce. Jen nové sloupce a uvolnění NOT NULL, nic se nemaže.
+-- Stávající zápisy jsou všechny z nahrávky: dostanou source 'recording' (výchozí hodnota) a zveřejněné
+-- se označí jako schválené ve své aktuální verzi, takže je publikum vidí dál beze změny.
+ALTER TABLE minutes ALTER COLUMN recording_id DROP NOT NULL;
+ALTER TABLE minutes ALTER COLUMN job_id DROP NOT NULL;
+ALTER TABLE minutes ALTER COLUMN transcript SET DEFAULT '';
+ALTER TABLE minutes ADD COLUMN source text NOT NULL DEFAULT 'recording'
+  CHECK (source IN ('recording', 'transcript', 'notes', 'file', 'manual'));
+-- Zápis z nahrávky má vždy nahrávku i úlohu přepisu, ostatní zdroje ani jedno.
+ALTER TABLE minutes ADD CONSTRAINT minutes_source_recording_check
+  CHECK ((source = 'recording') = (recording_id IS NOT NULL AND job_id IS NOT NULL));
+ALTER TABLE minutes ADD COLUMN approved_version integer;
+ALTER TABLE minutes ADD COLUMN approved_by text REFERENCES users(id);
+ALTER TABLE minutes ADD COLUMN approved_at timestamptz;
+UPDATE minutes SET approved_version = version, approved_by = published_by, approved_at = published_at
+  WHERE status = 'published' AND approved_version IS NULL;
+`,
+  },
 ];

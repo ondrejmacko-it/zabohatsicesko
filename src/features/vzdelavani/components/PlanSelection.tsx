@@ -5,6 +5,10 @@ import { createContext, startTransition, useActionState, useContext, useEffect, 
 import { ActionMessage } from "@/components/ActionForm";
 import { flash } from "@/components/FlashMessage";
 import { Icon } from "@/components/Icon";
+import { Modal } from "@/components/Modal";
+import { publishInviteNote, type InviteMode } from "@/lib/invite-mode";
+import { formatEventTime, formatDayMonth, toDateKey, weekdayShort } from "@/lib/time";
+import type { Group } from "@/lib/types";
 import type { MonthDraft } from "@/server/services/events";
 import { deleteDraftsAction, publishMonthAction, type ActionResult } from "../actions";
 
@@ -12,7 +16,21 @@ import { deleteDraftsAction, publishMonthAction, type ActionResult } from "../ac
 export type PickItem = { id: string; revision: number };
 
 type Ask = "publish" | "delete" | null;
-type Selection = { active: boolean; picked: Set<string>; toggle: (id: string) => void; start: () => void; stop: () => void; available: boolean };
+type Selection = {
+  active: boolean;
+  picked: Set<string>;
+  toggle: (id: string) => void;
+  start: () => void;
+  stop: () => void;
+  available: boolean;
+  /** Návrh jde zveřejnit samostatně (budoucí, nikdy nezveřejněný, v tomto měsíci). */
+  canPublishOne: (id: string) => boolean;
+  /** Otevře potvrzení zveřejnění jednoho návrhu (menu ⋯ na kartě). */
+  publishOne: (id: string) => void;
+};
+
+/** Komu jde pozvánka podle skupiny a jak (režim pozvánek). Bez Kalendáře null. */
+export type PublishInvite = { recipients: Record<Group, Array<{ email: string; name: string }>>; mode: InviteMode };
 
 const SelectionContext = createContext<Selection | null>(null);
 
@@ -30,9 +48,11 @@ export function SelectionZone({
   items,
   publishable,
   changeDrafts,
+  invite = null,
   children,
 }: {
   monthKey: string;
+  invite?: PublishInvite | null;
   items: PickItem[];
   publishable: MonthDraft[];
   /** Počet návrhů změn zveřejněných akcí v měsíci. Ty mají vlastní potvrzení dopadu v okně akce. */
@@ -43,6 +63,7 @@ export function SelectionZone({
   const [active, setActive] = useState(false);
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [ask, setAsk] = useState<Ask>(null);
+  const [single, setSingle] = useState<MonthDraft | null>(null);
   const bar = useRef<HTMLDivElement>(null);
   const backTo = useRef<Ask>(null);
 
@@ -134,11 +155,21 @@ export function SelectionZone({
     toggle(card.dataset.pickId!);
   };
 
-  const value: Selection = { active, picked, toggle, start: () => setActive(true), stop, available: items.length > 0 };
+  const value: Selection = {
+    active,
+    picked,
+    toggle,
+    start: () => setActive(true),
+    stop,
+    available: items.length > 0,
+    canPublishOne: (id) => publishableById.has(id),
+    publishOne: (id) => setSingle(publishableById.get(id) ?? null),
+  };
   return (
     <SelectionContext.Provider value={value}>
       <div className="plan-zone" data-selecting={active || undefined} onClickCapture={onClickCapture}>
         {children}
+        {single && <PublishOneDialog key={single.id} draft={single} monthKey={monthKey} invite={invite} onClose={() => setSingle(null)} />}
         {active && (
           <div ref={bar} className="select-bar" role="region" aria-label="Hromadný výběr návrhů">
             <ActionMessage state={deleteState ?? publishState} />
@@ -239,5 +270,70 @@ export function PickBox({ id, label }: { id: string; label: string }) {
       onChange={() => selection.toggle(id)}
       aria-label={`Vybrat: ${label}`}
     />
+  );
+}
+
+/**
+ * Zveřejnění jednoho návrhu z menu karty. Stejná serverová cesta jako hromadné zveřejnění (`publishMonthAction`):
+ * server znovu ověří verzi, stav a měsíc a neúplný návrh pustí jen s výslovným potvrzením. Okno předem řekne,
+ * co chybí a komu půjde pozvánka.
+ */
+function PublishOneDialog({ draft, monthKey, invite, onClose }: { draft: MonthDraft; monthKey: string; invite: PublishInvite | null; onClose: () => void }) {
+  const router = useRouter();
+  const [allowIncomplete, setAllowIncomplete] = useState(false);
+  const missing = [!draft.topicTitle && "téma", !draft.leadId && "vedoucí"].filter((m): m is string => Boolean(m));
+  const [state, publish, pending] = useActionState(async (prev: ActionResult | null, fd: FormData) => {
+    const result = await publishMonthAction(prev, fd);
+    if (result.ok) {
+      flash(result.message);
+      onClose();
+      router.refresh();
+    }
+    return result;
+  }, null);
+  const submit = () => {
+    const fd = new FormData();
+    fd.set("month", monthKey);
+    fd.append("pick", draft.id);
+    fd.set(`rev-${draft.id}`, String(draft.revision));
+    // Zveřejnění beze změny údajů: posíláme hodnoty návrhu, jak je server poslal.
+    fd.set(`topic-${draft.id}`, draft.topicTitle ?? "");
+    fd.set(`lead-${draft.id}`, draft.leadId ?? "");
+    if (missing.length && allowIncomplete) fd.set("allowIncomplete", "1");
+    startTransition(() => publish(fd));
+  };
+  const day = toDateKey(new Date(draft.startsAt));
+  return (
+    <Modal open title="Zveřejnit návrh" onRequestClose={onClose}>
+      <div className="stack">
+        <p>
+          <strong>{draft.label}</strong> · {weekdayShort(day)} {formatDayMonth(day)}, {formatEventTime(new Date(draft.startsAt), new Date(draft.endsAt), false)}
+        </p>
+        <div className="notice" role="status">
+          <p>Kolegové akci uvidí ve Wiki a dostanou pozvánku do Kalendáře.</p>
+          {invite && <p className="small">{publishInviteNote(invite.mode, [draft.audience], invite.recipients)}</p>}
+        </div>
+        {missing.length > 0 && (
+          <>
+            <p className="notice notice-danger">
+              <strong>Chybí {missing.join(" a ")}.</strong> Doplňte ho v okně akce, nebo zveřejněte bez něj.
+            </p>
+            <label className="check">
+              <input type="checkbox" checked={allowIncomplete} onChange={(e) => setAllowIncomplete(e.target.checked)} />
+              <span>Zveřejnit i bez {missing.length === 2 ? "tématu a vedoucího" : missing[0] === "téma" ? "tématu" : "vedoucího"}.</span>
+            </label>
+          </>
+        )}
+        <ActionMessage state={state} />
+        <div className="dialog-actions">
+          <button type="button" className="btn btn-primary" disabled={pending || (missing.length > 0 && !allowIncomplete)} onClick={submit}>
+            {pending ? "Zveřejňuji…" : "Zveřejnit"}
+          </button>
+          <button type="button" className="btn" onClick={onClose}>
+            Zpět
+          </button>
+        </div>
+      </div>
+    </Modal>
   );
 }

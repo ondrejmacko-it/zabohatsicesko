@@ -10,7 +10,7 @@ import { GROUP_LABELS, TYPE_LABELS } from "@/lib/labels";
 import { isoWeekday } from "@/lib/time";
 import { EVENT_TYPES, GROUPS } from "@/lib/types";
 import { defaultAudience } from "@/server/domain/generation";
-import { interestedLabel, isRecommendable, topicFitsAudience } from "@/server/domain/topics";
+import { interestedLabel, isGuaranteed, recommendTopics, topicFitsAudience } from "@/server/domain/topics";
 import type { InviteRecipients } from "@/server/services/calendar-status";
 import type { EventFormValues } from "@/server/services/detail";
 import type { ChangeImpact } from "@/server/services/impact";
@@ -32,7 +32,16 @@ function fieldName(field: FormField): string {
 }
 
 export type Person = { id: string; name: string };
-export type TopicOption = { name: string; audience: string; reason: string; interestCount: number; nextPlanned?: string | null };
+export type TopicOption = {
+  id: string;
+  name: string;
+  audience: string;
+  reason: string;
+  interestCount: number;
+  nextPlanned?: string | null;
+  /** Garantované téma (pořadí 1–3). */
+  priorityRank?: number | null;
+};
 
 /** Svátek vzniká jen při doplnění měsíce, ručně ho založit ani na něj akci změnit nejde (hlídá i server). */
 const FORM_TYPES = EVENT_TYPES.filter((type) => type !== "holiday");
@@ -52,19 +61,33 @@ type FormProps = {
   planDays?: number[];
   /** Proběhlá akce: termín už měnit nejde (stejné pravidlo hlídá server). */
   termLocked?: boolean;
+  /**
+   * Kopie existující akce (Duplikovat): formulář uloží jen návrh a datum označí jako navržené. Server kopii
+   * se zveřejněním odmítne (`duplicateOf`).
+   */
+  duplicateOf?: string;
+  /**
+   * Uložený stav akce, když `initial` obsahuje předvyplnění (Naplánovat téma). Neuložená změna se počítá
+   * vůči němu, takže předvyplněné téma jde uložit i jako návrh.
+   */
+  saved?: EventFormValues;
 };
 
-type CreateProps = Omit<FormProps, "mode" | "id" | "revision" | "published"> & {
+type CreateProps = Omit<FormProps, "mode" | "id" | "revision" | "published" | "saved"> & {
   /** Okno se otevře hned (odkaz „+“ na dni v Plánu). Po zavření se adresa vrátí na `closeHref`. */
   openOnMount?: boolean;
   closeHref?: string;
 };
+
+const copyHref = (values: EventFormValues, id?: string) =>
+  `/vzdelavani/harmonogram?mesic=${values.date.slice(0, 7)}${id ? `&akce=${encodeURIComponent(id)}` : ""}`;
 
 /** Tlačítko a okno Přidat akci. Stejný formulář jako okno akce, jen s pořadím pro založení. */
 export function EventDialog(props: CreateProps) {
   const router = useRouter();
   const [open, setOpen] = useState(Boolean(props.openOnMount));
   const [session, setSession] = useState(0);
+  const edited = useRef(false);
   const close = () => {
     setOpen(false);
     if (props.closeHref) router.replace(props.closeHref, { scroll: false });
@@ -83,16 +106,20 @@ export function EventDialog(props: CreateProps) {
         Přidat akci
       </button>
       {open && (
-        <Modal open title="Přidat akci" onRequestClose={close} wide>
+        <Modal open title={props.duplicateOf ? "Duplikovat akci" : "Přidat akci"} onRequestClose={close} wide hasUnsavedChanges={() => edited.current}>
           <EventForm
             key={session}
             {...props}
             mode="create"
             published={null}
-            onDone={(values) => {
+            onEditedChange={(value) => {
+              edited.current = value;
+            }}
+            onDone={(values, id) => {
               setOpen(false);
-              // Nová akce se ukáže v měsíci, do kterého patří. Žádná další potvrzovací stránka.
-              router.replace(`/vzdelavani/harmonogram?mesic=${values.date.slice(0, 7)}`, { scroll: false });
+              // Nová akce se ukáže v měsíci, do kterého patří. Žádná další potvrzovací stránka. Kopie rovnou
+              // otevře okno nové akce, aby ji správce zkontroloval a zveřejnil.
+              router.replace(copyHref(values, props.duplicateOf ? id : undefined), { scroll: false });
             }}
           />
         </Modal>
@@ -108,10 +135,19 @@ export function EventDialog(props: CreateProps) {
 export function EventWindow({ title, closeHref, intro, menu, ...props }: Omit<FormProps, "mode"> & { title: string; closeHref: string; intro: React.ReactNode; menu: React.ReactNode }) {
   const router = useRouter();
   const close = () => router.replace(closeHref, { scroll: false });
+  const edited = useRef(false);
   return (
-    <Modal open title={title} onRequestClose={close} wide>
+    <Modal open title={title} onRequestClose={close} wide hasUnsavedChanges={() => edited.current}>
       {intro}
-      <EventForm {...props} mode="edit" menu={menu} onDone={close} />
+      <EventForm
+        {...props}
+        mode="edit"
+        menu={menu}
+        onDone={close}
+        onEditedChange={(value) => {
+          edited.current = value;
+        }}
+      />
     </Modal>
   );
 }
@@ -143,9 +179,17 @@ function EventForm({
   invite,
   planDays,
   termLocked = false,
+  duplicateOf,
+  saved,
   menu,
   onDone,
-}: FormProps & { menu?: React.ReactNode; onDone: (values: EventFormValues) => void }) {
+  onEditedChange,
+}: FormProps & {
+  menu?: React.ReactNode;
+  onDone: (values: EventFormValues, id?: string) => void;
+  /** Hlásí oknu, jestli se hodnoty liší od otevření. Okno se podle toho při zavření zeptá. */
+  onEditedChange?: (edited: boolean) => void;
+}) {
   const [values, setValues] = useState(initial);
   const [multiDay, setMultiDay] = useState(initial.endDate !== null);
   // Méně časté údaje jsou sbalené. Otevřené jsou, když je správce už vyplnil jinak než výchozím způsobem.
@@ -163,12 +207,18 @@ function EventForm({
     const result = await saveEventAction(prev, formData);
     if (result.ok) {
       flash(result.message);
-      onDone(values);
+      onDone(values, result.id);
     }
     return result;
   }, null);
 
-  const dirty = valuesKey !== JSON.stringify(initial);
+  const dirty = valuesKey !== JSON.stringify(saved ?? initial);
+  // Dotaz při zavření porovnává s tím, co okno ukázalo při otevření. Předvyplnění (kopie, téma) je výchozí
+  // stav: zavření bez další úpravy se neptá, i když předvyplněný návrh není uložený (`saved`).
+  const edited = valuesKey !== JSON.stringify(initial);
+  useEffect(() => {
+    onEditedChange?.(edited);
+  }, [edited, onEditedChange]);
   // Potvrzení dopadu platí jen pro hodnoty, pro které vzniklo. Jakákoli další úprava formuláře ho zruší.
   const confirmed = impact?.key === valuesKey ? impact.data : null;
   const missing = [!values.topicTitle.trim() && "téma", !values.leadId && "vedoucí"].filter((m): m is string => Boolean(m));
@@ -228,7 +278,11 @@ function EventForm({
   };
   const weekday = /^\d{4}-\d{2}-\d{2}$/.test(values.date) ? isoWeekday(values.date) : null;
   const unusualDay = planDays !== undefined && planDays.length > 0 && weekday !== null && !planDays.includes(weekday);
-  const suggestions = topics.filter((t) => isRecommendable(t) && topicFitsAudience(t.audience, values.audience)).slice(0, 3);
+  // Pořadí doporučení: garantovaná témata skupiny, pak témata přímo pro skupinu, pak zájem (`recommendTopics`).
+  const suggestions = recommendTopics(topics, values.audience).slice(0, 3);
+  // Vybrané téma je pro jinou skupinu: jen upozornění, rozhoduje správce (téma se uloží i tak).
+  const chosenTopic = topics.find((t) => t.name.toLowerCase() === values.topicTitle.trim().toLowerCase());
+  const audienceMismatch = chosenTopic && !topicFitsAudience(chosenTopic.audience, values.audience) ? chosenTopic : null;
 
   useEffect(() => {
     if (!dirty) return;
@@ -317,6 +371,7 @@ function EventForm({
             <button key={t.name} type="button" className="suggestion" onClick={() => set("topicTitle", t.name)}>
               <span className="suggestion-head">
                 <span className="suggestion-name">{t.name}</span>
+                {isGuaranteed(t) ? <span className="badge badge-ok">Garantované</span> : <span className="badge badge-outline">Doporučené</span>}
                 <span className="badge badge-ochre">{interestedLabel(t.interestCount)}</span>
               </span>
               {/* Počet zájemců je v odznaku, v podtextu zůstává jen historie tématu. */}
@@ -324,6 +379,12 @@ function EventForm({
             </button>
           ))}
         </div>
+      )}
+      {audienceMismatch && (
+        <p className="notice span-2" role="status">
+          Téma „{audienceMismatch.name}“ je pro skupinu {GROUP_LABELS[audienceMismatch.audience as keyof typeof GROUP_LABELS] ?? audienceMismatch.audience}, akce je pro{" "}
+          {GROUP_LABELS[values.audience]}. Zkontrolujte skupinu nebo téma.
+        </p>
       )}
     </>
   );
@@ -369,6 +430,7 @@ function EventForm({
         </label>
       </div>
       {termLocked && <p className="field-hint span-2">Akce už proběhla, termín zůstává.</p>}
+      {duplicateOf && <p className="field-hint span-2">Navržené datum, zkontrolujte.</p>}
       {unusualDay && !termLocked && (
         <p className="notice notice-danger span-2" role="alert">
           <strong>{ON_WEEKDAY[weekday!]} se vzdělávání běžně nekoná.</strong> V Plánu bude akce jako řádek pod týdnem.
@@ -429,6 +491,7 @@ function EventForm({
       {confirmed && <input type="hidden" name="confirmToken" value={confirmed.token} />}
       {acceptedIncomplete === valuesKey && missing.length > 0 && <input type="hidden" name="allowIncomplete" value="on" />}
       {id && <input type="hidden" name="id" value={id} />}
+      {duplicateOf && <input type="hidden" name="duplicateOf" value={duplicateOf} />}
       {revision !== undefined && <input type="hidden" name="revision" value={revision} />}
 
       {mode === "create" ? (
@@ -524,12 +587,15 @@ function EventForm({
         <div key="choose" className="dialog-actions event-actions">
           {menu && <div className="event-actions-menu">{menu}</div>}
           {published && !unpublishedChanges && !dirty && <span className="small muted event-actions-note">Beze změn</span>}
-          <button type="submit" name="intent" value="draft" className="btn" disabled={busy || (mode === "edit" && !dirty)}>
+          {duplicateOf && <span className="small muted event-actions-note">Kopie se uloží jako návrh, zveřejníte ji po kontrole.</span>}
+          <button type="submit" name="intent" value="draft" className={duplicateOf ? "btn btn-primary" : "btn"} disabled={busy || (mode === "edit" && !dirty)}>
             Uložit jako návrh
           </button>
-          <button type="submit" name="intent" value="publish" className="btn btn-primary" disabled={busy || (published !== null && !unpublishedChanges && !dirty)}>
-            {checking ? "Ověřuji…" : pending ? "Ukládám…" : publishLabel}
-          </button>
+          {duplicateOf ? null : (
+            <button type="submit" name="intent" value="publish" className="btn btn-primary" disabled={busy || (published !== null && !unpublishedChanges && !dirty)}>
+              {checking ? "Ověřuji…" : pending ? "Ukládám…" : publishLabel}
+            </button>
+          )}
         </div>
       )}
     </form>

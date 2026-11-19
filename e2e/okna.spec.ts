@@ -153,12 +153,13 @@ test.describe("okna správce", () => {
     await expect(page.getByText(label)).toHaveCount(0);
   });
 
-  test("Pravidelný týden z okna Připravit měsíc", async ({ page }) => {
+  test("Nastavit pravidelný rozvrh z okna Připravit měsíc", async ({ page }) => {
     await page.goto("/vzdelavani/harmonogram");
     await settle(page);
     await page.getByRole("button", { name: /^Připravit měsíc/ }).click();
-    await dialog(page, /^Připravit měsíc/).getByRole("button", { name: "Pravidelný týden" }).click();
-    await expect(dialog(page, "Pravidelný týden")).toBeVisible();
+    await dialog(page, /^Připravit měsíc/).getByRole("button", { name: "Nastavit pravidelný rozvrh" }).click();
+    await expect(dialog(page, "Nastavit pravidelný rozvrh")).toBeVisible();
+    await expect(dialog(page, "Nastavit pravidelný rozvrh")).toContainText("Podle něj „Doplnit chybějící termíny“ připraví návrhy");
   });
 
   test("Upravit akci z detailu otevře okno akce v Plánu", async ({ page }) => {
