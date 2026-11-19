@@ -144,4 +144,57 @@ test.describe("Plán: souhrn měsíce (A-03)", () => {
     await expect(page).toHaveURL(/stav=doplnit#mesic/);
     await expect(group.getByRole("link", { name: /^Doplnit .*zrušit filtr/ })).toHaveAttribute("aria-current", "true");
   });
+
+  test("více filtrů: stavy i typy NEBO v kategorii, A mezi nimi, štítky, zrušení a historie @desktop", async ({ page }) => {
+    await openPlan(page);
+    const group = page.getByRole("group", { name: "Zúžit plán měsíce" }).first();
+    // Karty akcí v mřížce: odkaz na okno akce (`?akce=`), jen viditelné (agenda pro telefon je skrytá).
+    const cards = page.locator("main a[href*='akce=']:not([aria-hidden=true]):visible");
+    const all = await cards.count();
+    await group.getByRole("link", { name: /^Návrhy \d+ ke zveřejnění/ }).click();
+    await expect(page).toHaveURL(/stav=navrhy#mesic/);
+    const drafts = await cards.count();
+    await group.getByRole("link", { name: /^Doplnit \d+ akc/ }).click();
+    await expect(page).toHaveURL(/stav=navrhy&stav=doplnit#mesic/);
+    // Oba stavy současně: aspoň tolik akcí jako samotné návrhy, ne víc než celý měsíc.
+    await expect(group.getByRole("link", { name: /zrušit filtr/ })).toHaveCount(2);
+    const both = await cards.count();
+    expect(both).toBeGreaterThanOrEqual(drafts);
+    expect(both).toBeLessThanOrEqual(all);
+
+    // Dva typy v nabídce Filtry: nabídka zůstane otevřená, každý typ má vlastní štítek s křížkem.
+    await page.getByText("Filtry", { exact: true }).click();
+    const menu = page.locator(".filter-menu-panel");
+    const typeBoxes = menu.getByRole("group", { name: "Typ akce" }).getByRole("checkbox");
+    const first = (await typeBoxes.nth(0).getAttribute("value"))!;
+    const second = (await typeBoxes.nth(1).getAttribute("value"))!;
+    await typeBoxes.nth(0).check();
+    await expect(page).toHaveURL(new RegExp(`typ=${first}`));
+    await expect(typeBoxes.nth(0)).toBeFocused();
+    const firstOnly = await cards.count();
+    await typeBoxes.nth(1).check();
+    await expect(page).toHaveURL(new RegExp(`typ=${first}&typ=${second}`));
+    await expect(menu).toBeVisible();
+    await expect(page.locator(".filter-button .count-badge")).toHaveText("4");
+    await page.keyboard.press("Escape");
+    const typeChips = group.getByRole("link", { name: /^Typ: .*zrušit filtr/ });
+    await expect(typeChips).toHaveCount(2);
+    // NEBO mezi typy: druhý typ výsledek rozšíří, nikdy nezúží.
+    expect(await cards.count()).toBeGreaterThanOrEqual(firstOnly);
+
+    // Odebrat jeden typ, pak historie prohlížeče vrátí oba; Zrušit filtry vše.
+    await typeChips.first().click();
+    await expect(page).toHaveURL(new RegExp(`typ=${second}`));
+    await expect(page).not.toHaveURL(new RegExp(`typ=${first}`));
+    await page.goBack();
+    await expect(page).toHaveURL(new RegExp(`typ=${first}&typ=${second}`));
+    await expect(group.getByRole("link", { name: /^Typ: .*zrušit filtr/ })).toHaveCount(2);
+    // Filtry platí i po přepnutí na Seznam a v dalším měsíci.
+    await page.getByRole("link", { name: "Seznam", exact: true }).click();
+    await expect(page).toHaveURL(/pohled=seznam.*typ=.*stav=navrhy/);
+    await group.getByRole("link", { name: "Zrušit filtry" }).click();
+    await expect(page).not.toHaveURL(/typ=|stav=/);
+    await expect(page).toHaveURL(/pohled=seznam/);
+    await expect(group.getByRole("link", { name: /zrušit filtr/ })).toHaveCount(0);
+  });
 });

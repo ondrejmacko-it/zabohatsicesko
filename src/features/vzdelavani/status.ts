@@ -172,18 +172,26 @@ export function monthTasks(summary: MonthSummary, monthName: string): MonthTask[
 
 export const PLAN_STATES = ["navrhy", "doplnit"] as const;
 export type PlanState = (typeof PLAN_STATES)[number];
-export type PlanFilter = { type?: EventType; state?: PlanState };
+export type PlanFilter = { types?: EventType[]; states?: PlanState[] };
 
-/** Filtr harmonogramu podle typu akce a stavu. Jen zužuje to, co uživatel už smí vidět. */
+/**
+ * Filtr harmonogramu podle typů akce a stavů. V jedné kategorii stačí shoda s kteroukoli vybranou hodnotou (NEBO),
+ * mezi kategoriemi musí platit obě (A). Jen zužuje to, co uživatel už smí vidět.
+ */
 export function filterCards(cards: EventCard[], monthKey: string, filter: PlanFilter): EventCard[] {
-  if (!filter.type && !filter.state) return cards;
-  const gapIds = filter.state === "doplnit" ? new Set(planGaps(cards, monthKey).map((g) => g.card.id)) : null;
-  return cards.filter(
-    (card) =>
-      (!filter.type || card.type === filter.type) &&
-      (filter.state !== "navrhy" || (card.type !== "holiday" && awaitsPublishing(card))) &&
-      (!gapIds || gapIds.has(card.id)),
-  );
+  const types = filter.types ?? [];
+  const states = filter.states ?? [];
+  if (!types.length && !states.length) return cards;
+  const gapIds = states.includes("doplnit") ? new Set(planGaps(cards, monthKey).map((g) => g.card.id)) : null;
+  const matchesState = (card: EventCard) =>
+    (states.includes("navrhy") && card.type !== "holiday" && awaitsPublishing(card)) || Boolean(gapIds?.has(card.id));
+  return cards.filter((card) => (!types.length || types.includes(card.type)) && (!states.length || matchesState(card)));
+}
+
+/** Hodnoty filtru z adresy: opakovaný parametr (`typ=a&typ=b`) i čárkami oddělený seznam; jen povolené, bez duplicit. */
+export function filterValues<T extends string>(raw: string | string[] | undefined, allowed: readonly T[]): T[] {
+  const parts = (Array.isArray(raw) ? raw : raw ? [raw] : []).flatMap((v) => v.split(","));
+  return allowed.filter((value) => parts.includes(value));
 }
 
 export type PlanGap = { card: EventCard; reasons: string[] };

@@ -2880,6 +2880,48 @@ p.cal-status {
   gap: 4px;
 }
 
+/* Typy a stavy jako zaškrtávací volby: víc hodnot v jedné skupině platí současně (NEBO). */
+.filter-group {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.filter-group > legend {
+  margin-bottom: 4px;
+  padding: 0;
+}
+
+.filter-check {
+  align-items: center;
+  min-height: 32px;
+  padding: 0 6px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.filter-check:hover {
+  background: var(--beige);
+}
+
+.filter-check input {
+  margin-top: 0;
+}
+
+/* Zrušit všechny filtry: tichý odkaz za štítky, ne další tlačítko. */
+.filter-reset {
+  align-self: center;
+  color: var(--muted);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.filter-reset:hover {
+  color: var(--ink);
+}
+
 /* ——— Hromadný výběr návrhů přímo v Plánu ——— */
 .pick-box {
   position: absolute;

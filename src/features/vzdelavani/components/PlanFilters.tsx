@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/Icon";
 import { TYPE_LABELS } from "@/lib/labels";
 import type { EventType } from "@/lib/types";
@@ -16,25 +17,26 @@ type Option = { key: string; label: string };
 export type StateChip = { state: PlanState; label: string; spoken: string; count: number; hint: string; href: string };
 
 type Props = {
-  /** Parametry, které filtr nemění (měsíc, zobrazení, stav). Posílají se spolu s výběrem. */
-  keep: Record<string, string>;
+  /** Parametry, které filtr nemění (měsíc, zobrazení). Posílají se spolu s výběrem. */
+  keep: [string, string][];
   types: EventType[];
-  type: EventType | undefined;
-  /** Odkaz, který zruší filtr typu. Null, když typ není vybraný. */
-  typeResetHref: string | null;
+  /** Vybrané typy akce, každý s odkazem, který odebere jen jeho. */
+  selectedTypes: { type: EventType; removeHref: string }[];
+  /** Odkaz, který zruší všechny filtry (typy i stavy). Null, když žádný není vybraný. */
+  resetHref: string | null;
   /** Nabídka „Zobrazit jako“ (pohled skupiny nebo kolegy). Jen pro správce, jinak null. */
   preview: { groups: Option[]; people: Option[]; value: string } | null;
   /** Co v měsíci čeká na správce. Prázdné pole = nic, štítky se nevykreslí. */
   chips: StateChip[];
-  state: PlanState | undefined;
+  states: PlanState[];
   /** Rychlé ovládání při posunu (telefon): měsíc, odkaz na Plán bez `den` a správcův den pro „+“ (null = nepřidává). */
   quick: { monthKey: string; todayKey: string; planHref: string; addDate: string | null };
 };
 
 /** Štítky Návrhy a Doplnit (souhrn celého měsíce, ne osobní úkoly): klik plán zúží, znovu klik filtr zruší. Sdílí je řádek filtrů i rychlá nabídka. */
-function ChipLinks({ chips, state }: { chips: StateChip[]; state: PlanState | undefined }) {
+function ChipLinks({ chips, states }: { chips: StateChip[]; states: PlanState[] }) {
   return chips.map((chip) => {
-    const on = chip.state === state;
+    const on = states.includes(chip.state);
     return (
       <Link key={chip.state} className="pill pill-count" href={chip.href} aria-current={on ? "true" : undefined} title={chip.hint}>
         {/* Přístupný název začíná viditelným textem (WCAG 2.5.3): „Doplnit 10 akcí“, skrytá je jen nápověda ke zrušení. */}
@@ -51,26 +53,59 @@ function ChipLinks({ chips, state }: { chips: StateChip[]; state: PlanState | un
   });
 }
 
-/** Pole filtru (typ akce, Zobrazit jako). Jediná implementace pro nabídku Filtry i rychlou nabídku. */
-function FilterFields({ keep, types, type, preview, hintId }: Pick<Props, "keep" | "types" | "type" | "preview"> & { hintId: string }) {
+type FieldsProps = Pick<Props, "keep" | "types" | "chips" | "preview"> & { selected: EventType[]; states: PlanState[]; hintId: string };
+
+/**
+ * Pole filtru (typy akce a stavy jako zaškrtávací volby, Zobrazit jako). Jediná implementace pro nabídku Filtry
+ * i rychlou nabídku. Změna volby hned přejde na novou adresu (historie prohlížeče ji vrátí), nabídka zůstane
+ * otevřená pro další volbu. Bez JavaScriptu se formulář odešle tlačítkem Použít.
+ */
+function FilterFields({ keep, types, chips, preview, selected, states, hintId }: FieldsProps) {
+  const router = useRouter();
+  // Volby se ukážou hned po kliknutí, adresa je dožene; návrat v historii je srovná s adresou.
+  const urlKey = `${selected.join(",")}|${states.join(",")}`;
+  const [picked, setPicked] = useState({ key: urlKey, typ: selected as string[], stav: states as string[] });
+  if (picked.key !== urlKey) setPicked({ key: urlKey, typ: selected, stav: states });
+  const toggle = (name: "typ" | "stav", value: string) => {
+    const list = picked[name];
+    const next = { ...picked, [name]: list.includes(value) ? list.filter((v) => v !== value) : [...list, value] };
+    // Klíč se srovná s adresou až po navigaci; do té doby platí, co uživatel právě zaškrtl.
+    setPicked(next);
+    const query = new URLSearchParams(keep);
+    if (preview?.value) query.set("jako", preview.value);
+    for (const t of next.typ) query.append("typ", t);
+    for (const st of next.stav) query.append("stav", st);
+    router.push(`/vzdelavani/harmonogram?${query}`, { scroll: false });
+  };
   const submit = (event: React.ChangeEvent<HTMLSelectElement>) => event.currentTarget.form?.requestSubmit();
   return (
     <>
-      {Object.entries(keep).map(([name, value]) => (
-        <input key={name} type="hidden" name={name} value={value} />
+      {keep.map(([name, value]) => (
+        <input key={`${name}-${value}`} type="hidden" name={name} value={value} />
       ))}
       {types.length > 1 && (
-        <label className="field">
-          <span className="field-label">Typ akce</span>
-          <select className="select select-small" name="typ" defaultValue={type ?? ""} onChange={submit}>
-            <option value="">Všechny typy</option>
-            {types.map((t) => (
-              <option key={t} value={t}>
-                {TYPE_LABELS[t]}
-              </option>
-            ))}
-          </select>
-        </label>
+        <fieldset className="filter-group">
+          <legend className="field-label">Typ akce</legend>
+          {types.map((t) => (
+            <label key={t} className="check filter-check">
+              <input type="checkbox" name="typ" value={t} checked={picked.typ.includes(t)} onChange={() => toggle("typ", t)} />
+              {TYPE_LABELS[t]}
+            </label>
+          ))}
+        </fieldset>
+      )}
+      {chips.length > 0 && (
+        <fieldset className="filter-group">
+          <legend className="field-label">Stav</legend>
+          {chips.map((chip) => (
+            <label key={chip.state} className="check filter-check">
+              <input type="checkbox" name="stav" value={chip.state} checked={picked.stav.includes(chip.state)} onChange={() => toggle("stav", chip.state)} />
+              <span>
+                {chip.label} <span className="muted">({chip.count})</span>
+              </span>
+            </label>
+          ))}
+        </fieldset>
       )}
       {preview && (
         <label className="field">
@@ -112,7 +147,7 @@ function FilterFields({ keep, types, type, preview, hintId }: Pick<Props, "keep"
  * hned, tlačítko Použít zůstává pro prohlížeč bez JavaScriptu. Na telefonu je řádek mřížka 2 × 2 a při posunu
  * stránky nabízí stejné filtry a výběr rychlé ovládání (`QuickActions`).
  */
-export function PlanFilters({ keep, types, type, typeResetHref, preview, chips, state, quick }: Props) {
+export function PlanFilters({ keep, types, selectedTypes, resetHref, preview, chips, states, quick }: Props) {
   const menu = useRef<HTMLDetailsElement>(null);
   const row = useRef<HTMLDivElement>(null);
   const selection = useSelection();
@@ -136,13 +171,13 @@ export function PlanFilters({ keep, types, type, typeResetHref, preview, chips, 
   }, []);
 
   const typeSelect = types.length > 1;
-  const hasMenu = typeSelect || Boolean(preview);
-  const active = (type ? 1 : 0) + (preview?.value ? 1 : 0);
+  const hasMenu = typeSelect || chips.length > 0 || Boolean(preview);
+  const active = selectedTypes.length + states.length + (preview?.value ? 1 : 0);
   const canSelect = Boolean(selection?.available);
   // Lichý počet prvků: poslední v mřížce 2 × 2 na telefonu zabere celý řádek, aby nezůstala díra.
-  const count = chips.length + (type && typeResetHref ? 1 : 0) + (hasMenu ? 1 : 0) + (canSelect ? 1 : 0);
+  const count = chips.length + selectedTypes.length + (resetHref ? 1 : 0) + (hasMenu ? 1 : 0) + (canSelect ? 1 : 0);
   const wideLast = count % 2 === 1;
-  const fields = { keep, types, type, preview };
+  const fields = { keep, types, chips, preview, selected: selectedTypes.map((s) => s.type), states };
   const quickActions = (
     <QuickActions
       {...quick}
@@ -152,7 +187,7 @@ export function PlanFilters({ keep, types, type, typeResetHref, preview, chips, 
           <div className="stack">
             {chips.length > 0 && (
               <div className="plan-filters-start" role="group" aria-label="Zúžit plán měsíce">
-                <ChipLinks chips={chips} state={state} />
+                <ChipLinks chips={chips} states={states} />
               </div>
             )}
             {hasMenu && (
@@ -166,18 +201,23 @@ export function PlanFilters({ keep, types, type, typeResetHref, preview, chips, 
     />
   );
   // Bez nabídky „Zobrazit jako“ nejde o správce, takže ani Vybrat návrhy: bez štítků a filtrů není co ukázat.
-  if (!chips.length && !type && !typeSelect && !preview) return quickActions;
+  if (!chips.length && !selectedTypes.length && !typeSelect && !preview) return quickActions;
   return (
     <>
       <div ref={row} className="plan-filters" data-items={count}>
         <div className="plan-filters-start" role="group" aria-label="Zúžit plán měsíce">
-          <ChipLinks chips={chips} state={state} />
-          {type && typeResetHref && (
-            <Link className="pill pill-count" href={typeResetHref} aria-current="true" data-wide={wideLast && !hasMenu && !canSelect ? true : undefined}>
+          <ChipLinks chips={chips} states={states} />
+          {selectedTypes.map(({ type, removeHref }) => (
+            <Link key={type} className="pill pill-count" href={removeHref} aria-current="true">
               <span className="visually-hidden">Typ: </span>
               {TYPE_LABELS[type]}
               <span className="visually-hidden">, zrušit filtr</span>
               <Icon name="close" size={14} />
+            </Link>
+          ))}
+          {resetHref && (
+            <Link className="filter-reset small" href={resetHref} data-wide={wideLast && !hasMenu && !canSelect ? true : undefined}>
+              Zrušit filtry
             </Link>
           )}
         </div>
