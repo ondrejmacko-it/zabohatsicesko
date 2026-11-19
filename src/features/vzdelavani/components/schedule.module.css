@@ -625,3 +625,77 @@
 :global([data-selecting]) .withMenu {
   padding-right: 36px;
 }
+
+/* ——— Návrh změny zveřejněné akce jako „stoh“ (jen správce) ———
+   Okrová karta návrhu leží na zveřejněné verzi, která nad ní vykukuje pruhem „Zveřejněná verze“. Při najetí myší
+   na pruh se originál vysune dopředu (stejná plocha jako karta, nic nepřesahuje buňku, mřížka má vodorovné
+   posouvání) a návrh ustoupí. Originál je jen pro myš; okno akce ho ukazuje i klávesnici a čtečkám. */
+.stacked {
+  padding-top: 18px;
+}
+
+.stacked > .event:not(.original) {
+  z-index: 1;
+  transition: opacity 0.18s ease;
+}
+
+.original {
+  position: absolute;
+  inset: 0 0 18px;
+  z-index: 0;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  background: var(--surface, #fff);
+  color: var(--muted);
+  /* Vysunutí = pruh se roztáhne přes kartu návrhu; myš zůstává nad originálem, takže stav nebliká. */
+  transition:
+    bottom 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.originalTab {
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 14px;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* Pruh zabírá horních 18 px; obsah originálu začíná pod ním, aby byl ve vysunutém stavu celý vidět. */
+.original .originalTab {
+  margin: -4px 0 3px;
+}
+
+.stacked > .original:hover {
+  z-index: 2;
+  bottom: 0;
+  color: var(--ink);
+  box-shadow: 0 6px 16px rgb(0 0 0 / 0.12);
+}
+
+.stacked:has(> .original:hover) > .event:not(.original) {
+  opacity: 0.35;
+}
+
+/* Úchyty karty (⋯, checkbox výběru) zůstávají na kartě návrhu, ne na pruhu. */
+.stacked > .menuGrid {
+  top: 22px;
+}
+
+.stacked > :global(.pick-box) {
+  top: 26px;
+}
+
+/* Agenda (telefon): bez stohu, jen řádek, co návrh mění. */
+.changes {
+  color: var(--ochre-dark);
+  font-size: 13px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .original,
+  .stacked > .event:not(.original) {
+    transition: none;
+  }
+}

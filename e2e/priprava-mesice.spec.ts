@@ -272,6 +272,25 @@ test.describe("okno akce: zahození neveřejných změn se potvrzuje @desktop", 
     await window.getByLabel(/^Vede/).selectOption({ label: "Správce ZBC ukázky" });
     await window.getByRole("button", { name: "Uložit jako návrh" }).click();
     await expect(page.getByRole("status").filter({ hasText: "Návrh změny je uložený" })).toBeVisible();
+    // Mřížka: okrový návrh leží na zveřejněné verzi, z níž vykukuje pruh. Najetí myší originál vysune dopředu.
+    await page.goto("/vzdelavani/harmonogram?mesic=2026-11");
+    await settle(page);
+    const original = page.locator('[data-original-of="ev-11-26"]');
+    await expect(original).toContainText("Zveřejněná verze");
+    await expect(original).toContainText("Vedoucí akce");
+    await expect(original).toHaveAttribute("aria-hidden", "true");
+    const draftCard = page.locator('a[data-move-id="ev-11-26"]');
+    await draftCard.scrollIntoViewIfNeeded();
+    const box = (await original.boundingBox())!;
+    const cell = (await page.locator("td").filter({ has: draftCard }).boundingBox())!;
+    expect(box.x).toBeGreaterThanOrEqual(cell.x);
+    expect(box.x + box.width).toBeLessThanOrEqual(cell.x + cell.width + 0.5);
+    await page.mouse.move(box.x + box.width / 2, box.y + 6);
+    await expect(original).toHaveCSS("z-index", "2");
+    await expect(draftCard).toHaveCSS("opacity", "0.35");
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await expect(original).toHaveCSS("transition-duration", "0s");
+    await page.emulateMedia({ reducedMotion: null });
     await page.goto("/vzdelavani/harmonogram?mesic=2026-11&akce=ev-11-26");
     await settle(page);
     const notice = window.getByText("Kolegové a Kalendář zatím vidí zveřejněnou verzi.");
