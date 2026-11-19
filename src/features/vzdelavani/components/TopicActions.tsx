@@ -78,7 +78,7 @@ function ProposeForm({ groups, onClose }: { groups: Group[]; onClose: () => void
   return (
     <Modal open title="Navrhnout téma" onRequestClose={onClose}>
       <form action={action} onSubmit={submitKeepingValues(action)} className="stack">
-        <p className="small muted">Popište stručně, co byste chtěli na vzdělávání probrat. Zájem se vám označí automaticky.</p>
+        <p className="small muted">Zájem se vám označí automaticky.</p>
         <label className="field">
           <span className="field-label">Téma</span>
           <input className="input" name="name" required minLength={3} maxLength={120} autoFocus />
@@ -257,9 +257,6 @@ function PlanTopicDialog({ topic, onClose }: { topic: { id: string; name: string
             <Icon name="plus" />
             Vytvořit novou akci
           </Link>
-          <button type="button" className="btn" onClick={onClose}>
-            Zavřít
-          </button>
         </div>
       </div>
     </Modal>

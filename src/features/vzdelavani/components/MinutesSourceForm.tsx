@@ -132,7 +132,7 @@ export function MinutesSourceForm({ eventId, eventLabel, hasRecording, replaceId
           <label className="field">
             <span className="field-label">Text přepisu nebo poznámek</span>
             <textarea className="textarea" name="text" rows={6} value={text} onChange={(e) => setText(e.target.value)} />
-            <span className="field-hint">Nadpisy Shrnutí, Hlavní body, Rozhodnutí a Další kroky se převezmou, návrh pak upravíte. Nejvýš 1 MB.</span>
+            <span className="field-hint">Nadpisy Shrnutí, Hlavní body, Rozhodnutí a Další kroky se převezmou. Nejvýš 1 MB.</span>
           </label>
           {textTooLarge && <p className="notice notice-danger">Text je větší než 1 MB. Zkraťte ho prosím.</p>}
         </DraftForm>
@@ -144,18 +144,17 @@ export function MinutesSourceForm({ eventId, eventLabel, hasRecording, replaceId
             name="file"
             label="Textový soubor"
             accept=".txt,.md,.vtt,.srt,text/plain,text/markdown,text/vtt"
-            hint="Jen TXT, MD, VTT nebo SRT v kódování UTF-8, nejvýš 1 MB. U titulků se časové značky odstraní. PDF ani Word zatím nejdou, vložte z nich text."
+            hint="TXT, MD, VTT nebo SRT v UTF-8, nejvýš 1 MB. Časy z titulků se odstraní. Text z PDF nebo Wordu vložte ručně."
             maxBytes={MAX_TEXT_BYTES}
             tooLargeText="Soubor je větší než 1 MB. Vyberte prosím menší."
             onChange={setFile}
           />
-          {file && !fileTooLarge && <p className="small">Použije se pro zápis akce: {eventLabel}.</p>}
         </DraftForm>
       )}
 
       {choice === "manual" && (
         <DraftForm eventId={eventId} source="manual" replaceId={replaceId} replacingDraft={replacingDraft} submitLabel="Napsat zápis ručně">
-          <p className="small muted">Otevře se prázdná šablona zápisu: Shrnutí, Hlavní body, Rozhodnutí a Další kroky.</p>
+          <p className="small muted">Oddíly Shrnutí, Hlavní body, Rozhodnutí a Další kroky.</p>
         </DraftForm>
       )}
     </div>

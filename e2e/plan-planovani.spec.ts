@@ -94,7 +94,7 @@ test.describe("Plán: svátek je pevný @desktop", () => {
     await expect(block(page, "ev-11-17")).toHaveCount(0);
     await page.goto("/vzdelavani/harmonogram?akce=ev-11-17");
     const win = page.getByRole("dialog", { name: "Státní svátek" });
-    await expect(win).toContainText("Nedá se přesunout ani upravit");
+    await expect(win).toContainText("Jen pro přehled, do Kalendáře se neposílá");
     await expect(win.getByRole("button", { name: /Zveřejnit|Uložit/ })).toHaveCount(0);
     await expect(win.getByRole("button", { name: "Další možnosti" })).toHaveCount(0);
   });

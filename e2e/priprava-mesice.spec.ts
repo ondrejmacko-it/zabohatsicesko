@@ -143,3 +143,37 @@ test.describe("okno akce: ochrana neuložených změn", () => {
     await expect(page.getByRole("dialog").getByLabel(/^Téma/)).toHaveValue("");
   });
 });
+
+test.describe("okno akce: zahození neveřejných změn se potvrzuje @desktop", () => {
+  test.use({ storageState: authFile("spravce") });
+
+  test("Zahodit změny se nejdřív zeptá, Zpět nic nezahodí, potvrzení vrátí zveřejněnou verzi", async ({ page }, info) => {
+    test.skip(info.project.name !== "windows-1280", "Zapisuje do sdílených dat ukázky, stačí jeden projekt.");
+    await page.goto("/vzdelavani/harmonogram?mesic=2026-11&akce=ev-11-26");
+    await settle(page);
+    const window = page.getByRole("dialog").filter({ has: page.getByLabel(/^Vede/) });
+    await window.getByLabel(/^Vede/).selectOption({ label: "Správce ZBC ukázky" });
+    await window.getByRole("button", { name: "Uložit jako návrh" }).click();
+    await expect(page.getByRole("status").filter({ hasText: "Návrh změny je uložený" })).toBeVisible();
+    await page.goto("/vzdelavani/harmonogram?mesic=2026-11&akce=ev-11-26");
+    await settle(page);
+    const notice = window.getByText("Kolegové a Kalendář zatím vidí zveřejněnou verzi.");
+    await expect(notice).toBeVisible();
+
+    await window.getByRole("button", { name: "Zahodit změny" }).click();
+    const confirm = page.getByRole("dialog", { name: "Zahodit neveřejné změny?" });
+    await expect(confirm).toBeVisible();
+    await confirm.getByRole("button", { name: "Zpět" }).click();
+    await expect(confirm).toBeHidden();
+    await expect(notice).toBeVisible();
+
+    await window.getByRole("button", { name: "Zahodit změny" }).click();
+    await confirm.getByRole("button", { name: "Zahodit změny" }).click();
+    await expect(notice).toBeHidden();
+    // Otevřené okno ukáže zveřejněnou verzi hned, bez nového načtení.
+    await expect(window.getByLabel(/^Vede/).locator("option:checked")).toHaveText("Vedoucí akce");
+    await page.reload();
+    await settle(page);
+    await expect(window.getByLabel(/^Vede/).locator("option:checked")).toHaveText("Vedoucí akce");
+  });
+});

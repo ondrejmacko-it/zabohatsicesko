@@ -119,7 +119,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
       {organizer && card.unpublishedChanges && (
         <div className="notice spread">
           <p>Kolegové a Kalendář zatím vidí zveřejněnou verzi.</p>
-          <ActionForm action={discardChangesAction} fields={{ id: card.id, revision: String(detail.revision) }} label="Zahodit návrh změny" pendingLabel="Zahazuji…" small />
+          <ActionForm action={discardChangesAction} fields={{ id: card.id, revision: String(detail.revision) }} label="Zahodit návrh změny" pendingLabel="Zahazuji…" small confirm={{ title: "Zahodit neveřejné změny?", text: "Uložené, ale nezveřejněné úpravy akce se smažou. Kolegové i Kalendář dál uvidí zveřejněnou verzi.", confirmLabel: "Zahodit změny" }} />
         </div>
       )}
 

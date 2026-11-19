@@ -78,7 +78,7 @@ test.describe("Témata: garantovaná a ostatní", () => {
     expect(await items.count()).toBeLessThanOrEqual(3);
     await expect(items.first()).toContainText("Firemní vzdělávání FP · 13. 11.");
     // D-01: skupinu už říká typ „Firemní vzdělávání FP“, proto se neopakuje.
-    await expect(items.first()).toContainText("návrh, uloží se jen návrh");
+    await expect(items.first()).toContainText("návrh");
     await expect(items.first()).not.toContainText("Finanční poradci");
     const more = plan.getByRole("button", { name: /^Zobrazit další/ });
     if (await more.isVisible()) {
@@ -258,7 +258,7 @@ test.describe("Témata: zápis priority, pořadí a návrhu @desktop", () => {
     await expect(plan.getByRole("listitem").first()).toBeVisible();
     if (await more.isVisible()) await more.click();
     const item = plan.getByRole("listitem").filter({ hasText: "· 4. 12." });
-    await expect(item).toContainText("návrh, uloží se jen návrh");
+    await expect(item).toContainText("návrh");
     await item.getByRole("button", { name: /^Přidat do návrhu/ }).click();
     await expect(plan).toBeHidden();
     await expect(page.getByText(/Téma „Příprava na úvodní schůzku“ je v návrhu na 4\. 12\. Kolegové ho zatím nevidí, nic se neodeslalo\./)).toBeVisible();

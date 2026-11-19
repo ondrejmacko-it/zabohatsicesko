@@ -56,10 +56,10 @@ function versionLabel(minutes: HandlerMinutes): string {
 
 function draftHint(minutes: HandlerMinutes): string {
   if (minutes.source === "recording") {
-    return `Návrh z ukázkového přepisu (šablona ${TEMPLATE_LABELS[minutes.detectedTemplate]}). Přepis je zatím jen demonstrace nad ukázkovou nahrávkou, ne přepis skutečné schůzky. Zkontrolujte návrh a uložte.`;
+    return `Návrh z ukázkového přepisu (šablona ${TEMPLATE_LABELS[minutes.detectedTemplate]}). Jde o ukázku, ne o přepis skutečné schůzky. Zkontrolujte ho a uložte.`;
   }
   if (!minutesStarted(minutes.content)) return "Vyplňte aspoň Shrnutí a uložte. Ke schválení je zápis až s obsahem.";
-  return "Návrh vznikl rozdělením textu do šablony zápisu, nic se nedomýšlí. Zkontrolujte ho a uložte.";
+  return "Návrh vznikl z vloženého textu, nic se nedomýšlí. Zkontrolujte ho a uložte.";
 }
 
 const formatSize = (bytes: number) => `${(bytes / 1024 / 1024).toLocaleString("cs-CZ", { maximumFractionDigits: 1 })} MB`;

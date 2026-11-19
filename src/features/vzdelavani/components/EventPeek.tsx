@@ -85,7 +85,7 @@ export async function EventPeek({ user, eventId, preview, previewKey, closeHref,
         {card.unpublishedChanges && (
           <div className="notice spread">
             <p className="small">Kolegové a Kalendář zatím vidí zveřejněnou verzi.</p>
-            <ActionForm action={discardChangesAction} fields={{ id: card.id, revision: String(detail.revision) }} label="Zahodit změny" pendingLabel="Zahazuji…" small />
+            <ActionForm action={discardChangesAction} fields={{ id: card.id, revision: String(detail.revision) }} label="Zahodit změny" pendingLabel="Zahazuji…" small confirm={{ title: "Zahodit neveřejné změny?", text: "Uložené, ale nezveřejněné úpravy akce se smažou. Kolegové i Kalendář dál uvidí zveřejněnou verzi.", confirmLabel: "Zahodit změny" }} />
           </div>
         )}
       </>
@@ -98,6 +98,8 @@ export async function EventPeek({ user, eventId, preview, previewKey, closeHref,
         : [{ href: fullHref, label: "Technické informace", icon: "settings" as const }];
     return (
       <EventWindow
+        // Nová revize (zahození, uložení jinde) = čerstvý formulář, jinak by okno drželo staré hodnoty.
+        key={detail.revision}
         title={card.label}
         closeHref={closeHref}
         intro={intro}
@@ -161,7 +163,7 @@ export async function EventPeek({ user, eventId, preview, previewKey, closeHref,
           <dd>{GROUP_LABELS[card.audience]}</dd>
         </div>
       </dl>
-      {holiday && <p className="hint">Svátek je v plánu jen pro přehled. Nedá se přesunout ani upravit a do Kalendáře se neposílá.</p>}
+      {holiday && <p className="hint">Jen pro přehled, do Kalendáře se neposílá.</p>}
       {technical && (
         <p className="small peek-tech">
           <Link href={fullHref}>Technické informace</Link>
