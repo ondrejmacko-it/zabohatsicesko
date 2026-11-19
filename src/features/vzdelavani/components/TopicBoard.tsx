@@ -82,6 +82,9 @@ export function TopicBoard({
   // Nové pořadí ze serveru (po uložení, obnovení nebo změně jiného správce) přepíše místní stav, když se netáhne.
   useEffect(() => {
     if (drag.current) return;
+    // Pořadí ze serveru může řádek přesunout do druhého seznamu (nový prvek): fokus na úchytu se nesmí ztratit.
+    const active = document.activeElement;
+    if (active instanceof HTMLElement && active.dataset.handle && boardRef.current?.contains(active)) focusAfter.current = active.dataset.handle;
     const [g = "", o = ""] = serverKey.split("|");
     setOrder({ guaranteed: g.split(",").filter(Boolean), others: o.split(",").filter(Boolean) });
   }, [serverKey]);
