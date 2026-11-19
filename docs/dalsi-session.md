@@ -1,5 +1,12 @@
 # Prompt pro další session
 
+**SJEDNOCENÍ WIKI – RELACE 12 HOTOVO (19. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd`, PR #74).**
+* 02109e7: `priprava-mesice.spec.ts:139` ukládal návrhy s předvyplněným garantovaným tématem → čtecí test Témat
+  (`temata-planovani.spec.ts:84`) padal v plném běhu. Teď ukládá bez tématu (P5). Lint, typecheck, unit 419/419,
+  build OK, celé e2e **1210 passed / 108 skipped / 0 failed**. Report bod 9 doplněn, popis PR #74 aktualizován,
+  uživatel dostal finální audit relací 8–12 a seznam ručních kroků na Preview.
+**Další krok:** nic bez pokynu; uživatel ručně zkouší Preview a merguje PR #74.
+
 **SJEDNOCENÍ WIKI – RELACE 11 → 12 (19. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd`, PR #74).**
 Zadání beze změny (viz blok relace 10 → 11 níže). P6 plné znění: soubor z `list_events` hledej „P6 – Kontrola konzistence“.
 * HOTOVO relace 11: P2 dokončen (4e29d78): Domů, Témata (`TopicsSection readOnly`), Zápisy (`MinutesPeek previewLabel`)

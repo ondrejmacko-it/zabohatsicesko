@@ -337,6 +337,18 @@ Viz „Testy relace 11“ níže. Snímky před/po: `docs/screenshots/sjednoceni
 HEAD), šířky 320, 390, 768, 1280, 1440, 1920; pohledy domu, lista, plan, temata, zapisy, zapis-editor, sprava,
 filtry, karta-menu, stoh (≥768, s najetím na originál), pridat-akci, pripravit-mesic, rozvrh, nahled, nahled-temata.
 
+#### Testy relace 11–12 (lokálně, Chromium, kalendář v simulaci)
+* Lint OK, typecheck OK, unit **419/419**, build OK.
+* Relace 11: celé e2e 1203 passed / 108 skipped / 7 failed. Padal jen `temata-planovani.spec.ts:75` (ř. 84,
+  „ · bez termínu“ u „Otevřené otázky na schůzce“) na všech 7 projektech.
+* Příčina (reprodukce v jednom workeru): `priprava-mesice.spec.ts:139` (hromadný vedoucí, měsíc 2027-05) klikne
+  „Doplnit chybějící termíny“. Generování předvyplní do návrhů i garantované téma a test návrhy uloží, takže téma
+  dostane termín návrhu. Oprava podle P5 (02109e7): test ukládá návrhy bez tématu (téma není předmětem testu).
+  Čtecí test zůstal beze změny, bez tolerance dvou stavů. `doporucene-tema` stejnou kombinaci nerozbije (ověřeno).
+* Relace 12, celé e2e na opravě: **1210 passed / 108 skipped / 0 failed** (8,8 min, 3 workery). Přeskočené testy
+  jsou záměrné (zápisy jen v jednom projektu, `@desktop` mimo telefony).
+* Firefox/WebKit a živý Google Kalendář neověřeny.
+
 ### 10. Rizika a návrhy mimo rozsah
 * Náhled kolegy, který je vedoucí: Domů/Plán ukáží jeho úkoly jen ke čtení; nahrávka a pracovní přepis se
   záměrně nezobrazují.
