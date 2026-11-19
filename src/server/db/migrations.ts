@@ -438,7 +438,11 @@ UPDATE minutes SET approved_version = version, approved_by = published_by, appro
 -- Garantovaných témat může být libovolně mnoho (dřív nejvýš 3). Pořadí zůstává 1..n a unikátní v organizaci
 -- (index topics_priority_rank_unique se nemění). Nic se nemaže ani nepřepisuje: jen se uvolní omezení
 -- a smallint se rozšíří na integer. Starší kód s novým schématem funguje dál (pořadí 1–3 jsou platná).
-ALTER TABLE topics DROP CONSTRAINT IF EXISTS topics_priority_rank_check;
+-- Bezpečné selhání: když očekávané omezení z 0013 chybí nebo vypadá jinak, schéma se liší od předpokladu
+-- a migrace se zastaví celá (transakce), místo aby tiše pokračovala. Blok DO je na jednom řádku, protože
+-- prepareDatabase dělí SQL na příkazy podle středníku na konci řádku.
+DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = 'topics'::regclass AND conname = 'topics_priority_rank_check' AND contype = 'c' AND pg_get_constraintdef(oid) LIKE '%priority_rank <= 3%') THEN RAISE EXCEPTION '0015: chybí očekávané omezení topics_priority_rank_check (1–3), migrace zastavena'; END IF; END $$;
+ALTER TABLE topics DROP CONSTRAINT topics_priority_rank_check;
 ALTER TABLE topics ALTER COLUMN priority_rank TYPE integer;
 ALTER TABLE topics ADD CONSTRAINT topics_priority_rank_positive CHECK (priority_rank >= 1);
 `,
