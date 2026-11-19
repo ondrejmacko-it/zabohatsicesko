@@ -1,5 +1,45 @@
 # Prompt pro další session
 
+**RELEASE AUDIT PR #74 (FÁZE A) – RELACE 13 → 14 (19. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd`).**
+Zadání: user zpráva „ZBČ: finální release audit + integrace zpětné vazby z Novi“ (session
+`session_01HpUirygb1N8XmnorbnJSA8`, `list_events` kinds `["user"]`, poslední). Uživatel: NEJDŘÍV dokončit PR #74 (fáze A),
+napsat mu, až bude ready; on mergne. Fázi B (feedback brouček z `novi-ai-tutor-app`) až potom v NOVÉM PR, teď ne.
+* HOTOVO relace 13 (ověřeno):
+  - A1: CI na 1e9ee58 zelené (lint/typy/testy/build, citlivé cesty, Vercel). main e27b631 je předek HEAD (bez
+    konfliktů), review komentáře 0. Plné e2e Chromium 1210/108/0 (relace 12).
+  - Pohled: `preview-context.ts` a `nahled-actions.ts` prošly kontrolou. Cookie je vázaná na účet a ověřuje se
+    pokaždé, `startPreview` vyžaduje `isOrganizer`, `backPath` nedovolí cizí web. `currentPreview` se čte jen ve
+    stránkách, ne v `actions.ts`.
+  - A3 (jen SELECT): produkce `zbc-wiki-produkce` (bitter-breeze-02749976) má 0001–0014. CHECK je
+    `((priority_rank >= 1) AND (priority_rank <= 3))`, takže sedí s kontrolou v 0015. Sloupec je smallint, index
+    `topics_priority_rank_unique (org_id, priority_rank) WHERE … archived_at IS NULL`, 15 témat, 3 garantovaná, max 3.
+    Preview (still-shadow-86247101) má 0015, `topics_priority_rank_positive`, integer, 2 garantovaná.
+  - Vercel env: `APPROVED_MIGRATIONS` je JEN preview + git větev PR #74, produkce nemá. Před 0015 server u 4.
+    garantovaného hlásí `priority_pending_migration` (topics.ts:248, kód 23514).
+  - Riziko k reportu: selhání 0015 (RAISE) shodí `prepareDatabase`, takže aplikace nenastartuje (data beze změny).
+  - A2: `playwright.config.ts` s `E2E_WEBKIT=1` přidá webkit-1440 (Retina),
+    webkit-390 (iPhone 13), webkit-320 (iPhone SE), firefox-1280, firefox-390, chromium-768, chromium-1024.
+  - V Default prostředí blokuje stažení prohlížečů síť (`cdn.playwright.dev`). Vzniklo osobní prostředí
+    `zabohatsicesko` (env_01CUjMoUrHosAHXXVqx7UKmr), které ty hosty povoluje. Relace 14 běží na něm.
+* DALŠÍ KROKY:
+  1) `npm ci`; `npx playwright install webkit firefox`. Systémové knihovny: `npx playwright install-deps webkit
+     firefox`, případně apt. Když nejde, zapsat „neověřeno“.
+  2) `fuser -k 3310/tcp 3311/tcp`; na pozadí `E2E_WEBKIT=1 npm run e2e -- --project=webkit-1440 --project=webkit-390
+     --project=webkit-320 --project=firefox-1280 --project=firefox-390 --project=chromium-768
+     --project=chromium-1024`. Chyby roztřídit: skutečná chyba aplikace (P0/P1 opravit malým commitem a cíleným
+     testem) vs. rozdíl prohlížeče v testu. Cíleně zkontrolovat CSS `:has()`, sticky, `100dvh`, `safe-area`,
+     nativní date/time, vrstvení dialogů.
+  3) Report `docs/report-release-audit-pr74.md`: ověřené testy (Chromium / Playwright WebKit / Firefox / skutečné
+     zařízení = NEověřeno), chyby, opravy, migrace (výše) a přesný postup nasazení a rollbacku 0015:
+     záloha = Neon větev produkce + PITR 6 h; schválení = přidat `APPROVED_MIGRATIONS=0015_topic_priority_unlimited`
+     pro Production a redeploy; rollback = smazat proměnnou, `ALTER TABLE topics ADD CONSTRAINT
+     topics_priority_rank_check CHECK (priority_rank BETWEEN 1 AND 3)`, jen když max ≤ 3, nebo obnova z větve.
+     Plus tabulka Go/No-Go P0/P1/P2 a doporučení Draft → Ready.
+  4) Lint, typecheck, unit, build a plné Chromium e2e (0 failed), commit, push, popis PR #74.
+  5) FINÁLNÍ zpráva uživateli (česky, tykat): PR #74 ready ano/ne, Go/No-Go, co má udělat on (merge, migrace 0015
+     na produkci až po jeho schválení). Fáze B až po merge.
+* Pravidla: produkce jen SELECT, žádný merge, deploy ani migrace na produkci; P2 nerozšiřovat.
+
 **SJEDNOCENÍ WIKI – RELACE 12 HOTOVO (19. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd`, PR #74).**
 * 02109e7: `priprava-mesice.spec.ts:139` ukládal návrhy s předvyplněným garantovaným tématem → čtecí test Témat
   (`temata-planovani.spec.ts:84`) padal v plném běhu. Teď ukládá bez tématu (P5). Lint, typecheck, unit 419/419,

@@ -48,10 +48,23 @@ projects.push({
   grepInvert: undefined,
 });
 
-// Skutečný WebKit (jádro Safari) jen na vyžádání: v cloudovém prostředí není nainstalovaný.
-// Na Macu: `npx playwright install webkit`, pak `E2E_WEBKIT=1 npm run e2e`.
+// Skutečný WebKit (jádro Safari) a Firefox jen na vyžádání: v cloudovém prostředí nemusí být nainstalované.
+// `npx playwright install webkit firefox`, pak `E2E_WEBKIT=1 npm run e2e -- --project=webkit-1440 …`.
+// E2E_WEBKIT=1 přidá WebKit (1440 Retina, telefon 390 a 320) a Firefox (1280, telefon 390) a Chromium 768 a 1024.
+// Chromium s user agentem Safari (macos-1512) není test Safari; ten dělají jen projekty webkit-*.
 if (process.env.E2E_WEBKIT === "1") {
-  projects.push(desktop("webkit-1440", 1440, 900, { ...devices["Desktop Safari"], viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 }));
+  const webkit = { ...devices["Desktop Safari"] };
+  const firefox = { ...devices["Desktop Firefox"] };
+  projects.push(
+    desktop("webkit-1440", 1440, 900, { ...webkit, viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 }),
+    { ...phone("webkit-390", 390), use: { ...devices["iPhone 13"], viewport: { width: 390, height: 760 } } },
+    { ...phone("webkit-320", 320), use: { ...devices["iPhone SE"], viewport: { width: 320, height: 640 } } },
+    desktop("firefox-1280", 1280, 800, { ...firefox, viewport: { width: 1280, height: 800 } }),
+    // Firefox nepodporuje isMobile, telefon = úzké okno s dotykem.
+    { ...phone("firefox-390", 390), use: { ...firefox, viewport: { width: 390, height: 760 }, hasTouch: true } },
+    desktop("chromium-768", 768, 1024),
+    desktop("chromium-1024", 1024, 768),
+  );
 }
 
 export default defineConfig({
