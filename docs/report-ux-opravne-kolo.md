@@ -1,4 +1,4 @@
-# Opravné kolo UX/UI k PR #73 – průběžný report (po relaci 3)
+# Opravné kolo UX/UI k PR #73 – průběžný report (po relaci 4)
 
 Větev `claude/focused-cerf-gr1tdi` z HEAD PR #73 (`ff7ac54`, shodné s referenčním commitem screenshotů).
 Zadání: `ZBC_KOMPLETNI_PROMPT_CLAUDE_CODE_PR73.md` (u uživatele, do repa se nedává). Relace končí na limitu
@@ -21,8 +21,16 @@ kontextu, práce pokračuje v navazující relaci. Nic není mergnuto ani nasaze
 | A-02 | **Opraveno** (c47960d) | `.addDay` v prázdném dni opacity .35, při najetí/fokusu 1, ve dni s akcemi dál skryté. Důkaz: e2e (únor 2027, opacity 0,35). |
 | A-05, A-06 | **Opraveno** (b76bd1a) | Příjemci pozvánky přímo pod „Pro koho“ (`audienceField`), „Další údaje“ jeden řádek v plné šířce oddělený čarou, bez druhého rámečku. Screenshot 1280/320 prohlédnut; e2e okna/priprava-mesice/rychle-akce/klavesnice/pristupnost 152 passed. Název v plánu u typu ≠ Jiná akce zůstal v Dalších údajích (vlastní název zachován). |
 | A-10 | **Již v pořádku** (test b76bd1a) | Technické informace a stav Kalendáře dostává jen správce (`detail.sync` jen `isOrganizer`). Důkaz: e2e `okna.spec.ts` „technické informace jen pro správu“ (vedoucí, účastník RM: 0×; správce: ano). V nabídce okna správce odkaz zůstává (A-09/A-11 neřešeno). |
-| T-01 | Rozpracováno (5d7886a) | Server hotový: `moveInOrder(ids, id, cílová pozice)`, `moveTopic(viewer, id, pozice, expected)` – kontrola souběhu (`conflict`, nic se nezapíše), garantovaná drží čísla priorit, skupina se nemění, audit `topic.move_to`; `moveTopicAction` bere `to` + `expected`. Unit `tests/temata-priority.test.ts` (382/382). **Chybí UI přetažení** (úchyt, pointer events, rollback). |
-| A-03, A-04, A-07, A-09, A-11–A-14, T-02–T-11, Z-04–Z-13, C-01–C-08 | Zatím neřešeno | Pořadí v `docs/dalsi-session.md`. |
+| T-01 | **Opraveno** (5d7886a, 0f36560) | `TopicOrderList.tsx`: úchyt jen správci (tlumený, odlišný od Mám zájem a ⋯), pointer events myš i dotyk (`touch-action:none`), jen v rámci skupiny, optimisticky, při chybě/souběhu návrat + `router.refresh`, šipky na úchytu, oznámení `aria-live`. Server ověřuje pořadí (`expected`). Důkaz: e2e `temata-planovani` „přetažení pořadí úchytem“ (myš 1280, klávesnice, souběh dvou oken s návratem, CDP prst 390 bez posunu stránky). |
+| T-02 | **Opraveno** (0f36560) | „Při plánování se nabízejí jako první, v tomto pořadí a bez ohledu na počet zájemců.“ Ověřeno v `recommendTopics`/`isRecommendable` (garantovaná i bez zájmu); automatické datum neslibuje. |
+| T-03 | **Opraveno** (0f36560) | Decentní čísla 1/2/3 u garantovaných pro všechny (`.topic-rank`), `ol` zůstává. e2e kontroluje „1“, „2“. |
+| T-04, C-04, T-11 | **Opraveno** (d1b8bee) | Bez podbarvení řádků; garance = ochrový pruh, Nejžádanější jen štítek. Screenshot 1280/390/320 prohlédnut. |
+| T-05 | **Opraveno** | Přetažení + šipky na úchytu; menu Posunout výš/níž zůstává jako další cesta. |
+| T-06 | **Opraveno** (d1b8bee) | Vnitřní nadpis „Témata“ jen pro čtečky (`visually-hidden`), úvodní věta vedle Navrhnout téma. |
+| T-07 | **Opraveno** (d1b8bee) | Tlačítko v okně „Navrhnout téma“. |
+| T-08, T-09, T-10 | **Opraveno** (bf406d2) | Okno Naplánovat téma: krátký úvod, stávající termín nahoře s hlavním „Otevřít stávající akci“, „Další termín“ a Vytvořit novou akci sekundárně, 3 akce + Zobrazit další, krátký řádek (`návrh, uloží se jen návrh` / `zveřejněno, změnu potvrdíte`), „Otevřít a doplnit“. e2e upraveno. |
+| A-12 | **Opraveno** (bf406d2) | Předvyplněné téma jen tichý řádek „… je předvyplněné, zatím nic není uložené ani zveřejněné.“ místo banneru. |
+| A-03, A-04, A-07, A-09, A-11, A-13, A-14, Z-04–Z-13, C-01–C-03, C-05–C-08 | Zatím neřešeno | Pořadí v `docs/dalsi-session.md`. |
 
 ## Ověření (skutečně spuštěno v této relaci)
 
@@ -34,6 +42,8 @@ kontextu, práce pokračuje v navazující relaci. Nic není mergnuto ani nasaze
   pristupnost, klavesnice: 98 passed / 4 skipped; rychle-akce, mobilni-ovladani, klavesnice, pristupnost, plan-planovani:
   55 passed / 19 skipped; okna, priprava-mesice, rychle-akce, klavesnice, pristupnost, kdo-tema, doporucene-tema:
   152 passed / 9 skipped; temata-planovani (1280) 10 passed. Build v relaci 3 nespuštěn.
+* Relace 4: typecheck OK, lint OK, unit `temata-priority` OK; e2e temata-planovani + pristupnost + klavesnice (1280/390/320)
+  33 passed / 6 skipped; temata-planovani + priprava-mesice + okna (1280/320) prošly po úpravě očekávání.
 * NEOVĚŘENO: celé e2e, screenshoty před/po, Firefox/WebKit, Preview, živý Kalendář.
 
 ## Změněná pravidla (pro integraci do Wiki)
