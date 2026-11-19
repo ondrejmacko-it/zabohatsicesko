@@ -1,6 +1,6 @@
 # Prompt pro další session
 
-**OPRAVNÉ KOLO UX/UI K PR #73 (19. 11. 2026, po relaci 4, větev `claude/focused-cerf-gr1tdi` z `ff7ac54` = HEAD PR #73).**
+**OPRAVNÉ KOLO UX/UI K PR #73 (19. 11. 2026, po relaci 5, větev `claude/focused-cerf-gr1tdi` z `ff7ac54` = HEAD PR #73).**
 Zadání: `ZBC_KOMPLETNI_PROMPT_CLAUDE_CODE_PR73.md` (do repa ne). Plné znění nálezů je v přepisu relace 1:
 `list_events` session `session_01HpUiryRW9ytAdLUy6o6Gah`, kinds `["user"]`, limit 100, `before_id`
 `336c7f62-1d81-4538-9217-ab258752be39` → výsledek se uloží do souboru; v něm najít „T-01 |“, vzít blok od „P0“ po
@@ -10,18 +10,17 @@ Pozor: kontejner nemá `node_modules`, nejdřív `npm ci`. Nepouštěj prettier.
 * HOTOVO: relace 1 (25839c2) Z-01, Z-02, Z-14, S-01, Z-03; relace 2 (e1a463f) potvrzení přes `ConfirmDialog`; relace 3:
   combobox (b1968e5), A-01/A-08/A-02 (c47960d), A-05/A-06 + test A-10 (b76bd1a), server T-01 (5d7886a); relace 4: T-01 UI
   `TopicOrderList.tsx` (0f36560), T-02, T-03, T-04/C-04/T-11, T-05, T-06, T-07 (d1b8bee), T-08–T-10 + A-12 (bf406d2).
+  Relace 5: krok 6 hotový (21a40a2): Z-04–Z-13, C-07, `FilePicker.tsx`, `MinutesWorkspace.tsx`, `src/lib/minutes.ts`.
 * DALŠÍ KROKY v pořadí (každý malý commit + cílené testy):
-  6. Zápisy Z-04–Z-13 v `MinutesSourceForm.tsx` (právě načtený, nic nezměněno), `RecordingSection.tsx`, `MinutesPeek.tsx`,
-     `MinutesEditor.tsx`: Z-04 jedna věta u zdroje, formát/limit jen u zvoleného; Z-05 file input přes label (název, velikost,
-     chyba); Z-06 výchozí volba ne „Nahrávka“ (ukázková), krátká pravdivá poznámka u ní; Z-07/Z-11 jedno varování naráz
-     (banner `replacingDraft` vedle ConfirmDialog je zbytečný); Z-08 „Rozpracováno“ u prázdného návrhu (stav jen z draft);
-     Z-09 nižší textarea s růstem; Z-10 „Změnit zdroj“ u hlavičky místo formuláře pod editorem; Z-12 „Zápis“ bez nahrávky;
-     Z-13 přiznat jen TXT/MD/VTT/SRT; C-07 „Zveřejněné zápisy“ / „K dokončení“. e2e: zapisy, zapisy-schvaleni, okna.
-  7. Zbytek A: A-03, A-04/C-05, A-07/A-13, A-09, A-11, A-14, C-01–C-03 (C-06, C-08 jen ověřit/zdokumentovat).
+  7. Zbytek A: A-03 (počty v Plánu srozumitelně, skok na první akci), A-04/C-05 (hierarchie stavů v kartě), A-07/A-13
+     (patička okna akce: „Beze změn“, primární tlačítko jen se změnou), A-09 (sjednocené položky menu, destruktivní dole),
+     A-11 (detail akce bez zbytečných ploch), A-14 (jednotný focus ring), C-01 (kontrast `.field-hint`), C-02 (slovník:
+     „Nahrávka a zápis“ v `EventPeek`/`status.ts` → „Zápis“ kde nahrávka není), C-03 (Zavřít/Zrušit/Zpět); C-06, C-08 jen
+     ověřit a zdokumentovat. Plné znění nálezů: postup výše (scratchpad).
   8. Build, celé e2e, screenshoty před/po (před = worktree na `ff7ac54`), finální report, závěrečná zpráva uživateli.
 * OTEVŘENÉ: push do větve PR #73 (`claude/rychle-akce-a-planovani-temat`) jen se souhlasem uživatele. DEP-01 (migrace
   0013/0014 při startu) rozhoduje uživatel. `PrepareMonthDialog` nechává `<datalist>`. Okno Naplánovat téma: důvod řazení
-  („typ akce vychází z témat“) z řádku vypuštěn kvůli délce. Nejžádanější svítí u 3 ze 4 témat v seedu (logika beze změny).
+  („typ akce vychází z témat“) z řádku vypuštěn kvůli délce. Nejžádanější svítí u 3 ze 4 témat v seedu (logika beze změny). PDF/DOCX zdroj zápisu nepodporujeme (Z-13, rozhodnutí uživatele).
 
 **RYCHLÉ AKCE, PLÁNOVÁNÍ TÉMAT, ZÁPISY SE SCHVÁLENÍM (18. 11. 2026, větev `claude/rychle-akce-a-planovani-temat` z main 59cadc0).**
 Zadání uživatele: velké UX zadání (Quick Actions, garantovaná témata, Naplánovat téma, doporučení, Připravit měsíc,

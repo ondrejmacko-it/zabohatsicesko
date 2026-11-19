@@ -1,4 +1,4 @@
-# Opravné kolo UX/UI k PR #73 – průběžný report (po relaci 4)
+# Opravné kolo UX/UI k PR #73 – průběžný report (po relaci 5)
 
 Větev `claude/focused-cerf-gr1tdi` z HEAD PR #73 (`ff7ac54`, shodné s referenčním commitem screenshotů).
 Zadání: `ZBC_KOMPLETNI_PROMPT_CLAUDE_CODE_PR73.md` (u uživatele, do repa se nedává). Relace končí na limitu
@@ -30,7 +30,18 @@ kontextu, práce pokračuje v navazující relaci. Nic není mergnuto ani nasaze
 | T-07 | **Opraveno** (d1b8bee) | Tlačítko v okně „Navrhnout téma“. |
 | T-08, T-09, T-10 | **Opraveno** (bf406d2) | Okno Naplánovat téma: krátký úvod, stávající termín nahoře s hlavním „Otevřít stávající akci“, „Další termín“ a Vytvořit novou akci sekundárně, 3 akce + Zobrazit další, krátký řádek (`návrh, uloží se jen návrh` / `zveřejněno, změnu potvrdíte`), „Otevřít a doplnit“. e2e upraveno. |
 | A-12 | **Opraveno** (bf406d2) | Předvyplněné téma jen tichý řádek „… je předvyplněné, zatím nic není uložené ani zveřejněné.“ místo banneru. |
-| A-03, A-04, A-07, A-09, A-11, A-13, A-14, Z-04–Z-13, C-01–C-03, C-05–C-08 | Zatím neřešeno | Pořadí v `docs/dalsi-session.md`. |
+| Z-04 | **Opraveno** (21a40a2) | `MinutesSourceForm`: jedna věta u každé volby, formát a limit až v nápovědě zvoleného zdroje. Screenshot 1280/390 prohlédnut. |
+| Z-05 | **Opraveno** (21a40a2) | `src/components/FilePicker.tsx`: skutečný `input type=file` vizuálně skrytý v tlačítku `.btn` (fokus na tlačítku), název + velikost, chyba velikosti. Použito v nahrávce i textovém souboru. e2e `zapisy.spec.ts` (název souboru). Firefox/WebKit neověřeno. |
+| Z-06 | **Opraveno** (21a40a2) | Výchozí volba „Vložit text“, „Nahrávka (ukázka)“ poslední s větou „Přepis umí jen ukázkovou nahrávku.“, u nahrávání „nenahrávejte ji“ (skutečnou schůzku). e2e `zapisy.spec.ts` volbu vybírá. |
+| Z-07, Z-11 | **Opraveno** (21a40a2) | Bez věty „Kolegové uvidí…“ nahoře (pravidlo u Schválit a zveřejnit), bez banneru nahrazení vedle ConfirmDialog, bez „Zveřejněno pro publikum“ (duplicita se stavem), nápověda návrhu a „kolegové vidí dříve schválený“ jako tichý text; výrazné zůstává jen nesoulad typu a chybějící vedoucí. |
+| Z-08 | **Opraveno** (21a40a2) | `src/lib/minutes.ts` `minutesStarted`: prázdná šablona = stav panelu `awaiting`, štítek „Rozpracováno“, „Rozpracováno, verze 1“; výběr a úkoly `started` („zápis rozpracovaný“, „Dokončit zápis“). Stejné pravidlo server používá pro `confirmReplace` → prázdnou šablonu nahradí bez potvrzovacího okna. Testy `zapisy-schvaleni.test.ts`, `stav-nahravky.test.ts`, e2e `zapisy-schvaleni.spec.ts`. |
+| Z-09 | **Opraveno** (21a40a2) | `.textarea-grow`: min 60 px, `field-sizing: content`, `rows` podle obsahu (2–8) jako záloha. |
+| Z-10 | **Opraveno** (21a40a2) | `MinutesWorkspace.tsx`: „Změnit zdroj“ u stavu verze vymění editor za volbu zdroje (editor jen skrytý, úpravy zůstanou), „Zpět k zápisu“, fokus na zvolený zdroj a zpět; nový návrh vrátí okno k editoru. e2e `zapisy-schvaleni.spec.ts`. |
+| Z-12 | **Opraveno** (21a40a2) | Nadpis „Zápis“, „Nahrávka a zápis“ jen s nahrávkou nebo zdrojem z nahrávky. e2e. Odkazy „Nahrávka a zápis“ v okně akce (`EventPeek`, `status.ts`) zatím beze změny. |
+| Z-13 | **Opraveno** (21a40a2) | Nápověda „Jen TXT, MD, VTT nebo SRT … PDF ani Word zatím nejdou, vložte z nich text.“ PDF/DOCX nepodporujeme (bez bezpečného parseru) – rozhodnutí uživatele, zda je chce. |
+| C-07 | **Opraveno** (21a40a2) | Stránka Zápisy: nadpis „Zveřejněné zápisy“, tlačítko „K dokončení“ s počtem (přístupný název „Zápisy k dokončení: N“), okno „Zápisy k dokončení“ / „Moje zápisy k dokončení“. e2e `okna.spec.ts`. |
+| Oprava úpravy schváleného zápisu | **Opraveno** (21a40a2) | Text v `MinutesEditor` po Z-01 nepravdivě tvrdil, že kolegové zápis přestanou vidět; nově „Uložení založí nový návrh. Kolegové do jeho schválení dál vidí tuto schválenou verzi.“ |
+| A-03, A-04, A-07, A-09, A-11, A-13, A-14, C-01–C-03, C-05, C-06, C-08 | Zatím neřešeno | Pořadí v `docs/dalsi-session.md`. |
 
 ## Ověření (skutečně spuštěno v této relaci)
 
@@ -44,6 +55,9 @@ kontextu, práce pokračuje v navazující relaci. Nic není mergnuto ani nasaze
   152 passed / 9 skipped; temata-planovani (1280) 10 passed. Build v relaci 3 nespuštěn.
 * Relace 4: typecheck OK, lint OK, unit `temata-priority` OK; e2e temata-planovani + pristupnost + klavesnice (1280/390/320)
   33 passed / 6 skipped; temata-planovani + priprava-mesice + okna (1280/320) prošly po úpravě očekávání.
+* Relace 5: typecheck OK, lint OK, unit **382/382** (celá sada; opraveno zastaralé očekávání v `temata-priority` z bf406d2,
+  které v relaci 4 padalo); e2e zapisy + zapisy-schvaleni + okna (1280 + 390) 73 passed / 1 skipped, zapisy-schvaleni po
+  rozšíření (1280) prošlo. Build v relaci 5 nespuštěn.
 * NEOVĚŘENO: celé e2e, screenshoty před/po, Firefox/WebKit, Preview, živý Kalendář.
 
 ## Změněná pravidla (pro integraci do Wiki)
