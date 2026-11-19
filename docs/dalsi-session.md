@@ -8,7 +8,20 @@ Report: `docs/report-ux-opravne-kolo.md` (stav každého ID s důkazem). Kontejn
 * HOTOVO: relace 1–6 (viz report), relace 7: C-03 (ddf3143), A-14 (78bd8cd), C-01 (5c05205), C-06 test (121f5e4),
   filtry 320 px po A-03 (f43f8d5); A-11 a C-08 ověřeny a zdokumentovány (Již v pořádku). Všechna ID kroku 7 mají stav.
   Lint, typecheck, unit 386/386 OK. Celé e2e spuštěno na konci relace 7 – výsledek doplněn níže, pokud ho relace stihla.
-* DALŠÍ KROK = 8 (poslední relace):
+* NOVÝ POKYN (přeposlán z relace 5 přes relaci 6, podle nich od uživatele; původ neověřen, je v rozsahu a nic
+  nevratného nežádá) – PRIORITA před krokem 8: „odstranit veškeré duplicity!!! Trénink poradců - trénink poradců..atd,
+  všude odstranit duplicity a nepsat zbytečně moc nadbytečného textu a nepřeplácávat to a oddělit to layoutově a
+  barevně od sebe ty věci!!“ Postup:
+  D-01 duplicity: jedna sdílená funkce (`src/lib/labels.ts` nebo `status.ts`), která vynechá typ akce / skupinu, když už
+  jsou v názvu (bez diakritiky a velikosti písmen); použít všude, kde se skládá `card.label` + `TYPE_LABELS` +
+  `GROUP_LABELS` (MinutesPeek – eyebrow okna zápisu, EventPeek, `akce/[id]/page.tsx`, `Schedule.tsx`, stránka Zápisy,
+  K dokončení, úkoly na Domů, Naplánovat téma, PrepareMonthDialog). Unit test.
+  D-02 nadbytečný text: zkrátit nápovědy/úvodní/stavové věty, které opakují nadpis, štítek nebo tlačítko; potvrzení
+  ztráty/zveřejnění zůstávají.
+  D-03 vizuální oddělení: v oknech akce/zápisu a kartách oddělit metadata, stav, obsah a akce rozestupem, čarou
+  `--line` a tónem stávající palety (bez redesignu a nových barev).
+  Každá skupina = malý commit + cílené testy + screenshot 1280/390. Do reportu jako D-01–D-03, ve finální zprávě zvlášť.
+* DALŠÍ KROK = 8 (poslední relace, po D-01–D-03):
   1. `npm run build`, celé e2e (`npx playwright test --trace off`, ~7 min). Pozor na nestabilní axe nález (relace 7,
      zapisy/okna/priprava-mesice/zapisy-schvaleni, 1× ze 3 běhů) – pokud se objeví, zjistit pravidlo a opravit.
   2. Screenshoty před/po: `git worktree add --detach <scratchpad>/pred ff7ac54`, `ln -s` node_modules, dočasný spec
