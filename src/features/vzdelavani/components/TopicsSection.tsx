@@ -115,13 +115,16 @@ export async function TopicsSection({ user }: { user: Viewer }) {
 
   return (
     <section className="section" aria-labelledby="temata">
-      <div className="spread">
-        <h2 id="temata">Témata</h2>
+      {/* Název stránky už nese záložka Témata; nadpis zůstává pro čtečky a osnovu stránky. */}
+      <h2 id="temata" className="visually-hidden">
+        Témata
+      </h2>
+      <div className="spread topic-intro">
+        <p className="lead-text">
+          Navrhněte téma nebo podpořte návrh kolegů.{!organizer && " O zařazení do plánu rozhoduje správce."}
+        </p>
         <ProposeTopicDialog groups={groups} />
       </div>
-      <p className="lead-text">
-        Navrhněte téma nebo podpořte návrh kolegů.{!organizer && " O zařazení do plánu rozhoduje správce."}
-      </p>
       {topics.length === 0 ? (
         <div className="empty-state">
           <p className="item-title">Zatím tu nejsou žádná témata.</p>

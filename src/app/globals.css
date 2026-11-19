@@ -2147,10 +2147,6 @@ a.brief-link:hover {
   list-style: none;
 }
 
-/* Aktivní témata mají jemné teplé podbarvení, nejžádanější decentně zelené. Archiv zůstává bílý. */
-.topic-list:not(.archived-topics) > .topic-row {
-  background: var(--beige);
-}
 
 .topic-row {
   display: grid;
@@ -2164,11 +2160,8 @@ a.brief-link:hover {
   border-top: 1px solid var(--line);
 }
 
-/* Nejžádanější téma: zelený pruh vlevo a jemně zelené pozadí. */
-.topic-list > .topic-row.topic-wanted {
-  background: color-mix(in srgb, var(--ok-soft) 70%, var(--surface));
-  box-shadow: inset 3px 0 0 var(--ok);
-}
+/* Jeden vizuální signál na kategorii: garantovaná mají ochrový pruh, Nejžádanější je jen textový štítek
+   (bez podbarvení řádku), skupiny odděluje nadpis a linka. */
 
 .topic-main {
   display: flex;
@@ -2269,6 +2262,14 @@ a.brief-link:hover {
 
 .topic-list.topic-guaranteed > .topic-row {
   box-shadow: inset 3px 0 0 var(--ochre);
+}
+
+.topic-intro {
+  margin-bottom: 16px;
+}
+
+.topic-intro .lead-text {
+  margin: 0;
 }
 
 .topic-priority-hint {

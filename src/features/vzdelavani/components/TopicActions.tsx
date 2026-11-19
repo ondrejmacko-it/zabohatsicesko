@@ -96,7 +96,7 @@ function ProposeForm({ groups, onClose }: { groups: Group[]; onClose: () => void
         <ActionMessage state={state} />
         <div className="row">
           <button type="submit" className="btn btn-primary" disabled={pending}>
-            Přidat téma
+            Navrhnout téma
           </button>
           <button type="button" className="btn" onClick={onClose}>
             Zrušit
