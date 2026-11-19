@@ -188,7 +188,7 @@ Potvrzená regrese nenalezena; UI kód se v této relaci neměnil, snímky se ne
    * okno akce i detail: okrový panel „Návrh změny zveřejněné akce. Mění …“, rozbalitelná „Zveřejněná verze“
      (krátké vysunutí, bez animace při `prefers-reduced-motion`), volby Zveřejnit změny / **Zrušit návrh**
      (dřív Zahodit změny; s potvrzením). Čistý nový návrh nic z toho nemá, kolegové dál vidí jen zveřejněnou verzi.
-   * mřížka Plánu – **stoh**: okrová karta návrhu leží na zveřejněné verzi, z níž nad kartou vykukuje 18px pruh
+   * mřížka Plánu – **stoh**: okrová karta návrhu leží na zveřejněné verzi, z níž nad kartou vykukuje 20px pruh
      „Zveřejněná verze“. Najetí myší na pruh originál roztáhne přes kartu (stín, návrh ztlumí na 35 %), vše uvnitř
      buňky. Originál je jen pro myš (`aria-hidden`, `tabIndex=-1`); klávesnice a čtečky mají totéž v okně akce.
      ⋯ a checkbox výběru zůstávají na kartě návrhu. Agenda (telefon) bez stohu: okrová karta + řádek „Mění …“.
@@ -207,3 +207,21 @@ Potvrzená regrese nenalezena; UI kód se v této relaci neměnil, snímky se ne
 | Rozbalovací části (Zveřejněná verze, filtry) | plynulé rozbalení výšky | dnes jen fade |
 
 Vše s `prefers-reduced-motion: reduce` bez animace, délky 120–220 ms, žádné animace při prvním načtení stránky.
+
+### Testy relace 7 (lokálně, Chromium, kalendář v simulaci)
+
+* Lint OK, typecheck OK, unit **415/415** (nově `tests/navrh-zmeny.test.ts` – `changedParts`), build OK.
+* Celé e2e na 434b3a7 (`npx playwright test --trace off`): **1178 passed / 114 skipped / 0 failed** (7,7 min).
+  První běh na d0e70f1: 7 failed – zastaralé očekávání „bez termínu“ v `temata-planovani.spec.ts` po bodu 1; test
+  teď přijme „bez termínu“ i „v návrhu na“ (záleží na souběžném zapisujícím testu nad sdílenými daty).
+* Po poslední úpravě CSS pruhu (18 → 20 px, ⋯ skryté nad vysunutým originálem): cíleně priprava-mesice, pristupnost,
+  rychle-akce, plan-planovani **142 passed / 37 skipped / 0 failed**.
+* Známý předexistující souběh: samostatně spuštěný `temata-planovani.spec.ts` může na telefonním projektu selhat
+  (čtecí test vidí dočasně změněná garantovaná témata ze zapisujícího testu na windows-1280; stejně i na původním
+  testu). V celém běhu neselhal. Oprava by znamenala oddělit zapisující testy od čtecích (návrh, nedělal jsem).
+* Simulace vs. živý test: vše lokálně nad PGlite s fiktivními daty; Preview ani produkce se nedotýkalo, bez migrace.
+
+### Snímky relace 7
+
+`po-*` přegenerovány na finálním kódu (šířky 320–1920, správce, lokální PGlite s uloženým návrhem změny ev-11-26):
+`plan` a `okno-akce` ukazují návrh změny, nově `po-stoh-*` a `po-stoh-hover-*` (768–1920) – klid a vysunutý originál.

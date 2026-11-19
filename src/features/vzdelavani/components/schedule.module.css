@@ -631,7 +631,7 @@
    na pruh se originál vysune dopředu (stejná plocha jako karta, nic nepřesahuje buňku, mřížka má vodorovné
    posouvání) a návrh ustoupí. Originál je jen pro myš; okno akce ho ukazuje i klávesnici a čtečkám. */
 .stacked {
-  padding-top: 18px;
+  padding-top: 20px;
 }
 
 .stacked > .event:not(.original) {
@@ -641,7 +641,7 @@
 
 .original {
   position: absolute;
-  inset: 0 0 18px;
+  inset: 0 0 20px;
   z-index: 0;
   overflow: hidden;
   border: 1px solid var(--line-strong);
@@ -662,9 +662,13 @@
   white-space: nowrap;
 }
 
-/* Pruh zabírá horních 18 px; obsah originálu začíná pod ním, aby byl ve vysunutém stavu celý vidět. */
+/* Pruh zabírá horních 20 px; obsah originálu začíná pod ním, aby byl ve vysunutém stavu celý vidět. */
+.stacked > .original {
+  padding-top: 1px;
+}
+
 .original .originalTab {
-  margin: -4px 0 3px;
+  margin: 0 0 6px;
 }
 
 .stacked > .original:hover {
@@ -678,13 +682,19 @@
   opacity: 0.35;
 }
 
+/* ⋯ a checkbox patří návrhu: nad vysunutým originálem by mátly. */
+.stacked:has(> .original:hover) > .menuGrid,
+.stacked:has(> .original:hover) > :global(.pick-box) {
+  visibility: hidden;
+}
+
 /* Úchyty karty (⋯, checkbox výběru) zůstávají na kartě návrhu, ne na pruhu. */
 .stacked > .menuGrid {
-  top: 22px;
+  top: 24px;
 }
 
 .stacked > :global(.pick-box) {
-  top: 26px;
+  top: 28px;
 }
 
 /* Agenda (telefon): bez stohu, jen řádek, co návrh mění. */
