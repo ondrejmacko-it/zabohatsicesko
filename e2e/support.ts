@@ -29,6 +29,10 @@ export async function enterDemo(page: Page, role: Role) {
 /** Chyby v konzoli, které k testu patří (stránka 404 vrací stav 404, to prohlížeč hlásí jako chybu). */
 const EXPECTED_CONSOLE = [/Failed to load resource: the server responded with a status of 404/];
 
+// WebKit hlásí prefetch Next.js (`_rsc=`), který přeruší další `page.goto`, jako nezachycenou chybu „… due to
+// access control checks.“ Chromium a Firefox stejné přerušení mlčky zahodí. Jen WebKit, jen prefetch, jen tato hláška.
+const WEBKIT_ABORTED_PREFETCH = /[?&]_rsc=[\w-]+ due to access control checks\.$/;
+
 type Fixtures = { consoleErrors: string[] };
 
 /**
@@ -37,12 +41,15 @@ type Fixtures = { consoleErrors: string[] };
  */
 export const test = base.extend<Fixtures>({
   consoleErrors: [
-    async ({ page }, use) => {
+    async ({ page, browserName }, use) => {
       const errors: string[] = [];
       page.on("console", (message) => {
         if (message.type() === "error" && !EXPECTED_CONSOLE.some((pattern) => pattern.test(message.text()))) errors.push(message.text());
       });
-      page.on("pageerror", (error) => errors.push(`pageerror: ${error.message}`));
+      page.on("pageerror", (error) => {
+        if (browserName === "webkit" && WEBKIT_ABORTED_PREFETCH.test(error.message)) return;
+        errors.push(`pageerror: ${error.message}`);
+      });
       await use(errors);
       expect(errors, "chyby v konzoli").toEqual([]);
     },

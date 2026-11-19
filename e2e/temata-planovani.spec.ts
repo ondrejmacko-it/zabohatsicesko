@@ -160,6 +160,8 @@ test.describe("Témata: garantovaná a ostatní", () => {
     await expect(window.getByLabel(/^Téma/)).toHaveValue("Týmové priority");
     await expect(window.getByRole("button", { name: "Uložit jako návrh" })).toBeEnabled();
     await page.keyboard.press("Escape");
+    // Zavření okna odebere akci z adresy. Bez čekání by ji WebKit přepsal až po dalším goto.
+    await expect(page).not.toHaveURL(/akce=/);
     await page.goto("/vzdelavani/harmonogram?mesic=2026-11&akce=ev-11-24");
     await settle(page);
     await expect(page.getByRole("dialog").getByLabel(/^Téma/)).toHaveValue("");

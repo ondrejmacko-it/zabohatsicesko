@@ -137,6 +137,8 @@ test.describe("Plán: přidání akce na telefonu i počítači", () => {
 test.describe("Plán na telefonu: přesun úchytem", () => {
   test.use({ storageState: authFile("spravce") });
   test.beforeEach(({ isMobile }) => test.skip(!isMobile, "dotykové ovládání telefonu"));
+  // Prst (Finger) posílá dotyky přes CDP, ten má jen Chromium. WebKit tyto testy přeskočí, na skutečném iPhonu neověřeno.
+  test.beforeEach(({ browserName }) => test.skip(browserName !== "chromium", "dotyk přes CDP jen v Chromiu"));
 
   test("podržení a tažení na den v agendě otevře potvrzení, Nepřesouvat nic nezmění", async ({ page }) => {
     await openPlan(page);
