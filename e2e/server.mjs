@@ -13,6 +13,8 @@ const shared = {
   DEMO_ACCESS_CODE: DEMO_CODE,
   SIM_LATENCY_MS: "0",
   NEXT_TELEMETRY_DISABLED: "1",
+  // Testy běží přes http://localhost, WebKit by jinak povýšil požadavky na https (src/proxy.ts).
+  CSP_UPGRADE_INSECURE: "0",
 };
 delete shared.DATABASE_URL;
 
