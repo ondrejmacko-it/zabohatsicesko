@@ -1,5 +1,17 @@
 # Prompt pro další session
 
+**SJEDNOCENÍ WIKI – RELACE 11 → 12 (19. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd`, PR #74).**
+Zadání beze změny (viz blok relace 10 → 11 níže). P6 plné znění: soubor z `list_events` hledej „P6 – Kontrola konzistence“.
+* HOTOVO relace 11: P2 dokončen (4e29d78): Domů, Témata (`TopicsSection readOnly`), Zápisy (`MinutesPeek previewLabel`)
+  podle `currentPreview`; lišta na ≤640 px (Pohled na celou šířku, šipka ve výběru); `e2e/nahled.spec.ts` (6 testů,
+  1280/320/390 zelené), unit `tests/nahled.test.ts` 9/9. Unit celkem 419/419, lint OK, typecheck OK. Report body 1–10
+  sepsaný: `docs/report-opravne-kolo-pr74.md`, sekce „Relace 9–11“ (doplnit jen výsledky testů relace 11).
+  Snímky `po-*` generuje dočasný `e2e/zz-snimky.spec.ts` (NECOMMITOVAT, po doběhu smazat).
+* ZBÝVÁ: 1) smazat `e2e/zz-snimky.spec.ts`, commit snímků `po-*`; 2) build + celé e2e (`fuser -k 3310/tcp 3311/tcp`,
+  `npm run e2e` na pozadí, 0 failed) → výsledky do reportu; 3) popis PR #74 (aktualizovat, výsledky, simulace vs. živý
+  test); 4) FINÁLNÍ zpráva uživateli: audit relací 8–11 (8: 7aa044e, 290ea09, 1033643, eb7e9ee; 9: df1d205, 419909c,
+  22354d8, 618e18b, d1c7a42; 10: 3ee6f9f, 1eaaa7d; 11: 4e29d78 + další) a ruční kroky na Preview (níže v reportu bod 6).
+
 **SJEDNOCENÍ WIKI – RELACE 10 → 11 (19. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd`, PR #74).**
 Zadání beze změny. Plné znění: session `session_01HpUirwZ4XH6LuKaqHTR6A4`, `list_events` kinds `["user"]` s
 `before_id` `0455a2be-3fb4-47ff-b406-24eb644cb310` (výsledek se uloží do souboru, hledej „ZBČ – PR #74: sjednocení“).

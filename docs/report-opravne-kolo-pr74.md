@@ -276,3 +276,70 @@ dál ověřuje přechod na „v návrhu na 4. 12.“ i souběh při přetahován
   nabídka zůstane otevřená a fokus na volbě. Štítky Návrhy/Doplnit přepínají svůj stav v sadě, každý vybraný typ má
   štítek s křížkem, „Zrušit filtry“ odebere vše. Filtry drží přepnutí Měsíc/Seznam i změnu měsíce (typ, který
   v novém měsíci není, vypadne). Bez JavaScriptu formulář odešle tlačítko Použít.
+
+## Relace 9–11: dokončení P1–P6 a finální report (body 1–10)
+
+### 1. Co bylo hotové a zůstalo zachováno
+Stoh návrhu nad zveřejněnou verzí (d0e70f1, 4d83b3f), `ChangeBanner`, `PageCall`, DnD témat mezi sekcemi (bea1c6c,
+ba4b169), migrace 0015, schvalování a historie zápisů, Quick Actions ⋯, Připravit měsíc s Comboboxem. Žádný z těchto
+celků se nepřepisoval, jen se sjednotily styly. Bez nových migrací, bez změn produkčních dat.
+
+### 2. Skutečné chyby nalezené v tomto kole
+* Nabídka Filtry se po zaškrtnutí typu zavřela: `key` u `PlanFilters` obsahoval vybrané typy, komponenta se
+  přemontovala (22354d8).
+* Filtry na 320/390 px přetékaly okno (618e18b, panel kotvený k řádku filtrů).
+* Výběr Pohled v horní liště přetékal na 320 px o 5 px a v aktivním stavu ztrácel šipku výběru (zkratka
+  `background` mazala obrázek šipky) – opraveno v 4e29d78, hlídá e2e `nahled.spec.ts`.
+* Nestabilní e2e Témat (čtecí a zapisující testy nad sdílenou DB, 7aa044e, 1033643).
+
+### 3.–4. Úpravy a sjednocená hierarchie
+Vzor = dialog Přidat akci: nadpis sekce → název položky (`.item-title` 650) → hodnota → popisek → metadata
+(`.item-meta` tlumeně) → stav (štítek). Sjednoceno: Připravit měsíc (kroky jako sekce s číslem, záhlaví sloupců,
+„Hromadně doplnit vedoucího“), Nastavit pravidelný rozvrh (den, čas, typy jako čipy, neaktivní den bez okrového
+pruhu), Témata (⋯ jako na kartách, tlumenější zájemci, „bez termínu“ bez tučného), Zápisy (štítek stavu verze
+`.minutes-state-*` + zdroj, karty zdrojů bílé s okrovým výběrem), Správa (⋯ účtu jako karta), `.btn-primary:disabled`
+šedé. P6: závěrečný průchod upravených obrazovek po snímcích `po-*` (pomocné texty odstraněné už v 6a2c354; nové
+texty náhledu jsou krátké: „Pohled: X · jen ke čtení“, „Náhled X tu neplatí, stránka používá váš účet“).
+
+### 5. Vícenásobné filtry
+Viz sekce Relace 8/P3 (290ea09): NEBO v kategorii, A mezi typem a stavem, adresa `typ=a&typ=b&stav=…`, štítky
+s křížkem, „Zrušit filtry“, nabídka zůstává otevřená.
+
+### 6. Globální „Zobrazit jako“ (3ee6f9f, 4e29d78)
+Jen správce. Výběr „Pohled“ v horní liště odděleně od účtu (Můj pohled / Skupina / Kolega). Serverová akce
+`startPreview` ověří správce a klíč a uloží HttpOnly cookie `zbc_nahled` = `id účtu|klíč` (Lax, 12 h); `endPreview`
+ji smaže. Každý požadavek ji znovu ověří (`currentPreview` → `resolvePreview`): cookie jiného účtu, neplatný klíč
+nebo ne-správce = běžný pohled. Serverové akce dál vždy používají skutečný účet a jeho oprávnění, náhled nic
+nepovoluje. Podporované stránky (data podle diváka, bez zapisujícího ovládání): Domů (nejbližší akce a úkoly
+diváka, bez vlastního Kalendáře a pozvánek), Plán, okno a detail akce, Témata (bez návrhu, hlasování, správy,
+přetahování a archivu; místo tlačítka štítek „Má zájem“), Zápisy (zápisy viditelné divákovi, bez K dokončení;
+u akce, kterou divák zpracovává, jen poznámka bez nahrávky a pracovního přepisu). Ostatní stránky (Správa,
+Integrace…) ukážou pruh „Náhled X tu neplatí, stránka používá váš účet“. Testy: `tests/nahled.test.ts` (cookie
+vázaná na účet, podvržený klíč, Témata a Zápisy skupiny = skutečný účastník), `e2e/nahled.spec.ts` (pohled FP na
+čtyřech stránkách bez Přidat akci / Navrhnout téma / Mám zájem / K dokončení, zápis RM nedostupný, Správa se
+skutečným účtem, Ukončit pohled, cookie jiného účtu i neplatný klíč, účastník s podvrženou cookie, lišta na
+320/390 px bez přetečení a překryvu).
+
+### 7. Animace (618e18b)
+Implementováno, vše jen v `prefers-reduced-motion: no-preference`, bez knihovny: (1) hover karet Plánu a agendy
+(stín + 1 px; ne u stohu a zvednuté karty), `a.item-card` jen stín (transformace by rozbila pevně ukotvené menu ⋯);
+(2) otevření dialogu fade + 6 px, 150 ms; (7) rozbalení nabídky Filtry a zveřejněné verze ve stohu. Body (3) potvrzení
+uložení a (4) zvednutí/dosednutí DnD zůstaly beze změny: stávající chování funguje a nová animace by zasahovala
+do DnD, které se přepisovat nemá.
+
+### 8. Stabilita e2e
+Zapisující testy Témat mají značku `@zapis-temat` a běží jen v projektu `zapis-temat` = teardown přihlášení, tedy
+po všech čtecích projektech. Čtecí testy vidí vždy seed; tolerance více stavů z 434b3a7 vrácena. Testy animací
+čekají na CSS stav (`toHaveCSS`), ne na čas.
+
+### 9. Výsledky testů a snímky
+Viz „Testy relace 11“ níže. Snímky před/po: `docs/screenshots/sjednoceni-pr74/` (`pred-*` = 4d83b3f, `po-*` =
+HEAD), šířky 320, 390, 768, 1280, 1440, 1920; pohledy domu, lista, plan, temata, zapisy, zapis-editor, sprava,
+filtry, karta-menu, stoh (≥768, s najetím na originál), pridat-akci, pripravit-mesic, rozvrh, nahled, nahled-temata.
+
+### 10. Rizika a návrhy mimo rozsah
+* Náhled kolegy, který je vedoucí: Domů/Plán ukáží jeho úkoly jen ke čtení; nahrávka a pracovní přepis se
+  záměrně nezobrazují.
+* Firefox/WebKit neověřeno (v cloudu není), živý iPhone neověřen.
+* Lišta správce na telefonu má tři řádky (značka, Pohled, účet); jde zkrátit přesunem Pohledu do menu účtu.
+* Animace 3 a 4 (potvrzení uložení, DnD) jen po souhlasu.
