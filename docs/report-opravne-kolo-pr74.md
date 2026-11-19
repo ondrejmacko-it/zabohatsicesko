@@ -225,3 +225,54 @@ Vše s `prefers-reduced-motion: reduce` bez animace, délky 120–220 ms, žádn
 
 `po-*` přegenerovány na finálním kódu (šířky 320–1920, správce, lokální PGlite s uloženým návrhem změny ev-11-26):
 `plan` a `okno-akce` ukazují návrh změny, nově `po-stoh-*` a `po-stoh-hover-*` (768–1920) – klid a vysunutý originál.
+
+## Relace 8: sjednocení Wiki, filtry, globální pohled (zadání P1–P6)
+
+### P2 – analýza a návrh globálního „Zobrazit jako“ (před implementací)
+
+Dnešní stav:
+* `resolvePreview(user, klíč)` v `services/preview.ts` vrací `Viewer` skupiny (`nahled-skupiny`, role member) nebo kolegy
+  jen pro správce (`isOrganizer`), jinak `null`. Skutečná identita se nemění, serverové akce vždy volají `requireUser()`.
+* Klíč nese jen URL `?jako=`; používá ho Plán (`harmonogram/page.tsx`, i úkoly a okno akce) a detail akce
+  (`akce/[id]`). Výběr je v nabídce Filtry (`PlanFilters.tsx`). Domů, Témata a Zápisy náhled neznají.
+
+Datová pravidla stránek:
+| Stránka | Data podle diváka | V náhledu |
+| --- | --- | --- |
+| Plán, okno akce, detail | `listMonth`, `getEventDetail`, `listTasks` (policy.ts) | už podporováno, jen ke čtení |
+| Domů | `nextEventsFor`, `listTasks`; osobní kalendář a pozvánky z Gmailu | nejbližší akce a úkoly diváka; kalendář a pozvánky skryté (patří účtu) |
+| Témata | `listTopics` (skupiny diváka, jeho hlasy), správa jen správce | témata a hlasy diváka, bez hlasování, návrhu a správy |
+| Zápisy | `listPublishedMinutes`, `listMissingMinutes` (vedoucí) | zápisy, které divák vidí; bez přidání a schvalování |
+| Správa, Integrace | jen správce | náhled se neuplatní, lišta to řekne („Tato stránka používá váš účet“) |
+
+Návrh (bez nového přihlášení, bez změny role na serveru, bez migrace):
+1. Klíč náhledu v HttpOnly cookie `zbc_nahled` (SameSite=Lax, session cookie, max. 12 h). Zapíše ji jen serverová akce
+   `startPreview`, která ověří `isOrganizer(requireUser())` a platnost klíče přes `resolvePreview`; `endPreview` ji smaže.
+   Cookie nic neopravňuje: při každém požadavku ji stránka znovu ověří přes `resolvePreview` (neznámý klíč nebo ne-správce = běžný pohled).
+2. Helper `currentPreview(user)` čte cookie; Plán, detail, Domů, Témata a Zápisy počítají data pro `preview.viewer`
+   a skryjí zapisující ovládání (stejně jako dnes Plán: `managing = organizer && !preview`). `?jako=` z URL zmizí.
+3. Horní lišta: vlevo skutečný účet (jméno, role, Odhlásit), zvlášť blok „Pohled“ (Můj pohled / skupiny / kolegové +
+   Ukončit pohled) jen pro správce. Aktivní náhled = okrový pruh pod lištou na každé stránce („Pohled: X · jen ke čtení“
+   + kde platí); na Správě a Integracích pruh řekne, že stránka používá váš účet. Na mobilu kompaktní pruh.
+4. Serverové akce zůstávají beze změny (vždy skutečný účet a jeho oprávnění). Nové e2e: v náhledu nejsou zapisující
+   tlačítka na podporovaných stránkách, Správa ukazuje skutečný účet, ne-správce cookie nastavit nemůže / je ignorována.
+
+### P5 – izolace e2e testů témat (7aa044e)
+
+Příčina: zapisující testy (priorita, pořadí, téma do návrhu prosincové akce) a čtecí testy témat sdílely jednu
+databázi ukázky a běžely souběžně v různých projektech. Čtecí test proto viděl někdy seed, jindy rozpracovaný stav.
+Řešení: řízená serializace přes Playwright. Zapisující testy mají značku `@zapis-temat`, ostatní projekty je
+vynechávají (`grepInvert`) a běží jen v projektu `zapis-temat` = teardown projektu `prihlaseni`, tedy až doběhnou
+všechny projekty, které na přihlášení závisí. (Závislost na všech projektech nešla: Playwright na závislé projekty
+nepoužije filtr souboru a samostatný běh by spustil celou sadu. Daň: každý cílený běh přidá 2 testy zápisu témat.)
+Čtecí testy tak vždy vidí seed a ověřují jediný stav („ · bez termínu“, žádné „v návrhu na“). Zapisující test
+dál ověřuje přechod na „v návrhu na 4. 12.“ i souběh při přetahování.
+
+### P3 – vícenásobné filtry Plánu (290ea09)
+
+* Adresa: `typ=a&typ=b&stav=navrhy&stav=doplnit` (čtou se i čárky); neznámé hodnoty se zahodí (`filterValues`).
+* Logika `filterCards`: v kategorii NEBO, mezi typem a stavem A. Stavy jen pro správce, jako dosud.
+* UI: nabídka Filtry s checkboxy (Typ akce, Stav s počty); změna hned přepne adresu (historie prohlížeče ji vrátí),
+  nabídka zůstane otevřená a fokus na volbě. Štítky Návrhy/Doplnit přepínají svůj stav v sadě, každý vybraný typ má
+  štítek s křížkem, „Zrušit filtry“ odebere vše. Filtry drží přepnutí Měsíc/Seznam i změnu měsíce (typ, který
+  v novém měsíci není, vypadne). Bez JavaScriptu formulář odešle tlačítko Použít.

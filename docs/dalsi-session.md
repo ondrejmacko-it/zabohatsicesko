@@ -1,5 +1,23 @@
 # Prompt pro další session
 
+**SJEDNOCENÍ WIKI – RELACE 8 → 9 (19. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd`, PR #74).**
+Zadání beze změny (blok níže; plné znění `list_events` session `session_01HpUirwZ4XH6LuKaqHTR6A4`, kinds `["user"]`,
+poslední user zpráva „ZBČ – PR #74: sjednocení Wiki…“). Report: `docs/report-opravne-kolo-pr74.md`, sekce Relace 8.
+* HOTOVO: P5 (7aa044e) – zapisující testy témat se značkou `@zapis-temat` běží jen v projektu `zapis-temat`, který
+  je teardown projektu `prihlaseni` (běží po všech projektech; playwright.config.ts); tolerance z 434b3a7 vrácena na „ · bez termínu“. P3 (290ea09) –
+  `filterCards({types, states})` NEBO v kategorii / A mezi, `filterValues` (opakovaný parametr i čárky), checkboxy
+  v nabídce Filtry (router.push, nabídka zůstává otevřená), štítky typů s křížkem, „Zrušit filtry“; unit + e2e
+  test „více filtrů…“ v `plan-planovani.spec.ts`. Ověřeno: typecheck, unit dokonceni, build OK; výsledek cílených
+  e2e (temata 2× samostatně, plan-planovani) v relaci 8 nedoběhl do konce – NEJDŘÍV je spusť a oprav.
+* P2: analýza a návrh v reportu (cookie `zbc_nahled`, `currentPreview`, lišta Účet vs. Pohled, okrový pruh, stránky
+  Domů/Témata/Zápisy jen ke čtení). Návrh poslán uživateli v relaci 8, odpověď zatím žádná → implementuj až na konci,
+  pokud uživatel nenamítne; při implementaci odstraň „Zobrazit jako“ z `PlanFilters` (je tam zatím dál).
+* ZBÝVÁ: P4 (jen animace 1 hover karet – pozor na stoh `.stacked`/`.original` v schedule.module.css; 2 `.dialog[open]`
+  fade + 4–8 px 150 ms; 3 `.flash` diskrétní; 4 `.topic-drag-overlay`/`.cardWrap[data-lifted]` zvednutí a dosednutí;
+  7 `.filter-menu-panel`, `.change-original-facts` – vše s `prefers-reduced-motion`), P1, P6, P2, plné ověření
+  (lint, typecheck, unit, build, celé e2e na pozadí 0 failed), snímky před/po 320–1920 (vlastní skript podle
+  `scripts/audit-screenshoty.mjs`), report body 1–10, popis PR #74, `subscribe_pr_activity`.
+
 **SJEDNOCENÍ WIKI, HIERARCHIE, FILTRY, GLOBÁLNÍ POHLED (19. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd`, PR #74, HEAD 4d83b3f+).**
 Zadání: prompt uživatele „ZBČ – PR #74: sjednocení Wiki, vizuální hierarchie, filtry a globální pohled“ (P1 hierarchie podle
 dialogu Přidat akci: Připravit měsíc, Nastavit pravidelný rozvrh, Zápisy, Témata, Domů/Harmonogram/Detail/Správa; P2 globální
