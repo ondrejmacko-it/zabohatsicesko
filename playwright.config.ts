@@ -8,7 +8,8 @@ const MAC_SAFARI_UA =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.1 Safari/605.1.15";
 
 // Testy se značkou @zapis-temat mění sdílená garantovaná témata a pořadí. Běží až ve vlastním projektu po všech
-// ostatních, takže čtecí testy vidí vždy seed a nemusí přijímat víc stavů.
+// ostatních (teardown přihlášení), takže čtecí testy vidí vždy seed a nemusí přijímat víc stavů. Závislost na všech
+// projektech by nešla: Playwright na závislé projekty nepoužije filtr souboru a spustil by celou sadu.
 const TOPIC_WRITES = /@zapis-temat/;
 
 const desktop = (name: string, width: number, height: number, extra: Project["use"] = {}): Project => ({
@@ -29,7 +30,8 @@ const phone = (name: string, width: number): Project => ({
 });
 
 const projects: Project[] = [
-  { name: "prihlaseni", testMatch: /prihlaseni\.setup\.ts/ },
+  // Teardown přihlášení = zápisy témat: běží, až doběhnou všechny projekty, které na přihlášení závisí.
+  { name: "prihlaseni", testMatch: /prihlaseni\.setup\.ts/, teardown: "zapis-temat" },
   desktop("windows-1280", 1280, 800),
   desktop("windows-1920", 1920, 1080),
   desktop("macos-1440", 1440, 900, { deviceScaleFactor: 2, userAgent: MAC_CHROME_UA }),
@@ -40,7 +42,7 @@ const projects: Project[] = [
 ];
 projects.push({
   ...desktop("zapis-temat", 1280, 800),
-  dependencies: projects.flatMap((p) => (p.name && p.name !== "prihlaseni" ? [p.name] : [])),
+  dependencies: [],
   testMatch: /temata-planovani\.spec\.ts/,
   grep: TOPIC_WRITES,
   grepInvert: undefined,
