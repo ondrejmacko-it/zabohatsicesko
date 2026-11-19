@@ -1,5 +1,33 @@
 # Prompt pro další session
 
+**SJEDNOCENÍ WIKI – RELACE 10 → 11 (19. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd`, PR #74).**
+Zadání beze změny. Plné znění: session `session_01HpUirwZ4XH6LuKaqHTR6A4`, `list_events` kinds `["user"]` s
+`before_id` `0455a2be-3fb4-47ff-b406-24eb644cb310` (výsledek se uloží do souboru, hledej „ZBČ – PR #74: sjednocení“).
+* HOTOVO relace 10 (3ee6f9f): P1 Zápisy – `.minutes-version` = štítek stavu `.minutes-state-{waiting,ok,draft}` +
+  `.minutes-source` (text `data-testid="stav-verze"` beze změny), `.persona` bílá + okrový výběr + fokus (platí i
+  pro vstup), kratší `draftHint`. Správa: ⋯ účtu `variant="card" className="menu-inline"`. Domů a detail akce
+  prohlédnuty (1280 px), hierarchie OK, beze změny. P2 ROZPRACOVÁNO: `services/preview-context.ts`
+  (`currentPreview`, cookie `zbc_nahled` = `userId|klíč`, HttpOnly, Lax, 12 h, ověřuje `resolvePreview`),
+  `app/(wiki)/nahled-actions.ts` (`startPreview`/`endPreview`, návrat přes referer jen na cestu Wiki),
+  `components/PreviewSwitch.tsx` (`PreviewSwitch` v `Topbar` jen pro správce, `PreviewBar` pod lištou,
+  `previewApplies`), CSS `.view-switch`, `.preview-bar` na konci globals.css. Plán a detail akce čtou cookie,
+  `?jako=` a výběr ve Filtrech odstraněny. Typecheck + eslint změněných souborů OK. NEOVĚŘENO: build, e2e, vzhled lišty.
+* ZBÝVÁ (pořadí): 1) P2 dokončit: Domů (`app/(wiki)/page.tsx`: `viewer = preview?.viewer ?? user` pro
+  `nextEventsFor`, `listTasks`, `listMonth` (planner podle diváka); v náhledu bez `loadPersonalCalendar`,
+  pozvánek a `PersonalCalendarStatus`; `TasksCard readOnly`; nadpis „Vítejte, …“ ponechat), Témata
+  (`TopicsSection` prop `readOnly`: bez `PageCall`/návrhu, bez `InterestButton` → jen stav, bez `TopicManage`,
+  `sortable=false`, bez reset/obnovit; data `listTopics(viewer)`), Zápisy (`listPublishedMinutes(viewer)`,
+  `canAdd=false`, `MinutesPeek` v náhledu převést panel handler → reader, ať nejsou formuláře). Zkontrolovat lištu
+  na 320/390 px (`.account` + `.view-switch` se musí vejít) a Firefox ne. E2E nový `e2e/nahled.spec.ts`: správce
+  zapne pohled skupiny FP → pruh na Domů/Plán/Témata/Zápisy, žádné „Přidat akci“, „Navrhnout téma“, „Mám zájem“
+  tlačítko; Správa ukazuje pruh „tu neplatí“ a skutečný účet; Ukončit pohled vrátí vlastní pohled; účastník
+  s podvrženou cookie `zbc_nahled` (`demo-…|skupina-rm`) nic nevidí jinak; unit pro `previewKeyFor`.
+  2) P6 průchod textů. 3) lint, typecheck, unit, build, celé e2e na pozadí 0 failed (`fuser -k 3310/tcp 3311/tcp`
+  předem). 4) snímky `po-*` (návod v bloku relace 9 níže; přidat pohled „nahled“ = aktivní náhled). 5) report body
+  1–10 do `docs/report-opravne-kolo-pr74.md` (sekce Relace 10+). 6) popis PR #74. 7) FINÁLNÍ zpráva uživateli:
+  audit relací 8–N s commity (relace 8: 7aa044e, 290ea09, 1033643, eb7e9ee; 9: df1d205, 419909c, 22354d8,
+  618e18b, d1c7a42; 10: 3ee6f9f) + seznam ručních kroků na Preview (role, stránky, šířky).
+
 **SJEDNOCENÍ WIKI – RELACE 9 → 10 (19. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd`, PR #74).**
 Zadání beze změny (plné znění: `list_events` session `session_01HpUirwZ4XH6LuKaqHTR6A4`, kinds `["user"]`, stránka
 před `757f686b-…`, zpráva „ZBČ – PR #74: sjednocení Wiki…“; uloží se do souboru, hledej text „ZBČ – PR #74: sjednocení“).
