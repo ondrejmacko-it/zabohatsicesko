@@ -914,9 +914,9 @@ fieldset.field > legend {
   color: var(--danger);
 }
 
-/* ⋯ v rohu karty akce: vždy viditelné tlačítko s jemným rámečkem (dřív 28 × 24 px a tlumené na 60 %, na
-   desktopu se ztrácelo). Viditelná plocha 36 × 32 px, dotyková ještě o kus větší (pseudo-prvek), karta
-   rozměry nemění. Při najetí nebo otevření ztmavne rámeček i ikona. */
+/* ⋯ v rohu karty akce: malé, ale vždy viditelné tlačítko s jemným rámečkem. Karta mu vyhrazuje místo (odsazení
+   názvu v mřížce, pravý okraj v agendě), takže nikdy nepřekryje text a nezvětší výšku karty. Najetí, fokus
+   a otevření ho zvýrazní. Na dotykovém displeji je o kus větší a dotyková plocha (pseudo-prvek) má 44 px. */
 .menu-card {
   position: absolute;
   z-index: 2;
@@ -932,30 +932,44 @@ fieldset.field > legend {
   position: relative;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 32px;
+  width: 26px;
+  height: 22px;
   padding: 0;
   border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface);
+  border-radius: 6px;
+  background: transparent;
   color: var(--muted);
   cursor: pointer;
 }
 
 .menu-card-trigger::before {
   position: absolute;
-  inset: -6px -4px;
+  inset: -4px;
   content: "";
 }
 
 .menu-card-trigger:hover,
-.menu-card[data-open] > .menu-card-trigger {
-  border-color: var(--muted);
+.menu-card-trigger:focus-visible {
+  border-color: var(--line-strong);
+  background: var(--surface);
   color: var(--ink);
 }
 
-.menu-card-trigger:focus-visible {
+.menu-card[data-open] > .menu-card-trigger {
+  border-color: var(--ink);
+  background: var(--surface);
   color: var(--ink);
+}
+
+@media (pointer: coarse) {
+  .menu-card-trigger {
+    width: 30px;
+    height: 26px;
+  }
+
+  .menu-card-trigger::before {
+    inset: -9px -7px;
+  }
 }
 
 /* Při hromadném výběru má přednost checkbox, menu karty se schová stejně jako úchyt přesunu. */

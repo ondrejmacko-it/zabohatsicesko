@@ -43,12 +43,22 @@ export function Menu({ label, children, small, iconOnly, className, variant }: P
     const anchor = trigger.current.getBoundingClientRect();
     const size = list.current.getBoundingClientRect();
     const below = window.innerHeight - anchor.bottom - GAP - EDGE;
-    const top = size.height <= below || anchor.top < size.height + GAP + EDGE ? anchor.bottom + GAP : anchor.top - GAP - size.height;
+    const above = anchor.top - GAP - EDGE;
+    // Dolů, když se tam vejde, jinak nahoru. Když se nevejde ani jedním směrem, otevře se na stranu s víc místem
+    // a dlouhý seznam se v ní posouvá. Ve velmi nízkém okně (méně než 160 px na obě strany) se seznam posune tak,
+    // aby byl celý v okně, i za cenu překrytí tlačítka. Hrana okna ho nikdy neořízne.
+    const down = size.height <= below || (size.height > above && below >= above);
+    const room = Math.max(0, down ? below : above);
+    const cramped = room < Math.min(size.height, 160);
+    const height = cramped ? Math.min(size.height, window.innerHeight - 2 * EDGE) : Math.min(size.height, room);
+    const top = cramped
+      ? Math.min(anchor.bottom + GAP, window.innerHeight - EDGE - height)
+      : down ? anchor.bottom + GAP : anchor.top - GAP - height;
     // Menu roste do volné strany: tlačítko v levé půlce okna → menu zarovnané k jeho levé hraně, jinak k pravé.
     // Na krajích ho drží uvnitř okna EDGE.
     const fromLeft = anchor.left + anchor.width / 2 < window.innerWidth / 2;
     const left = Math.min(Math.max(EDGE, fromLeft ? anchor.left : anchor.right - size.width), window.innerWidth - size.width - EDGE);
-    setPlace({ top: Math.max(EDGE, top), left: Math.max(EDGE, left) });
+    setPlace({ top: Math.max(EDGE, top), left: Math.max(EDGE, left), maxHeight: height });
   }, [open]);
 
   useEffect(() => {
@@ -109,7 +119,7 @@ export function Menu({ label, children, small, iconOnly, className, variant }: P
           setOpen((value) => !value);
         }}
       >
-        <Icon name="more" size={card ? 18 : 16} />
+        <Icon name="more" size={16} />
         {!iconOnly && !card && label}
       </button>
       <div

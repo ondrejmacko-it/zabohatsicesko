@@ -554,29 +554,60 @@
   outline: 2px dashed var(--line-strong);
 }
 
-/* ——— Menu ⋯ s rychlými akcemi (sourozenec odkazu karty). Karta kvůli němu nemění výšku. ——— */
+/* ——— Menu ⋯ s rychlými akcemi (sourozenec odkazu karty). Karta kvůli němu nemění výšku. ———
+   Mřížka: ⋯ vpravo nahoře v řádku názvu. Název má vpravo vyhrazené místo, ostatní řádky jsou pod tlačítkem,
+   takže nic nepřekrývá. Dřív bylo vpravo dole a zakrývalo čas, téma i štítek stavu. Výstraha chybějících údajů
+   (karta bez štítku) se posune vlevo od ⋯. */
 .menuGrid {
-  right: 2px;
-  bottom: 2px;
+  top: 4px;
+  right: 4px;
 }
 
+.cardWrap:has(> .menuGrid) > .event .title {
+  padding-right: 24px;
+}
+
+.cardWrap:has(> .menuGrid) > .event .meta:not(:has(:global(.badge))) {
+  right: 32px;
+}
+
+.cardWrap:has(> .menuGrid) > .event:has(> .meta > .missing:only-child) .title {
+  padding-right: 46px;
+}
+
+/* Svisle na střed bez transform: transform by se stal rámcem pro `position: fixed` seznamu menu a to by se
+   otevřelo mimo obrazovku. */
 .menuAgenda,
 .menuAgendaHandle {
-  top: 50%;
-  right: 6px;
-  transform: translateY(-50%);
+  top: 0;
+  right: 8px;
+  bottom: 0;
+  align-items: center;
 }
 
 .withMenu {
-  padding-right: 44px;
+  padding-right: 42px;
+}
+
+@media (pointer: coarse) {
+  .cardWrap:has(> .menuGrid) > .event .title {
+    padding-right: 28px;
+  }
+
+  .cardWrap:has(> .menuGrid) > .event .meta:not(:has(:global(.badge))) {
+    right: 36px;
+  }
+
+  .cardWrap:has(> .menuGrid) > .event:has(> .meta > .missing:only-child) .title {
+    padding-right: 50px;
+  }
 }
 
 @media (max-width: 760px) {
   /* Telefon: ⋯ vpravo nahoře, úchyt přesunu pod ním vpravo dole. Oba mají vlastní dotykovou plochu. */
   .menuAgendaHandle {
-    top: 6px;
-    right: 8px;
-    transform: none;
+    top: 8px;
+    bottom: auto;
   }
 
   .withMenu.withHandle {
