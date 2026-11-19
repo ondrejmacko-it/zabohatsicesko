@@ -132,3 +132,27 @@ při přesunu klávesnicí · předávky c380dd2, ff27312, cb02688 · snímky p�
 2. Výběr osob přes Combobox s vyhledáváním (P1-4), až bude osob víc.
 3. Vedoucí akce se dnes nekontroluje proti příslušnosti ke skupině (jen existence účtu a oprávnění správce).
 4. Merge PR #74 do main ručně po revizi.
+
+## Relace 5: před merge (rozhodnutí uživatele body 1–6)
+
+### 1. Migrace 0015 a Preview DB
+
+Read-only ověření (jen metadata a SELECT, žádná hodnota tajemství se nečetla):
+
+* **Oddělenost:** Vercel `DATABASE_URL` pro Preview a Production jsou různé proměnné z různých Neon úložišť
+  (Preview → `store_b8h3…` = Neon `still-shadow-86247101` „neon-zbz-vzdelavani-demo“, Production → `store_memn…`
+  = Neon `bitter-breeze-02749976` „zbc-wiki-produkce“). Preview tedy produkční databázi nevidí.
+* **Omezení na Preview:** `topics_priority_rank_check` = `CHECK (priority_rank >= 1 AND priority_rank <= 3)`, sloupec `smallint`.
+* **`schema_migrations` na Preview:** poslední `0014_minutes_sources_and_approval` (18. 11. 21:05 UTC), 0015 chybí.
+* **Obnova:** Neon PITR 6 h (`history_retention_seconds` 21600) a navíc záložní větev
+  `zaloha-pred-0015-2026-11-19` (`br-hidden-mode-b9dux46b`, bez compute) vytvořená z Preview `main` před migrací.
+
+Úprava migrace (8c2fa73): místo `DROP CONSTRAINT IF EXISTS` nejdřív blok `DO $$ … RAISE EXCEPTION`, který ověří,
+že omezení `topics_priority_rank_check` existuje a má horní mez 3. Jinak migrace selže celá (transakce, schéma beze
+změny) a server nenastartuje s chybou místo tichého pokračování. Blok je na jednom řádku, protože `prepareDatabase`
+dělí SQL podle středníku na konci řádku (pokryto testem). Nový `tests/migrace-0015.test.ts` (PGlite): úspěch
+s očekávaným omezením, selhání bez omezení i s jinou horní mezí, schéma po selhání beze změny.
+
+Spuštění na Preview: nesecretní `APPROVED_MIGRATIONS=0015_topic_priority_unlimited` jen pro Preview a jen git
+větev `claude/finalni-kontrola-novy-pr-g2r2wd` (Production ji nemá), redeploy 8c2fa73 → `dpl_Hc4z5f5w7z2x7QEa7bF2bNxa4M9X` READY.
+Migrace se spouští při prvním dotazu do DB (`getDb`), ne při buildu.
