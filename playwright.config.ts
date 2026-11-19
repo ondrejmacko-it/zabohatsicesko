@@ -7,10 +7,15 @@ const MAC_CHROME_UA =
 const MAC_SAFARI_UA =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.1 Safari/605.1.15";
 
+// Testy se značkou @zapis-temat mění sdílená garantovaná témata a pořadí. Běží až ve vlastním projektu po všech
+// ostatních, takže čtecí testy vidí vždy seed a nemusí přijímat víc stavů.
+const TOPIC_WRITES = /@zapis-temat/;
+
 const desktop = (name: string, width: number, height: number, extra: Project["use"] = {}): Project => ({
   name,
   dependencies: ["prihlaseni"],
   testIgnore: /prihlaseni\.setup\.ts/,
+  grepInvert: TOPIC_WRITES,
   use: { ...devices["Desktop Chrome"], viewport: { width, height }, ...extra },
 });
 
@@ -19,7 +24,7 @@ const phone = (name: string, width: number): Project => ({
   dependencies: ["prihlaseni"],
   testIgnore: /prihlaseni\.setup\.ts/,
   // Klávesnice a axe jen na počítači, telefon hlídá rozložení a okna.
-  grepInvert: /@desktop/,
+  grepInvert: [/@desktop/, TOPIC_WRITES],
   use: { ...devices["Desktop Chrome"], viewport: { width, height: 760 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true },
 });
 
@@ -33,6 +38,13 @@ const projects: Project[] = [
   phone("telefon-360", 360),
   phone("telefon-320", 320),
 ];
+projects.push({
+  ...desktop("zapis-temat", 1280, 800),
+  dependencies: projects.flatMap((p) => (p.name && p.name !== "prihlaseni" ? [p.name] : [])),
+  testMatch: /temata-planovani\.spec\.ts/,
+  grep: TOPIC_WRITES,
+  grepInvert: undefined,
+});
 
 // Skutečný WebKit (jádro Safari) jen na vyžádání: v cloudovém prostředí není nainstalovaný.
 // Na Macu: `npx playwright install webkit`, pak `E2E_WEBKIT=1 npm run e2e`.

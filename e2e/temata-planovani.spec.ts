@@ -2,8 +2,8 @@ import type { CDPSession, Locator, Page } from "@playwright/test";
 import { authFile, expect, expectNoHorizontalScroll, settle, test } from "./support";
 
 // Ukázka běží s referenčním časem 12. 11. 2026 9:00. Garantovaná témata ze seedu: 1. Otevřené otázky na schůzce,
-// 2. Návaznost po konzultaci. Zápisy do sdílených dat dělá jen jeden projekt: vlastní návrh v prosinci 2026
-// (jinde se v něm nic nezakládá) a dočasná priorita či pořadí, které test hned vrátí.
+// 2. Návaznost po konzultaci. Zápisy do garantovaných témat a pořadí (@zapis-temat) běží jen v projektu zapis-temat
+// až po všech ostatních projektech (playwright.config.ts). Čtecí testy proto vidí vždy seed.
 
 const TOPICS = "/vzdelavani/temata";
 const menuOf = (page: Page, name: string) => page.getByRole("button", { name: `Možnosti tématu ${name}`, exact: true });
@@ -78,12 +78,11 @@ test.describe("Témata: garantovaná a ostatní", () => {
     await expect(guaranteed.locator(".topic-row .item-title > span[id]")).toHaveText(["Otevřené otázky na schůzce", "Návaznost po konzultaci"]);
     await expect(page.getByRole("heading", { name: "Ostatní témata" })).toBeVisible();
     await expect(rowOf(guaranteed, "Otevřené otázky na schůzce").getByText("Nejžádanější")).toBeVisible();
-    // Bez počítadla „ze 3“. Garantované téma bez budoucího termínu: „bez termínu“, nebo oranžově „v návrhu na“,
-    // když ho souběžný test mezitím dal do návrhu akce (sdílená data). Oba stavy se nikdy nesejdou u jednoho tématu.
+    // Bez počítadla „ze 3“. Garantované téma ze seedu nemá budoucí termín ani návrh (zápisy běží až po čtení).
     await expect(guaranteed.getByText(/ze 3/)).toHaveCount(0);
     const first = rowOf(guaranteed, "Otevřené otázky na schůzce");
-    await expect(first.locator(".topic-unscheduled, .topic-in-draft")).toHaveCount(1);
-    await expect(first.locator(".topic-unscheduled, .topic-in-draft")).toHaveText(/^( · bez termínu|v návrhu na \d+\. \d+\.)$/);
+    await expect(first.locator(".topic-unscheduled")).toHaveText(" · bez termínu");
+    await expect(first.locator(".topic-in-draft")).toHaveCount(0);
 
     await menuOf(page, "Otevřené otázky na schůzce").click();
     await expect(openMenu(page).locator("a, button")).toHaveText(["Naplánovat téma", "Upravit téma", "Zrušit prioritu", "Posunout níž", "Archivovat…"]);
@@ -184,13 +183,12 @@ test.describe("Témata: garantovaná a ostatní", () => {
   });
 });
 
-test.describe("Témata: zápis priority, pořadí a návrhu @desktop", () => {
+test.describe("Témata: zápis priority, pořadí a návrhu @desktop @zapis-temat", () => {
   test.use({ storageState: authFile("spravce") });
   // Oba testy mění stejné sdílené pořadí, nesmí běžet souběžně.
   test.describe.configure({ mode: "serial" });
 
-  test("přetažení témat: dlouhý seznam, mezi skupinami, prázdná skupina, Esc, klávesnice, prst, souběh a archivace", async ({ page, browser }, testInfo) => {
-    test.skip(testInfo.project.name !== "windows-1280", "zápis jen jednou");
+  test("přetažení témat: dlouhý seznam, mezi skupinami, prázdná skupina, Esc, klávesnice, prst, souběh a archivace", async ({ page, browser }) => {
     test.setTimeout(240_000);
     await openTopics(page);
     const guaranteedRow = (name: string) => page.locator(".topic-guaranteed .topic-row").filter({ hasText: name });
@@ -354,8 +352,7 @@ test.describe("Témata: zápis priority, pořadí a návrhu @desktop", () => {
     expect(await names(guaranteedOf(page))).toEqual(SEED_GUARANTEED);
   });
 
-  test("nastavit a zrušit prioritu, posunout a vrátit pořadí, přidat téma do návrhu", async ({ page }, testInfo) => {
-    test.skip(testInfo.project.name !== "windows-1280", "zápis jen jednou");
+  test("nastavit a zrušit prioritu, posunout a vrátit pořadí, přidat téma do návrhu", async ({ page }) => {
     await openTopics(page);
     const guaranteed = () => page.locator(".topic-guaranteed .item-title > span[id]");
 
