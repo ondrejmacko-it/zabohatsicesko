@@ -3,6 +3,7 @@
 import { useActionState, useRef, useState, type ReactNode } from "react";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { ActionMessage } from "@/components/ActionForm";
+import { FilePicker } from "@/components/FilePicker";
 import { createMinutesDraftAction } from "../actions";
 import { UploadForm } from "./UploadForm";
 
@@ -10,11 +11,13 @@ const MAX_TEXT_BYTES = 1024 * 1024;
 
 type Choice = "recording" | "text" | "file" | "manual";
 
+// Jedna věta u každé volby, formát a limit se ukážou až u zvolené. Ukázková nahrávka je poslední a není
+// výchozí: dokud přepis neumí skutečné schůzky, nemá se tvářit jako hlavní cesta.
 const CHOICES: Array<{ id: Choice; title: string; detail: string }> = [
-  { id: "recording", title: "Nahrávka", detail: "Zápis se připraví z přepisu nahrávky." },
-  { id: "text", title: "Vložit přepis nebo poznámky", detail: "Text z jiného nástroje nebo vlastní poznámky." },
-  { id: "file", title: "Nahrát textový soubor", detail: "TXT, MD nebo titulky VTT a SRT." },
+  { id: "text", title: "Vložit text", detail: "Přepis nebo poznámky." },
+  { id: "file", title: "Textový soubor", detail: "Přepis nebo titulky ze souboru." },
   { id: "manual", title: "Napsat ručně", detail: "Prázdná šablona zápisu." },
+  { id: "recording", title: "Nahrávka (ukázka)", detail: "Přepis umí jen ukázkovou nahrávku." },
 ];
 
 /** Formulář, ze kterého vznikne návrh zápisu bez nahrávky. Server zdroj znovu ověří (přípona, velikost, UTF-8). */
@@ -91,10 +94,10 @@ export function MinutesSourceForm({ eventId, eventLabel, hasRecording, replaceId
   eventLabel: string;
   hasRecording: boolean;
   replaceId: string | null;
-  /** Aktuální zápis je rozpracovaný návrh, nový zdroj ho nahradí. */
+  /** Aktuální zápis je rozpracovaný návrh s obsahem: nahrazení se potvrdí (prázdnou šablonu ne, nic se neztratí). */
   replacingDraft: boolean;
 }) {
-  const [choice, setChoice] = useState<Choice>("recording");
+  const [choice, setChoice] = useState<Choice>("text");
   const [text, setText] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const textTooLarge = new Blob([text]).size > MAX_TEXT_BYTES;
@@ -114,9 +117,6 @@ export function MinutesSourceForm({ eventId, eventLabel, hasRecording, replaceId
           </label>
         ))}
       </fieldset>
-      {replacingDraft && (
-        <p className="notice">Nový návrh nahradí rozpracovaný návrh zápisu. Úpravy v něm se nezachovají.</p>
-      )}
 
       {choice === "recording" && <UploadForm eventId={eventId} eventLabel={eventLabel} replacing={hasRecording} />}
 
@@ -131,10 +131,8 @@ export function MinutesSourceForm({ eventId, eventLabel, hasRecording, replaceId
           </label>
           <label className="field">
             <span className="field-label">Text přepisu nebo poznámek</span>
-            <textarea className="textarea" name="text" rows={8} value={text} onChange={(e) => setText(e.target.value)} />
-            <span className="field-hint">
-              Nadpisy Shrnutí, Hlavní body, Rozhodnutí a Další kroky se převezmou. Ostatní text se rozdělí podle obsahu, návrh pak upravíte.
-            </span>
+            <textarea className="textarea" name="text" rows={6} value={text} onChange={(e) => setText(e.target.value)} />
+            <span className="field-hint">Nadpisy Shrnutí, Hlavní body, Rozhodnutí a Další kroky se převezmou, návrh pak upravíte. Nejvýš 1 MB.</span>
           </label>
           {textTooLarge && <p className="notice notice-danger">Text je větší než 1 MB. Zkraťte ho prosím.</p>}
         </DraftForm>
@@ -142,23 +140,16 @@ export function MinutesSourceForm({ eventId, eventLabel, hasRecording, replaceId
 
       {choice === "file" && (
         <DraftForm eventId={eventId} source="file" replaceId={replaceId} replacingDraft={replacingDraft} submitLabel="Připravit návrh ze souboru" disabled={!file || fileTooLarge}>
-          <label className="field">
-            <span className="field-label">Textový soubor</span>
-            <input
-              className="input"
-              type="file"
-              name="file"
-              accept=".txt,.md,.vtt,.srt,text/plain,text/markdown,text/vtt"
-              required
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-            />
-            <span className="field-hint">TXT, MD, VTT nebo SRT v kódování UTF-8, nejvýš 1 MB. U titulků se časové značky odstraní.</span>
-          </label>
-          {file && (
-            <p className={fileTooLarge ? "notice notice-danger" : "notice"}>
-              {fileTooLarge ? "Soubor je větší než 1 MB. Vyberte prosím menší." : `Soubor „${file.name}“ se použije pro zápis akce: ${eventLabel}.`}
-            </p>
-          )}
+          <FilePicker
+            name="file"
+            label="Textový soubor"
+            accept=".txt,.md,.vtt,.srt,text/plain,text/markdown,text/vtt"
+            hint="Jen TXT, MD, VTT nebo SRT v kódování UTF-8, nejvýš 1 MB. U titulků se časové značky odstraní. PDF ani Word zatím nejdou, vložte z nich text."
+            maxBytes={MAX_TEXT_BYTES}
+            tooLargeText="Soubor je větší než 1 MB. Vyberte prosím menší."
+            onChange={setFile}
+          />
+          {file && !fileTooLarge && <p className="small">Použije se pro zápis akce: {eventLabel}.</p>}
         </DraftForm>
       )}
 

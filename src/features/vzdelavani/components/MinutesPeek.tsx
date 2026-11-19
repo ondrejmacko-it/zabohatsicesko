@@ -12,6 +12,7 @@ const STATE_TEXT: Record<MissingMinutesItem["state"], string> = {
   processing: "nahrávka se přepisuje",
   failed: "přepis se nepovedl",
   unsupported: "ukázkový přepis soubor nepřepíše",
+  started: "zápis rozpracovaný",
   draft: "návrh čeká na schválení",
 };
 
@@ -20,6 +21,7 @@ const STATE_ACTION: Record<MissingMinutesItem["state"], string> = {
   processing: "Zobrazit stav",
   failed: "Zkusit přepis znovu",
   unsupported: "Vybrat jinou nahrávku",
+  started: "Dokončit zápis",
   draft: "Zkontrolovat",
 };
 
@@ -47,7 +49,7 @@ export async function MinutesPeek({ user, eventId, closeHref }: { user: Viewer; 
 }
 
 /**
- * Okno „Nedokončené zápisy“ (správce, všechny) nebo „Moje zápisy k dokončení“ (vedoucí): proběhlé akce,
+ * Okno „Zápisy k dokončení“ (správce, všechny) nebo „Moje zápisy k dokončení“ (vedoucí): proběhlé akce,
  * kterým zápis chybí. U každé je odpovědná osoba. Výběr akce otevře její zápis ve stejném okně.
  */
 export function AddMinutesPicker({

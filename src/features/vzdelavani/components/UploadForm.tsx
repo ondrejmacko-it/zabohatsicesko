@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
+import { useActionState, useState } from "react";
 import { ActionMessage } from "@/components/ActionForm";
+import { FilePicker } from "@/components/FilePicker";
 import { uploadRecordingAction } from "../actions";
 
 const MAX_BYTES = 4 * 1024 * 1024;
@@ -10,38 +11,30 @@ const MAX_BYTES = 4 * 1024 * 1024;
 export function UploadForm({ eventId, eventLabel, replacing }: { eventId: string; eventLabel: string; replacing: boolean }) {
   const [state, action, pending] = useActionState(uploadRecordingAction, null);
   const [file, setFile] = useState<File | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
   const tooLarge = file !== null && file.size > MAX_BYTES;
 
   return (
     <form action={action} className="stack upload">
       <input type="hidden" name="id" value={eventId} />
-      <label className="field">
-        <span className="field-label">{replacing ? "Nový soubor s nahrávkou" : "Soubor s nahrávkou"}</span>
-        <input
-          ref={inputRef}
-          className="input"
-          type="file"
-          name="file"
-          accept=".wav,.mp3,.m4a,audio/wav,audio/mpeg,audio/mp4"
-          required
-          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-        />
-        <span className="field-hint">WAV, MP3 nebo M4A, nejvýš 4 MB a 15 minut. Soubor se uloží soukromě.</span>
-      </label>
       {/* Přepis je v této verzi ukázka: umí jen jednu známou nahrávku. UI to musí říct dřív, než vedoucí něco nahraje. */}
       <p className="notice">
-        Automatický přepis zatím umí jen jednu ukázkovou nahrávku. Z nahrávky skutečné schůzky zápis nevznikne.{" "}
+        Automatický přepis zatím umí jen jednu ukázkovou nahrávku. Z nahrávky skutečné schůzky zápis nevznikne, nenahrávejte ji.{" "}
         <a href="/demo/testovaci-nahravka.wav" download>
           Stáhnout ukázkovou nahrávku
         </a>
       </p>
-      {file && (
-        <p className={tooLarge ? "notice notice-danger" : "notice"}>
-          {tooLarge
-            ? "Soubor je větší než 4 MB. Vyberte prosím menší nahrávku."
-            : `Soubor „${file.name}“ se přiřadí k akci: ${eventLabel}.`}
-          {replacing && !tooLarge && " Stávající nahrávka a její návrh zápisu se nahradí."}
+      <FilePicker
+        name="file"
+        label={replacing ? "Nový soubor s nahrávkou" : "Soubor s nahrávkou"}
+        accept=".wav,.mp3,.m4a,audio/wav,audio/mpeg,audio/mp4"
+        hint="WAV, MP3 nebo M4A, nejvýš 4 MB a 15 minut. Soubor se uloží soukromě."
+        maxBytes={MAX_BYTES}
+        tooLargeText="Soubor je větší než 4 MB. Vyberte prosím menší nahrávku."
+        onChange={setFile}
+      />
+      {file && !tooLarge && (
+        <p className="small">
+          Přiřadí se k akci: {eventLabel}.{replacing && " Stávající nahrávka a její návrh zápisu se nahradí."}
         </p>
       )}
       <ActionMessage state={state} />

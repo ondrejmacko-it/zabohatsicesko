@@ -1,6 +1,7 @@
 import { ActionForm } from "@/components/ActionForm";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { Menu } from "@/components/Menu";
+import { minutesStarted } from "@/lib/minutes";
 import { ERROR_LABELS, MINUTES_SOURCE_LABELS, RECORDING_STATE_LABELS, TEMPLATE_LABELS } from "@/lib/labels";
 import { formatDate, toDateKey } from "@/lib/time";
 import type { MinutesContent, RecordingState } from "@/lib/types";
@@ -8,6 +9,7 @@ import type { HandlerMinutes, RecordingPanel } from "@/server/services/recording
 import { retryTranscriptionAction, withdrawMinutesAction } from "../actions";
 import { MinutesEditor } from "./MinutesEditor";
 import { MinutesSourceForm } from "./MinutesSourceForm";
+import { MinutesWorkspace } from "./MinutesWorkspace";
 
 const STATE_BADGE: Record<RecordingState, string> = {
   awaiting: "badge badge-outline",
@@ -45,6 +47,7 @@ export function MinutesView({ content }: { content: MinutesContent }) {
 function versionLabel(minutes: HandlerMinutes): string {
   const date = (iso: string | null) => (iso ? ` · ${formatDate(toDateKey(new Date(iso)))}` : "");
   if (minutes.status === "published") return `Schváleno: verze ${minutes.version}${date(minutes.approvedAt)}`;
+  if (!minutesStarted(minutes.content)) return `Rozpracováno, verze ${minutes.version}`;
   if (minutes.approvedVersion !== null) {
     return `Verze ${minutes.version} čeká na nové schválení (schválena byla verze ${minutes.approvedVersion})`;
   }
@@ -55,14 +58,14 @@ function draftHint(minutes: HandlerMinutes): string {
   if (minutes.source === "recording") {
     return `Návrh z ukázkového přepisu (šablona ${TEMPLATE_LABELS[minutes.detectedTemplate]}). Přepis je zatím jen demonstrace nad ukázkovou nahrávkou, ne přepis skutečné schůzky. Zkontrolujte návrh a uložte.`;
   }
-  if (minutes.source === "manual") return "Ruční zápis. Vyplňte šablonu a uložte.";
+  if (!minutesStarted(minutes.content)) return "Vyplňte aspoň Shrnutí a uložte. Ke schválení je zápis až s obsahem.";
   return "Návrh vznikl rozdělením textu do šablony zápisu, nic se nedomýšlí. Zkontrolujte ho a uložte.";
 }
 
 const formatSize = (bytes: number) => `${(bytes / 1024 / 1024).toLocaleString("cs-CZ", { maximumFractionDigits: 1 })} MB`;
 const formatDuration = (sec: number) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`;
 
-/** Nahrávka a zápis u proběhlé akce. Obsah se liší podle oprávnění, rozhoduje server. */
+/** Zápis (a nahrávka, pokud je) u proběhlé akce. Obsah se liší podle oprávnění, rozhoduje server. */
 export function RecordingSection({ eventId, eventLabel, panel }: { eventId: string; eventLabel: string; panel: RecordingPanel }) {
   if (panel.access === "none") return null;
 
@@ -94,14 +97,27 @@ export function RecordingSection({ eventId, eventLabel, panel }: { eventId: stri
   const published = Boolean(panel.publicMinutes) || minutes?.status === "published";
   const wrongFile = state === "failed" && errorCode === "unsupported_fixture";
   const fromRecording = minutes?.source === "recording";
+  // Prázdná ruční šablona je rozpracovaná, „Čeká na zápis“ by mátlo vedle otevřeného editoru.
+  const stateLabel = minutes?.status === "draft" && !minutesStarted(minutes.content) ? "Rozpracováno" : RECORDING_STATE_LABELS[state];
+  const sourceForm =
+    state === "processing" ? null : (
+      <MinutesSourceForm
+        eventId={eventId}
+        eventLabel={eventLabel}
+        hasRecording={recording !== null}
+        replaceId={minutes?.id ?? null}
+        replacingDraft={minutes?.status === "draft" && minutesStarted(minutes.content)}
+      />
+    );
   return (
     <section className="section" id="nahravka" aria-labelledby="nahravka-title">
       <AutoRefresh active={state === "processing"} />
       <div className="spread">
-        <h2 id="nahravka-title">Nahrávka a zápis</h2>
+        {/* Nahrávku nadpis zmíní, jen když opravdu existuje nebo je zdrojem zápisu. */}
+        <h2 id="nahravka-title">{recording || fromRecording ? "Nahrávka a zápis" : "Zápis"}</h2>
         <span className="row">
           <span className={STATE_BADGE[state]} role="status">
-            {RECORDING_STATE_LABELS[state]}
+            {stateLabel}
           </span>
           {/* Vrácení do návrhu je méně častý a citlivý krok, proto je v nabídce, ne vedle hlavních akcí. */}
           {published && (
@@ -111,10 +127,6 @@ export function RecordingSection({ eventId, eventLabel, panel }: { eventId: stri
           )}
         </span>
       </div>
-      <p className="small muted">
-        Kolegové uvidí až zápis schválený vedoucím akce.
-      </p>
-
       {recording && (
         <div className="stack recording">
           <p className="small">
@@ -138,11 +150,17 @@ export function RecordingSection({ eventId, eventLabel, panel }: { eventId: stri
         </div>
       )}
 
-      {minutes && (
-        <div className="stack">
-          <p className="small minutes-version" data-testid="stav-verze">
-            <strong>{versionLabel(minutes)}</strong> · Zdroj: {MINUTES_SOURCE_LABELS[minutes.source]}
-          </p>
+      {minutes ? (
+        // Nový návrh (jiné id) okno vrátí k editoru, volba zdroje se po úspěchu zavře.
+        <MinutesWorkspace
+          key={minutes.id}
+          header={
+            <p className="small minutes-version" data-testid="stav-verze">
+              <strong>{versionLabel(minutes)}</strong> · Zdroj: {MINUTES_SOURCE_LABELS[minutes.source]}
+            </p>
+          }
+          sourceForm={sourceForm}
+        >
           {minutes.templateMismatch && (
             <p className="notice">
               Podle obsahu {fromRecording ? "nahrávky" : "textu"} to vypadá na typ „{TEMPLATE_LABELS[minutes.detectedTemplate]}“, což nesedí s typem
@@ -151,10 +169,11 @@ export function RecordingSection({ eventId, eventLabel, panel }: { eventId: stri
           )}
           {minutes.status === "draft" ? (
             <>
-              {panel.publicMinutes && (
-                <p className="notice">Kolegové zatím vidí dříve zveřejněný zápis, dokud vedoucí neschválí tento.</p>
-              )}
-              <p className="notice">{draftHint(minutes)}</p>
+              {/* Pomocné věty jsou tiché, výrazné upozornění zůstává jen pro to, co je opravdu potřeba vyřešit. */}
+              <p className="small muted">
+                {draftHint(minutes)}
+                {panel.publicMinutes && " Kolegové zatím vidí dříve schválený zápis."}
+              </p>
               <MinutesEditor
                 eventId={eventId}
                 minutesId={minutes.id}
@@ -166,7 +185,6 @@ export function RecordingSection({ eventId, eventLabel, panel }: { eventId: stri
             </>
           ) : (
             <>
-              <p className="notice notice-ok">Zveřejněno pro publikum akce.</p>
               <MinutesView content={minutes.content} />
               <details className="fold">
                 <summary>Upravit zápis</summary>
@@ -188,25 +206,10 @@ export function RecordingSection({ eventId, eventLabel, panel }: { eventId: stri
               <p className="transcript">{minutes.transcript}</p>
             </details>
           )}
-        </div>
+        </MinutesWorkspace>
+      ) : (
+        sourceForm
       )}
-
-      {/* Když už je zápis rozpracovaný, je hlavní krok úprava. Jiný zdroj je sbalený. */}
-      {state !== "processing" &&
-        (minutes ? (
-          <details className="fold">
-            <summary>Připravit zápis z jiného zdroje</summary>
-            <MinutesSourceForm
-              eventId={eventId}
-              eventLabel={eventLabel}
-              hasRecording={recording !== null}
-              replaceId={minutes.id}
-              replacingDraft={minutes.status === "draft"}
-            />
-          </details>
-        ) : (
-          <MinutesSourceForm eventId={eventId} eventLabel={eventLabel} hasRecording={recording !== null} replaceId={null} replacingDraft={false} />
-        ))}
     </section>
   );
 }

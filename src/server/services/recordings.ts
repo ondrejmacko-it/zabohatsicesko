@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { and, desc, eq, inArray, isNull, lt, ne, or, sql } from "drizzle-orm";
+import { minutesStarted } from "@/lib/minutes";
 import type { MinutesContent, MinutesSource, RecordingState } from "@/lib/types";
 import { audit, logError, withinRateLimit } from "@/server/audit";
 import { config, now } from "@/server/config";
@@ -202,9 +203,8 @@ async function requireCurrentMinutes(db: Executor, eventId: string, minutesId: s
 
 const EMPTY_MINUTES: MinutesContent = { summary: "", keyPoints: [], decisions: [], nextSteps: [] };
 
-/** Zápis má nějaký obsah. Prázdný ruční návrh jde nahradit bez potvrzení, nic se tím neztratí. */
-export const hasContent = (c: MinutesContent) =>
-  c.summary.trim() !== "" || c.keyPoints.length > 0 || c.decisions.length > 0 || c.nextSteps.length > 0;
+/** Prázdný ruční návrh jde nahradit bez potvrzení, nic se tím neztratí. Stejné pravidlo používá UI. */
+const hasContent = minutesStarted;
 
 export type MinutesDraftInput =
   | { source: "transcript" | "notes"; text: string }
@@ -465,7 +465,8 @@ export async function recordingPanel(viewer: Viewer, row: EventRow): Promise<Rec
     const jobRunning = job !== undefined && (job.status === "queued" || job.status === "processing");
     let state: RecordingState = "awaiting";
     if (jobRunning && (!draft || draft.createdAt < job.createdAt)) state = "processing";
-    else if (draft) state = draft.status === "published" ? "available" : "review";
+    // Prázdná šablona ručního zápisu ještě nic ke schválení nemá.
+    else if (draft) state = draft.status === "published" ? "available" : minutesStarted(draft.content) ? "review" : "awaiting";
     else if (job?.status === "failed") state = "failed";
     else if (job) state = "processing";
     return {

@@ -7,7 +7,7 @@ import type { Viewer } from "@/server/policy";
 import { readPastedText, readTextFile, stripSubtitleTimings, TEXT_SOURCE_MAX_BYTES } from "@/server/recordings/text-source";
 import { DomainError } from "@/server/services/errors";
 import { loadEventRow } from "@/server/services/events";
-import { listPublishedMinutes, listTasks } from "@/server/services/journey";
+import { listMissingMinutes, listPublishedMinutes, listTasks } from "@/server/services/journey";
 import { approveMinutes, createMinutesDraft, recordingPanel, updateMinutes, withdrawMinutes } from "@/server/services/recordings";
 import { PAST_FP, PUBLISHED_RM, admin, lead, outsider, participant, resetDemo } from "./helpers";
 
@@ -139,9 +139,14 @@ describe("zápis bez nahrávky", () => {
     const id = await createMinutesDraft(lead, PAST_FP, { source: "manual" }, null);
     const panel = await panelOf(lead);
     expect(panel).toMatchObject({ minutes: { id, source: "manual", content: { summary: "", keyPoints: [] } } });
+    // Z-08: prázdná šablona je rozpracovaná, ne „čeká na schválení“ (detail, výběr i úkol).
+    expect(panel).toMatchObject({ state: "awaiting" });
+    expect((await listMissingMinutes(lead)).items.find((i) => i.eventId === PAST_FP)?.state).toBe("started");
     // Prázdný ruční zápis schválit nejde, po doplnění shrnutí ano.
     expect(await code(approveMinutes(lead, PAST_FP, id, 1))).toBe("minutes_incomplete");
     const saved = await updateMinutes(lead, PAST_FP, id, 1, { summary: "Ruční shrnutí", keyPoints: [], decisions: [], nextSteps: [] });
+    expect(await panelOf(lead)).toMatchObject({ state: "review" });
+    expect((await listMissingMinutes(lead)).items.find((i) => i.eventId === PAST_FP)?.state).toBe("draft");
     await approveMinutes(lead, PAST_FP, id, saved.version);
     expect((await listPublishedMinutes(participant)).find((m) => m.eventId === PAST_FP)?.summary).toBe("Ruční shrnutí");
   });

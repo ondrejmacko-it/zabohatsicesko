@@ -16,7 +16,25 @@ test.describe("Zápisy: schválení vedoucím @desktop", () => {
     const section = page.locator("#nahravka");
     await expect(section.getByRole("status").filter({ hasText: "Čeká na zápis" })).toBeVisible();
 
-    await section.getByRole("radio", { name: /Vložit přepis nebo poznámky/ }).check();
+    // Z-08: prázdná ruční šablona je rozpracovaná, ne „čeká na schválení“. Z-12: bez nahrávky nadpis jen „Zápis“.
+    await expect(section.getByRole("heading", { level: 2 })).toHaveText("Zápis");
+    await section.getByRole("radio", { name: /Napsat ručně/ }).check();
+    await section.getByRole("button", { name: "Napsat zápis ručně" }).click();
+    await expect(section.getByRole("status").filter({ hasText: "Rozpracováno" })).toBeVisible();
+    await expect(section.getByTestId("stav-verze")).toContainText("Rozpracováno, verze 1");
+    await expect(section).not.toContainText("čeká na schválení");
+
+    // Z-10: Změnit zdroj vymění v okně editor za volbu zdroje, rozepsaný text se návratem neztratí.
+    await section.getByLabel("Shrnutí", { exact: true }).fill("Rozepsáno");
+    await section.getByRole("button", { name: "Změnit zdroj" }).click();
+    await expect(section.getByLabel("Shrnutí", { exact: true })).toBeHidden();
+    await expect(section.getByRole("radio", { name: /Vložit text/ })).toBeFocused();
+    await section.getByRole("button", { name: "Zpět k zápisu" }).click();
+    await expect(section.getByLabel("Shrnutí", { exact: true })).toHaveValue("Rozepsáno");
+    await section.getByRole("button", { name: "Změnit zdroj" }).click();
+
+    // Prázdnou šablonu nový zdroj nahradí bez potvrzovacího okna (nic se neztratí).
+    await section.getByRole("radio", { name: /Vložit text/ }).check();
     await section.getByLabel("Druh textu").selectOption("notes");
     await expectNoSeriousA11y(page);
     await expectNoHorizontalScroll(page);

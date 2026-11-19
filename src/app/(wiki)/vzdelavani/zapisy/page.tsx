@@ -36,8 +36,9 @@ export default async function MinutesPage({ searchParams }: { searchParams: Sear
   };
   const missing = await listMissingMinutes(user);
   const canAdd = isOrganizer(user) || missing.handlesAny;
-  // Správce vidí všechny chybějící zápisy, vedoucí jen ty, za které odpovídá.
-  const missingTitle = isOrganizer(user) ? "Nedokončené zápisy" : "Moje zápisy k dokončení";
+  // Správce vidí všechny chybějící zápisy, vedoucí jen ty, za které odpovídá. Stránka odlišuje krátkými
+  // názvy, co už kolegové čtou (Zveřejněné zápisy) a co se teprve dokončuje (K dokončení).
+  const missingTitle = isOrganizer(user) ? "Zápisy k dokončení" : "Moje zápisy k dokončení";
   const peekId = (params.zapis ?? "").slice(0, 120);
 
   return (
@@ -51,10 +52,10 @@ export default async function MinutesPage({ searchParams }: { searchParams: Sear
     )}
     <section className="section" aria-labelledby="zapisy">
       <div className="spread">
-        <h2 id="zapisy">Zápisy</h2>
+        <h2 id="zapisy">Zveřejněné zápisy</h2>
         {canAdd && (
-          <Link className="btn btn-primary" href={link({ pridat: "1" })} scroll={false}>
-            {missingTitle}
+          <Link className="btn btn-primary" href={link({ pridat: "1" })} scroll={false} aria-label={`${missingTitle}: ${missing.items.length}`}>
+            K dokončení
             {missing.items.length > 0 && <span className="count-badge">{missing.items.length}</span>}
           </Link>
         )}
@@ -118,7 +119,7 @@ export default async function MinutesPage({ searchParams }: { searchParams: Sear
             {filtering
               ? "Zkuste jiné slovo nebo zrušte filtr."
               : canAdd && missing.items.length > 0
-                ? `Po skončení akce otevřete ${missingTitle}, doplňte zápis a zveřejněte ho. Účastníci ho pak najdou tady.`
+                ? "Po skončení akce otevřete K dokončení, doplňte zápis a nechte ho schválit. Účastníci ho pak najdou tady."
                 : "Zápis se objeví, jakmile ho vedoucí po skončení akce zveřejní. Uvidíte zápisy z akcí pro své skupiny."}
           </p>
         </div>
