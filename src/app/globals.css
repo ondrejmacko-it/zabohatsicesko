@@ -3152,22 +3152,6 @@ p.cal-status {
   margin-right: 4px;
 }
 
-.confirm-bar {
-  align-items: flex-start;
-  justify-content: flex-end;
-  background: var(--draft);
-}
-
-.confirm-text {
-  flex: 1 1 260px;
-  margin: 0;
-}
-
-.confirm-text p,
-.confirm-text ul {
-  margin: 0 0 4px;
-}
-
 .invitees > summary {
   cursor: pointer;
   list-style-position: inside;

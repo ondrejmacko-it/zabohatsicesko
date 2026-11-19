@@ -12,6 +12,8 @@ type Props = {
   onCancel: () => void;
   /** Tlačítka rozhodnutí. Bezpečná volba má `autoFocus`, destruktivní je odlišená (`btn-danger`). */
   children: React.ReactNode;
+  /** Kam vrátit fokus po zavření, když tlačítko, které se ptalo, mezitím zablokovala kontrola na serveru. */
+  returnFocusTo?: () => HTMLElement | null | undefined;
 };
 
 /**
@@ -21,11 +23,15 @@ type Props = {
  * neaktivní (fokus z potvrzení neuteče) a nic se v něm neposune. Po zavření se fokus vrátí tam, kde byl.
  * `alertdialog` je správná role: jde vždy o rozhodnutí, které čeká na odpověď.
  */
-export function ConfirmDialog({ open, title, description, onCancel, children }: Props) {
+export function ConfirmDialog({ open, title, description, onCancel, children, returnFocusTo }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
   const pressedOutside = useRef(false);
   const titleId = useId();
   const textId = useId();
+  const focusTarget = useRef(returnFocusTo);
+  useEffect(() => {
+    focusTarget.current = returnFocusTo;
+  });
 
   useEffect(() => {
     const dialog = ref.current;
@@ -34,7 +40,8 @@ export function ConfirmDialog({ open, title, description, onCancel, children }: 
     dialog.showModal();
     return () => {
       dialog.close();
-      if (returnFocus?.isConnected) returnFocus.focus();
+      const target = focusTarget.current?.() ?? returnFocus;
+      if (target?.isConnected) target.focus();
     };
   }, [open]);
 
@@ -47,7 +54,9 @@ export function ConfirmDialog({ open, title, description, onCancel, children }: 
       aria-labelledby={titleId}
       aria-describedby={textId}
       onCancel={(event) => {
+        // Esc patří jen tomuto rozhodnutí. Pracovní okno pod ním (React předek přes portál) se nezavírá.
         event.preventDefault();
+        event.stopPropagation();
         onCancel();
       }}
       onMouseDown={(event) => {

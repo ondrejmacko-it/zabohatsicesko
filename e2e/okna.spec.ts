@@ -114,12 +114,21 @@ test.describe("okna správce", () => {
     await page.locator("input.pick-box:visible").nth(1).focus();
     await page.keyboard.press("Space");
     await expect(bar).toContainText("Vybráno 2");
-    // První krok jen ptá, nic neodešle.
+    // První krok jen ptá v samostatném okně, nic neodešle. Lišta výběru pod ním zůstane beze změny.
     await bar.getByRole("button", { name: "Zveřejnit vybrané" }).click();
-    await expect(bar.getByRole("alertdialog")).toContainText(/Zveřejnit \d+ akc/);
-    await bar.getByRole("button", { name: "Zpět" }).click();
-    await expect(bar.getByRole("alertdialog")).toHaveCount(0);
+    const ask = page.getByRole("alertdialog", { name: /Zveřejnit \d+ akc/ });
+    await expect(ask).toBeVisible();
+    await expect(ask.getByRole("button", { name: "Zpět" })).toBeFocused();
+    await ask.getByRole("button", { name: "Zpět" }).click();
+    await expect(page.getByRole("alertdialog")).toHaveCount(0);
+    await expect(bar).toContainText("Vybráno 2");
     await expect(bar.getByRole("button", { name: "Zveřejnit vybrané" })).toBeFocused();
+    // Esc v potvrzení zavře jen potvrzení, výběr zůstane.
+    await bar.getByRole("button", { name: "Zveřejnit vybrané" }).click();
+    await expect(ask).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(ask).toHaveCount(0);
+    await expect(bar).toContainText("Vybráno 2");
     // Esc výběr ukončí, nic se nezměnilo.
     await page.keyboard.press("Escape");
     await expect(bar).toHaveCount(0);
@@ -146,8 +155,9 @@ test.describe("okna správce", () => {
     const bar = page.getByRole("region", { name: "Hromadný výběr návrhů" });
     await expect(bar).toContainText("Vybráno 1");
     await bar.getByRole("button", { name: "Smazat vybrané" }).click();
-    await expect(bar.getByRole("alertdialog")).toContainText("Smazat 1 návrh?");
-    await bar.getByRole("button", { name: "Potvrdit smazání" }).click();
+    const ask = page.getByRole("alertdialog", { name: "Smazat 1 návrh?" });
+    await expect(ask).toContainText("Nic se neodešle a nejde to vrátit.");
+    await ask.getByRole("button", { name: "Potvrdit smazání" }).click();
     await expect(bar).toBeHidden();
     await expect(page.getByRole("status").filter({ hasText: /Smazán/ })).toBeVisible();
     await expect(page.getByText(label)).toHaveCount(0);
@@ -160,6 +170,48 @@ test.describe("okna správce", () => {
     await dialog(page, /^Připravit měsíc/).getByRole("button", { name: "Nastavit pravidelný rozvrh" }).click();
     await expect(dialog(page, "Nastavit pravidelný rozvrh")).toBeVisible();
     await expect(dialog(page, "Nastavit pravidelný rozvrh")).toContainText("Podle něj „Doplnit chybějící termíny“ připraví návrhy");
+  });
+
+  // Bez zápisu: potvrzení se jen otevře a vrátí zpět. Rozhodnutí je samostatné okno nad formulářem, ne lišta v něm.
+  test("Zveřejnit bez tématu a vedoucího: samostatné potvrzení, Zpět k úpravám nic nezmění", async ({ page }) => {
+    await page.goto("/vzdelavani/harmonogram");
+    await settle(page);
+    await page.getByRole("button", { name: "Přidat akci" }).click();
+    const add = dialog(page, "Přidat akci");
+    await add.getByLabel("Typ").selectOption({ label: "Portfolio tým" });
+    await add.getByLabel("Datum").fill("2027-09-15");
+    await add.getByRole("button", { name: "Zveřejnit", exact: true }).click();
+    const ask = page.getByRole("alertdialog", { name: "Zveřejnit bez tématu a vedoucího?" });
+    await expect(ask).toContainText("Kolegové uvidí obecný název");
+    await expect(ask.getByRole("button", { name: "Zpět k úpravám" })).toBeFocused();
+    await expectNoHorizontalScroll(page);
+    await ask.getByRole("button", { name: "Zpět k úpravám" }).click();
+    await expect(ask).toHaveCount(0);
+    await expect(add).toBeVisible();
+    await expect(add.getByLabel("Datum")).toHaveValue("2027-09-15");
+    await expect(add.getByRole("button", { name: "Zveřejnit", exact: true })).toBeFocused();
+    // Esc zavře jen potvrzení, okno akce zůstane otevřené.
+    await add.getByRole("button", { name: "Zveřejnit", exact: true }).click();
+    await expect(ask).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(ask).toHaveCount(0);
+    await expect(add).toBeVisible();
+  });
+
+  test("Zveřejnit změny termínu: dopad v samostatném potvrzení @desktop", async ({ page }) => {
+    await page.goto("/vzdelavani/harmonogram?akce=ev-11-18");
+    await settle(page);
+    const win = dialog(page, "Portfolio tým");
+    await expect(win).toBeVisible();
+    await win.getByLabel("Od", { exact: true }).fill("09:00");
+    await win.getByRole("button", { name: "Zveřejnit změny" }).click();
+    const ask = page.getByRole("alertdialog", { name: "Zveřejnit změny?" });
+    await expect(ask).toContainText("Změníte termín");
+    await expect(ask.getByRole("button", { name: "Potvrdit zveřejnění" })).toBeVisible();
+    await ask.getByRole("button", { name: "Zpět k úpravám" }).click();
+    await expect(ask).toHaveCount(0);
+    await expect(win.getByLabel(/^Od/)).toHaveValue("09:00");
+    await expect(win.getByRole("button", { name: "Zveřejnit změny" })).toBeFocused();
   });
 
   test("Upravit akci z detailu otevře okno akce v Plánu", async ({ page }) => {
