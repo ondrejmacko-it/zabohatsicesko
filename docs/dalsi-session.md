@@ -7,7 +7,15 @@ Zadání beze změny (viz blok relace 10 → 11 níže). P6 plné znění: soubo
   1280/320/390 zelené), unit `tests/nahled.test.ts` 9/9. Unit celkem 419/419, lint OK, typecheck OK. Report body 1–10
   sepsaný: `docs/report-opravne-kolo-pr74.md`, sekce „Relace 9–11“ (doplnit jen výsledky testů relace 11).
   Snímky `po-*` generuje dočasný `e2e/zz-snimky.spec.ts` (NECOMMITOVAT, po doběhu smazat).
-* ZBÝVÁ: 1) smazat `e2e/zz-snimky.spec.ts`, commit snímků `po-*`; 2) build + celé e2e (`fuser -k 3310/tcp 3311/tcp`,
+* Relace 11 dál: snímky `po-*` commitnuté (88 ks, `zz-snimky` smazán). Build OK. CELÉ e2e: 1203 passed / 108 skipped /
+  **7 failed** = jen `temata-planovani.spec.ts:75` na všech 7 projektech: ř. 84 `.topic-unscheduled` („ · bez termínu“)
+  u „Otevřené otázky na schůzce“ chybí. Samostatně test PROJDE; v plném běhu `--project=windows-1280` selže taky →
+  jiný (ne-@zapis-temat) test uloží akci/návrh s tímto garantovaným tématem (pravděpodobně Připravit měsíc nebo okno
+  akce, kde se garantované téma předvyplní jako doporučené; hledej v `priprava-mesice`, `okna`, `doporucene-tema`,
+  `rychle-akce`, `plan-planovani`, `mobilni-ovladani` uložení do sdílené DB). Oprava podle P5: ten zapisující test
+  označit `@zapis-temat` NEBO ať ukládá bez tématu / s negarantovaným; NEpřidávat toleranci dvou stavů. Pak znovu
+  celé e2e (0 failed) a doplnit výsledek do reportu (sekce „Relace 9–11“, bod 9).
+* ZBÝVÁ (bez bodu 1–2 výše hotových): 2) celé e2e 0 failed (`fuser -k 3310/tcp 3311/tcp`,
   `npm run e2e` na pozadí, 0 failed) → výsledky do reportu; 3) popis PR #74 (aktualizovat, výsledky, simulace vs. živý
   test); 4) FINÁLNÍ zpráva uživateli: audit relací 8–11 (8: 7aa044e, 290ea09, 1033643, eb7e9ee; 9: df1d205, 419909c,
   22354d8, 618e18b, d1c7a42; 10: 3ee6f9f, 1eaaa7d; 11: 4e29d78 + další) a ruční kroky na Preview (níže v reportu bod 6).
