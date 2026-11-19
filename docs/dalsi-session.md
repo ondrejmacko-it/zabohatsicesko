@@ -1,5 +1,14 @@
 # Prompt pro další session
 
+**OPRAVNÉ KOLO PR #74 (19. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd`, draft PR #74, CI zelené na c4c3a9a).**
+Zadání: prompt uživatele „ZBČ – Opravné kolo PR #74: DnD témat, plánování, Quick Actions a finální vizuální hierarchie“
+(P0-1 DnD témat i mezi sekcemi, P0-2 bez limitu 3 garantovaných + nová migrace jen na Preview, P0-3 reprodukce a oprava
+hromadného vedoucího, P1-1 až P1-5, P2, povinné testy a screenshoty 320–1920). Plné znění: `list_events` session
+`session_01HpUiruJkjFtPcUM3L92gGi`, kinds `["user"]`, poslední user zpráva.
+* Text „Nastaveno N ze 3.“ z finální kontroly odstranit (P0-2).
+* Relace samy zakládají navazující (`create_session`, `source_revision` i `outcome_branch` =
+  `claude/finalni-kontrola-novy-pr-g2r2wd`), pushují do PR #74, uživateli se ozve až poslední s reportem a odkazem na preview.
+
 **FINÁLNÍ KONTROLA A NOVÝ PR – RELACE 2 (19. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd` = opravná větev + main `e27b631`).**
 Report: `docs/report-finalni-kontrola.md` (sekce Relace 2). Nový draft PR do main z této větve; PR #73 sloučený, jeho větev se nemění.
 * HOTOVO: 4A neúplný návrh zápisu (`minutesDraftSchema`, `minutes_invalid`), 4B test historie, 4C zámek akce ve schválení
