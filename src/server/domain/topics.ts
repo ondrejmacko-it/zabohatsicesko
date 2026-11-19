@@ -204,10 +204,10 @@ export function planCandidates(
     .map(({ e }) => ({
       ...e,
       draft: e.status === "draft",
+      // Krátce, jeden řádek: podrobnosti dopadu ukáže až potvrzení zveřejnění v okně akce.
       reason: [
-        e.status === "draft" ? "Návrh bez tématu, uloží se jen návrh" : "Zveřejněná akce bez tématu, změnu zveřejníte s kontrolou dopadu",
-        TOPIC_DRIVEN_TYPES.has(e.type) ? "typ akce vychází z témat" : null,
-        e.audience === topic.audience ? "stejná skupina" : "téma je pro všechny",
+        e.status === "draft" ? "návrh, uloží se jen návrh" : "zveřejněno, změnu potvrdíte",
+        e.audience === topic.audience ? null : "téma je pro všechny",
       ]
         .filter(Boolean)
         .join(" · "),

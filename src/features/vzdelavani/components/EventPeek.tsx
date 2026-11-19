@@ -75,8 +75,9 @@ export async function EventPeek({ user, eventId, preview, previewKey, closeHref,
       <>
         {statusBand}
         {preset && (
-          <p className="notice small" role="status">
-            Téma „{preset.name}“ je předvyplněné. Změnu uložte jako návrh, nebo ji zveřejněte s kontrolou dopadu na pozvané.
+          // Jen tichý řádek (A-12): hodnota je vidět v poli Téma, banner by přebil skutečné problémy akce.
+          <p className="small muted" role="status">
+            Téma „{preset.name}“ je předvyplněné, zatím nic není uložené ani zveřejněné.
           </p>
         )}
         {card.unpublishedChanges && (

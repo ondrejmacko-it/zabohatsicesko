@@ -145,7 +145,7 @@ describe("Naplánovat téma: výběr akcí", () => {
       ev("svatek", 3, { type: "holiday" }),
     ]);
     expect(candidates.map((c) => c.id)).toEqual(["drivejsi", "pozdejsi", "trenink", "zverejnena"]);
-    expect(candidates[0]!.reason).toBe("Návrh bez tématu, uloží se jen návrh · typ akce vychází z témat · stejná skupina");
+    expect(candidates[0]!.reason).toBe("návrh, uloží se jen návrh");
     expect(candidates.at(-1)!.reason).toContain("Zveřejněná akce bez tématu");
     expect(scheduled).toBeNull();
   });

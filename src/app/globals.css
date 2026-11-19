@@ -2312,6 +2312,31 @@ a.brief-link:hover {
   border-top: 1px solid var(--line);
 }
 
+.plan-topic-scheduled {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: inset 3px 0 0 var(--ochre);
+}
+
+.plan-topic-scheduled .item-title,
+.plan-topic-heading {
+  margin: 0;
+}
+
+.plan-topic-heading {
+  font-size: 1rem;
+}
+
+.plan-topic-more {
+  align-self: flex-start;
+}
+
 .plan-topic-action {
   display: flex;
   flex-direction: column;

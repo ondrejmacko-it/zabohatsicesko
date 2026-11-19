@@ -43,10 +43,20 @@ test.describe("Témata: garantovaná a ostatní", () => {
     await openTopics(page);
     await chooseInMenu(page, "Příprava na úvodní schůzku", "Naplánovat téma");
     const plan = page.getByRole("dialog", { name: "Naplánovat téma" });
-    await expect(plan.getByText(/Téma už je naplánované na 26\. 11\./)).toBeVisible();
+    // Stávající termín je nahoře s hlavním odkazem, další termín je vedlejší volba (nejdřív nejvýš tři akce).
+    await expect(plan.getByText(/^Naplánováno na 26\. 11\./)).toBeVisible();
+    await expect(plan.getByRole("link", { name: "Otevřít stávající akci" })).toHaveClass(/btn-primary/);
+    await expect(plan.getByRole("heading", { name: "Další termín" })).toBeVisible();
+    await expect(plan.getByRole("link", { name: "Vytvořit novou akci" })).not.toHaveClass(/btn-primary/);
     const items = plan.getByRole("list", { name: "Vhodné akce" }).getByRole("listitem");
+    expect(await items.count()).toBeLessThanOrEqual(3);
     await expect(items.first()).toContainText("Firemní vzdělávání FP · 13. 11.");
-    await expect(items.first()).toContainText("Návrh bez tématu, uloží se jen návrh · typ akce vychází z témat · stejná skupina");
+    await expect(items.first()).toContainText("Finanční poradci · návrh, uloží se jen návrh");
+    const more = plan.getByRole("button", { name: /^Zobrazit další/ });
+    if (await more.isVisible()) {
+      await more.click();
+      expect(await items.count()).toBeGreaterThan(3);
+    }
     await expectNoHorizontalScroll(page);
 
     await plan.getByRole("link", { name: "Vytvořit novou akci" }).click();
@@ -64,7 +74,7 @@ test.describe("Témata: garantovaná a ostatní", () => {
     await page.goto("/vzdelavani/harmonogram?mesic=2026-11&akce=ev-11-24&tema=topic-priority");
     await settle(page);
     const window = page.getByRole("dialog").filter({ hasText: "je předvyplněné" });
-    await expect(window.getByText("Téma „Týmové priority“ je předvyplněné.")).toBeVisible();
+    await expect(window.getByText("Téma „Týmové priority“ je předvyplněné, zatím nic není uložené ani zveřejněné.")).toBeVisible();
     await expect(window.getByLabel(/^Téma/)).toHaveValue("Týmové priority");
     await expect(window.getByRole("button", { name: "Uložit jako návrh" })).toBeEnabled();
     await page.keyboard.press("Escape");
@@ -216,8 +226,11 @@ test.describe("Témata: zápis priority, pořadí a návrhu @desktop", () => {
     await openTopics(page);
     await chooseInMenu(page, "Příprava na úvodní schůzku", "Naplánovat téma");
     const plan = page.getByRole("dialog", { name: "Naplánovat téma" });
+    const more = plan.getByRole("button", { name: /^Zobrazit další/ });
+    await expect(plan.getByRole("listitem").first()).toBeVisible();
+    if (await more.isVisible()) await more.click();
     const item = plan.getByRole("listitem").filter({ hasText: "· 4. 12." });
-    await expect(item).toContainText("Návrh");
+    await expect(item).toContainText("návrh, uloží se jen návrh");
     await item.getByRole("button", { name: /^Přidat do návrhu/ }).click();
     await expect(plan).toBeHidden();
     await expect(page.getByText(/Téma „Příprava na úvodní schůzku“ je v návrhu na 4\. 12\. Kolegové ho zatím nevidí, nic se neodeslalo\./)).toBeVisible();

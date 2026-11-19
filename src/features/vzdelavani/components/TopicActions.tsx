@@ -166,17 +166,21 @@ export function TopicManage({ topic, groups, canGuarantee, canMoveUp, canMoveDow
   );
 }
 
+/** Kolik vhodných akcí okno Naplánovat téma ukáže hned, zbytek po Zobrazit další. */
+const PLAN_TOPIC_FIRST = 3;
+
 const harmonogramHref = (dateKey: string, query: Record<string, string>) =>
   `/vzdelavani/harmonogram?${new URLSearchParams({ mesic: dateKey.slice(0, 7), ...query })}`;
 
 /**
  * Okno Naplánovat téma: vhodné budoucí akce bez tématu s vysvětlením proč (pořadí určuje server), u návrhu
- * Přidat do návrhu (uloží jen návrh), u zveřejněné akce otevření okna akce s předvyplněným tématem (běžné
- * zveřejnění s kontrolou dopadu) a Vytvořit novou akci (předvyplněné Přidat akci). Má-li téma budoucí
- * termín, okno ho ukáže s odkazem.
+ * Přidat do návrhu (uloží jen návrh), u zveřejněné akce Otevřít a doplnit (okno akce s předvyplněným tématem,
+ * nic se neuloží bez potvrzení) a Vytvořit novou akci. Má-li téma budoucí termín, je nahoře s hlavním
+ * odkazem Otevřít stávající akci a další termín je vedlejší volba. Nejdřív jen tři nejlepší akce.
  */
 function PlanTopicDialog({ topic, onClose }: { topic: { id: string; name: string }; onClose: () => void }) {
   const [loaded, setLoaded] = useState<(ActionResult & { options?: TopicPlanOptions }) | null>(null);
+  const [showAll, setShowAll] = useState(false);
   useEffect(() => {
     let active = true;
     void topicPlanOptionsAction(topic.id).then((result) => {
@@ -187,33 +191,41 @@ function PlanTopicDialog({ topic, onClose }: { topic: { id: string; name: string
     };
   }, [topic.id]);
   const options = loaded?.ok ? loaded.options : undefined;
+  const scheduled = options?.scheduled;
+  const candidates = options?.candidates ?? [];
+  const shown = showAll ? candidates : candidates.slice(0, PLAN_TOPIC_FIRST);
   return (
     <Modal open title="Naplánovat téma" onRequestClose={onClose} wide>
       <div className="stack">
-        <p className="small muted">
-          Kam zařadit téma „{topic.name}“. Nejdřív jsou návrhy bez tématu pro stejnou skupinu, uložení do návrhu nic nezveřejní ani neodešle.
-        </p>
+        <p className="small muted">Kam zařadit téma „{topic.name}“. Nic se samo nezveřejní ani neodešle.</p>
         {!loaded && (
           <p className="small" role="status">
             Hledám vhodné termíny…
           </p>
         )}
         {loaded && !loaded.ok && <ActionMessage state={loaded} />}
-        {options?.scheduled && (
-          <p className="notice" role="status">
-            Téma už {options.scheduled.draft ? "je v návrhu" : "je naplánované"} na {formatDayMonth(options.scheduled.dateKey)} ({options.scheduled.label}).{" "}
-            <Link href={harmonogramHref(options.scheduled.dateKey, { akce: options.scheduled.id })}>Otevřít akci</Link>
-          </p>
+        {scheduled && (
+          // Téma už termín má: hlavní cesta je otevřít tu akci, další termín je jen vedlejší možnost níže.
+          <div className="plan-topic-scheduled">
+            <p className="item-title">
+              {scheduled.draft ? "V návrhu" : "Naplánováno"} na {formatDayMonth(scheduled.dateKey)} · {scheduled.label}
+            </p>
+            <Link className="btn btn-primary btn-small" href={harmonogramHref(scheduled.dateKey, { akce: scheduled.id })}>
+              Otevřít stávající akci
+            </Link>
+          </div>
         )}
-        {options && options.candidates.length === 0 && <p className="small">Žádná budoucí akce bez tématu se pro skupinu tématu nehodí. Vytvořte novou.</p>}
-        {options && options.candidates.length > 0 && (
+        {options && (
+          <h3 className="plan-topic-heading">{scheduled ? "Další termín" : "Vhodné akce"}</h3>
+        )}
+        {options && candidates.length === 0 && <p className="small">Žádná budoucí akce bez tématu se pro skupinu tématu nehodí. Vytvořte novou.</p>}
+        {candidates.length > 0 && (
           <ul className="plan-topic-list" aria-label="Vhodné akce">
-            {options.candidates.map((c) => (
+            {shown.map((c) => (
               <li key={c.id} className="plan-topic-item">
                 <div className="topic-main">
                   <p className="item-title">
                     {c.label} · {formatDayMonth(c.dateKey)}
-                    {c.draft && <span className="badge badge-draft topic-badge">Návrh</span>}
                   </p>
                   <p className="item-meta">
                     {GROUP_LABELS[c.audience as Group] ?? c.audience} · {c.reason}
@@ -222,16 +234,26 @@ function PlanTopicDialog({ topic, onClose }: { topic: { id: string; name: string
                 {c.draft ? (
                   <AssignToDraft topicId={topic.id} candidate={c} onDone={onClose} />
                 ) : (
-                  <Link className="btn btn-small" href={harmonogramHref(c.dateKey, { akce: c.id, tema: topic.id })}>
-                    Otevřít s tématem
+                  // Zveřejněná akce: otevře se okno akce s předvyplněným tématem, uloží až správce s kontrolou dopadu.
+                  <Link
+                    className="btn btn-small"
+                    href={harmonogramHref(c.dateKey, { akce: c.id, tema: topic.id })}
+                    aria-label={`Otevřít a doplnit ${c.label} ${formatDayMonth(c.dateKey)}`}
+                  >
+                    Otevřít a doplnit
                   </Link>
                 )}
               </li>
             ))}
           </ul>
         )}
+        {candidates.length > shown.length && (
+          <button type="button" className="btn btn-small plan-topic-more" onClick={() => setShowAll(true)}>
+            Zobrazit další ({candidates.length - shown.length})
+          </button>
+        )}
         <div className="row">
-          <Link className="btn btn-primary" href={`/vzdelavani/harmonogram?tema=${encodeURIComponent(topic.id)}`}>
+          <Link className={scheduled ? "btn" : "btn btn-primary"} href={`/vzdelavani/harmonogram?tema=${encodeURIComponent(topic.id)}`}>
             <Icon name="plus" />
             Vytvořit novou akci
           </Link>
