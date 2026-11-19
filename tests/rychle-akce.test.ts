@@ -34,6 +34,7 @@ const card = (over: Partial<EventCard> = {}): EventCard => ({
   past: false,
   syncStatus: "synced",
   movedFrom: null,
+  original: null,
   revision: 3,
   handler: true,
   minutesPublished: false,

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ActionForm } from "@/components/ActionForm";
+import { PageCall } from "@/components/PageCall";
 import { resetTopicOrderAction } from "@/features/vzdelavani/actions";
 import { TopicBoard, type TopicOrderItem } from "@/features/vzdelavani/components/TopicBoard";
 import { InterestButton, ProposeTopicDialog, RestoreTopicButton, TopicManage } from "@/features/vzdelavani/components/TopicActions";
@@ -126,12 +127,9 @@ export async function TopicsSection({ user }: { user: Viewer }) {
       <h2 id="temata" className="visually-hidden">
         Témata
       </h2>
-      <div className="spread topic-intro">
-        <p className="lead-text">
-          Navrhněte téma nebo podpořte návrh kolegů.{!organizer && " O zařazení do plánu rozhoduje správce."}
-        </p>
+      <PageCall text="Navrhněte téma nebo podpořte návrh kolegů.">
         <ProposeTopicDialog groups={groups} />
-      </div>
+      </PageCall>
       {topics.length === 0 ? (
         <div className="empty-state">
           <p className="item-title">Zatím tu nejsou žádná témata.</p>

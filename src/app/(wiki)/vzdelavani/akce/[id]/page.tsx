@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ActionForm } from "@/components/ActionForm";
 import { AutoRefresh } from "@/components/AutoRefresh";
-import { discardChangesAction } from "@/features/vzdelavani/actions";
+import { ChangeBanner } from "@/features/vzdelavani/components/ChangeBanner";
 import { Icon } from "@/components/Icon";
 import { Todo, missingText } from "@/components/Todo";
 import { RecordingSection } from "@/features/vzdelavani/components/RecordingSection";
@@ -116,11 +115,13 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
         </p>
       )}
 
-      {organizer && card.unpublishedChanges && (
-        <div className="notice spread">
-          <p>Kolegové a Kalendář zatím vidí zveřejněnou verzi.</p>
-          <ActionForm action={discardChangesAction} fields={{ id: card.id, revision: String(detail.revision) }} label="Zahodit návrh změny" pendingLabel="Zahazuji…" small confirm={{ title: "Zahodit neveřejné změny?", text: "Uložené, ale nezveřejněné úpravy akce se smažou. Kolegové i Kalendář dál uvidí zveřejněnou verzi.", confirmLabel: "Zahodit změny" }} />
-        </div>
+      {organizer && card.original && (
+        <ChangeBanner
+          eventId={card.id}
+          revision={detail.revision}
+          original={card.original}
+          publishHref={`/vzdelavani/harmonogram?mesic=${monthOf(toDateKey(new Date(card.startsAt)))}&akce=${encodeURIComponent(card.id)}`}
+        />
       )}
 
       <section className="section facts-section" aria-label="Údaje o akci">

@@ -276,9 +276,13 @@ test.describe("okno akce: zahození neveřejných změn se potvrzuje @desktop", 
     await settle(page);
     const notice = window.getByText("Kolegové a Kalendář zatím vidí zveřejněnou verzi.");
     await expect(notice).toBeVisible();
+    // Panel návrhu změny říká, co se mění, a rozbalí zveřejněnou verzi (originál).
+    await expect(window.getByText(/Mění vedoucí\./)).toBeVisible();
+    await window.getByText("Zveřejněná verze", { exact: true }).click();
+    await expect(window.locator(".change-original-facts")).toContainText("Vedoucí akce");
 
-    await window.getByRole("button", { name: "Zahodit změny" }).click();
-    const confirm = page.getByRole("dialog", { name: "Zahodit neveřejné změny?" });
+    await window.getByRole("button", { name: "Zrušit návrh" }).click();
+    const confirm = page.getByRole("dialog", { name: "Zrušit návrh změny?" });
     await expect(confirm).toBeVisible();
     // Sdílené potvrzení: bezpečná volba má fokus, pracovní okno pod ním zůstane vidět a Esc zavře jen potvrzení.
     await expect(confirm.getByRole("button", { name: "Zpět" })).toBeFocused();
@@ -286,13 +290,13 @@ test.describe("okno akce: zahození neveřejných změn se potvrzuje @desktop", 
     await page.keyboard.press("Escape");
     await expect(confirm).toBeHidden();
     await expect(notice).toBeVisible();
-    await window.getByRole("button", { name: "Zahodit změny" }).click();
+    await window.getByRole("button", { name: "Zrušit návrh" }).click();
     await confirm.getByRole("button", { name: "Zpět" }).click();
     await expect(confirm).toBeHidden();
     await expect(notice).toBeVisible();
 
-    await window.getByRole("button", { name: "Zahodit změny" }).click();
-    await confirm.getByRole("button", { name: "Zahodit změny" }).click();
+    await window.getByRole("button", { name: "Zrušit návrh" }).click();
+    await confirm.getByRole("button", { name: "Zrušit návrh" }).click();
     await expect(notice).toBeHidden();
     // Otevřené okno ukáže zveřejněnou verzi hned, bez nového načtení.
     await expect(window.getByLabel(/^Vede/).locator("option:checked")).toHaveText("Vedoucí akce");

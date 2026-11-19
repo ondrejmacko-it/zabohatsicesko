@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { ActionForm } from "@/components/ActionForm";
 import { Icon } from "@/components/Icon";
 import { RouteModal, UnavailableModal } from "@/components/RouteModal";
 import { Todo, missingText } from "@/components/Todo";
@@ -12,8 +11,8 @@ import { listPeople, loadTemplate } from "@/server/services/events";
 import type { PlanPreview } from "@/server/services/preview";
 import { listTopics } from "@/server/services/topics";
 import { loadInviteRecipients } from "@/server/services/calendar-status";
-import { discardChangesAction } from "../actions";
 import { cardTone, primaryStatus, statusAdvice } from "../status";
+import { ChangeBanner } from "./ChangeBanner";
 import { EventWindow } from "./EventDialog";
 import { EventMenu } from "./EventMenu";
 import { minutesSectionLabel } from "@/lib/minutes";
@@ -82,12 +81,7 @@ export async function EventPeek({ user, eventId, preview, previewKey, closeHref,
             Téma „{preset.name}“ je předvyplněné, zatím nic není uložené ani zveřejněné.
           </p>
         )}
-        {card.unpublishedChanges && (
-          <div className="notice spread">
-            <p className="small">Kolegové a Kalendář zatím vidí zveřejněnou verzi.</p>
-            <ActionForm action={discardChangesAction} fields={{ id: card.id, revision: String(detail.revision) }} label="Zahodit změny" pendingLabel="Zahazuji…" small confirm={{ title: "Zahodit neveřejné změny?", text: "Uložené, ale nezveřejněné úpravy akce se smažou. Kolegové i Kalendář dál uvidí zveřejněnou verzi.", confirmLabel: "Zahodit změny" }} />
-          </div>
-        )}
+        {card.original && <ChangeBanner eventId={card.id} revision={detail.revision} original={card.original} />}
       </>
     );
     // Funkční Kalendář se v okně neukazuje. Oprava je odkaz jen při chybě, technické informace jsou v nabídce.

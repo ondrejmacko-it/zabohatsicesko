@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { PageCall } from "@/components/PageCall";
 import { GROUP_LABELS, TYPE_LABELS, eventContext } from "@/lib/labels";
 import { AddMinutesPicker, MinutesPeek } from "@/features/vzdelavani/components/MinutesPeek";
 import { TopicsAnchorRedirect } from "@/features/vzdelavani/components/TopicsAnchorRedirect";
@@ -51,15 +52,15 @@ export default async function MinutesPage({ searchParams }: { searchParams: Sear
         assignHref={isOrganizer(user) ? (item) => `/vzdelavani/harmonogram?mesic=${item.startsAt.slice(0, 7)}&akce=${encodeURIComponent(item.eventId)}` : undefined} />
     )}
     <section className="section" aria-labelledby="zapisy">
-      <div className="spread">
-        <h2 id="zapisy">Zveřejněné zápisy</h2>
-        {canAdd && (
+      {canAdd && (
+        <PageCall text="Dokončete zápisy z proběhlých akcí.">
           <Link className="btn btn-primary" href={link({ pridat: "1" })} scroll={false} aria-label={`${missingTitle}: ${missing.items.length}`}>
             K dokončení
             {missing.items.length > 0 && <span className="count-badge">{missing.items.length}</span>}
           </Link>
-        )}
-      </div>
+        </PageCall>
+      )}
+      <h2 id="zapisy">Zveřejněné zápisy</h2>
 
       {all.length > 0 && (
         <form className="filter-bar" method="get" role="search">
