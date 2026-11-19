@@ -2489,6 +2489,31 @@ a.brief-link:hover {
 /* ——— Zápis v okně: sekce uvnitř okna nemá vlastní rámeček ——— */
 .peek-eyebrow {
   margin: -8px 0 0;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+/*
+ * D-03: v okně zápisu jsou od sebe oddělené metadata (řádek nad), stav verze (tónovaný pruh),
+ * obsah zápisu a akce pod ním (čára). Jen rozestup, čára a tón stávající palety.
+ */
+.peek-section .minutes-head {
+  padding: 8px 8px 8px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--beige);
+}
+
+.peek-section .minutes-version {
+  margin: 0;
+}
+
+.peek-section .minutes-head .btn {
+  background: var(--surface);
+}
+
+.peek-section .minutes-head + .stack > details {
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
 }
 
 .peek-section > .section {
