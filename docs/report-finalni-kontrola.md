@@ -70,3 +70,10 @@ Relace 1: větev `claude/focused-cerf-gr1tdi`. Relace 2: větev `claude/finalni-
 * Bod 10: „NJBJK“ nesmazáno. Návrh: v demo DB smazat zájem (2), téma a zveřejněnou akci jen se souhlasem, nebo akci
   zrušit a téma archivovat (zachová audit). Dlouhodobě: samostatná Neon DB/branch pro prezentaci s resetovaným seedem.
 * Firefox a WebKit: v kontejneru nejsou nainstalované, **neověřeno** (WebKit jde na Macu přes `E2E_WEBKIT=1`).
+
+### Testy relace 2 (kód na `6166c3a`, poté jen dokumentace)
+
+Lint OK, typecheck OK, unit **398/398**, build OK, **celé e2e 1169 passed / 111 skipped / 0 failed** (6,7 min; Chromium
+1280/1920/1440/1512, telefon 390/360/320, `locale cs-CZ`, axe v `pristupnost`). Přeskočené testy jsou záměrné
+(`@desktop` na telefonech, zápisové scénáře jen na jednom projektu). Firefox a WebKit neověřeny (nejsou nainstalované).
+Google Kalendář jen v simulaci, žádné skutečné pozvánky.
