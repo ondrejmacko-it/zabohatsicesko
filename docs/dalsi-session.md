@@ -1,5 +1,13 @@
 # Prompt pro další session
 
+**OPRAVNÉ KOLO PR #74 – HOTOVO, RELACE 4 (19. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd`, draft PR #74).**
+Report: `docs/report-opravne-kolo-pr74.md` (body 1–10, sekce Relace 4). Snímky před/po: `docs/screenshots/opravne-kolo-pr74/`.
+* Ověřeno na HEAD: lint, typecheck, unit 406/406, build, celé e2e 1176 passed / 114 skipped / 1 failed → oprava
+  c36436b (fokus úchytu při přepisu pořadím ze serveru), po ní temata-planovani 3× 12/12. Popis PR #74 aktualizován.
+* ČEKÁ NA UŽIVATELE (nic dalšího bez pokynu): migrace 0015 na Preview (`APPROVED_MIGRATIONS=0015_topic_priority_unlimited`
+  + redeploy, předtím SELECT názvu omezení v `pg_constraint`); Combobox pro výběr osob (P1-4); kontrola příslušnosti
+  vedoucího ke skupině; ruční merge PR #74.
+
 **OPRAVNÉ KOLO PR #74 – RELACE 3 HOTOVA (19. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd`, draft PR #74).**
 Zadání: `list_events` session `session_01HpUiruJkjFtPcUM3L92gGi`, kinds `["user"]`, před nejnovější stránkou (`before_id`
 = `first_id`), user zpráva „ZBČ – Opravné kolo PR #74…“ (výsledek do souboru, `json.JSONDecoder().raw_decode`, klíče
