@@ -85,3 +85,50 @@ Uložení a obnovení stránky ověřeno e2e, server beze změny (oprávnění, 
   v Připravit měsíc) přes Combobox s vyhledáváním a hodnotou ID, až bude osob víc (riziko: P0-3 právě opravený).
 * P1-5: průchody (vytvoření, editace, duplikace, přesun, doplnění měsíce, hromadné vyplnění, naplánování tématu,
   zápis) mají přímé formuláře, potvrzení nevratných kroků a rozdíl Uložit × Zveřejnit; beze změny.
+
+## Relace 4: celé ověření, snímky a předání
+
+### Testy na HEAD (lokálně, Chromium, bezpečná simulace kalendáře)
+
+* ESLint, typecheck, unit **406/406**, produkční build: OK.
+* Celé e2e (`npx playwright test --trace off`, všechny projekty 320–1920, macOS/Windows/telefon, přístupnost
+  axe, oprávnění, únik dat, kalendářní procesy v simulaci, ostrá Wiki s falešným Google): **1176 passed /
+  114 skipped / 1 failed**. Selhání: přesun šipkou přes hranici skupin ztratil fokus na úchytu, když pořadí
+  z předchozího uložení dorazilo až po dalším stisku (řádek se na chvíli vykreslil v druhém seznamu jako nový
+  prvek). Oprava c36436b: při přepisu pořadím ze serveru se fokus vrátí na úchyt. Po opravě lint, typecheck OK,
+  `temata-planovani` (windows-1280) 3 × samostatně 12/12, `temata-planovani` + `klavesnice` na všech projektech OK.
+* Skipped = testy omezené záměrně na jeden projekt (zápis do DB jen jednou) nebo jen desktop/telefon.
+* Firefox/WebKit se v kontejneru nespouští (WebKit projekt jen při dostupném prohlížeči), neověřeno.
+* Migrace 0015 ověřena jen na lokální PGlite (e2e a unit). Na stagingu (Preview) **nespuštěna**, čeká na schválení.
+
+### Screenshoty před/po
+
+`docs/screenshots/opravne-kolo-pr74/`: `pred-*` = c4c3a9a (před opravným kolem), `po-*` = c36436b, šířky 320, 390,
+768, 1280, 1440, 1920 (výška okna 700/844/1024/800/900/1080, deviceScaleFactor 1, `cs-CZ`). Obrazovky: `domu`,
+`plan`, `plan-menu` (otevřená nabídka ⋯ u „Portfolio tým“), `pripravit-mesic`, `rozvrh` (Nastavit pravidelný
+rozvrh), `pridat-akci`, `okno-akce`, `temata`, `zapisy`, `sprava`. 120 snímků, 16 MB.
+Porovnání: ⋯ menší a vpravo nahoře bez překryvu textu, nabídka v okně i na 320 px; garantovaná témata okrový podklad
+a pruh, nejžádanější zelený akcent; Správa role štítkem; Připravit měsíc nulové počty tiše; text „Nastaveno N ze 3“
+zmizel. Typografie a paleta Wiki beze změny.
+
+### Záměrně nezměněno
+
+* Výběr osob (Vede, Kontrolor, vedoucí v Připravit měsíc) zůstává nativní `<select>` (P1-4, návrh v inventuře výše).
+* Datum a čas nativní `type=date/time`, bez vlastního datepickeru.
+* Průchody P1-5 (formuláře, potvrzení, Uložit × Zveřejnit) beze změny, fungují.
+* Schválené zápisy, historie a zámek proti souběhu beze změny (e2e zapisy, zapisy-schvaleni prošly).
+* Žádné automatické zveřejnění, mazání dat ani odesílání pozvánek; kalendář jen v simulaci.
+* Server výběru vedoucího beze změny (oprava P0-3 je čistě v UI).
+
+### Commity opravného kola
+
+0b1c0d2 P0-3 · bea1c6c P0-2 + migrace 0015 · ba4b169 P0-1 + P1-2 · eda8a14 P1-1 · 7f04ef9 P1-3 · c36436b fokus
+při přesunu klávesnicí · předávky c380dd2, ff27312, cb02688 · snímky před a po.
+
+### K rozhodnutí uživatele
+
+1. Spustit migraci 0015 na Preview: nesecretní `APPROVED_MIGRATIONS=0015_topic_priority_unlimited` v Preview env
+   + redeploy; předtím SELECT názvu omezení v `pg_constraint`. Bez ní Preview odmítne 4. garantované téma čitelnou chybou.
+2. Výběr osob přes Combobox s vyhledáváním (P1-4), až bude osob víc.
+3. Vedoucí akce se dnes nekontroluje proti příslušnosti ke skupině (jen existence účtu a oprávnění správce).
+4. Merge PR #74 do main ručně po revizi.
