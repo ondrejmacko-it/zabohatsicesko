@@ -151,7 +151,6 @@ export function QuickActions({ monthKey, todayKey, planHref, addDate, anchor, fi
                 </button>
               )}
             />
-            <p className="small muted">Tečka = den s akcí. Měsíc i filtry zůstávají.</p>
             {missing && (
               <div className="notice" role="status">
                 <p>

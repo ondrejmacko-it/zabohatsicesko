@@ -54,8 +54,17 @@ function topicItem(t: RankedTopic, index: number, count: number, ctx: RowContext
         <p className="item-meta">
           {ctx.label(t.audience)} · {t.lastHeld ? `naposledy ${formatDayMonth(t.lastHeld)}` : "zatím neproběhlo"}
           {next}
+          {/* Téma je jen v návrhu akce: kolegové termín ještě nevidí, správce ho má dotáhnout ke zveřejnění. */}
+          {ctx.organizer && !t.nextPlanned && t.nextDraft && (
+            <>
+              {" · "}
+              <Link className="topic-in-draft" href={`/vzdelavani/harmonogram?mesic=${t.nextDraft.slice(0, 7)}${t.nextDraftId ? `&akce=${encodeURIComponent(t.nextDraftId)}` : ""}`}>
+                v návrhu na {formatDayMonth(t.nextDraft)}
+              </Link>
+            </>
+          )}
           {/* Garantované téma bez budoucího termínu: správce ho uvidí hned v seznamu, datum se nedoplňuje samo. */}
-          {ctx.organizer && t.priorityRank != null && !t.nextPlanned && <span className="topic-unscheduled"> · bez termínu</span>}
+          {ctx.organizer && t.priorityRank != null && !t.nextPlanned && !t.nextDraft && <span className="topic-unscheduled"> · bez termínu</span>}
         </p>
       </div>
       <div className="topic-interest">
@@ -135,12 +144,9 @@ export async function TopicsSection({ user }: { user: Viewer }) {
             guaranteed={guaranteed.map((t, index) => topicItem(t, index, guaranteed.length, ctx))}
             others={others.map((t, index) => topicItem(t, index, others.length, ctx))}
             guaranteedHead={
-              <>
-                <h3 id="temata-garantovana" className="topic-group-title">
-                  Garantovaná témata
-                </h3>
-                <p className="item-meta">Při plánování se nabízejí jako první, v tomto pořadí.</p>
-              </>
+              <h3 id="temata-garantovana" className="topic-group-title">
+                Garantovaná témata
+              </h3>
             }
             othersHead={
               <>

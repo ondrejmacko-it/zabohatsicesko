@@ -91,6 +91,20 @@ describe("návrh přesunu účastníkům neschová původní termín", () => {
     await updateEvent(organizer, PUBLISHED_RM, revision + 1, draft, "publish");
     expect((await listTopics(organizer)).find((t) => t.id === topic.id)?.nextPlanned).toBe("2026-11-12");
   });
+
+  test("téma jen v návrhu změny: správce vidí termín návrhu, účastník nic", async () => {
+    const topic = (await listTopics(organizer)).find((t) => t.audience === "all" || t.audience === "rm")!;
+    expect(topic.nextDraft ?? null).toBeNull();
+    const { revision, ...draft } = await inputOf(PUBLISHED_RM, { topicTitle: topic.name, topicId: topic.id });
+    await updateEvent(organizer, PUBLISHED_RM, revision, draft, "draft");
+    const seen = (await listTopics(organizer)).find((t) => t.id === topic.id)!;
+    expect(seen.nextDraft).toBe("2026-11-12");
+    expect(seen.nextDraftId).toBe(PUBLISHED_RM);
+    for (const t of await listTopics(participant)) expect(t.nextDraft ?? null).toBeNull();
+    // Po zveřejnění je termín skutečný, návrh změny už není.
+    await updateEvent(organizer, PUBLISHED_RM, revision + 1, draft, "publish");
+    expect((await listTopics(organizer)).find((t) => t.id === topic.id)?.nextDraft ?? null).toBeNull();
+  });
 });
 
 describe("potvrzení dopadu změny", () => {

@@ -3246,6 +3246,12 @@ p.cal-status {
   font-weight: 600;
 }
 
+/* Téma jen v návrhu akce: oranžově jako ostatní návrhy, ne červeně jako chybějící termín. */
+.topic-in-draft {
+  color: var(--ochre-dark);
+  font-weight: 600;
+}
+
 .topic-suggestion {
   grid-column: 1 / -1;
   display: flex;

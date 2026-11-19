@@ -28,6 +28,7 @@ import { DomainError } from "@/server/services/errors";
 export async function listTopics(viewer: Viewer): Promise<RankedTopic[]> {
   const db = await getDb();
   const reference = now().toISOString();
+  const organizer = isOrganizer(viewer);
   const rows = await queryRows<{
     id: string;
     name: string;
@@ -37,6 +38,8 @@ export async function listTopics(viewer: Viewer): Promise<RankedTopic[]> {
     last_held: Date | string | null;
     next_planned: Date | string | null;
     next_planned_id: string | null;
+    next_draft: Date | string | null;
+    next_draft_id: string | null;
     priority_rank: number | null;
     manual_rank: number | null;
   }>(
@@ -53,7 +56,18 @@ export async function listTopics(viewer: Viewer): Promise<RankedTopic[]> {
           (SELECT e.id FROM events e
              WHERE e.published->>'topicId' = t.id AND e.published->>'status' = 'published'
                AND (e.published->>'startsAt')::timestamptz > ${reference}::timestamptz
-             ORDER BY (e.published->>'startsAt')::timestamptz, e.id LIMIT 1) AS next_planned_id
+             ORDER BY (e.published->>'startsAt')::timestamptz, e.id LIMIT 1) AS next_planned_id,
+          -- Téma přiřazené jen v pracovní verzi (návrh akce nebo návrh změny zveřejněné akce). Návrhy vidí jen správce.
+          (SELECT e.starts_at FROM events e
+             WHERE ${organizer} AND e.org_id = t.org_id AND e.topic_id = t.id
+               AND (e.status = 'draft' OR (e.status = 'published' AND e.revision IS DISTINCT FROM e.published_revision))
+               AND e.starts_at > ${reference}::timestamptz
+             ORDER BY e.starts_at, e.id LIMIT 1) AS next_draft,
+          (SELECT e.id FROM events e
+             WHERE ${organizer} AND e.org_id = t.org_id AND e.topic_id = t.id
+               AND (e.status = 'draft' OR (e.status = 'published' AND e.revision IS DISTINCT FROM e.published_revision))
+               AND e.starts_at > ${reference}::timestamptz
+             ORDER BY e.starts_at, e.id LIMIT 1) AS next_draft_id
         FROM topics t WHERE t.org_id = ${config.orgId} AND t.archived_at IS NULL`,
   );
   const stats: TopicStat[] = rows
@@ -67,6 +81,8 @@ export async function listTopics(viewer: Viewer): Promise<RankedTopic[]> {
       lastHeld: r.last_held ? toDateKey(new Date(r.last_held)) : null,
       nextPlanned: r.next_planned ? toDateKey(new Date(r.next_planned)) : null,
       nextPlannedId: r.next_planned_id,
+      nextDraft: r.next_draft ? toDateKey(new Date(r.next_draft)) : null,
+      nextDraftId: r.next_draft_id,
       priorityRank: r.priority_rank,
       manualRank: r.manual_rank,
     }));

@@ -10,7 +10,11 @@ uživatele fungují. Nové požadavky (větší změny nejdřív navrhnout uživ
 4. Změna ZVEŘEJNĚNÉ akce uložená jen jako návrh: graficky jako návrh „nad“ originálem, rozkliknout originál, akce
    Zveřejnit změny / Zrušit návrh (nechat originál). Čistý nový návrh nic takového nemá. Ostatní návrhy nevidí
    (beze změny). Zjistit, jak dnes `events`/`event_revisions` drží rozpracovanou změnu zveřejněné akce, navrhnout UI.
-**Další krok:** krátký návrh bodů 1–4 uživateli (hlavně 3 a 4), po souhlasu implementace + testy + celé e2e + snímky.
+**Relace 6:** body 1 a 2 HOTOVO (`nextDraft`/`nextDraftId` v `listTopics` jen pro správce, oranžový odkaz
+`.topic-in-draft` „v návrhu na D. M.“; smazány pomocné texty: garantovaná témata, „Tečka = den s akcí…“, „Zájem se vám
+označí automaticky.“, „Čas, téma, vedoucí i publikum zůstanou stejné.“). Body 3 a 4: uživatel dostal krátký návrh
+(bez migrace, `events.published` = originál, pracovní řádek = návrh změny), ČEKÁ se na schválení + další rework.
+**Další krok:** po schválení implementovat 3 a 4 (+ rework), lint/typecheck/unit/build, celé e2e, snímky `po-*`, report.
 
 **PŘED MERGE PR #74 – RELACE 5 HOTOVA (19. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd`, draft PR #74).**
 Report: `docs/report-opravne-kolo-pr74.md` (sekce Relace 5).

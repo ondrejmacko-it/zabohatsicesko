@@ -388,7 +388,7 @@ test.describe("Témata: zápis priority, pořadí a návrhu @desktop", () => {
     await expect(add).toBeHidden();
 
     await openTopics(page);
-    await chooseInMenu(page, "Příprava na úvodní schůzku", "Naplánovat téma");
+    await chooseInMenu(page, "Otevřené otázky na schůzce", "Naplánovat téma");
     const plan = page.getByRole("dialog", { name: "Naplánovat téma" });
     const more = plan.getByRole("button", { name: /^Zobrazit další/ });
     await expect(plan.getByRole("listitem").first()).toBeVisible();
@@ -397,12 +397,17 @@ test.describe("Témata: zápis priority, pořadí a návrhu @desktop", () => {
     await expect(item).toContainText("návrh");
     await item.getByRole("button", { name: /^Přidat do návrhu/ }).click();
     await expect(plan).toBeHidden();
-    await expect(page.getByText(/Téma „Příprava na úvodní schůzku“ je v návrhu na 4\. 12\. Kolegové ho zatím nevidí, nic se neodeslalo\./)).toBeVisible();
+    await expect(page.getByText(/Téma „Otevřené otázky na schůzce“ je v návrhu na 4\. 12\. Kolegové ho zatím nevidí, nic se neodeslalo\./)).toBeVisible();
+    await openTopics(page);
+    // Garantované téma bez zveřejněného termínu: místo červeného „bez termínu“ oranžově termín návrhu.
+    const planned = rowOf(page.locator("main"), "Otevřené otázky na schůzce");
+    await expect(planned.locator(".topic-in-draft")).toHaveText("v návrhu na 4. 12.");
+    await expect(planned.locator(".topic-unscheduled")).toHaveCount(0);
 
     // Návrh má téma a zůstal návrhem.
     await page.goto("/vzdelavani/harmonogram?mesic=2026-12");
     await settle(page);
-    const card = page.locator("a[data-move-id]").filter({ hasText: "Příprava na úvodní schůzku" });
+    const card = page.locator("a[data-move-id]").filter({ hasText: "Otevřené otázky na schůzce" });
     await expect(card).toHaveCount(1);
     await expect(card).toContainText(/Návrh/);
   });

@@ -78,7 +78,6 @@ function ProposeForm({ groups, onClose }: { groups: Group[]; onClose: () => void
   return (
     <Modal open title="Navrhnout téma" onRequestClose={onClose}>
       <form action={action} onSubmit={submitKeepingValues(action)} className="stack">
-        <p className="small muted">Zájem se vám označí automaticky.</p>
         <label className="field">
           <span className="field-label">Téma</span>
           <input className="input" name="name" required minLength={3} maxLength={120} autoFocus />
