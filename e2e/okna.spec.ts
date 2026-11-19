@@ -407,5 +407,20 @@ test.describe("technické informace jen pro správu", () => {
       await settle(page);
       await expect(page.getByText("Technické informace").first()).toBeVisible();
     });
+
+    test("nabídka okna akce: každá položka s ikonou, destruktivní pod čarou (A-09)", async ({ page }) => {
+      await page.goto("/vzdelavani/harmonogram?mesic=2026-11&akce=ev-11-18");
+      await settle(page);
+      const win = page.getByRole("dialog").first();
+      await win.getByRole("button", { name: "Další možnosti" }).click();
+      const list = win.locator(".menu-list:not([hidden])");
+      const items = list.locator(":scope > .btn, :scope > a, form .btn");
+      const count = await items.count();
+      expect(count).toBeGreaterThan(1);
+      for (let i = 0; i < count; i++) await expect(items.nth(i).locator("svg")).toHaveCount(1);
+      await expect(list.getByRole("link", { name: "Technické informace" })).toBeVisible();
+      // Zrušení akce je až za oddělovačem, na konci nabídky.
+      await expect(list.locator(".menu-divider + .menu-danger")).toContainText("Zrušit akci");
+    });
   });
 });

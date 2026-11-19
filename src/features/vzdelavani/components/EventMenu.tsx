@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Children, useActionState, useEffect, useRef, useState } from "react";
 import { ActionMessage } from "@/components/ActionForm";
-import { Icon } from "@/components/Icon";
+import { Icon, type IconName } from "@/components/Icon";
 import { Menu } from "@/components/Menu";
 import { flash } from "@/components/FlashMessage";
 import { Modal } from "@/components/Modal";
@@ -17,8 +17,8 @@ type Props = {
   revision: number;
   canCancel: boolean;
   canDelete: boolean;
-  /** Odkazy nahoře v nabídce (zápis, celý detail). */
-  links?: Array<{ href: string; label: string }>;
+  /** Odkazy nahoře v nabídce (zápis, celý detail). Ikona drží položky nabídky jednotné (A-09). */
+  links?: Array<{ href: string; label: string; icon: IconName }>;
   /** Odkaz na Přidat akci předvyplněnou podle této akce (`?kopie=`). */
   copyHref?: string;
   /** Další položky připravené serverem, například „Nahradit pravidelný termín“. */
@@ -35,6 +35,7 @@ export function EventMenu({ id, revision, canCancel, canDelete, links = [], copy
       <Menu label="Další možnosti">
         {links.map((link) => (
           <Link key={link.href} className="btn" href={link.href}>
+            <Icon name={link.icon} />
             {link.label}
           </Link>
         ))}

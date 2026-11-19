@@ -90,10 +90,10 @@ export async function EventPeek({ user, eventId, preview, previewKey, closeHref,
     );
     // Funkční Kalendář se v okně neukazuje. Oprava je odkaz jen při chybě, technické informace jsou v nabídce.
     const links = card.past
-      ? [{ href: `${fullHref}#nahravka`, label: "Nahrávka a zápis" }]
+      ? [{ href: `${fullHref}#nahravka`, label: "Nahrávka a zápis", icon: "file" as const }]
       : card.syncStatus === "attention"
-        ? [{ href: `${fullHref}#kalendar`, label: "Opravit v Kalendáři" }]
-        : [{ href: fullHref, label: "Technické informace" }];
+        ? [{ href: `${fullHref}#kalendar`, label: "Opravit v Kalendáři", icon: "calendar" as const }]
+        : [{ href: fullHref, label: "Technické informace", icon: "settings" as const }];
     return (
       <EventWindow
         title={card.label}

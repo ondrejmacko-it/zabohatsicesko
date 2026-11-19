@@ -87,6 +87,8 @@ export function RecordingSection({ eventId, eventLabel, panel }: { eventId: stri
       label="Vrátit zápis do návrhu…"
       pendingLabel="Vracím…"
       variant="danger"
+      icon="ban"
+      buttonClassName="menu-danger"
       confirm={{
         title: "Vrátit zápis do návrhu",
         text: "Kolegové zápis přestanou vidět a z pozvánky v Kalendáři zmizí odkaz na něj. Zápis zůstane u vás jako návrh, který můžete opravit a zveřejnit znovu.",
