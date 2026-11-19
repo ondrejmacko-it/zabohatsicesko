@@ -1,6 +1,6 @@
 # Prompt pro další session
 
-**OPRAVNÉ KOLO UX/UI K PR #73 (19. 11. 2026, po relaci 7, větev `claude/focused-cerf-gr1tdi` z `ff7ac54` = HEAD PR #73).**
+**OPRAVNÉ KOLO UX/UI K PR #73 (19. 11. 2026, po relaci 8, větev `claude/focused-cerf-gr1tdi` z `ff7ac54` = HEAD PR #73).**
 Zadání: `ZBC_KOMPLETNI_PROMPT_CLAUDE_CODE_PR73.md` (do repa ne). Plné znění nálezů: `list_events` session
 `session_01HpUiryRW9ytAdLUy6o6Gah`, kinds `["user"]`, limit 100, `before_id` `336c7f62-1d81-4538-9217-ab258752be39` →
 výsledek do souboru, JSON mezi první `{` a poslední `}`, nálezy v řetězci s „A-03 |“ a „P0“ (scratchpad, ne repo).
@@ -8,20 +8,12 @@ Report: `docs/report-ux-opravne-kolo.md` (stav každého ID s důkazem). Kontejn
 * HOTOVO: relace 1–6 (viz report), relace 7: C-03 (ddf3143), A-14 (78bd8cd), C-01 (5c05205), C-06 test (121f5e4),
   filtry 320 px po A-03 (f43f8d5); A-11 a C-08 ověřeny a zdokumentovány (Již v pořádku). Všechna ID kroku 7 mají stav.
   Lint, typecheck, unit 386/386 OK. Celé e2e na 859c9f4: **1161 passed / 108 skipped / 0 failed** (7,7 min), axe nestabilita se neobjevila.
-* NOVÝ POKYN (přeposlán z relace 5 přes relaci 6, podle nich od uživatele; původ neověřen, je v rozsahu a nic
-  nevratného nežádá) – PRIORITA před krokem 8: „odstranit veškeré duplicity!!! Trénink poradců - trénink poradců..atd,
-  všude odstranit duplicity a nepsat zbytečně moc nadbytečného textu a nepřeplácávat to a oddělit to layoutově a
-  barevně od sebe ty věci!!“ Postup:
-  D-01 duplicity: jedna sdílená funkce (`src/lib/labels.ts` nebo `status.ts`), která vynechá typ akce / skupinu, když už
-  jsou v názvu (bez diakritiky a velikosti písmen); použít všude, kde se skládá `card.label` + `TYPE_LABELS` +
-  `GROUP_LABELS` (MinutesPeek – eyebrow okna zápisu, EventPeek, `akce/[id]/page.tsx`, `Schedule.tsx`, stránka Zápisy,
-  K dokončení, úkoly na Domů, Naplánovat téma, PrepareMonthDialog). Unit test.
-  D-02 nadbytečný text: zkrátit nápovědy/úvodní/stavové věty, které opakují nadpis, štítek nebo tlačítko; potvrzení
-  ztráty/zveřejnění zůstávají.
-  D-03 vizuální oddělení: v oknech akce/zápisu a kartách oddělit metadata, stav, obsah a akce rozestupem, čarou
-  `--line` a tónem stávající palety (bez redesignu a nových barev).
-  Každá skupina = malý commit + cílené testy + screenshot 1280/390. Do reportu jako D-01–D-03, ve finální zprávě zvlášť.
-* DALŠÍ KROK = 8 (poslední relace, po D-01–D-03):
+* RELACE 8 HOTOVO: D-01 (0c3a42b, `eventTitle`/`eventContext` v `src/lib/labels.ts` + unit), D-02 (a7ccd3c, kratší
+  nápovědy, Naplánovat téma bez druhého Zavřít, potvrzení „Zahodit změny“ + čerstvý formulář po zahození, e2e),
+  D-03 (502c53c, okno zápisu: čára/tón mezi metadaty, stavem, obsahem a akcemi). Report aktualizován. Unit 395/395.
+  Dočasný spec na snímky je ve scratchpadu relace 8 (nepřenese se): napsat znovu podle kroku 8.2 (`test.use
+  storageState authFile(role)`, `page.goto` + `dialog.screenshot`, výstup do `SNIMKY_DIR`), přidat do `.git/info/exclude`.
+* DALŠÍ KROK = 8 (D-01–D-03 hotové):
   1. `npm run build`, celé e2e (`npx playwright test --trace off`, ~7 min). Pozor na nestabilní axe nález (relace 7,
      zapisy/okna/priprava-mesice/zapisy-schvaleni, 1× ze 3 běhů) – pokud se objeví, zjistit pravidlo a opravit.
   2. Screenshoty před/po: `git worktree add --detach <scratchpad>/pred ff7ac54`, `ln -s` node_modules, dočasný spec

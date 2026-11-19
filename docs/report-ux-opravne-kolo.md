@@ -1,4 +1,4 @@
-# Opravné kolo UX/UI k PR #73 – průběžný report (po relaci 7)
+# Opravné kolo UX/UI k PR #73 – průběžný report (po relaci 8)
 
 Větev `claude/focused-cerf-gr1tdi` z HEAD PR #73 (`ff7ac54`, shodné s referenčním commitem screenshotů).
 Zadání: `ZBC_KOMPLETNI_PROMPT_CLAUDE_CODE_PR73.md` (u uživatele, do repa se nedává). Relace končí na limitu
@@ -52,10 +52,17 @@ kontextu, práce pokračuje v navazující relaci. Nic není mergnuto ani nasaze
 | C-01 | **Opraveno** (5c05205) | `--muted` na panelech má 4,5–5,5 : 1 (AA splněno), problém je 12 px. Jen nápovědy, na kterých závisí výsledek, dostaly `.field-hint-key` (13 px, `--ink-soft`, 8+ : 1): limit/formát souboru, „Navržené datum, zkontrolujte“, kdo pozvánku nedostane, testovací režim pozvánek, co hromadné doplnění přepíše, jednorázový odkaz. Ostatní nápovědy beze změny. e2e `zapisy` kontroluje 13 px a barvu. |
 | C-06 | **Již v pořádku** (test 121f5e4) | Desktop: nativní HTML5 drag, žádný vlastní prvek v DOM. Telefon: `.move-ghost` = klon karty s `aria-hidden`, `pointer-events:none`, odstraní se v `stopTouch` (puštění, pointercancel, odchod ze stránky). e2e `mobilni-ovladani`: během tažení právě 1 kopie s textem karty, po puštění i puštění mimo 0 kopií a 0 `data-lifted`, po Nepřesouvat karta jednou na původním dni; `plan-planovani` (desktop) karta po zrušení jednou. |
 | C-08 | **Již v pořádku** / rozhodnutí uživatele | „Action time“ je firemní typ akce (`src/lib/labels.ts`), ne překlep – ponecháno. „NJBJK“ v repu ani seedu není: jde o data ručně zadaná na sdílené Preview DB. Před prezentací Preview vyčistit nebo znovu nasadit seed – rozhoduje uživatel (zásah do sdílených dat). |
-| D-01, D-02, D-03 | Zatím neřešeno (nový pokyn, přeposlaný z jiné relace) | Duplicity typu/skupiny v názvech, nadbytečný text, vizuální oddělení metadat/stavu/obsahu/akcí. Postup v `docs/dalsi-session.md`. |
+| D-01 | **Opraveno** (0c3a42b) | Sdílené `eventTitle` a `eventContext` v `src/lib/labels.ts`: porovnání bez diakritiky, velikosti písmen a interpunkce, po celých slovech. Téma, které obsahuje typ (nebo naopak), se nespojuje „Typ: Téma“; typ v názvu se znovu nepíše; skupina, kterou říká typ (Trénink poradců/FV FP = Finanční poradci, Trénink RM/FV RM = RM), se vynechá. Použito: detail akce (eyebrow), okno zápisu, karta Nejbližší akce, Zápisy, Naplánovat téma, úkoly (`journey.ts`), název pozvánky (`calendarSummary`), návrh zápisu. Unit `tests/duplicity-nazvu.test.ts` (9), e2e `temata-planovani` hlídá, že u FP se skupina neopakuje. Okno akce a karty Plánu skupinu nespojovaly (pole Pro koho). Snímky 1280/390 prohlédnuty. |
+| D-02 | **Opraveno** (a7ccd3c) | Naplánovat téma: důvod u návrhu „návrh“ (dřív „návrh, uloží se jen návrh“ vedle tlačítka Přidat do návrhu), bez druhého Zavřít dole (zavírá hlavička). Zápis: nápověda textu, souboru, ruční šablony a návrhu kratší; zrušen řádek „Použije se pro zápis akce: …“ (opakoval titulek okna). Navrhnout téma a svátek: jedna věta. Potvrzení ztráty/zveřejnění ponechána. Nově: **Zahodit změny** (okno i detail akce) zahazovalo neveřejné úpravy bez dotazu → samostatné potvrzovací okno (Zpět / Zahodit změny); otevřené okno po zahození hned ukáže zveřejněnou verzi (`key` = revize, dřív držel staré hodnoty a hrozilo jejich nové uložení). e2e `priprava-mesice` „zahození neveřejných změn se potvrzuje“. |
+| D-03 | **Opraveno** (502c53c) | Okno zápisu: metadata nad čarou `--line`, stav verze + Změnit zdroj v tónovaném pruhu `--beige`, obsah, pod ním akce (Upravit zápis, Pracovní přepis) oddělené čarou. Jen CSS pod `.peek-section`, žádné nové barvy. Okno akce (stavový pruh / údaje v rámečku / lišta akcí s čarou), Naplánovat téma a detail akce už oddělené byly – beze změny. Karty Plánu beze změny (kompaktní mřížka, zásah by byl redesign). Snímky 1280/390 prohlédnuty; e2e zapisy, zapisy-schvaleni, pristupnost (1280/390/320) OK. |
 | Filtry Plánu 320 px | **Opraveno** (f43f8d5) | Regrese po A-03: kratší štítky souhrnu (44 px) vs. zalomené „Vybrat návrhy“ (52 px) – `grid-auto-rows: 1fr`. e2e `mobilni-ovladani` „filtry 2 × 2“ (320/360/390). |
 
 ## Ověření (skutečně spuštěno v této relaci)
+
+* Relace 8: typecheck OK, lint OK, unit **395/395**; e2e okna, priprava-mesice, plan-planovani, rychle-akce,
+  temata-planovani, zapisy, zapisy-schvaleni, stranky (1280 + 390) **261 passed / 0 failed**; po D-03 zapisy,
+  zapisy-schvaleni, pristupnost (1280/390/320) 17 passed. Celé e2e po D-01–D-03 zatím NEběželo (krok 8).
+* Relace 7 (konec): celé e2e 1161 passed / 108 skipped / 0 failed.
 
 * typecheck OK, lint OK, unit **381/381** (vitest, celá sada).
 * e2e `priprava-mesice` + `zapisy-schvaleni` (windows-1280): 11 testů, po úpravě očekávání Z-01 vše prošlo;
