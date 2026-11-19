@@ -131,12 +131,15 @@ export function nextFreePriority(topics: readonly Pick<TopicStat, "priorityRank"
  * Posun o jedno místo v daném pořadí: vrátí nové pořadí ID, nebo null, když téma už je na kraji
  * (nebo v pořadí není). Výměna se sousedem, ostatní zůstávají.
  */
-export function moveInOrder(ids: readonly string[], id: string, direction: "up" | "down"): string[] | null {
+export function moveInOrder(ids: readonly string[], id: string, target: "up" | "down" | number): string[] | null {
   const index = ids.indexOf(id);
-  const other = direction === "up" ? index - 1 : index + 1;
-  if (index < 0 || other < 0 || other >= ids.length) return null;
+  if (index < 0) return null;
+  // Číslo = cílová pozice v seznamu (přetažení), mimo rozsah se ořízne na začátek nebo konec.
+  const to = typeof target === "number" ? Math.min(ids.length - 1, Math.max(0, Math.trunc(target))) : target === "up" ? index - 1 : index + 1;
+  if (to < 0 || to >= ids.length || to === index) return null;
   const next = [...ids];
-  [next[index], next[other]] = [next[other]!, next[index]!];
+  next.splice(index, 1);
+  next.splice(to, 0, id);
   return next;
 }
 

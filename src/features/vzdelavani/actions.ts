@@ -573,8 +573,17 @@ export async function setTopicPriorityAction(_prev: ActionResult | null, formDat
 
 export async function moveTopicAction(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
   return run(async (user) => {
-    const data = z.object({ topicId: z.string().max(80), direction: z.enum(["up", "down"]) }).parse(formObject(formData));
-    await moveTopic(user, data.topicId, data.direction);
+    const data = z
+      .object({
+        topicId: z.string().max(80),
+        direction: z.enum(["up", "down"]).optional(),
+        // Přetažení: cílová pozice ve skupině a pořadí, které správce viděl (kontrola souběhu).
+        to: z.coerce.number().int().min(0).max(500).optional(),
+        expected: z.string().max(8000).optional(),
+      })
+      .refine((d) => d.direction !== undefined || d.to !== undefined)
+      .parse(formObject(formData));
+    await moveTopic(user, data.topicId, data.to ?? data.direction!, data.expected?.split(",").filter(Boolean));
     return { ok: true };
   });
 }

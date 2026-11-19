@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, asc, eq, gt, isNotNull, isNull, ne, sql } from "drizzle-orm";
+import { and, asc, eq, gt, isNotNull, inArray, isNull, ne, sql } from "drizzle-orm";
 import { toDateKey } from "@/lib/time";
 import { audit } from "@/server/audit";
 import { config, now } from "@/server/config";
@@ -262,32 +262,39 @@ export async function setTopicPriority(viewer: Viewer, topicId: string, guarante
  * ostatními (ruční pořadí). Při prvním ručním posunu se aktuální pořadí podle zájmu uloží celé,
  * aby se ostatní témata nepřeházela. Téma na kraji zůstane, kde je.
  */
-export async function moveTopic(viewer: Viewer, topicId: string, direction: "up" | "down"): Promise<void> {
+/**
+ * Posune téma v jeho skupině (garantovaná / ostatní) o jedno místo, nebo na cílovou pozici (přetažení).
+ * Skupinu nikdy nemění. `expected` je pořadí skupiny, jak ho viděl správce při přetažení: když se mezitím
+ * změnilo (jiný správce, nové téma), server nic nezapíše a vrátí `conflict`, klient vrátí původní pořadí.
+ */
+export async function moveTopic(viewer: Viewer, topicId: string, target: "up" | "down" | number, expected?: readonly string[]): Promise<void> {
   if (!isOrganizer(viewer)) throw new DomainError("forbidden");
   await orderTransaction(async (tx) => {
     const topic = await requireActiveTopic(tx, topicId);
     const all = await activeTopics(tx);
-    if (isGuaranteed(topic)) {
-      const order = guaranteedTopics(all.map((t) => ({ ...t, interestCount: 0 })));
-      const next = moveInOrder(order.map((t) => t.id), topicId, direction);
-      if (!next) return;
-      // Soused, se kterým se téma vymění, stojí v novém pořadí na původním místě tématu.
-      const other = order.find((t) => t.id === next[order.findIndex((o) => o.id === topicId)])!;
-      // Výměna přes prázdnou hodnotu: unikátní index nepovolí ani na okamžik dvě stejná pořadí.
-      await tx.update(topics).set({ priorityRank: null }).where(eq(topics.id, topicId));
-      await tx.update(topics).set({ priorityRank: topic.priorityRank }).where(eq(topics.id, other.id));
-      await tx.update(topics).set({ priorityRank: other.priorityRank }).where(eq(topics.id, topicId));
+    const guaranteed = isGuaranteed(topic);
+    const counts = guaranteed ? null : await interestCounts(tx);
+    const order = guaranteed
+      ? guaranteedTopics(all.map((t) => ({ ...t, interestCount: 0 })))
+      : otherTopics(all.map((t) => ({ ...t, interestCount: counts!.get(t.id) ?? 0 })));
+    const ids = order.map((t) => t.id);
+    if (expected && (expected.length !== ids.length || expected.some((id, i) => id !== ids[i]))) throw new DomainError("conflict");
+    const next = moveInOrder(ids, topicId, target);
+    if (!next) return;
+    if (guaranteed) {
+      // Pořadí 1–3 zůstávají stejná čísla, jen se přeskupí. Nejdřív všechna na prázdnou hodnotu: unikátní
+      // index nepovolí ani na okamžik dvě stejná pořadí.
+      const ranks = order.map((t) => t.priorityRank!).sort((a, b) => a - b);
+      await tx.update(topics).set({ priorityRank: null }).where(inArray(topics.id, ids));
+      for (const [index, id] of next.entries()) await tx.update(topics).set({ priorityRank: ranks[index]! }).where(eq(topics.id, id));
     } else {
-      const counts = await interestCounts(tx);
-      const order = otherTopics(all.map((t) => ({ ...t, interestCount: counts.get(t.id) ?? 0 })));
-      const next = moveInOrder(order.map((t) => t.id), topicId, direction);
-      if (!next) return;
       for (const [index, id] of next.entries()) {
         const current = order.find((t) => t.id === id)!;
         if (current.manualRank !== index + 1) await tx.update(topics).set({ manualRank: index + 1 }).where(eq(topics.id, id));
       }
     }
-    await audit(tx, viewer.id, direction === "up" ? "topic.move_up" : "topic.move_down", "topic", topicId);
+    const action = typeof target === "number" ? "topic.move_to" : target === "up" ? "topic.move_up" : "topic.move_down";
+    await audit(tx, viewer.id, action, "topic", topicId);
   });
 }
 

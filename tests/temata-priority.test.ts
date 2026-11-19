@@ -77,6 +77,11 @@ describe("garantovaná témata a ruční pořadí: pravidla", () => {
     expect(moveInOrder(["a", "b"], "a", "up")).toBeNull();
     expect(moveInOrder(["a", "b"], "b", "down")).toBeNull();
     expect(moveInOrder(["a"], "x", "up")).toBeNull();
+    // Přetažení na pozici: přesune, ne vymění; mimo rozsah se ořízne, stejné místo = nic.
+    expect(moveInOrder(["a", "b", "c", "d"], "a", 2)).toEqual(["b", "c", "a", "d"]);
+    expect(moveInOrder(["a", "b", "c", "d"], "d", 0)).toEqual(["d", "a", "b", "c"]);
+    expect(moveInOrder(["a", "b", "c"], "a", 99)).toEqual(["b", "c", "a"]);
+    expect(moveInOrder(["a", "b", "c"], "b", 1)).toBeNull();
   });
 });
 
@@ -197,6 +202,20 @@ describe("garantovaná témata a pořadí: služby", () => {
       code(setTopicPriority(organizer, "topic-preparation", true)),
     ]);
     expect(results.sort()).toEqual(["ok", "priority_full"]);
+  });
+
+  test("přetažení na pozici: garantovaná drží čísla priorit, souběh se odmítne bez zápisu", async () => {
+    const before = await ranks();
+    // Druhé garantované na první místo: priority se jen přeskupí.
+    await moveTopic(organizer, "topic-rm", 0, ["topic-questions", "topic-rm"]);
+    const state = await ranks();
+    expect([state["topic-rm"]?.priority, state["topic-questions"]?.priority]).toEqual([before["topic-questions"]?.priority, before["topic-rm"]?.priority]);
+    // Zastaralé pořadí (správce viděl jiné) → conflict, nic se nezmění.
+    expect(await code(moveTopic(organizer, "topic-rm", 1, ["topic-questions", "topic-rm"]))).toBe("conflict");
+    expect(await ranks()).toEqual(state);
+    // Přetažením se nedá změnit skupina: ostatní téma zůstane bez priority.
+    await moveTopic(organizer, "topic-priority", 0);
+    expect((await ranks())["topic-priority"]?.priority ?? null).toBeNull();
   });
 
   test("unikátní index nedovolí stejné pořadí dvěma nearchivovaným tématům", async () => {
