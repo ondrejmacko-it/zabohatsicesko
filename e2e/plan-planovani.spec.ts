@@ -128,3 +128,20 @@ test.describe("Plán: účastník nepřidává ani nepřesouvá @desktop", () =>
     await expect(page.getByRole("dialog")).toHaveCount(0);
   });
 });
+
+test.describe("Plán: souhrn měsíce (A-03)", () => {
+  test.use({ storageState: authFile("spravce") });
+
+  test("štítky říkají, co čeká, a zúží plán na tyto akce", async ({ page }) => {
+    await openPlan(page);
+    const group = page.getByRole("group", { name: "Zúžit plán měsíce" }).first();
+    const chip = group.getByRole("link", { name: /^Doplnit \d+ akc/ });
+    await expect(chip).toBeVisible();
+    await expect(chip).toHaveAttribute("title", /Chybí téma, vedoucí/);
+    await expect(group.getByRole("link", { name: /Chybí údaje/ })).toHaveCount(0);
+    await expect(group.getByRole("link", { name: /^Návrhy \d+ ke zveřejnění/ })).toBeVisible();
+    await chip.click();
+    await expect(page).toHaveURL(/stav=doplnit#mesic/);
+    await expect(group.getByRole("link", { name: /^Doplnit .*zrušit filtr/ })).toHaveAttribute("aria-current", "true");
+  });
+});

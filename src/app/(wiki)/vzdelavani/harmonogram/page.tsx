@@ -133,10 +133,12 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   const summary = managing && monthKey >= monthOf(todayKey) ? monthSummary(monthCards, monthKey) : null;
   const chips: StateChip[] = summary
     ? [
-        { state: "navrhy" as const, label: "Návrhy", count: summary.toPublish },
-        { state: "doplnit" as const, label: "Chybí údaje", count: summary.toComplete },
+        { state: "navrhy" as const, label: "Návrhy", spoken: "ke zveřejnění", count: summary.toPublish, hint: "Návrhy, které kolegové uvidí až po zveřejnění." },
+        { state: "doplnit" as const, label: "Doplnit", spoken: summary.toComplete <= 4 ? "akce" : "akcí", count: summary.toComplete, hint: "Chybí téma, vedoucí nebo oprava v Kalendáři." },
       ]
         .filter((chip) => chip.count > 0)
+        // Kotva #mesic: zúžený plán pak začíná první akcí, kterou štítek počítá (mřížka i agenda jsou v DOM zároveň,
+        // kotva na kartu by na telefonu mířila na skrytou mřížku).
         .map((chip) => ({ ...chip, href: `${link({ stav: chip.state === state ? undefined : chip.state })}#mesic` }))
     : [];
   // Vlastní úkoly diváka (záznam, zápis…) jsou v Plánu sbalené do jednoho řádku. Celé jsou na Úvodu.

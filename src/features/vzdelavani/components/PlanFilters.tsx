@@ -12,7 +12,8 @@ import { SelectToggle, useSelection } from "./PlanSelection";
 type Option = { key: string; label: string };
 
 /** Štítek stavu měsíce (jen správce): počet a odkaz, který harmonogram zúží na dotčené termíny. */
-export type StateChip = { state: PlanState; label: string; count: number; href: string };
+/** Štítek souhrnu měsíce. `spoken` doplní přístupný název za počtem („Doplnit 8 akcí“), `hint` vysvětlí, co počet znamená. */
+export type StateChip = { state: PlanState; label: string; spoken: string; count: number; hint: string; href: string };
 
 type Props = {
   /** Parametry, které filtr nemění (měsíc, zobrazení, stav). Posílají se spolu s výběrem. */
@@ -30,14 +31,15 @@ type Props = {
   quick: { monthKey: string; todayKey: string; planHref: string; addDate: string | null };
 };
 
-/** Štítky Návrhy a Chybí údaje: klik plán zúží, znovu klik filtr zruší. Sdílí je řádek filtrů i rychlá nabídka. */
+/** Štítky Návrhy a Doplnit (souhrn celého měsíce, ne osobní úkoly): klik plán zúží, znovu klik filtr zruší. Sdílí je řádek filtrů i rychlá nabídka. */
 function ChipLinks({ chips, state }: { chips: StateChip[]; state: PlanState | undefined }) {
   return chips.map((chip) => {
     const on = chip.state === state;
     return (
-      <Link key={chip.state} className="pill pill-count" href={chip.href} aria-current={on ? "true" : undefined}>
-        {/* Přístupný název skládá viditelný text (WCAG 2.5.3), skrytá je jen nápověda ke zrušení. */}
+      <Link key={chip.state} className="pill pill-count" href={chip.href} aria-current={on ? "true" : undefined} title={chip.hint}>
+        {/* Přístupný název začíná viditelným textem (WCAG 2.5.3): „Doplnit 10 akcí“, skrytá je jen nápověda ke zrušení. */}
         {chip.label} <span className="pill-number">{chip.count}</span>
+        <span className="visually-hidden"> {chip.spoken}</span>
         {on && (
           <>
             <span className="visually-hidden">, zrušit filtr</span>
@@ -149,7 +151,7 @@ export function PlanFilters({ keep, types, type, typeResetHref, preview, chips, 
         hasMenu || chips.length ? (
           <div className="stack">
             {chips.length > 0 && (
-              <div className="plan-filters-start" role="group" aria-label="Zúžit plán">
+              <div className="plan-filters-start" role="group" aria-label="Zúžit plán měsíce">
                 <ChipLinks chips={chips} state={state} />
               </div>
             )}
@@ -168,7 +170,7 @@ export function PlanFilters({ keep, types, type, typeResetHref, preview, chips, 
   return (
     <>
       <div ref={row} className="plan-filters" data-items={count}>
-        <div className="plan-filters-start" role="group" aria-label="Zúžit plán">
+        <div className="plan-filters-start" role="group" aria-label="Zúžit plán měsíce">
           <ChipLinks chips={chips} state={state} />
           {type && typeResetHref && (
             <Link className="pill pill-count" href={typeResetHref} aria-current="true" data-wide={wideLast && !hasMenu && !canSelect ? true : undefined}>
