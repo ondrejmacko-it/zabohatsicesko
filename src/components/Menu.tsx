@@ -44,7 +44,10 @@ export function Menu({ label, children, small, iconOnly, className, variant }: P
     const size = list.current.getBoundingClientRect();
     const below = window.innerHeight - anchor.bottom - GAP - EDGE;
     const top = size.height <= below || anchor.top < size.height + GAP + EDGE ? anchor.bottom + GAP : anchor.top - GAP - size.height;
-    const left = Math.min(Math.max(EDGE, anchor.right - size.width < EDGE ? anchor.left : anchor.right - size.width), window.innerWidth - size.width - EDGE);
+    // Menu roste do volné strany: tlačítko v levé půlce okna → menu zarovnané k jeho levé hraně, jinak k pravé.
+    // Na krajích ho drží uvnitř okna EDGE.
+    const fromLeft = anchor.left + anchor.width / 2 < window.innerWidth / 2;
+    const left = Math.min(Math.max(EDGE, fromLeft ? anchor.left : anchor.right - size.width), window.innerWidth - size.width - EDGE);
     setPlace({ top: Math.max(EDGE, top), left: Math.max(EDGE, left) });
   }, [open]);
 

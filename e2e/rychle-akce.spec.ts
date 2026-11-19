@@ -231,3 +231,38 @@ test.describe("Rychlé akce ⋯ na telefonu", () => {
     await expect(picker).toBeHidden();
   });
 });
+
+test.describe("⋯ a „+“ v mřížce @desktop", () => {
+  test.use({ storageState: authFile("spravce") });
+
+  // A-01, A-08, A-02: ⋯ je vidět bez najetí a trefí se, menu roste do volné strany, „+“ v prázdném dni je naznačené.
+  test("viditelné tlačítko, menu podle strany, decentní plus", async ({ page }) => {
+    await page.goto("/vzdelavani/harmonogram?mesic=2026-11");
+    await settle(page);
+    const triggers = page.locator(".menu-card-trigger:visible");
+    const first = triggers.first();
+    const box = (await first.boundingBox())!;
+    expect(box.width).toBeGreaterThanOrEqual(36);
+    expect(box.height).toBeGreaterThanOrEqual(32);
+    expect(await first.evaluate((el) => getComputedStyle(el).opacity)).toBe("1");
+
+    const viewport = page.viewportSize()!;
+    for (const trigger of [first, triggers.last()]) {
+      await trigger.scrollIntoViewIfNeeded();
+      await trigger.click();
+      const anchor = (await trigger.boundingBox())!;
+      const list = page.locator(".menu-list:visible");
+      const menu = (await list.boundingBox())!;
+      if (anchor.x + anchor.width / 2 < viewport.width / 2) expect(Math.abs(menu.x - anchor.x)).toBeLessThan(2);
+      else expect(Math.abs(menu.x + menu.width - (anchor.x + anchor.width))).toBeLessThan(2);
+      await page.keyboard.press("Escape");
+      await expect(list).toHaveCount(0);
+    }
+
+    await page.goto("/vzdelavani/harmonogram?mesic=2027-02");
+    await settle(page);
+    const emptyPlus = page.locator("td:not(:has(a[class*='event'])) a[aria-label^='Přidat akci na']").first();
+    await page.mouse.move(0, 0);
+    expect(Number(await emptyPlus.evaluate((el) => getComputedStyle(el).opacity))).toBeCloseTo(0.35, 2);
+  });
+});

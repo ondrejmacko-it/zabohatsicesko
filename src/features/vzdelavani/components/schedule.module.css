@@ -105,7 +105,8 @@
   vertical-align: top;
 }
 
-/* „+“ pro přidání akce na den: správci se ukáže při najetí nebo fokusu, na dotyku je vidět stále. */
+/* „+“ pro přidání akce na den: v prázdném dni decentně vidět (správce ví, kam kliknout), ve dni s akcemi
+   až při najetí nebo fokusu, aby nerušil karty. Na dotyku je vidět stále. */
 .addDay {
   position: absolute;
   top: 4px;
@@ -119,6 +120,10 @@
   background: #fff;
   color: var(--ink);
   opacity: 0;
+}
+
+.cell:not(:has(.event)) .addDay {
+  opacity: 0.35;
 }
 
 .cell:hover .addDay,
