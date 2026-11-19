@@ -143,7 +143,11 @@ export function Combobox({ id, name, value, onChange, options, placeholder, list
           onChange(event.target.value);
           show(event.target.value);
         }}
-        onClick={() => (open ? close() : show(null))}
+        // Klik nabídku jen otevře. Zavírá ji výběr, Esc, Tab nebo odchod z pole, takže klik do rozepsaného
+        // textu (například kvůli posunu kurzoru) nabídku neschová.
+        onClick={() => {
+          if (!open) show(null);
+        }}
         onKeyDown={onKeyDown}
         onBlur={close}
       />

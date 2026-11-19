@@ -334,6 +334,8 @@ function EventForm({
         className="input"
         name="label"
         value={values.label}
+        // Prohlížeč by jinak nabízel dřívější názvy přes nabídku témat a štítků.
+        autoComplete="off"
         onChange={(e) => set("label", e.target.value)}
         required
         minLength={2}

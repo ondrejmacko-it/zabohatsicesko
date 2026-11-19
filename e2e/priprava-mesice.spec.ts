@@ -111,6 +111,9 @@ test.describe("okno akce: ochrana neuložených změn", () => {
 
     // Porovnávají se hodnoty: vrácené pole už za změnu nestojí.
     await topic.fill(original);
+    // Psaní otevře nabídku témat; první Esc zavře jen ji, druhý okno.
+    await page.keyboard.press("Escape");
+    await expect(add.getByRole("listbox")).toBeHidden();
     await page.keyboard.press("Escape");
     await expect(add).toBeHidden();
   });
