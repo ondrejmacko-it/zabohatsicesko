@@ -1,6 +1,6 @@
 # Prompt pro další session
 
-**SJEDNOCENÍ WIKI – RELACE 8 → 9 (19. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd`, PR #74).**
+**SJEDNOCENÍ WIKI – RELACE 8 → 9 (relaci 9 zakládá uživatel ručně: limit hloubky řetězu relací) (19. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd`, PR #74).**
 Zadání beze změny (blok níže; plné znění `list_events` session `session_01HpUirwZ4XH6LuKaqHTR6A4`, kinds `["user"]`,
 poslední user zpráva „ZBČ – PR #74: sjednocení Wiki…“). Report: `docs/report-opravne-kolo-pr74.md`, sekce Relace 8.
 * HOTOVO: P5 (7aa044e) – zapisující testy témat se značkou `@zapis-temat` běží jen v projektu `zapis-temat`, který
@@ -8,9 +8,9 @@ poslední user zpráva „ZBČ – PR #74: sjednocení Wiki…“). Report: `doc
   `filterCards({types, states})` NEBO v kategorii / A mezi, `filterValues` (opakovaný parametr i čárky), checkboxy
   v nabídce Filtry (router.push, nabídka zůstává otevřená), štítky typů s křížkem, „Zrušit filtry“; unit + e2e
   test „více filtrů…“ v `plan-planovani.spec.ts`. Ověřeno: typecheck, unit dokonceni, build OK; výsledek cílených
-  e2e: temata-planovani + plan-planovani 81 passed / 4 failed – selhal jen nový test „více filtrů…“ (klik na „Filtry“
-  přes getByText byl nejednoznačný); lokátor opraven na `.plan-filters .filter-button`, NEOVĚŘENO – NEJDŘÍV spusť
-  `plan-planovani.spec.ts` a pak 2× samostatně `temata-planovani.spec.ts` (po teardown úpravě zatím 1× OK).
+  e2e: temata-planovani 2× samostatně 45/45 passed (P5 OVĚŘENO). Test „více filtrů…“ padal na strict mode
+  (`.plan-filters .filter-button` = 2 prvky, zřejmě i v rychlé nabídce); přidáno `.first()`, NEOVĚŘENO – nejdřív
+  spusť `plan-planovani.spec.ts` (před během zabij servery na portech 3310/3311: `fuser -k 3310/tcp 3311/tcp`).
 * P2: analýza a návrh v reportu (cookie `zbc_nahled`, `currentPreview`, lišta Účet vs. Pohled, okrový pruh, stránky
   Domů/Témata/Zápisy jen ke čtení). Návrh poslán uživateli v relaci 8, odpověď zatím žádná → implementuj až na konci,
   pokud uživatel nenamítne; při implementaci odstraň „Zobrazit jako“ z `PlanFilters` (je tam zatím dál).
