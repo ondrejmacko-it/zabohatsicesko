@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { cardDetails } from "@/features/vzdelavani/status";
+import { cardDetails, hiddenMissingDetails } from "@/features/vzdelavani/status";
 import type { EventCard } from "@/server/services/events";
 
 const card = (over: Partial<EventCard> = {}): EventCard => ({
@@ -77,5 +77,20 @@ describe("kolonky Kdo a Téma na kartě harmonogramu", () => {
       "Kdo: Eva",
       "Téma: Bude upřesněno",
     ]);
+  });
+});
+
+describe("výstraha na kartě jen pro chybějící údaj, který karta neukazuje (A-04)", () => {
+  test("řádky „— doplnit“ už problém hlásí, výstraha se neopakuje", () => {
+    expect(hiddenMissingDetails(card(), true)).toEqual([]);
+    expect(hiddenMissingDetails(card({ leadName: "Vašek" }), true)).toEqual([]);
+  });
+
+  test("Action time bez tématu řádek Téma nemá, výstraha zůstává", () => {
+    expect(hiddenMissingDetails(card({ type: "action", leadName: "Vašek" }), true)).toEqual(["téma"]);
+  });
+
+  test("účastník výstrahu nikdy nedostane", () => {
+    expect(hiddenMissingDetails(card({ type: "action" }), false)).toEqual([]);
   });
 });

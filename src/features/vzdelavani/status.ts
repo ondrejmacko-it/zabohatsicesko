@@ -62,6 +62,15 @@ export function missingDetails(card: EventCard, managing: boolean): string[] {
   return [!card.topicTitle && "téma", !card.leadName && "vedoucí"].filter((m): m is string => Boolean(m));
 }
 
+/**
+ * Chybějící údaje, které karta neukazuje jako řádek „— doplnit“ (typicky téma u Action time). Jen ty dostanou
+ * ikonu výstrahy, aby karta nehlásila tentýž problém dvakrát (A-04).
+ */
+export function hiddenMissingDetails(card: EventCard, managing: boolean): string[] {
+  const shown = new Set<string>(cardDetails(card, managing).filter((d) => d.missing).map((d) => (d.label === "Kdo" ? "vedoucí" : "téma")));
+  return missingDetails(card, managing).filter((m) => !shown.has(m));
+}
+
 export type CardDetail = { label: "Kdo" | "Téma"; value: string; missing: boolean };
 
 const sameText = (a: string, b: string) => a.trim().toLocaleLowerCase("cs") === b.trim().toLocaleLowerCase("cs");

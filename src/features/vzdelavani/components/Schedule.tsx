@@ -14,7 +14,7 @@ import {
   weekdayShort,
 } from "@/lib/time";
 import type { EventCard } from "@/server/services/events";
-import { badgeClass, cardDetails, cardStatus, cardTone, isMovable, isPickable, missingDetails, primaryStatus } from "../status";
+import { badgeClass, cardDetails, cardStatus, cardTone, hiddenMissingDetails, isMovable, isPickable, primaryStatus } from "../status";
 import { CardMenu, type CardMenuItem } from "./CardMenu";
 import { PickBox } from "./PlanSelection";
 import styles from "./schedule.module.css";
@@ -78,7 +78,8 @@ function GhostBlock({ card, hrefFor = pageHref }: { card: EventCard; hrefFor?: C
  */
 function CardMeta({ card, managing }: { card: EventCard; managing: boolean }) {
   const status = cardStatus(card);
-  const missing = missingDetails(card, managing);
+  // Jeden stavový štítek; výstraha jen pro chybějící údaj, který karta jinak neukazuje.
+  const missing = hiddenMissingDetails(card, managing);
   if (!status && !missing.length) return null;
   const missingText = `Chybí ${missing.join(" a ")}`;
   return (
