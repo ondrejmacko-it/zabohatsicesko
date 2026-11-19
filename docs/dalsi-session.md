@@ -1,5 +1,25 @@
 # Prompt pro další session
 
+**FINÁLNÍ KONTROLA A NOVÝ PR (19. 11. 2026, po relaci 1, větev `claude/focused-cerf-gr1tdi`).**
+Zadání: dlouhý prompt uživatele „ZBČ – Finální kontrola, dokončení oprav a příprava nového PR“ (body 1–13). Plné znění:
+`list_events` session `session_01HpUiryoWyPcP1uKF2Ws911`, kinds `["user"]`, poslední user zpráva. PR #73 je SLOUČENÝ
+(main `e27b631` = strom `ff7ac54`), do jeho větve nepushovat. Průběžný report: `docs/report-finalni-kontrola.md`.
+* HOTOVO relace 1: inventura Gitu (bod 1), migrace a DB read-only (bod 7: produkce má 0013/0014, 0 zápisů), NJBJK read-only (bod 10).
+* DALŠÍ KROKY v pořadí (každý malý commit + cílené testy; větší změny nejdřív popsat v reportu):
+  1. Bod 7 dokončit: runtime logy produkce kolem 07:46–07:50 UTC (chyby migrací), návrh rollbacku/zálohy (Neon branch/PITR 6 h).
+  2. Bod 4A: `minutesSchema` vyžaduje Shrnutí i pro návrh → ověřit testem, případně oddělit schéma konceptu a schválení.
+     4B/4C: souběh `approveMinutes` vs `createMinutesDraft`/`updateMinutes` (kontroly před transakcí?) → reprodukční test, oprava.
+     4D: jen návrh PDF/DOCX do reportu.
+  3. Bod 2: sjednotit potvrzení `ActionForm` (vlastní `Modal`) se `ConfirmDialog` – sdílený základ, `dialog` vs `alertdialog`,
+     dvojí odeslání, Esc jen vnořené okno; regresní test eb67ebd existuje v `priprava-mesice.spec.ts`.
+  4. Bod 3: `PrepareMonthDialog` `<datalist>` → Combobox (nekontrolovaná pole, bez překreslování měsíce); testy Comboboxu.
+  5. Bod 5: garantovaná témata – stav „garantované bez termínu“ (návrh), 3 priority, archivace.
+  6. Bod 6: datum/čas AM/PM (locale `cs-CZ` v Playwrightu? snímky ukazují 11/18/2026 a AM) – zjistit příčinu, nepřidávat datepicker.
+  7. Bod 8: celé e2e + build + lint + typecheck + unit na finálním HEAD; Firefox/WebKit jen pokud jdou nainstalovat.
+  8. Bod 9 bezpečnost, bod 11 nový PR do main (draft, bez merge), bod 12 finální report + zpráva uživateli.
+* Pravidla: produkce jen SELECT; NJBJK nemazat; žádný merge/deploy; relace samy zakládají navazující (`create_session`,
+  `source_revision` a `outcome_branch` = `claude/focused-cerf-gr1tdi`), uživateli se ozvat až v poslední.
+
 **OPRAVNÉ KOLO UX/UI K PR #73 – HOTOVO (19. 11. 2026, relace 9, větev `claude/focused-cerf-gr1tdi` z `ff7ac54` = HEAD PR #73).**
 Závěrečný report: `docs/report-ux-opravne-kolo.md` (shrnutí po oblastech, stav každého ID, před/po, testy, rizika, otázky).
 Snímky před/po: `docs/screenshots/opravne-kolo/` (`pred-*` = ff7ac54, `po-*` = eb67ebd).
