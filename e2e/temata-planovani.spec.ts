@@ -78,9 +78,12 @@ test.describe("Témata: garantovaná a ostatní", () => {
     await expect(guaranteed.locator(".topic-row .item-title > span[id]")).toHaveText(["Otevřené otázky na schůzce", "Návaznost po konzultaci"]);
     await expect(page.getByRole("heading", { name: "Ostatní témata" })).toBeVisible();
     await expect(rowOf(guaranteed, "Otevřené otázky na schůzce").getByText("Nejžádanější")).toBeVisible();
-    // Správce vidí, že lze nastavit až tři, a které garantované téma nemá budoucí termín.
+    // Bez počítadla „ze 3“. Garantované téma bez budoucího termínu: „bez termínu“, nebo oranžově „v návrhu na“,
+    // když ho souběžný test mezitím dal do návrhu akce (sdílená data). Oba stavy se nikdy nesejdou u jednoho tématu.
     await expect(guaranteed.getByText(/ze 3/)).toHaveCount(0);
-    await expect(guaranteed.locator(".topic-unscheduled").first()).toBeVisible();
+    const first = rowOf(guaranteed, "Otevřené otázky na schůzce");
+    await expect(first.locator(".topic-unscheduled, .topic-in-draft")).toHaveCount(1);
+    await expect(first.locator(".topic-unscheduled, .topic-in-draft")).toHaveText(/^( · bez termínu|v návrhu na \d+\. \d+\.)$/);
 
     await menuOf(page, "Otevřené otázky na schůzce").click();
     await expect(openMenu(page).locator("a, button")).toHaveText(["Naplánovat téma", "Upravit téma", "Zrušit prioritu", "Posunout níž", "Archivovat…"]);
