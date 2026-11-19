@@ -151,15 +151,24 @@ test.describe("Plán na telefonu: přesun úchytem", () => {
     const point = { x: box.x + box.width / 2, y: box.y + Math.min(box.height / 2, 40) };
     await finger.move(start, point);
     await expect(target).toHaveAttribute("data-drop-over", "");
+    // C-06: během tažení jediná kopie karty, nepřekáží cíli (pointer-events) ani čtečce, originál zůstává na místě.
+    const ghost = page.locator(".move-ghost");
+    await expect(ghost).toHaveCount(1);
+    await expect(ghost).toContainText(label!);
+    await expect(ghost).toHaveCSS("pointer-events", "none");
+    await expect(ghost).toHaveAttribute("aria-hidden", "true");
     await finger.up();
 
     const confirm = page.getByRole("dialog", { name: "Přesunout akci" });
     await expect(confirm).toContainText(`Přesunout akci ${label} z st 18. 11. na čt 19. 11.?`);
+    await expect(ghost).toHaveCount(0);
+    await expect(page.locator("[data-lifted]")).toHaveCount(0);
     await expect(page.locator(".move-panel")).toHaveCount(0);
     await expect(page.locator("body")).not.toHaveAttribute("data-moving", "");
     await confirm.getByRole("button", { name: "Nepřesouvat" }).click();
     await expect(confirm).toBeHidden();
     await expect(from.getByText(label!)).toBeVisible();
+    await expect(page.locator(`[data-move-handle][data-handle-label="${label}"]`)).toHaveCount(1);
     await expect(page).not.toHaveURL(/akce=/);
   });
 
@@ -203,6 +212,7 @@ test.describe("Plán na telefonu: přesun úchytem", () => {
     await expect(page.getByRole("dialog")).toHaveCount(0);
     await expect(page.locator(".move-panel")).toHaveCount(0);
     await expect(page.locator("[data-lifted]")).toHaveCount(0);
+    await expect(page.locator(".move-ghost")).toHaveCount(0);
 
     // Ťuknutí na kartu otevře detail akce, ne přesun.
     const card = agendaDay(page, "2026-11-18").getByRole("link").filter({ hasText: (await handle.getAttribute("data-handle-label"))! });
