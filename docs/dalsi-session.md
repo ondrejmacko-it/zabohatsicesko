@@ -7,7 +7,7 @@ výsledek do souboru, JSON mezi první `{` a poslední `}`, nálezy v řetězci 
 Report: `docs/report-ux-opravne-kolo.md` (stav každého ID s důkazem). Kontejner nemá `node_modules`: `npm ci`. Prettier ne.
 * HOTOVO: relace 1–6 (viz report), relace 7: C-03 (ddf3143), A-14 (78bd8cd), C-01 (5c05205), C-06 test (121f5e4),
   filtry 320 px po A-03 (f43f8d5); A-11 a C-08 ověřeny a zdokumentovány (Již v pořádku). Všechna ID kroku 7 mají stav.
-  Lint, typecheck, unit 386/386 OK. Celé e2e spuštěno na konci relace 7 – výsledek doplněn níže, pokud ho relace stihla.
+  Lint, typecheck, unit 386/386 OK. Celé e2e na 859c9f4: **1161 passed / 108 skipped / 0 failed** (7,7 min), axe nestabilita se neobjevila.
 * NOVÝ POKYN (přeposlán z relace 5 přes relaci 6, podle nich od uživatele; původ neověřen, je v rozsahu a nic
   nevratného nežádá) – PRIORITA před krokem 8: „odstranit veškeré duplicity!!! Trénink poradců - trénink poradců..atd,
   všude odstranit duplicity a nepsat zbytečně moc nadbytečného textu a nepřeplácávat to a oddělit to layoutově a

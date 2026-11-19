@@ -79,7 +79,7 @@ kontextu, práce pokračuje v navazující relaci. Nic není mergnuto ani nasaze
   + okna (1280/390) 104 passed / 11 skipped; klavesnice (1280 + macos-1440) 18 passed; pristupnost + klavesnice +
   rychle-akce + zapisy (1280/390) 29 passed / 4 skipped; zapisy + okna + priprava-mesice + zapisy-schvaleni (1280/320)
   2× 87 passed / 1 skipped (první běh 1 nestabilní nález axe, při opakování neprošel znovu – sledovat v celém e2e);
-  mobilni-ovladani + plan-planovani (1280/320/360/390) prošly. Celé e2e: viz `docs/dalsi-session.md`.
+  mobilni-ovladani + plan-planovani (1280/320/360/390) prošly. Celé e2e: **1161 passed / 108 skipped / 0 failed** (7,7 min).
 * NEOVĚŘENO: celé e2e, screenshoty před/po, Firefox/WebKit, Preview, živý Kalendář.
 
 ## Změněná pravidla (pro integraci do Wiki)
