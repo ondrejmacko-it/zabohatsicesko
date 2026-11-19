@@ -1,5 +1,14 @@
 # Prompt pro další session
 
+**FINÁLNÍ KONTROLA A NOVÝ PR – RELACE 2 (19. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd` = opravná větev + main `e27b631`).**
+Report: `docs/report-finalni-kontrola.md` (sekce Relace 2). Nový draft PR do main z této větve; PR #73 sloučený, jeho větev se nemění.
+* HOTOVO: 4A neúplný návrh zápisu (`minutesDraftSchema`, `minutes_invalid`), 4B test historie, 4C zámek akce ve schválení
+  a zápisu z nahrávky + reprodukční test; 2 `ActionForm` → `ConfirmDialog` (`urgent`/`busy`); 3 Combobox v Připravit měsíc
+  (neřízený režim); 5 „Nastaveno N ze 3“ a „bez termínu“. 4D, 6, 9 jen zjištění v reportu.
+* OTEVŘENÉ (čeká na uživatele): runtime logy migrací v produkci (bod 7), smazání/archivace „NJBJK“, úkol „Garantované
+  téma nemá termín“, PDF/DOCX (návrh: nejdřív DOCX), DEP-01 migrace mimo start, Firefox/WebKit (neověřeno).
+**Další krok:** nic bez pokynu; uživatel reviduje a merguje nový draft PR ručně.
+
 **FINÁLNÍ KONTROLA A NOVÝ PR (19. 11. 2026, po relaci 1, větev `claude/focused-cerf-gr1tdi`).**
 Zadání: dlouhý prompt uživatele „ZBČ – Finální kontrola, dokončení oprav a příprava nového PR“ (body 1–13). Plné znění:
 `list_events` session `session_01HpUiryoWyPcP1uKF2Ws911`, kinds `["user"]`, poslední user zpráva. PR #73 je SLOUČENÝ
