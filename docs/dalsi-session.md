@@ -1,6 +1,6 @@
 # Prompt pro další session
 
-**OPRAVNÉ KOLO UX/UI K PR #73 (19. 11. 2026, po relaci 5, větev `claude/focused-cerf-gr1tdi` z `ff7ac54` = HEAD PR #73).**
+**OPRAVNÉ KOLO UX/UI K PR #73 (19. 11. 2026, po relaci 6, větev `claude/focused-cerf-gr1tdi` z `ff7ac54` = HEAD PR #73).**
 Zadání: `ZBC_KOMPLETNI_PROMPT_CLAUDE_CODE_PR73.md` (do repa ne). Plné znění nálezů je v přepisu relace 1:
 `list_events` session `session_01HpUiryRW9ytAdLUy6o6Gah`, kinds `["user"]`, limit 100, `before_id`
 `336c7f62-1d81-4538-9217-ab258752be39` → výsledek se uloží do souboru; v něm najít „T-01 |“, vzít blok od „P0“ po
@@ -11,12 +11,13 @@ Pozor: kontejner nemá `node_modules`, nejdřív `npm ci`. Nepouštěj prettier.
   combobox (b1968e5), A-01/A-08/A-02 (c47960d), A-05/A-06 + test A-10 (b76bd1a), server T-01 (5d7886a); relace 4: T-01 UI
   `TopicOrderList.tsx` (0f36560), T-02, T-03, T-04/C-04/T-11, T-05, T-06, T-07 (d1b8bee), T-08–T-10 + A-12 (bf406d2).
   Relace 5: krok 6 hotový (21a40a2): Z-04–Z-13, C-07, `FilePicker.tsx`, `MinutesWorkspace.tsx`, `src/lib/minutes.ts`.
+  Relace 6: A-03 (1d41667), A-04/C-05 (47e752b), A-07/A-13 (a321167), A-09 (152960d), C-02 (5540951).
 * DALŠÍ KROKY v pořadí (každý malý commit + cílené testy):
-  7. Zbytek A: A-03 (počty v Plánu srozumitelně, skok na první akci), A-04/C-05 (hierarchie stavů v kartě), A-07/A-13
-     (patička okna akce: „Beze změn“, primární tlačítko jen se změnou), A-09 (sjednocené položky menu, destruktivní dole),
-     A-11 (detail akce bez zbytečných ploch), A-14 (jednotný focus ring), C-01 (kontrast `.field-hint`), C-02 (slovník:
-     „Nahrávka a zápis“ v `EventPeek`/`status.ts` → „Zápis“ kde nahrávka není), C-03 (Zavřít/Zrušit/Zpět); C-06, C-08 jen
-     ověřit a zdokumentovat. Plné znění nálezů: postup výše (scratchpad).
+  7. Zbytek: C-03 (analýza v reportu: „Zrušit úpravy“ u úprav, „Nepřesouvat“ v `MoveEvent`, „Zavřít“ u prázdného
+     formuláře; upravit e2e `mobilni-ovladani` 160/223, `plan-planovani` 62), A-11 (detail akce bez zbytečných ploch),
+     A-14 (jednotný focus ring, test Tab/Shift+Tab/Esc), C-01 (kontrast `.field-hint`, jen důležité nápovědy); C-06, C-08
+     jen ověřit a zdokumentovat. Plné znění nálezů: postup výše (scratchpad; v relaci 6 výsledek `list_events` obsahuje
+     obal `<other-session>`, JSON je mezi první `{` a poslední `}`, text nálezů v řetězci s „A-03 |“ a „P0“).
   8. Build, celé e2e, screenshoty před/po (před = worktree na `ff7ac54`), finální report, závěrečná zpráva uživateli.
 * OTEVŘENÉ: push do větve PR #73 (`claude/rychle-akce-a-planovani-temat`) jen se souhlasem uživatele. DEP-01 (migrace
   0013/0014 při startu) rozhoduje uživatel. `PrepareMonthDialog` nechává `<datalist>`. Okno Naplánovat téma: důvod řazení

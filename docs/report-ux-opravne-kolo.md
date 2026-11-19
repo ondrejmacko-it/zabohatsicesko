@@ -1,4 +1,4 @@
-# Opravné kolo UX/UI k PR #73 – průběžný report (po relaci 5)
+# Opravné kolo UX/UI k PR #73 – průběžný report (po relaci 6)
 
 Větev `claude/focused-cerf-gr1tdi` z HEAD PR #73 (`ff7ac54`, shodné s referenčním commitem screenshotů).
 Zadání: `ZBC_KOMPLETNI_PROMPT_CLAUDE_CODE_PR73.md` (u uživatele, do repa se nedává). Relace končí na limitu
@@ -41,7 +41,13 @@ kontextu, práce pokračuje v navazující relaci. Nic není mergnuto ani nasaze
 | Z-13 | **Opraveno** (21a40a2) | Nápověda „Jen TXT, MD, VTT nebo SRT … PDF ani Word zatím nejdou, vložte z nich text.“ PDF/DOCX nepodporujeme (bez bezpečného parseru) – rozhodnutí uživatele, zda je chce. |
 | C-07 | **Opraveno** (21a40a2) | Stránka Zápisy: nadpis „Zveřejněné zápisy“, tlačítko „K dokončení“ s počtem (přístupný název „Zápisy k dokončení: N“), okno „Zápisy k dokončení“ / „Moje zápisy k dokončení“. e2e `okna.spec.ts`. |
 | Oprava úpravy schváleného zápisu | **Opraveno** (21a40a2) | Text v `MinutesEditor` po Z-01 nepravdivě tvrdil, že kolegové zápis přestanou vidět; nově „Uložení založí nový návrh. Kolegové do jeho schválení dál vidí tuto schválenou verzi.“ |
-| A-03, A-04, A-07, A-09, A-11, A-13, A-14, C-01–C-03, C-05, C-06, C-08 | Zatím neřešeno | Pořadí v `docs/dalsi-session.md`. |
+| A-03 | **Opraveno** (1d41667) | Štítky souhrnu měsíce: „Návrhy N“ (přístupně „Návrhy N ke zveřejnění“) a „Doplnit N“ místo „Chybí údaje“ (přístupně „Doplnit N akcí“), `title` vysvětlí důvod, skupina „Zúžit plán měsíce“ (odlišení od osobních úkolů „Čeká na vás“). Klik zúží plán a skočí na `#mesic`; zúžená agenda začíná první počítanou akcí. Kotva přímo na kartu zamítnuta: mřížka i agenda jsou v DOM zároveň, na telefonu by mířila na skrytou mřížku. Delší „Ke zveřejnění/K doplnění“ se na 320 px zalamovaly (screenshot), proto krátké. e2e `plan-planovani` „souhrn měsíce“ (1280/390/320). |
+| A-04, C-05 | **Opraveno** (47e752b) | Karta: jeden stavový štítek (beze změny `cardStatus`), výstraha jen pro chybějící údaj, který karta neukazuje jako „— doplnit“ (`hiddenMissingDetails`, typicky Action time bez tématu); dřív návrh hlásil chybějící údaje dvakrát. Pro čtečku zůstávají řádky „Kdo: — doplnit“. Unit `kdo-tema.test.ts` (3 nové). |
+| A-07, A-13 | **Opraveno** (a321167) | `EventDialog`: zveřejněná akce bez úprav = „Beze změn“, Zveřejnit změny neaktivní a bez `btn-primary`; primární až po změně. Potvrzení dopadu beze změny. e2e `okna.spec.ts` „Zveřejnit změny termínu“. |
+| A-09 | **Opraveno** (152960d) | Ikona u každé položky nabídky okna akce (Technické informace, Opravit v Kalendáři, Nahrávka a zápis), Kalendáře (nastavení, simulace, nová pozvánka) a zápisu; „Vrátit zápis do návrhu…“ jako `menu-danger` (dřív v nabídce vypadal neutrálně). Destruktivní pod čarou dole. e2e `okna.spec.ts` „nabídka okna akce“. |
+| C-02 | **Opraveno** (5540951) | `minutesSectionLabel` (`src/lib/minutes.ts`): „Nahrávka a zápis“ jen s nahrávkou / zápisem z nahrávky, jinak „Zápis“ (okno akce, detail akce, nadpis sekce). Menu karty: „Upravit zápis“ místo „Nahrávka a zápis“ (vedle „Zobrazit zápis“). „Co vkládáte“ místo „Druh textu“. „Technické informace“ zůstávají jen správci (A-10), „Název v plánu“ a „Připravit návrh zápisu“ ponechány (srozumitelné). Unit testy. |
+| C-03 | Rozpracováno (necommitnuto nic) | Analýza: „Zrušit“ v `TopicActions` (Navrhnout téma ř. 102, Upravit téma ř. 331), `TemplateDialog` ř. 74, `PrepareMonthDialog` ř. 374, `MoveEvent` ř. 94, `AccessForms` (98, 157, 283). Návrh: úpravy existujícího → „Zrušit úpravy“, potvrzení přesunu → „Nepřesouvat“ (vedle „Zrušit akci“ je „Zrušit“ dvojznačné), prázdný formulář → „Zavřít“. e2e odkazy: `mobilni-ovladani` 160, 223; `plan-planovani` 62. |
+| A-11, A-14, C-01, C-06, C-08 | Zatím neřešeno | Pořadí v `docs/dalsi-session.md`. |
 
 ## Ověření (skutečně spuštěno v této relaci)
 
@@ -58,6 +64,11 @@ kontextu, práce pokračuje v navazující relaci. Nic není mergnuto ani nasaze
 * Relace 5: typecheck OK, lint OK, unit **382/382** (celá sada; opraveno zastaralé očekávání v `temata-priority` z bf406d2,
   které v relaci 4 padalo); e2e zapisy + zapisy-schvaleni + okna (1280 + 390) 73 passed / 1 skipped, zapisy-schvaleni po
   rozšíření (1280) prošlo. Build v relaci 5 nespuštěn.
+* Relace 6: typecheck OK, lint (změněné soubory) OK; unit `kdo-tema`, `zapisy-schvaleni`, `rychle-akce` OK; e2e
+  plan-planovani + mobilni-ovladani + pristupnost (1280/320) 31 passed / 15 skipped; kdo-tema + rychle-akce +
+  plan-planovani (1280/390) 29 passed; okna (1280/320) 69 passed; okna + zapisy + zapisy-schvaleni + klavesnice (1280)
+  48 passed; zapisy + zapisy-schvaleni + rychle-akce + okna (1280) 50 passed. Screenshot štítků 1280/320 prohlédnut.
+  Celá unit sada a build v relaci 6 nespuštěny.
 * NEOVĚŘENO: celé e2e, screenshoty před/po, Firefox/WebKit, Preview, živý Kalendář.
 
 ## Změněná pravidla (pro integraci do Wiki)
