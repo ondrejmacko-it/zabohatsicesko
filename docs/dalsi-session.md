@@ -1,5 +1,29 @@
 # Prompt pro další session
 
+**PŘED MERGE PR #74 (19. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd`, HEAD `4549f30`, CI zelené).**
+Uživatel ověřil report opravného kola a před merge chce (jeho rozhodnutí, závazné):
+1. **Migrace 0015 na Preview – SOUHLAS, ale nejdřív read-only ověřit:** (a) Preview DB je opravdu oddělená od produkční
+   (Vercel env `DATABASE_URL` Preview × Production – jen metadata, nedešifrovat; Neon projekt/větve), (b) název CHECK
+   omezení na `topics.priority_rank` (`pg_constraint`), (c) stav `schema_migrations`, (d) možnost obnovy Preview dat
+   (Neon PITR / záložní větev). Pak **upravit migraci 0015**: chybějící očekávané omezení = bezpečné selhání
+   (`DO $$ ... RAISE EXCEPTION`), ne tiché `DROP CONSTRAINT IF EXISTS`; unit/e2e na PGlite. Pak Preview migrace:
+   nesecretní `APPROVED_MIGRATIONS=0015_topic_priority_unlimited` jen pro Preview (ideálně jen git větev PR #74),
+   redeploy, ověřit runtime logy. **Žádná produkční migrace ani změna produkčních dat.** Po migraci na Preview ověřit
+   4–6 garantovaných témat, přesun mezi sekcemi, pořadí po reloadu, doporučení při plánování (přihlášení na Preview
+   vyžaduje přístupový kód ukázky – tajemství; když nejde ověřit UI, zeptat se uživatele nebo ověřit SELECTem).
+   Logika schválení: `src/server/db/client.ts` (ř. ~36–54), `src/server/db/migrations.ts`.
+2. **Výběr osob:** ponechat nativní select (žádný Combobox).
+3. **Vedoucí a skupiny:** žádné tvrdé omezení příslušnosti; současná kontrola existence účtu a oprávnění správce zůstává.
+4. **Testy:** po poslední změně kódu znovu KOMPLETNÍ e2e (`npx playwright test --trace off`, na pozadí, ~9 min),
+   požadavek **0 failed na aktuálním HEAD**; plus lint, typecheck, unit, build.
+5. **Vizuální kontrola** snímků `po-*` v `docs/screenshots/opravne-kolo-pr74/` (Quick Actions a umístění ⋯, DnD
+   a zvýraznění témat, Připravit měsíc, výběr vedoucího). Opravit jen potvrzené regrese, žádný redesign. Snímky
+   pořizuje `shots.js` (návod výše v relaci 3: `next start` s vlastním `PGLITE_DIR`, `DEMO_ACCESS_CODE` ≥ 12 znaků,
+   persona „Správce ZBC ukázky“); po změně kódu snímky `po-*` přegenerovat.
+6. **GitHub:** pokračovat v PR #74, aktualizovat report `docs/report-opravne-kolo-pr74.md`, popis PR a CI. Žádný merge
+   do main, žádný produkční deploy.
+**Finále:** poslat uživateli přehled: výsledky testů, stav Preview migrace, jasné doporučení, zda je PR připravené na merge.
+
 **OPRAVNÉ KOLO PR #74 – HOTOVO, RELACE 4 (19. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd`, draft PR #74).**
 Report: `docs/report-opravne-kolo-pr74.md` (body 1–10, sekce Relace 4). Snímky před/po: `docs/screenshots/opravne-kolo-pr74/`.
 * Ověřeno na HEAD: lint, typecheck, unit 406/406, build, celé e2e 1176 passed / 114 skipped / 1 failed → oprava
