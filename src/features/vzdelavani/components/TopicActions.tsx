@@ -119,7 +119,7 @@ export type TopicManageProps = {
 
 /**
  * Správa tématu v jedné nabídce ⋯: Naplánovat téma, Upravit, Nastavit / Zrušit prioritu, Posunout výš / níž
- * (místo tažení, ovládá se i klávesnicí) a pod čarou Archivovat s potvrzením.
+ * (vedle přetažení úchytem další cesta bez myši) a pod čarou Archivovat s potvrzením.
  */
 export function TopicManage({ topic, groups, canGuarantee, canMoveUp, canMoveDown }: TopicManageProps) {
   const [dialog, setDialog] = useState<"edit" | "plan" | null>(null);

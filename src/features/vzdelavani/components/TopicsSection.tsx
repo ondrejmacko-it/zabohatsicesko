@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ActionForm } from "@/components/ActionForm";
 import { resetTopicOrderAction } from "@/features/vzdelavani/actions";
+import { TopicOrderList, type TopicOrderItem } from "@/features/vzdelavani/components/TopicOrderList";
 import { InterestButton, ProposeTopicDialog, RestoreTopicButton, TopicManage } from "@/features/vzdelavani/components/TopicActions";
 import { GROUP_LABELS } from "@/lib/labels";
 import { formatDayMonth } from "@/lib/time";
@@ -27,8 +28,8 @@ type RowContext = {
   label: (g: string) => string;
 };
 
-/** Jeden řádek tématu. Pořadí v seznamu (a tím i posun výš/níž) určuje volající. */
-function TopicRow({ t, index, count, ctx }: { t: RankedTopic; index: number; count: number; ctx: RowContext }) {
+/** Obsah jednoho řádku tématu pro `TopicOrderList`. Pořadí v seznamu (a tím i posun výš/níž) určuje volající. */
+function topicItem(t: RankedTopic, index: number, count: number, ctx: RowContext): TopicOrderItem {
   const names = ctx.interested?.get(t.id) ?? [];
   const wanted = ctx.mostWanted.has(t.id);
   const next = t.nextPlanned && (
@@ -41,8 +42,12 @@ function TopicRow({ t, index, count, ctx }: { t: RankedTopic; index: number; cou
       )}
     </>
   );
-  return (
-    <li className={wanted ? "topic-row topic-wanted" : "topic-row"}>
+  return {
+    id: t.id,
+    name: t.name,
+    className: wanted ? "topic-row topic-wanted" : "topic-row",
+    content: (
+    <>
       <div className="topic-main">
         <p className="item-title">
           <span id={`tema-${t.id}`}>{t.name}</span>
@@ -73,8 +78,9 @@ function TopicRow({ t, index, count, ctx }: { t: RankedTopic; index: number; cou
         <InterestButton topicId={t.id} interested={t.interestedByViewer} titleId={`tema-${t.id}`} />
         {ctx.organizer && <TopicManage topic={t} groups={ctx.groups} canGuarantee={ctx.canGuarantee} canMoveUp={index > 0} canMoveDown={index < count - 1} />}
       </div>
-    </li>
-  );
+    </>
+    ),
+  };
 }
 
 /**
@@ -128,12 +134,13 @@ export async function TopicsSection({ user }: { user: Viewer }) {
               <h3 id="temata-garantovana" className="topic-group-title">
                 Garantovaná témata
               </h3>
-              <p className="item-meta">Správce je chce probrat přednostně, v tomto pořadí.</p>
-              <ol className="topic-list topic-guaranteed">
-                {guaranteed.map((t, index) => (
-                  <TopicRow key={t.id} t={t} index={index} count={guaranteed.length} ctx={ctx} />
-                ))}
-              </ol>
+              <p className="item-meta">Při plánování se nabízejí jako první, v tomto pořadí a bez ohledu na počet zájemců.</p>
+              <TopicOrderList
+                ordered
+                sortable={organizer && guaranteed.length > 1}
+                className="topic-list topic-guaranteed"
+                items={guaranteed.map((t, index) => topicItem(t, index, guaranteed.length, ctx))}
+              />
             </div>
           )}
           {organizer && guaranteed.length === 0 && (
@@ -154,12 +161,18 @@ export async function TopicsSection({ user }: { user: Viewer }) {
                   {organizer && <ActionForm action={resetTopicOrderAction} label="Seřadit podle zájmu" pendingLabel="Řadím…" small />}
                 </div>
               )}
-              <ul className="topic-list">
-                {others.map((t, index) => (
-                  <TopicRow key={t.id} t={t} index={index} count={others.length} ctx={ctx} />
-                ))}
-              </ul>
+              <TopicOrderList
+                ordered={false}
+                sortable={organizer && others.length > 1}
+                className="topic-list"
+                items={others.map((t, index) => topicItem(t, index, others.length, ctx))}
+              />
             </div>
+          )}
+          {organizer && (
+            <p id="tema-poradi-napoveda" className="visually-hidden">
+              Pořadí změníte přetažením úchytu, nebo šipkami nahoru a dolů. Přesouvá se jen v rámci skupiny.
+            </p>
           )}
         </>
       )}
