@@ -373,3 +373,32 @@ test.describe("nabídka tématu v okně akce", () => {
     await expect(topic).toHaveValue("Úplně nové téma e2e");
   });
 });
+
+test.describe("technické informace jen pro správu", () => {
+  // A-10: stav Kalendáře a technické údaje vidí jen správce, vedoucí ani účastník je nedostanou.
+  for (const role of ["vedouci", "ucastnikRm"] as const) {
+    test.describe(role, () => {
+      test.use({ storageState: authFile(role) });
+      test("okno ani detail akce technické informace neukazují", async ({ page }) => {
+        await page.goto("/vzdelavani/harmonogram?mesic=2026-11&akce=tr-rm-1112");
+        await settle(page);
+        await expect(page.getByRole("dialog").first()).toBeVisible();
+        await expect(page.getByText("Technické informace")).toHaveCount(0);
+        await page.goto("/vzdelavani/akce/tr-rm-1112");
+        await settle(page);
+        await expect(page.getByRole("heading", { name: /Vzdělávání/ })).toBeVisible();
+        await expect(page.getByText("Technické informace")).toHaveCount(0);
+        await expect(page.getByText(/Kalendář/).filter({ hasText: /synchroniz|ID události|Google/ })).toHaveCount(0);
+      });
+    });
+  }
+
+  test.describe("správce", () => {
+    test.use({ storageState: authFile("spravce") });
+    test("detail akce technické informace má", async ({ page }) => {
+      await page.goto("/vzdelavani/akce/tr-rm-1112");
+      await settle(page);
+      await expect(page.getByText("Technické informace").first()).toBeVisible();
+    });
+  });
+});

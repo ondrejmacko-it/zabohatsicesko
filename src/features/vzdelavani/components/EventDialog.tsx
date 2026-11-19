@@ -410,17 +410,27 @@ function EventForm({
       </select>
     </label>
   );
+  // Příjemci pozvánky patří přímo pod „Pro koho“: změna skupiny je hned vidět na seznamu, kdo pozvánku dostane.
   const audienceField = (
-    <label className="field">
-      <span className="field-label">Pro koho {mark("audience")}</span>
-      <select className="select" name="audience" value={values.audience} onChange={(e) => set("audience", e.target.value as EventFormValues["audience"])}>
+    <div className="field">
+      <label className="field-label" htmlFor={`${formId}-audience`}>
+        Pro koho {mark("audience")}
+      </label>
+      <select
+        id={`${formId}-audience`}
+        className="select"
+        name="audience"
+        value={values.audience}
+        onChange={(e) => set("audience", e.target.value as EventFormValues["audience"])}
+      >
         {GROUPS.map((g) => (
           <option key={g} value={g}>
             {GROUP_LABELS[g]}
           </option>
         ))}
       </select>
-    </label>
+      {invite && <InviteeList invite={invite} audience={values.audience} />}
+    </div>
   );
   const termFields = (
     <>
@@ -537,7 +547,6 @@ function EventForm({
             {audienceField}
             {termFields}
           </div>
-          {invite && <InviteeList invite={invite} audience={values.audience} />}
           {moreFields}
         </fieldset>
       )}
