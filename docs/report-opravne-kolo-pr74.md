@@ -176,3 +176,34 @@ Lint OK, typecheck OK, unit **410/410**, build OK, celé e2e (`npx playwright te
 Snímky `po-*` (Plán s ⋯ a otevřeným menu 390/1280, Témata 1280, Připravit měsíc 390) prohlédnuty: ⋯ vpravo nahoře bez
 překryvu textu, menu celé v okně, garantovaná okrová, nejžádanější zelený pruh, hromadný vedoucí nativním selectem.
 Potvrzená regrese nenalezena; UI kód se v této relaci neměnil, snímky se nepřegenerovaly.
+
+## Relace 6/7: zpětná vazba uživatele na preview (body 1–4)
+
+1. **Téma jen v návrhu akce** (6a2c354): místo červeného „bez termínu“ oranžově „v návrhu na <datum>“.
+2. **Pomocné texty** (6a2c354): odstraněny vysvětlující věty typu „Při plánování se nabízejí jako první…“.
+3. **Hlavní výzva stránky** (7bef7d1, schváleno): `PageCall` = věta serifem + jediné hlavní tlačítko nad obsahem
+   (Témata „Navrhněte téma nebo podpořte návrh kolegů.“ + Navrhnout téma; Zápisy pro správce/vedoucího „Dokončete
+   zápisy z proběhlých akcí.“ + K dokončení). Plán a Správa už hlavní tlačítko výrazné mají, beze změny.
+4. **Návrh změny zveřejněné akce** (7bef7d1 + d0e70f1, schváleno, bez migrace – originál je `events.published`):
+   * okno akce i detail: okrový panel „Návrh změny zveřejněné akce. Mění …“, rozbalitelná „Zveřejněná verze“
+     (krátké vysunutí, bez animace při `prefers-reduced-motion`), volby Zveřejnit změny / **Zrušit návrh**
+     (dřív Zahodit změny; s potvrzením). Čistý nový návrh nic z toho nemá, kolegové dál vidí jen zveřejněnou verzi.
+   * mřížka Plánu – **stoh**: okrová karta návrhu leží na zveřejněné verzi, z níž nad kartou vykukuje 18px pruh
+     „Zveřejněná verze“. Najetí myší na pruh originál roztáhne přes kartu (stín, návrh ztlumí na 35 %), vše uvnitř
+     buňky. Originál je jen pro myš (`aria-hidden`, `tabIndex=-1`); klávesnice a čtečky mají totéž v okně akce.
+     ⋯ a checkbox výběru zůstávají na kartě návrhu. Agenda (telefon) bez stohu: okrová karta + řádek „Mění …“.
+   * data: `EventCard.original` jen pro správce (`changedParts`: termín, téma, vedoucí, publikum, typ, kontrolor).
+
+### Návrh dalších lehkých animací (neimplementováno, čeká na souhlas)
+
+| Kde | Co | Poznámka |
+| --- | --- | --- |
+| Karty v mřížce Plánu, Témata, Přehled | zvednutí při hoveru (stín + posun o 1–2 px) | bez zvětšení, ať se nerozhodí mřížka |
+| Okna (Přidat akci, okno akce, Připravit měsíc) | plynulé otevření/zavření (fade + posun 8 px, 150 ms) | `dialog` už má strukturu, jen CSS |
+| Uložení / zveřejnění | krátké potvrzení ✓ na tlačítku a zvýraznění změněné karty (okrový záblesk 600 ms) | navazuje na hlášku `status` |
+| Přetahování témat a přesun akce | „zvednutí“ taženého prvku, plynulé zařazení na nové místo | DnD už má stav `data-lifted` |
+| Štítky počtů (Připravit měsíc, K dokončení, hlasy) | krátký „pop“ při změně čísla | jen při změně, ne při načtení |
+| Podpora tématu | srdce/šipka hlasu s malým odskokem | jediná „radostná“ mikrointerakce |
+| Rozbalovací části (Zveřejněná verze, filtry) | plynulé rozbalení výšky | dnes jen fade |
+
+Vše s `prefers-reduced-motion: reduce` bez animace, délky 120–220 ms, žádné animace při prvním načtení stránky.

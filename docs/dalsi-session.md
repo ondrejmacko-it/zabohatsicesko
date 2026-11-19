@@ -10,23 +10,12 @@ uživatele fungují. Nové požadavky (větší změny nejdřív navrhnout uživ
 4. Změna ZVEŘEJNĚNÉ akce uložená jen jako návrh: graficky jako návrh „nad“ originálem, rozkliknout originál, akce
    Zveřejnit změny / Zrušit návrh (nechat originál). Čistý nový návrh nic takového nemá. Ostatní návrhy nevidí
    (beze změny). Zjistit, jak dnes `events`/`event_revisions` drží rozpracovanou změnu zveřejněné akce, navrhnout UI.
-**Relace 6:** body 1 a 2 HOTOVO (6a2c354). Uživatel SCHVÁLIL návrh bodů 3 a 4 a pošle ještě další rework (zapracovat).
-Rozpracováno (commit „Hlavní výzva stránky a panel návrhu změny“), e2e zatím NEBĚŽELO:
-* Bod 3: `src/components/PageCall.tsx` + CSS `.page-call` (věta serifem + jediné hlavní tlačítko, telefon na plnou šířku);
-  použito na Témata a Zápisy (správce/vedoucí „Dokončete zápisy z proběhlých akcí.“ + K dokončení). Plán a Správa mají
-  hlavní tlačítko už výrazné (beze změny). Ověřit snímkem 1280/390/320 a e2e (zapisy, temata, stranky, pristupnost).
-* Bod 4: `EventCard.original` (`EventOriginal` + `changedParts` v `services/events.ts`, jen správce, bez migrace);
-  `ChangeBanner.tsx` v okně akce (EventPeek) i detailu (`akce/[id]`, tam „Zveřejnit změny…“ odkaz do okna): „Mění …“,
-  `<details>` Zveřejněná verze (animace vysunutí, reduced-motion), „Zrušit návrh“ (dřív Zahodit změny; e2e
-  `priprava-mesice.spec.ts` upraveno). ZBÝVÁ: karta v mřížce plánu jako „stoh“ (oranžový návrh nad originálem):
-  v `Schedule.tsx` `EventBlock` při `card.original` tón `draft` + sourozenec za kartou (Link, `aria-hidden`, `tabIndex=-1`)
-  s pruhem „Zveřejněná verze“ ~18 px nad kartou; při hoveru/focusu PRUHU se originál přesune dopředu (z-index, posun,
-  stín, karta návrhu ztlumí), uvnitř buňky (gridWrap má overflow-x auto → nevysouvat mimo kartu). Reduced motion bez
-  animace. Unit test `changedParts`. Agenda (telefon): jen štítek + řádek „Mění …“.
-* Uživatel chce i NÁVRH, kde dál použít lehké animace/hovery (zvětšení při hoveru apod.) – poslat seznam v závěru.
-**Další krok:** dokončit stoh v mřížce, rework uživatele, lint/typecheck/unit (411/411 na rozpracovaném), build, celé e2e
-(`npx playwright test --trace off` na pozadí, 0 failed), snímky `po-*`, report `docs/report-opravne-kolo-pr74.md`
-(sekce Relace 6), popis PR #74, CI, zpráva uživateli (+ návrh animací).
+**Relace 7 (d0e70f1):** body 1–4 HOTOVO. Stoh v mřížce (okrový návrh nad originálem, pruh „Zveřejněná verze“, hover
+originál roztáhne přes kartu, reduced-motion bez animace, Agenda jen „Mění …“), unit `tests/navrh-zmeny.test.ts`,
+e2e kontrola stohu v `priprava-mesice.spec.ts`. Report: sekce „Relace 6/7“ v `docs/report-opravne-kolo-pr74.md`
+včetně tabulky návrhu dalších animací (NEIMPLEMENTOVÁNO, čeká na souhlas uživatele).
+* Uživatel slíbil další rework → zapracovat do stejného PR (větší nejdřív krátce navrhnout).
+**Další krok:** čekat na rework / souhlas s animacemi; nic nemergovat.
 
 **PŘED MERGE PR #74 – RELACE 5 HOTOVA (19. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd`, draft PR #74).**
 Report: `docs/report-opravne-kolo-pr74.md` (sekce Relace 5).
