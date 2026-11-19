@@ -29,6 +29,9 @@ test.describe("Témata: garantovaná a ostatní", () => {
     await expect(guaranteed.locator(".topic-row .item-title > span[id]")).toHaveText(["Otevřené otázky na schůzce", "Návaznost po konzultaci"]);
     await expect(page.getByRole("heading", { name: "Ostatní témata" })).toBeVisible();
     await expect(rowOf(guaranteed, "Otevřené otázky na schůzce").getByText("Nejžádanější")).toBeVisible();
+    // Správce vidí, že lze nastavit až tři, a které garantované téma nemá budoucí termín.
+    await expect(guaranteed.getByText("Nastaveno 2 ze 3.", { exact: false })).toBeVisible();
+    await expect(guaranteed.locator(".topic-unscheduled").first()).toBeVisible();
 
     await menuOf(page, "Otevřené otázky na schůzce").click();
     await expect(openMenu(page).locator("a, button")).toHaveText(["Naplánovat téma", "Upravit téma", "Zrušit prioritu", "Posunout níž", "Archivovat…"]);

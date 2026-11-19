@@ -56,6 +56,8 @@ function topicItem(t: RankedTopic, index: number, count: number, ctx: RowContext
         <p className="item-meta">
           {ctx.label(t.audience)} · {t.lastHeld ? `naposledy ${formatDayMonth(t.lastHeld)}` : "zatím neproběhlo"}
           {next}
+          {/* Garantované téma bez budoucího termínu: správce ho uvidí hned v seznamu, datum se nedoplňuje samo. */}
+          {ctx.organizer && t.priorityRank != null && !t.nextPlanned && <span className="topic-unscheduled"> · bez termínu</span>}
         </p>
       </div>
       <div className="topic-interest">
@@ -137,7 +139,10 @@ export async function TopicsSection({ user }: { user: Viewer }) {
               <h3 id="temata-garantovana" className="topic-group-title">
                 Garantovaná témata
               </h3>
-              <p className="item-meta">Při plánování se nabízejí jako první, v tomto pořadí a bez ohledu na počet zájemců.</p>
+              <p className="item-meta">
+                Při plánování se nabízejí jako první, v tomto pořadí a bez ohledu na počet zájemců.
+                {organizer && ` Nastaveno ${guaranteed.length} ze 3.`}
+              </p>
               <TopicOrderList
                 ordered
                 sortable={organizer && guaranteed.length > 1}

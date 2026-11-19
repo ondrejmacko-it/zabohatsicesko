@@ -3128,6 +3128,12 @@ p.cal-status {
   background-color: var(--ochre-soft);
 }
 
+/* Garantované téma bez termínu: jen zvýrazněný text v řádku, žádný nový panel. */
+.topic-unscheduled {
+  color: var(--danger);
+  font-weight: 600;
+}
+
 .topic-suggestion {
   grid-column: 1 / -1;
   display: flex;
