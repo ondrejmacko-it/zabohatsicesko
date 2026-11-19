@@ -3200,6 +3200,15 @@ p.cal-status {
   background: var(--ochre-soft);
 }
 
+/* Nulové počty (a Připraveno bez návrhů) jen tichým textem bez rámečku: informace zůstane, ale nesoupeří
+   s kategoriemi, které vyžadují zásah. */
+.prepare-overview-item:disabled {
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+  opacity: 1;
+}
+
 /* Hromadné doplnění vedoucího: volba, tlačítko a vysvětlení v jednom zalamovaném řádku. */
 .prepare-bulk {
   display: flex;
@@ -3302,6 +3311,27 @@ p.cal-status {
   flex: 1;
   min-width: 0;
   overflow-wrap: break-word;
+}
+
+.account-email {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.account-role {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin-top: 6px;
+}
+
+.account-role .badge {
+  background: var(--surface);
+}
+
+.account-role .badge-ochre {
+  background: var(--ochre-soft);
 }
 
 .account-side {

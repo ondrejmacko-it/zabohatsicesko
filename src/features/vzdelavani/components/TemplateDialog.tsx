@@ -30,11 +30,8 @@ export function TemplateDialog({ slots }: { slots: SlotValue[] }) {
       {state?.ok && <ActionMessage state={state} />}
       <Modal open={open} title="Nastavit pravidelný rozvrh" onRequestClose={() => setOpen(false)} wide>
         <p className="small">
-          Pravidelný rozvrh říká, ve které dny a časy se akce konají každý týden. Podle něj „Doplnit chybějící
-          termíny“ připraví návrhy na celý měsíc. Změna rozvrhu nic nezveřejní a už vytvořené akce nemění.
-        </p>
-        <p className="small muted">
-          Když má den víc typů, střídají se po týdnech. Konkrétní akce pak můžete kdykoli upravit ručně.
+          Dny a časy, kdy se akce konají každý týden. Podle nich se připraví návrhy na měsíc. Změna nic nezveřejní
+          a hotové akce nemění. Víc typů v jednom dni se střídá po týdnech.
         </p>
         <form action={action} onSubmit={submitKeepingValues(action)} className="stack">
           {slots.map((slot) => (

@@ -169,7 +169,7 @@ test.describe("okna správce", () => {
     await page.getByRole("button", { name: /^Připravit měsíc/ }).click();
     await dialog(page, /^Připravit měsíc/).getByRole("button", { name: "Nastavit pravidelný rozvrh" }).click();
     await expect(dialog(page, "Nastavit pravidelný rozvrh")).toBeVisible();
-    await expect(dialog(page, "Nastavit pravidelný rozvrh")).toContainText("Podle něj „Doplnit chybějící termíny“ připraví návrhy");
+    await expect(dialog(page, "Nastavit pravidelný rozvrh")).toContainText("Podle nich se připraví návrhy na měsíc");
   });
 
   // Bez zápisu: potvrzení se jen otevře a vrátí zpět. Rozhodnutí je samostatné okno nad formulářem, ne lišta v něm.

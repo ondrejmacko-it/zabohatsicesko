@@ -221,11 +221,12 @@ function AccountHead({
             !a.editable && a.status === "active" && <span className="small muted"> · váš účet</span>
           )}
         </p>
-        <p className="item-meta">{a.email}</p>
-        <p className="item-meta">
-          {ROLE_LABELS[a.role]}
-          {a.groups.length > 0 &&
-            ` · ${a.groups.map((g) => GROUP_LABELS[g]).join(", ")}`}
+        <p className="item-meta account-email">{a.email}</p>
+        {/* Role štítkem (správce okrovým), skupiny vedle ní obyčejným textem: jméno, role, e-mail a skupiny
+            se tak rozliší na první pohled. */}
+        <p className="item-meta account-role">
+          <span className={`badge${a.role === "member" ? "" : " badge-ochre"}`}>{ROLE_LABELS[a.role]}</span>
+          {a.groups.length > 0 && <span>{a.groups.map((g) => GROUP_LABELS[g]).join(", ")}</span>}
         </p>
         {/* Fiktivní role ukázky druhý řádek nemají: že jde o ukázku, říká štítek v hlavičce. */}
         {live && a.status === "active" ? (
