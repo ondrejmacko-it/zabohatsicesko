@@ -1,4 +1,4 @@
-# Opravné kolo UX/UI k PR #73 – průběžný report (po relaci 6)
+# Opravné kolo UX/UI k PR #73 – průběžný report (po relaci 7)
 
 Větev `claude/focused-cerf-gr1tdi` z HEAD PR #73 (`ff7ac54`, shodné s referenčním commitem screenshotů).
 Zadání: `ZBC_KOMPLETNI_PROMPT_CLAUDE_CODE_PR73.md` (u uživatele, do repa se nedává). Relace končí na limitu
@@ -46,8 +46,13 @@ kontextu, práce pokračuje v navazující relaci. Nic není mergnuto ani nasaze
 | A-07, A-13 | **Opraveno** (a321167) | `EventDialog`: zveřejněná akce bez úprav = „Beze změn“, Zveřejnit změny neaktivní a bez `btn-primary`; primární až po změně. Potvrzení dopadu beze změny. e2e `okna.spec.ts` „Zveřejnit změny termínu“. |
 | A-09 | **Opraveno** (152960d) | Ikona u každé položky nabídky okna akce (Technické informace, Opravit v Kalendáři, Nahrávka a zápis), Kalendáře (nastavení, simulace, nová pozvánka) a zápisu; „Vrátit zápis do návrhu…“ jako `menu-danger` (dřív v nabídce vypadal neutrálně). Destruktivní pod čarou dole. e2e `okna.spec.ts` „nabídka okna akce“. |
 | C-02 | **Opraveno** (5540951) | `minutesSectionLabel` (`src/lib/minutes.ts`): „Nahrávka a zápis“ jen s nahrávkou / zápisem z nahrávky, jinak „Zápis“ (okno akce, detail akce, nadpis sekce). Menu karty: „Upravit zápis“ místo „Nahrávka a zápis“ (vedle „Zobrazit zápis“). „Co vkládáte“ místo „Druh textu“. „Technické informace“ zůstávají jen správci (A-10), „Název v plánu“ a „Připravit návrh zápisu“ ponechány (srozumitelné). Unit testy. |
-| C-03 | Rozpracováno (necommitnuto nic) | Analýza: „Zrušit“ v `TopicActions` (Navrhnout téma ř. 102, Upravit téma ř. 331), `TemplateDialog` ř. 74, `PrepareMonthDialog` ř. 374, `MoveEvent` ř. 94, `AccessForms` (98, 157, 283). Návrh: úpravy existujícího → „Zrušit úpravy“, potvrzení přesunu → „Nepřesouvat“ (vedle „Zrušit akci“ je „Zrušit“ dvojznačné), prázdný formulář → „Zavřít“. e2e odkazy: `mobilni-ovladani` 160, 223; `plan-planovani` 62. |
-| A-11, A-14, C-01, C-06, C-08 | Zatím neřešeno | Pořadí v `docs/dalsi-session.md`. |
+| C-03 | **Opraveno** (ddf3143) | Význam podle situace: „Zavřít“ u nového/neaktivního okna (Navrhnout téma, Nový odkaz, schválení či vrácení přístupu) se chová jako Zavřít v záhlaví – s rozepsanými změnami se zeptá (`data-modal-close` v `Modal`); „Zrušit úpravy“ u úprav existujícího (Upravit téma, šablona rozvrhu, Připravit měsíc, úprava přístupu) zahodí bez dotazu, říká to samo; „Nepřesouvat“ v potvrzení přesunu (vedle „Zrušit akci“ bylo „Zrušit“ dvojznačné); „Ponechat přístup“ vedle Odebrat přístup. e2e `temata-planovani` „Zavřít dole v okně hlídá rozepsaný návrh“ (1280/320), upravené `mobilni-ovladani`, `plan-planovani`. „Zpět“ v procesu už dřív (ConfirmDialog „Zpět k úpravám“). |
+| A-11 | **Již v pořádku** (po A-10/A-09, ověřeno screenshotem) | Okno akce správce: technické informace jen v nabídce, Kalendář se ukazuje jen při chybě (odkaz Opravit). Okno vedoucího/účastníka: stav + 4 řádky údajů. Detail akce: Kdy/Vede/Pro koho v jednom bloku, Technické informace sbalené jen pro správce. Snímky 1280/390 (správce, vedoucí, `ev-11-18`, `tr-rm-1112`) prohlédnuty; další zmenšování by šlo proti „nezmenšovat do nepřehlednosti“. |
+| A-14 | **Opraveno** (78bd8cd) | Jeden ring `--focus-ring: 2px solid var(--ochre)`, offset 2 px (dovnitř jen v rolovaném seznamu nabídky a u úchytu, pole -1 px přes rámeček). Dřív: průsvitný stín (kontrast 1,63 : 1, v režimu vynucených barev mizel), pole černý outline, nabídka okrový. Okrová má ≥ 3,6 : 1 vůči všem plochám včetně tmavého menu. Datum/čas: `:focus-within` (Chrome hlásí fokus ve vnitřním segmentu). e2e `klavesnice` „focus ring je všude stejný, Shift+Tab…“ (20× Tab na Plánu, 12× Tab v okně = past fokusu, Shift+Tab, Esc + návrat fokusu), 1280 + macos-1440. Screenshot karty a okna s fokusem prohlédnut. |
+| C-01 | **Opraveno** (5c05205) | `--muted` na panelech má 4,5–5,5 : 1 (AA splněno), problém je 12 px. Jen nápovědy, na kterých závisí výsledek, dostaly `.field-hint-key` (13 px, `--ink-soft`, 8+ : 1): limit/formát souboru, „Navržené datum, zkontrolujte“, kdo pozvánku nedostane, testovací režim pozvánek, co hromadné doplnění přepíše, jednorázový odkaz. Ostatní nápovědy beze změny. e2e `zapisy` kontroluje 13 px a barvu. |
+| C-06 | **Již v pořádku** (test 121f5e4) | Desktop: nativní HTML5 drag, žádný vlastní prvek v DOM. Telefon: `.move-ghost` = klon karty s `aria-hidden`, `pointer-events:none`, odstraní se v `stopTouch` (puštění, pointercancel, odchod ze stránky). e2e `mobilni-ovladani`: během tažení právě 1 kopie s textem karty, po puštění i puštění mimo 0 kopií a 0 `data-lifted`, po Nepřesouvat karta jednou na původním dni; `plan-planovani` (desktop) karta po zrušení jednou. |
+| C-08 | **Již v pořádku** / rozhodnutí uživatele | „Action time“ je firemní typ akce (`src/lib/labels.ts`), ne překlep – ponecháno. „NJBJK“ v repu ani seedu není: jde o data ručně zadaná na sdílené Preview DB. Před prezentací Preview vyčistit nebo znovu nasadit seed – rozhoduje uživatel (zásah do sdílených dat). |
+| Filtry Plánu 320 px | **Opraveno** (f43f8d5) | Regrese po A-03: kratší štítky souhrnu (44 px) vs. zalomené „Vybrat návrhy“ (52 px) – `grid-auto-rows: 1fr`. e2e `mobilni-ovladani` „filtry 2 × 2“ (320/360/390). |
 
 ## Ověření (skutečně spuštěno v této relaci)
 
@@ -69,6 +74,11 @@ kontextu, práce pokračuje v navazující relaci. Nic není mergnuto ani nasaze
   plan-planovani (1280/390) 29 passed; okna (1280/320) 69 passed; okna + zapisy + zapisy-schvaleni + klavesnice (1280)
   48 passed; zapisy + zapisy-schvaleni + rychle-akce + okna (1280) 50 passed. Screenshot štítků 1280/320 prohlédnut.
   Celá unit sada a build v relaci 6 nespuštěny.
+* Relace 7: lint OK, typecheck OK, unit **386/386** (celá sada); e2e plan-planovani + mobilni-ovladani + temata-planovani
+  + okna (1280/390) 104 passed / 11 skipped; klavesnice (1280 + macos-1440) 18 passed; pristupnost + klavesnice +
+  rychle-akce + zapisy (1280/390) 29 passed / 4 skipped; zapisy + okna + priprava-mesice + zapisy-schvaleni (1280/320)
+  2× 87 passed / 1 skipped (první běh 1 nestabilní nález axe, při opakování neprošel znovu – sledovat v celém e2e);
+  mobilni-ovladani + plan-planovani (1280/320/360/390) prošly. Celé e2e: viz `docs/dalsi-session.md`.
 * NEOVĚŘENO: celé e2e, screenshoty před/po, Firefox/WebKit, Preview, živý Kalendář.
 
 ## Změněná pravidla (pro integraci do Wiki)

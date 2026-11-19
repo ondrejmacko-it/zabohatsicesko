@@ -1,27 +1,27 @@
 # Prompt pro další session
 
-**OPRAVNÉ KOLO UX/UI K PR #73 (19. 11. 2026, po relaci 6, větev `claude/focused-cerf-gr1tdi` z `ff7ac54` = HEAD PR #73).**
-Zadání: `ZBC_KOMPLETNI_PROMPT_CLAUDE_CODE_PR73.md` (do repa ne). Plné znění nálezů je v přepisu relace 1:
-`list_events` session `session_01HpUiryRW9ytAdLUy6o6Gah`, kinds `["user"]`, limit 100, `before_id`
-`336c7f62-1d81-4538-9217-ab258752be39` → výsledek se uloží do souboru; v něm najít „T-01 |“, vzít blok od „P0“ po
-„Přesný opravný prompt“ do scratchpadu (ne do repa). Report: `docs/report-ux-opravne-kolo.md` (stav každého ID s důkazem).
-Pozor: kontejner nemá `node_modules`, nejdřív `npm ci`. Nepouštěj prettier. Screenshoty: dočasný spec `e2e/zz-snimky.spec.ts`
-(necommitovat), Playwright si server spustí sám.
-* HOTOVO: relace 1 (25839c2) Z-01, Z-02, Z-14, S-01, Z-03; relace 2 (e1a463f) potvrzení přes `ConfirmDialog`; relace 3:
-  combobox (b1968e5), A-01/A-08/A-02 (c47960d), A-05/A-06 + test A-10 (b76bd1a), server T-01 (5d7886a); relace 4: T-01 UI
-  `TopicOrderList.tsx` (0f36560), T-02, T-03, T-04/C-04/T-11, T-05, T-06, T-07 (d1b8bee), T-08–T-10 + A-12 (bf406d2).
-  Relace 5: krok 6 hotový (21a40a2): Z-04–Z-13, C-07, `FilePicker.tsx`, `MinutesWorkspace.tsx`, `src/lib/minutes.ts`.
-  Relace 6: A-03 (1d41667), A-04/C-05 (47e752b), A-07/A-13 (a321167), A-09 (152960d), C-02 (5540951).
-* DALŠÍ KROKY v pořadí (každý malý commit + cílené testy):
-  7. Zbytek: C-03 (analýza v reportu: „Zrušit úpravy“ u úprav, „Nepřesouvat“ v `MoveEvent`, „Zavřít“ u prázdného
-     formuláře; upravit e2e `mobilni-ovladani` 160/223, `plan-planovani` 62), A-11 (detail akce bez zbytečných ploch),
-     A-14 (jednotný focus ring, test Tab/Shift+Tab/Esc), C-01 (kontrast `.field-hint`, jen důležité nápovědy); C-06, C-08
-     jen ověřit a zdokumentovat. Plné znění nálezů: postup výše (scratchpad; v relaci 6 výsledek `list_events` obsahuje
-     obal `<other-session>`, JSON je mezi první `{` a poslední `}`, text nálezů v řetězci s „A-03 |“ a „P0“).
-  8. Build, celé e2e, screenshoty před/po (před = worktree na `ff7ac54`), finální report, závěrečná zpráva uživateli.
-* OTEVŘENÉ: push do větve PR #73 (`claude/rychle-akce-a-planovani-temat`) jen se souhlasem uživatele. DEP-01 (migrace
-  0013/0014 při startu) rozhoduje uživatel. `PrepareMonthDialog` nechává `<datalist>`. Okno Naplánovat téma: důvod řazení
-  („typ akce vychází z témat“) z řádku vypuštěn kvůli délce. Nejžádanější svítí u 3 ze 4 témat v seedu (logika beze změny). PDF/DOCX zdroj zápisu nepodporujeme (Z-13, rozhodnutí uživatele).
+**OPRAVNÉ KOLO UX/UI K PR #73 (19. 11. 2026, po relaci 7, větev `claude/focused-cerf-gr1tdi` z `ff7ac54` = HEAD PR #73).**
+Zadání: `ZBC_KOMPLETNI_PROMPT_CLAUDE_CODE_PR73.md` (do repa ne). Plné znění nálezů: `list_events` session
+`session_01HpUiryRW9ytAdLUy6o6Gah`, kinds `["user"]`, limit 100, `before_id` `336c7f62-1d81-4538-9217-ab258752be39` →
+výsledek do souboru, JSON mezi první `{` a poslední `}`, nálezy v řetězci s „A-03 |“ a „P0“ (scratchpad, ne repo).
+Report: `docs/report-ux-opravne-kolo.md` (stav každého ID s důkazem). Kontejner nemá `node_modules`: `npm ci`. Prettier ne.
+* HOTOVO: relace 1–6 (viz report), relace 7: C-03 (ddf3143), A-14 (78bd8cd), C-01 (5c05205), C-06 test (121f5e4),
+  filtry 320 px po A-03 (f43f8d5); A-11 a C-08 ověřeny a zdokumentovány (Již v pořádku). Všechna ID kroku 7 mají stav.
+  Lint, typecheck, unit 386/386 OK. Celé e2e spuštěno na konci relace 7 – výsledek doplněn níže, pokud ho relace stihla.
+* DALŠÍ KROK = 8 (poslední relace):
+  1. `npm run build`, celé e2e (`npx playwright test --trace off`, ~7 min). Pozor na nestabilní axe nález (relace 7,
+     zapisy/okna/priprava-mesice/zapisy-schvaleni, 1× ze 3 běhů) – pokud se objeví, zjistit pravidlo a opravit.
+  2. Screenshoty před/po: `git worktree add --detach <scratchpad>/pred ff7ac54`, `ln -s` node_modules, dočasný spec
+     `e2e/zz-snimky.spec.ts` (necommitovat; snímky detailu a okna akce `ev-11-18`/`tr-rm-1112` správce/vedoucí, fokus
+     karty a okna, + témata, okno Naplánovat téma, zápis, Plán 320) spustit v obou stromech postupně (port 3310).
+     Vybrané páry po uložit do `docs/screenshots/opravne-kolo/` (před = `pred-*.png`, po = `po-*.png`).
+  3. Finální report v `docs/report-ux-opravne-kolo.md` (oddíly: design konzistence, rozhodovací overlaye,
+     dropdowny/combobox, wizard, témata a DnD, zápisy a verze, kalendář/role, vizuální před/po, spuštěné testy, rizika
+     před nasazením vč. DEP-01 migrací 0013/0014), zpráva uživateli s otázkou, zda pushnout do větve PR #73.
+* OTEVŘENÉ (nezastavují práci): push do větve PR #73 (`claude/rychle-akce-a-planovani-temat`) jen se souhlasem. DEP-01
+  (migrace 0013/0014 při startu) rozhoduje uživatel. `PrepareMonthDialog` nechává `<datalist>`. Wizard: nezaváděn
+  (formuláře mají kroky 1/2 jako sekce, přínos wizardu neprokázán). „Zrušit úpravy“ zahodí bez dotazu (záměr, popisek
+  to říká). Preview DB obsahuje ručně zadané „NJBJK“ – vyčištění rozhoduje uživatel. PDF/DOCX zdroj zápisu ne (Z-13).
 
 **RYCHLÉ AKCE, PLÁNOVÁNÍ TÉMAT, ZÁPISY SE SCHVÁLENÍM (18. 11. 2026, větev `claude/rychle-akce-a-planovani-temat` z main 59cadc0).**
 Zadání uživatele: velké UX zadání (Quick Actions, garantovaná témata, Naplánovat téma, doporučení, Připravit měsíc,
