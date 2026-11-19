@@ -1,5 +1,29 @@
 # Prompt pro další session
 
+**OPRAVNÉ KOLO PR #74 – RELACE 2 HOTOVA (19. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd`, draft PR #74).**
+Zadání: `list_events` session `session_01HpUiruJkjFtPcUM3L92gGi`, kinds `["user"]`, poslední user zpráva „ZBČ – Opravné kolo
+PR #74…“ (výsledek se uloží do souboru, vytáhnout skriptem: `json.JSONDecoder().raw_decode`, klíče `text`/`content`).
+Průběžný report: `docs/report-opravne-kolo-pr74.md`. Relace 1: P0-3 (0b1c0d2), P0-2 server + migrace 0015 (bea1c6c).
+* HOTOVO P0-1 + P1-2 (ba4b169): `TopicBoard.tsx` nahradil `TopicOrderList.tsx` – jeden kontext tažení přes obě skupiny,
+  DOM se během tažení nemění (zástupné místo, `fixed` náhled, linka vložení, cíl z rozměrů zachycených při startu),
+  autoscroll u okraje (rAF) + přepočet na `scroll`, Esc (posluchač jen během tažení), ztráta zachycení = zrušení,
+  po puštění jedna `placeTopicAction`, optimisticky + rollback, `aria-busy` při ukládání. Prázdná skupina = cíl
+  (`.topic-drop-empty`, nahradila notice „Zatím nejsou nastavená…“). Šipky přes okraj skupiny = přesun do druhé.
+  Barvy: garantovaná `--ochre-soft` podklad + okrový pruh + tmavší nadpis, nejžádanější mezi ostatními zelený pruh `--ok`.
+  E2E `temata-planovani.spec.ts` (jen windows-1280, serial): 18 vlastních témat Tým A (ostatních 20+), o 1/3/5/6+,
+  poslední→první a první→poslední s autoscrollem, Esc, ostatní↔garantovaná, prázdná skupina, klávesnice, souběh dvou
+  oken, po archivaci, prst 390 px, úklid (archivace, Seřadit podle zájmu). Unit: přesuny v seznamech 1/3/10/25.
+  Ověřeno: lint, typecheck, unit temata-priority 25/25, e2e 7 sad (temata, klavesnice, pristupnost, stranky,
+  domu-ukoly, doporucene-tema, kdo-tema) na všech projektech 654 passed / 27 skipped.
+* DALŠÍ KROKY: 1) **P1-1 Quick Actions** (`Menu.tsx`, `CardMenu.tsx`, `Schedule.tsx`, `schedule.module.css`): menší
+  decentní ⋯, vyhrazené místo bez překryvu textu, hover/focus/open, dotyková plocha, menu v okně, destruktivní oddělené,
+  test klik na ⋯ neotevře detail ani DnD. 2) P1-4/P1-3/P1-5 cíleně (texty kratší, hierarchie; hromadný vedoucí: Wiki
+  výběr s ID jen pokud jasný přínos). 3) P2 jen s jasným přínosem. 4) celé ověření (lint, typecheck, unit, build,
+  celé e2e) + screenshoty před/po 320/390/768/1280/1440/1920 do `docs/screenshots/opravne-kolo-pr74/` (před = c4c3a9a
+  přes `git worktree`, hlavní obrazovky + otevřené nabídky). 5) poslední relace: popis PR #74, CI, report uživateli.
+* Otázky pro uživatele (poslední relace): spustit 0015 na Preview (nesecretní `APPROVED_MIGRATIONS=0015_topic_priority_unlimited`
+  v Vercel Preview env + redeploy, předtím SELECT názvu omezení v `pg_constraint`); vedoucí bez kontroly příslušnosti ke skupině.
+
 **OPRAVNÉ KOLO PR #74 – RELACE 1 HOTOVA (19. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd`, draft PR #74).**
 Zadání: `list_events` session `session_01HpUiruJkjFtPcUM3L92gGi`, kinds `["user"]`, poslední user zpráva „ZBČ – Opravné kolo
 PR #74…“ (uložit do souboru v scratchpadu, číst odtud). Průběžný report: `docs/report-opravne-kolo-pr74.md`.
