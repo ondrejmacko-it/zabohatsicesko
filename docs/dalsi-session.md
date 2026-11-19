@@ -1,5 +1,35 @@
 # Prompt pro další session
 
+**SJEDNOCENÍ WIKI – RELACE 9 → 10 (19. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd`, PR #74).**
+Zadání beze změny (plné znění: `list_events` session `session_01HpUirwZ4XH6LuKaqHTR6A4`, kinds `["user"]`, stránka
+před `757f686b-…`, zpráva „ZBČ – PR #74: sjednocení Wiki…“; uloží se do souboru, hledej text „ZBČ – PR #74: sjednocení“).
+* HOTOVO relace 9: (a) test „více filtrů“ OVĚŘEN – skutečná chyba: `key` u `PlanFilters` v `harmonogram/page.tsx`
+  obsahoval vybrané typy → komponenta se přemontovala a nabídka Filtry se po zaškrtnutí typu zavřela (22354d8);
+  plan-planovani 46/46. (b) 618e18b: Filtry na 320/390 px přetékaly okno (panel teď kotvený k řádku filtrů);
+  Připravit měsíc (kroky `.prepare-step` jako sekce s `.step-no`, hláška kroku 1 na vlastním řádku, `.publish-head`
+  záhlaví sloupců, `.prepare-bulk` jako nástroj „Hromadně doplnit vedoucího“ – popisek pole teď „Vedoucí do
+  prázdných polí“, krok 3 `publish-impact-count/state`, prázdný stav jen text); `.btn-primary:disabled` šedé;
+  rozvrh (`.slot-day`, `.slot-time`, `.slot-types` + `.check-chip`, neaktivní den bez okrového pruhu); Témata (⋯
+  `variant="card"` + `.menu-inline`, tlumenější zájemci/metadata, „bez termínu“ bez tučného); globálně `.item-title`
+  650 a `.item-meta` muted. P4: `dialog[open]` fade+6 px 150 ms, rozbalení `.filter-menu-panel` a
+  `.change-original-facts`, hover karet Plánu/agendy (stín + 1 px, ne stoh, ne `data-lifted`) a `a.item-card` (jen
+  stín – transformace by rozbila pevně ukotvené menu ⋯, zachytil test Správa). Vše v `prefers-reduced-motion: no-preference`.
+  Ověřeno: lint, typecheck, e2e (priprava-mesice, okna, plan-planovani, temata-planovani, zapisy-schvaleni,
+  pristupnost) na windows-1280 + telefon-320: 99+92 passed, 0 failed. NEOVĚŘENO: unit, build, celé e2e, snímky po.
+* Snímky PŘED: `docs/screenshots/sjednoceni-pr74/pred-*-{320,390,768,1280,1440,1920}.jpg` (13 pohledů). Skript
+  NENÍ v repu (scratchpad); v další relaci ho znovu vytvoř: přihlášení jako správce (viz `scripts/audit-screenshoty.mjs`),
+  návrh změny ev-11-26 pro stoh (viz `priprava-mesice.spec.ts` ř. ~269), pohledy domu, plan, lista (clip 160 px),
+  temata, zapisy, zapis-editor (`/vzdelavani/akce/ev-11-10#nahravka`), sprava, filtry (stav=navrhy&stav=doplnit + 2 typy),
+  karta-menu, stoh (hover `[data-original-of=ev-11-26]`, ≥768), pridat-akci, pripravit-mesic, rozvrh, nahled; JPEG q62.
+* ZBÝVÁ (pořadí): 1) P1 zbytek – Zápisy (karty zdrojů `.persona` bílé + okrový výběr, stav/zdroj výrazněji v
+  `RecordingSection`), Domů/Detail/Správa jen nadpis × metadata × stav × CTA; 2) P6 průchod textů; 3) P2 globální
+  „Zobrazit jako“ podle návrhu v reportu (sekce Relace 8; cookie `zbc_nahled`, odstranit výběr z `PlanFilters`,
+  e2e: náhled bez zapisujících tlačítek, Správa = skutečný účet, ne-správce cookie ignorována) – bezpečnostně citlivé,
+  pokud by vyšel rozsáhlý, nejdřív sepsat dopad; 4) lint, typecheck, unit, build, celé e2e na pozadí (0 failed);
+  5) snímky `po-*` stejným skriptem; 6) report body 1–10 do `docs/report-opravne-kolo-pr74.md`; 7) popis PR #74.
+  Před e2e: `fuser -k 3310/tcp 3311/tcp`. Bez merge, deploye, migrací.
+* Uživatel chce na konci AUDIT: co bylo uděláno + co má ručně vyzkoušet na Preview.
+
 **SJEDNOCENÍ WIKI – RELACE 8 → 9 (relaci 9 zakládá uživatel ručně: limit hloubky řetězu relací) (19. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd`, PR #74).**
 Zadání beze změny (blok níže; plné znění `list_events` session `session_01HpUirwZ4XH6LuKaqHTR6A4`, kinds `["user"]`,
 poslední user zpráva „ZBČ – PR #74: sjednocení Wiki…“). Report: `docs/report-opravne-kolo-pr74.md`, sekce Relace 8.
