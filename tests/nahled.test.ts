@@ -2,7 +2,10 @@ import { beforeEach, describe, expect, test } from "vitest";
 import { monthSummary, monthTasks } from "@/features/vzdelavani/status";
 import { getEventDetail } from "@/server/services/detail";
 import { listMonth, nextEventsFor } from "@/server/services/events";
+import { listPublishedMinutes } from "@/server/services/journey";
 import { listPreviewOptions, resolvePreview } from "@/server/services/preview";
+import { encodePreviewCookie, previewKeyFor } from "@/server/services/preview-context";
+import { listTopics } from "@/server/services/topics";
 import { lead, organizer, outsider, participant, resetDemo } from "./helpers";
 
 beforeEach(resetDemo);
@@ -77,5 +80,33 @@ describe("horní bloky Plánu", () => {
     expect(cards.length).toBeLessThanOrEqual(3);
     expect(cards.every((c) => c.planStatus === "published" && c.type !== "holiday")).toBe(true);
     expect(cards.map((c) => c.startsAt)).toEqual([...cards.map((c) => c.startsAt)].sort());
+  });
+});
+
+describe("globální náhled (cookie zbc_nahled)", () => {
+  test("klíč platí jen pro účet, který náhled zapnul", () => {
+    const value = encodePreviewCookie(organizer.id, "skupina-fp");
+    expect(previewKeyFor(organizer.id, value)).toBe("skupina-fp");
+    expect(previewKeyFor(participant.id, value)).toBeUndefined();
+    expect(previewKeyFor(organizer.id, undefined)).toBeUndefined();
+    expect(previewKeyFor(organizer.id, "skupina-fp")).toBeUndefined();
+    expect(previewKeyFor(organizer.id, `${organizer.id}|`)).toBeUndefined();
+    expect(previewKeyFor(organizer.id, `|skupina-fp`)).toBeUndefined();
+  });
+
+  test("podvržený klíč účastníka nic nezapne", async () => {
+    expect(await resolvePreview(participant, previewKeyFor(participant.id, encodePreviewCookie(participant.id, "skupina-rm")))).toBeNull();
+    expect(await resolvePreview(organizer, "skupina-neexistuje")).toBeNull();
+  });
+
+  test("Témata a Zápisy v náhledu skupiny = co vidí skutečný účastník", async () => {
+    const fp = (await resolvePreview(organizer, "skupina-fp"))!;
+    const rm = (await resolvePreview(organizer, "skupina-rm"))!;
+    const topicIds = async (viewer: Parameters<typeof listTopics>[0]) => (await listTopics(viewer)).map((t) => t.id).sort();
+    expect(await topicIds(fp.viewer)).toEqual(await topicIds(participant));
+    expect(await topicIds(rm.viewer)).toEqual(await topicIds(outsider));
+    const minuteIds = async (viewer: Parameters<typeof listPublishedMinutes>[0]) => (await listPublishedMinutes(viewer)).map((m) => m.eventId).sort();
+    expect(await minuteIds(fp.viewer)).toEqual(await minuteIds(participant));
+    expect(await minuteIds(rm.viewer)).toEqual(await minuteIds(outsider));
   });
 });

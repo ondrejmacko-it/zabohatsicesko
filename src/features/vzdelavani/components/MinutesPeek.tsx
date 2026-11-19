@@ -29,7 +29,18 @@ const STATE_ACTION: Record<MissingMinutesItem["state"], string> = {
  * Zápis v okně nad stránkou Zápisy. Čtenář vidí zveřejněný zápis, vedoucí a kontrolor tu rovnou nahrají
  * záznam a zápis zkontrolují. Oprávnění počítá server stejně jako v detailu akce.
  */
-export async function MinutesPeek({ user, eventId, closeHref }: { user: Viewer; eventId: string; closeHref: string }) {
+export async function MinutesPeek({
+  user,
+  eventId,
+  closeHref,
+  previewLabel,
+}: {
+  user: Viewer;
+  eventId: string;
+  closeHref: string;
+  /** Aktivní náhled: `user` je divák náhledu a okno nesmí nabídnout nahrání ani úpravy. */
+  previewLabel?: string;
+}) {
   const detail = await getEventDetail(user, eventId);
   if (!detail || detail.recording.access === "none") return <UnavailableModal title="Zápis není dostupný" closeHref={closeHref} backLabel="Zpět na zápisy" />;
   const { card } = detail;
@@ -41,7 +52,13 @@ export async function MinutesPeek({ user, eventId, closeHref }: { user: Viewer; 
         {[day, ...eventContext(title, card.type, card.audience), detail.leadName ? `Vede: ${detail.leadName}` : "Vedoucí neurčen"].join(" · ")}
       </p>
       <div className="peek-section">
-        <RecordingSection eventId={card.id} eventLabel={`${title} · ${day}`} panel={detail.recording} />
+        {previewLabel && detail.recording.access === "handler" ? (
+          <p className="muted">
+            {previewLabel} u této akce nahrává záznam a kontroluje zápis. Nahrávka a pracovní přepis se v náhledu nezobrazují.
+          </p>
+        ) : (
+          <RecordingSection eventId={card.id} eventLabel={`${title} · ${day}`} panel={detail.recording} />
+        )}
       </div>
     </RouteModal>
   );

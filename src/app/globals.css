@@ -4287,7 +4287,8 @@ body[data-moving] .quick-actions,
 
 .view-switch-active .view-select {
   border-color: var(--ochre);
-  background: var(--ochre-soft);
+  /* Jen barva: zkratka background by smazala šipku výběru. */
+  background-color: var(--ochre-soft);
   color: var(--ochre-dark);
   font-weight: 600;
 }
@@ -4314,8 +4315,24 @@ body[data-moving] .quick-actions,
 }
 
 @media (max-width: 640px) {
+  /* Na telefonu má Pohled vlastní řádek pod značkou: celá šířka, bez oddělovače, dlouhý název se zkrátí. */
   .view-switch {
-    padding-right: 6px;
+    width: 100%;
+    margin-left: 0;
+    padding-right: 0;
+    border-right: 0;
+  }
+
+  .view-switch-form {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .view-select {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: 100%;
+    text-overflow: ellipsis;
   }
 
   .view-switch-label,

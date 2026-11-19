@@ -21,6 +21,7 @@ import { listArchivedTopics, listTopicInterested, listTopics } from "@/server/se
 
 type RowContext = {
   organizer: boolean;
+  readOnly: boolean;
   groups: Group[];
   mostWanted: Set<string>;
   interested: Map<string, string[]> | null;
@@ -85,8 +86,13 @@ function topicItem(t: RankedTopic, index: number, count: number, ctx: RowContext
         )}
       </div>
       <div className="topic-actions">
-        <InterestButton topicId={t.id} interested={t.interestedByViewer} titleId={`tema-${t.id}`} />
-        {ctx.organizer && <TopicManage topic={t} groups={ctx.groups} canMoveUp={index > 0} canMoveDown={index < count - 1} />}
+        {/* Náhled nic nemění: místo tlačítka jen stav zájmu diváka. */}
+        {ctx.readOnly ? (
+          t.interestedByViewer && <span className="badge topic-badge">Má zájem</span>
+        ) : (
+          <InterestButton topicId={t.id} interested={t.interestedByViewer} titleId={`tema-${t.id}`} />
+        )}
+        {ctx.organizer && !ctx.readOnly && <TopicManage topic={t} groups={ctx.groups} canMoveUp={index > 0} canMoveDown={index < count - 1} />}
       </div>
     </>
     ),
@@ -98,7 +104,7 @@ function topicItem(t: RankedTopic, index: number, count: number, ctx: RowContext
  * pořadí správce. Štítek Nejžádanější zůstává vázaný na skutečný počet zájemců v celém seznamu.
  * Správa je v nabídce u každého řádku.
  */
-export async function TopicsSection({ user }: { user: Viewer }) {
+export async function TopicsSection({ user, readOnly = false }: { user: Viewer; readOnly?: boolean }) {
   const organizer = isOrganizer(user);
   const [ranked, archived, interested] = await Promise.all([
     listTopics(user),
@@ -114,6 +120,7 @@ export async function TopicsSection({ user }: { user: Viewer }) {
   const groups = GROUPS.filter((g) => organizer || user.groups.includes(g)) as Group[];
   const ctx: RowContext = {
     organizer,
+    readOnly,
     groups,
     mostWanted: mostWantedIds(topics),
     interested,
@@ -127,18 +134,22 @@ export async function TopicsSection({ user }: { user: Viewer }) {
       <h2 id="temata" className="visually-hidden">
         Témata
       </h2>
-      <PageCall text="Navrhněte téma nebo podpořte návrh kolegů.">
-        <ProposeTopicDialog groups={groups} />
-      </PageCall>
+      {!readOnly && (
+        <PageCall text="Navrhněte téma nebo podpořte návrh kolegů.">
+          <ProposeTopicDialog groups={groups} />
+        </PageCall>
+      )}
       {topics.length === 0 ? (
         <div className="empty-state">
           <p className="item-title">Zatím tu nejsou žádná témata.</p>
-          <p className="item-meta">Navrhněte první tlačítkem Navrhnout téma. Kolegové pak mohou dát najevo zájem.</p>
+          <p className="item-meta">
+            {readOnly ? "V tomto pohledu není vidět žádné téma." : "Navrhněte první tlačítkem Navrhnout téma. Kolegové pak mohou dát najevo zájem."}
+          </p>
         </div>
       ) : (
         <>
           <TopicBoard
-            sortable={organizer}
+            sortable={organizer && !readOnly}
             guaranteed={guaranteed.map((t, index) => topicItem(t, index, guaranteed.length, ctx))}
             others={others.map((t, index) => topicItem(t, index, others.length, ctx))}
             guaranteedHead={
@@ -156,13 +167,13 @@ export async function TopicsSection({ user }: { user: Viewer }) {
                 {manualOrder && (
                   <div className="topic-order-note">
                     <p className="item-meta">Pořadí upravil správce. Nová témata přibývají na konec.</p>
-                    {organizer && <ActionForm action={resetTopicOrderAction} label="Seřadit podle zájmu" pendingLabel="Řadím…" small />}
+                    {organizer && !readOnly && <ActionForm action={resetTopicOrderAction} label="Seřadit podle zájmu" pendingLabel="Řadím…" small />}
                   </div>
                 )}
               </>
             }
           />
-          {organizer && (
+          {organizer && !readOnly && (
             <p id="tema-poradi-napoveda" className="visually-hidden">
               Pořadí změníte přetažením úchytu, i mezi garantovanými a ostatními tématy. Šipkami nahoru a dolů posunete téma o jedno místo, přes okraj skupiny do druhé skupiny.
             </p>
@@ -170,7 +181,7 @@ export async function TopicsSection({ user }: { user: Viewer }) {
         </>
       )}
 
-      {archived.length > 0 && (
+      {!readOnly && archived.length > 0 && (
         <details className="archived-block">
           <summary>Archivovaná témata ({archived.length})</summary>
           <ul className="topic-list archived-topics">

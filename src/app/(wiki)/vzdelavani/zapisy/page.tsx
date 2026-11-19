@@ -10,6 +10,7 @@ import { GROUPS, type Group } from "@/lib/types";
 import { requireUser } from "@/server/auth/session";
 import { isOrganizer } from "@/server/policy";
 import { listMissingMinutes, listPublishedMinutes } from "@/server/services/journey";
+import { currentPreview } from "@/server/services/preview-context";
 
 export const metadata: Metadata = { title: "Zápisy" };
 
@@ -18,14 +19,17 @@ type SearchParams = Promise<{ q?: string; typ?: string; skupina?: string; zapis?
 export default async function MinutesPage({ searchParams }: { searchParams: SearchParams }) {
   const user = await requireUser();
   const params = await searchParams;
+  // V náhledu (lišta Pohled) stránka ukáže zápisy, které vidí skupina nebo kolega, a nic nedovolí doplnit.
+  const preview = await currentPreview(user);
+  const viewer = preview?.viewer ?? user;
   const query = (params.q ?? "").slice(0, 80);
   // Nabídka filtrů vychází jen ze zápisů, které uživatel smí číst. Cizí skupiny ani typy neprozradí.
-  const all = await listPublishedMinutes(user);
+  const all = await listPublishedMinutes(viewer);
   const types = [...new Set(all.map((m) => m.type))];
   const groups = GROUPS.filter((g) => all.some((m) => m.audience === g));
   const type = types.find((t) => t === params.typ);
   const audience = groups.find((g: Group) => g === params.skupina);
-  const filtered = query || type || audience ? await listPublishedMinutes(user, { query, type, audience }) : all;
+  const filtered = query || type || audience ? await listPublishedMinutes(viewer, { query, type, audience }) : all;
   const filtering = Boolean(query || type || audience);
   const months = groupByMonth(filtered);
   // Okna nad stránkou řídí adresa: hledání a filtry pod nimi zůstávají.
@@ -35,8 +39,8 @@ export default async function MinutesPage({ searchParams }: { searchParams: Sear
     const text = search.toString();
     return text ? `/vzdelavani/zapisy?${text}` : "/vzdelavani/zapisy";
   };
-  const missing = await listMissingMinutes(user);
-  const canAdd = isOrganizer(user) || missing.handlesAny;
+  const missing = preview ? { items: [], handlesAny: false } : await listMissingMinutes(user);
+  const canAdd = !preview && (isOrganizer(user) || missing.handlesAny);
   // Správce vidí všechny chybějící zápisy, vedoucí jen ty, za které odpovídá. Stránka odlišuje krátkými
   // názvy, co už kolegové čtou (Zveřejněné zápisy) a co se teprve dokončuje (K dokončení).
   const missingTitle = isOrganizer(user) ? "Zápisy k dokončení" : "Moje zápisy k dokončení";
@@ -46,7 +50,7 @@ export default async function MinutesPage({ searchParams }: { searchParams: Sear
     <>
     <TopicsAnchorRedirect />
     {peekId ? (
-      <MinutesPeek key={peekId} user={user} eventId={peekId} closeHref={link()} />
+      <MinutesPeek key={peekId} user={viewer} eventId={peekId} closeHref={link()} previewLabel={preview?.label} />
     ) : (
       canAdd && params.pridat === "1" && <AddMinutesPicker title={missingTitle} items={missing.items} hrefFor={(id) => link({ zapis: id })} closeHref={link()}
         assignHref={isOrganizer(user) ? (item) => `/vzdelavani/harmonogram?mesic=${item.startsAt.slice(0, 7)}&akce=${encodeURIComponent(item.eventId)}` : undefined} />
