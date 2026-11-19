@@ -499,6 +499,8 @@ function EventForm({
 
   const busy = pending || checking;
   const publishLabel = published ? "Zveřejnit změny" : "Zveřejnit";
+  // Zveřejněná akce bez návrhu změny a bez úprav: není co uložit ani zveřejnit, patička to jen oznámí (A-07, A-13).
+  const unchanged = published !== null && !unpublishedChanges && !dirty;
 
   return (
     <form ref={formRef} id={formId} onSubmit={submit} onInvalidCapture={onInvalid} className="stack event-form">
@@ -613,13 +615,14 @@ function EventForm({
       {/* Enter ve formuláři uloží jen návrh. Zveřejnění je vždy vědomá volba. */}
       <div className="dialog-actions event-actions">
         {menu && <div className="event-actions-menu">{menu}</div>}
-        {published && !unpublishedChanges && !dirty && <span className="small muted event-actions-note">Beze změn</span>}
+        {unchanged && <span className="small muted event-actions-note">Beze změn</span>}
         {duplicateOf && <span className="small muted event-actions-note">Kopie se uloží jako návrh, zveřejníte ji po kontrole.</span>}
         <button type="submit" name="intent" value="draft" data-confirm-save="Uložit jako návrh" className={duplicateOf ? "btn btn-primary" : "btn"} disabled={busy || (mode === "edit" && !dirty)}>
           Uložit jako návrh
         </button>
         {duplicateOf ? null : (
-          <button type="submit" name="intent" value="publish" className="btn btn-primary" disabled={busy || (published !== null && !unpublishedChanges && !dirty)}>
+          // Primární vzhled jen tehdy, když je skutečně co zveřejnit; bez změn tlačítko k ničemu nevybízí.
+          <button type="submit" name="intent" value="publish" className={unchanged ? "btn" : "btn btn-primary"} disabled={busy || unchanged}>
             {checking ? "Ověřuji…" : pending ? "Ukládám…" : publishLabel}
           </button>
         )}

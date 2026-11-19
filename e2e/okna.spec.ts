@@ -203,8 +203,15 @@ test.describe("okna správce", () => {
     await settle(page);
     const win = dialog(page, "Portfolio tým");
     await expect(win).toBeVisible();
+    // A-07, A-13: bez změny patička jen oznámí „Beze změn“, Zveřejnit změny není primární ani aktivní.
+    const publish = win.getByRole("button", { name: "Zveřejnit změny" });
+    await expect(win.getByText("Beze změn", { exact: true })).toBeVisible();
+    await expect(publish).toBeDisabled();
+    await expect(publish).not.toHaveClass(/btn-primary/);
     await win.getByLabel("Od", { exact: true }).fill("09:00");
-    await win.getByRole("button", { name: "Zveřejnit změny" }).click();
+    await expect(win.getByText("Beze změn", { exact: true })).toHaveCount(0);
+    await expect(publish).toHaveClass(/btn-primary/);
+    await publish.click();
     const ask = page.getByRole("alertdialog", { name: "Zveřejnit změny?" });
     await expect(ask).toContainText("Změníte termín");
     await expect(ask.getByRole("button", { name: "Potvrdit zveřejnění" })).toBeVisible();
