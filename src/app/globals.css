@@ -3483,6 +3483,8 @@ body[data-moving] .quick-actions,
   .plan-filters {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    /* Všechny řádky stejně vysoké: na 320 px se „Vybrat návrhy“ zalomí a krátké štítky souhrnu nad ním by byly nižší. */
+    grid-auto-rows: 1fr;
     align-items: stretch;
     gap: 8px;
   }
