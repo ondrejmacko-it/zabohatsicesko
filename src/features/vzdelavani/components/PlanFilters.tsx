@@ -10,7 +10,6 @@ import type { PlanState } from "../status";
 import { QuickActions } from "./QuickActions";
 import { SelectToggle, useSelection } from "./PlanSelection";
 
-type Option = { key: string; label: string };
 
 /** Štítek stavu měsíce (jen správce): počet a odkaz, který harmonogram zúží na dotčené termíny. */
 /** Štítek souhrnu měsíce. `spoken` doplní přístupný název za počtem („Doplnit 8 akcí“), `hint` vysvětlí, co počet znamená. */
@@ -24,8 +23,6 @@ type Props = {
   selectedTypes: { type: EventType; removeHref: string }[];
   /** Odkaz, který zruší všechny filtry (typy i stavy). Null, když žádný není vybraný. */
   resetHref: string | null;
-  /** Nabídka „Zobrazit jako“ (pohled skupiny nebo kolegy). Jen pro správce, jinak null. */
-  preview: { groups: Option[]; people: Option[]; value: string } | null;
   /** Co v měsíci čeká na správce. Prázdné pole = nic, štítky se nevykreslí. */
   chips: StateChip[];
   states: PlanState[];
@@ -53,14 +50,14 @@ function ChipLinks({ chips, states }: { chips: StateChip[]; states: PlanState[] 
   });
 }
 
-type FieldsProps = Pick<Props, "keep" | "types" | "chips" | "preview"> & { selected: EventType[]; states: PlanState[]; hintId: string };
+type FieldsProps = Pick<Props, "keep" | "types" | "chips"> & { selected: EventType[]; states: PlanState[] };
 
 /**
- * Pole filtru (typy akce a stavy jako zaškrtávací volby, Zobrazit jako). Jediná implementace pro nabídku Filtry
+ * Pole filtru (typy akce a stavy jako zaškrtávací volby; pohled je globálně v horní liště). Jediná implementace pro nabídku Filtry
  * i rychlou nabídku. Změna volby hned přejde na novou adresu (historie prohlížeče ji vrátí), nabídka zůstane
  * otevřená pro další volbu. Bez JavaScriptu se formulář odešle tlačítkem Použít.
  */
-function FilterFields({ keep, types, chips, preview, selected, states, hintId }: FieldsProps) {
+function FilterFields({ keep, types, chips, selected, states }: FieldsProps) {
   const router = useRouter();
   // Volby se ukážou hned po kliknutí, adresa je dožene; návrat v historii je srovná s adresou.
   const urlKey = `${selected.join(",")}|${states.join(",")}`;
@@ -72,12 +69,10 @@ function FilterFields({ keep, types, chips, preview, selected, states, hintId }:
     // Klíč se srovná s adresou až po navigaci; do té doby platí, co uživatel právě zaškrtl.
     setPicked(next);
     const query = new URLSearchParams(keep);
-    if (preview?.value) query.set("jako", preview.value);
     for (const t of next.typ) query.append("typ", t);
     for (const st of next.stav) query.append("stav", st);
     router.push(`/vzdelavani/harmonogram?${query}`, { scroll: false });
   };
-  const submit = (event: React.ChangeEvent<HTMLSelectElement>) => event.currentTarget.form?.requestSubmit();
   return (
     <>
       {keep.map(([name, value]) => (
@@ -107,31 +102,6 @@ function FilterFields({ keep, types, chips, preview, selected, states, hintId }:
           ))}
         </fieldset>
       )}
-      {preview && (
-        <label className="field">
-          <span className="field-label">Zobrazit jako</span>
-          <select className="select select-small" name="jako" defaultValue={preview.value} onChange={submit} aria-describedby={hintId}>
-            <option value="">Můj pohled</option>
-            <optgroup label="Očima skupiny">
-              {preview.groups.map((o) => (
-                <option key={o.key} value={o.key}>
-                  {o.label}
-                </option>
-              ))}
-            </optgroup>
-            <optgroup label="Očima kolegy">
-              {preview.people.map((o) => (
-                <option key={o.key} value={o.key}>
-                  {o.label}
-                </option>
-              ))}
-            </optgroup>
-          </select>
-          <span id={hintId} className="small muted">
-            Jen náhled, nic se nezmění.
-          </span>
-        </label>
-      )}
       <noscript>
         <button className="btn btn-small" type="submit">
           Použít
@@ -147,7 +117,7 @@ function FilterFields({ keep, types, chips, preview, selected, states, hintId }:
  * hned, tlačítko Použít zůstává pro prohlížeč bez JavaScriptu. Na telefonu je řádek mřížka 2 × 2 a při posunu
  * stránky nabízí stejné filtry a výběr rychlé ovládání (`QuickActions`).
  */
-export function PlanFilters({ keep, types, selectedTypes, resetHref, preview, chips, states, quick }: Props) {
+export function PlanFilters({ keep, types, selectedTypes, resetHref, chips, states, quick }: Props) {
   const menu = useRef<HTMLDetailsElement>(null);
   const row = useRef<HTMLDivElement>(null);
   const selection = useSelection();
@@ -171,13 +141,13 @@ export function PlanFilters({ keep, types, selectedTypes, resetHref, preview, ch
   }, []);
 
   const typeSelect = types.length > 1;
-  const hasMenu = typeSelect || chips.length > 0 || Boolean(preview);
-  const active = selectedTypes.length + states.length + (preview?.value ? 1 : 0);
+  const hasMenu = typeSelect || chips.length > 0;
+  const active = selectedTypes.length + states.length;
   const canSelect = Boolean(selection?.available);
   // Lichý počet prvků: poslední v mřížce 2 × 2 na telefonu zabere celý řádek, aby nezůstala díra.
   const count = chips.length + selectedTypes.length + (resetHref ? 1 : 0) + (hasMenu ? 1 : 0) + (canSelect ? 1 : 0);
   const wideLast = count % 2 === 1;
-  const fields = { keep, types, chips, preview, selected: selectedTypes.map((s) => s.type), states };
+  const fields = { keep, types, chips, selected: selectedTypes.map((s) => s.type), states };
   const quickActions = (
     <QuickActions
       {...quick}
@@ -192,7 +162,7 @@ export function PlanFilters({ keep, types, selectedTypes, resetHref, preview, ch
             )}
             {hasMenu && (
               <form className="stack" method="get" aria-label="Filtr harmonogramu">
-                <FilterFields {...fields} hintId="zobrazit-jako-napoveda-rychle" />
+                <FilterFields {...fields} />
               </form>
             )}
           </div>
@@ -201,7 +171,7 @@ export function PlanFilters({ keep, types, selectedTypes, resetHref, preview, ch
     />
   );
   // Bez nabídky „Zobrazit jako“ nejde o správce, takže ani Vybrat návrhy: bez štítků a filtrů není co ukázat.
-  if (!chips.length && !selectedTypes.length && !typeSelect && !preview) return quickActions;
+  if (!chips.length && !selectedTypes.length && !typeSelect) return quickActions;
   return (
     <>
       <div ref={row} className="plan-filters" data-items={count}>
@@ -230,7 +200,7 @@ export function PlanFilters({ keep, types, selectedTypes, resetHref, preview, ch
                 {active > 0 && <span className="count-badge">{active}</span>}
               </summary>
               <form className="filter-menu-panel stack" method="get" aria-label="Filtr harmonogramu">
-                <FilterFields {...fields} hintId="zobrazit-jako-napoveda" />
+                <FilterFields {...fields} />
               </form>
             </details>
           )}

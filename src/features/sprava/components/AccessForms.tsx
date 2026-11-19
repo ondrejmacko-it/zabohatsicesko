@@ -181,7 +181,7 @@ export function AccountActions({ account: a, roles, live, editable = true }: Acc
           Nastavit a schválit
         </button>
       )}
-      <Menu label={`Možnosti účtu ${a.name}`} small iconOnly>
+      <Menu label={`Možnosti účtu ${a.name}`} variant="card" className="menu-inline">
         {a.status === "pending" && (
           <ActionForm
             action={rejectRequestAction}

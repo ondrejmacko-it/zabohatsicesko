@@ -14,7 +14,7 @@ import { formatDate, formatEventWhen, monthOf, toDateKey } from "@/lib/time";
 import { requireUser } from "@/server/auth/session";
 import { isOrganizer } from "@/server/policy";
 import { getEventDetail } from "@/server/services/detail";
-import { resolvePreview } from "@/server/services/preview";
+import { currentPreview } from "@/server/services/preview-context";
 import { minutesSectionLabel } from "@/lib/minutes";
 
 export const metadata: Metadata = { title: "Detail akce" };
@@ -25,14 +25,14 @@ const ORIGINS: Record<string, { href: string; label: string }> = {
   prehled: { href: "/vzdelavani/harmonogram", label: "Zpět na Plán" },
 };
 
-type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ odkud?: string; jako?: string }> };
+type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ odkud?: string }> };
 
 export default async function EventDetailPage({ params, searchParams }: Props) {
   const user = await requireUser();
   const { id } = await params;
   const query = await searchParams;
   // Náhled „Zobrazit jako“ z harmonogramu: detail se počítá pro vybranou skupinu nebo kolegu a je jen ke čtení.
-  const preview = await resolvePreview(user, query.jako);
+  const preview = await currentPreview(user);
   // Neviditelná i neexistující akce vrací stejnou odpověď, aby ID neprozradilo, že akce existuje.
   const eventId = safeDecode(id);
   const detail = eventId ? await getEventDetail(preview?.viewer ?? user, eventId) : null;
@@ -53,7 +53,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
   const handler = detail.recording.access === "handler" && !preview;
   const planHref = `/vzdelavani/harmonogram?mesic=${monthOf(dayKey)}`;
   const back = preview
-    ? { href: `${planHref}&jako=${encodeURIComponent(query.jako!)}`, label: "Zpět na plán (v náhledu)" }
+    ? { href: planHref, label: "Zpět na plán (v náhledu)" }
     : (ORIGINS[query.odkud ?? ""] ?? { href: planHref, label: "Zpět na plán" });
 
   return (
@@ -63,12 +63,6 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
         <Link href={back.href}>← {back.label}</Link>
       </p>
 
-      {preview && (
-        <p className="notice" role="status">
-          Pohled: <strong>{preview.label}</strong> · jen ke čtení.{" "}
-          <Link href={`/vzdelavani/akce/${encodeURIComponent(card.id)}`}>Otevřít v pohledu správce</Link>
-        </p>
-      )}
 
       <div className="page-head detail-head">
         <div>

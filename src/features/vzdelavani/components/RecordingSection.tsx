@@ -54,12 +54,17 @@ function versionLabel(minutes: HandlerMinutes): string {
   return `Návrh, verze ${minutes.version}, čeká na schválení vedoucím`;
 }
 
+function versionTone(minutes: HandlerMinutes): "ok" | "waiting" | "draft" {
+  if (minutes.status === "published") return "ok";
+  return minutesStarted(minutes.content) ? "waiting" : "draft";
+}
+
 function draftHint(minutes: HandlerMinutes): string {
   if (minutes.source === "recording") {
-    return `Návrh z ukázkového přepisu (šablona ${TEMPLATE_LABELS[minutes.detectedTemplate]}). Jde o ukázku, ne o přepis skutečné schůzky. Zkontrolujte ho a uložte.`;
+    return `Návrh z ukázkového přepisu (šablona ${TEMPLATE_LABELS[minutes.detectedTemplate]}). Jde o ukázku, ne o přepis skutečné schůzky.`;
   }
-  if (!minutesStarted(minutes.content)) return "Vyplňte aspoň Shrnutí a uložte. Ke schválení je zápis až s obsahem.";
-  return "Návrh vznikl z vloženého textu, nic se nedomýšlí. Zkontrolujte ho a uložte.";
+  if (!minutesStarted(minutes.content)) return "Vyplňte aspoň Shrnutí. Ke schválení je zápis až s obsahem.";
+  return "Návrh vznikl z vloženého textu, nic se nedomýšlí.";
 }
 
 const formatSize = (bytes: number) => `${(bytes / 1024 / 1024).toLocaleString("cs-CZ", { maximumFractionDigits: 1 })} MB`;
@@ -157,8 +162,10 @@ export function RecordingSection({ eventId, eventLabel, panel }: { eventId: stri
         <MinutesWorkspace
           key={minutes.id}
           header={
-            <p className="small minutes-version" data-testid="stav-verze">
-              <strong>{versionLabel(minutes)}</strong> · Zdroj: {MINUTES_SOURCE_LABELS[minutes.source]}
+            <p className="minutes-version" data-testid="stav-verze">
+              {/* Stav verze je hlavní informace hlavičky (čeká na schválení / schváleno), zdroj jen doplňuje. */}
+              <span className={`minutes-state minutes-state-${versionTone(minutes)}`}>{versionLabel(minutes)}</span>
+              <span className="minutes-source">Zdroj: {MINUTES_SOURCE_LABELS[minutes.source]}</span>
             </p>
           }
           sourceForm={sourceForm}

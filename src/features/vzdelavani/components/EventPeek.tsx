@@ -21,7 +21,6 @@ type Props = {
   user: Viewer;
   eventId: string;
   preview: PlanPreview | null;
-  previewKey?: string;
   closeHref: string;
   /** Naplánovat téma u zveřejněné akce: téma je ve formuláři předvyplněné, uloží se až běžným uložením. */
   presetTopicId?: string;
@@ -32,7 +31,7 @@ type Props = {
  * ostatní vidí údaje a odkaz na zápis. Nahrávka a stav v Kalendáři zůstávají na celé stránce akce.
  * Neviditelná nebo neexistující akce ukáže neutrální „Akce není dostupná“.
  */
-export async function EventPeek({ user, eventId, preview, previewKey, closeHref, presetTopicId }: Props) {
+export async function EventPeek({ user, eventId, preview, closeHref, presetTopicId }: Props) {
   const detail = await getEventDetail(preview?.viewer ?? user, eventId);
   if (!detail) return <UnavailableModal title="Akce není dostupná" closeHref={closeHref} backLabel="Zpět na plán" />;
   const { card } = detail;
@@ -44,7 +43,7 @@ export async function EventPeek({ user, eventId, preview, previewKey, closeHref,
   const status = primaryStatus(card);
   // Návrh: pás už říká, že ho kolegové nevidí, a chybějící údaje jsou vidět přímo v prázdných polích.
   const advice = managing && card.planStatus !== "draft" ? statusAdvice(card) : null;
-  const fullHref = `/vzdelavani/akce/${encodeURIComponent(card.id)}${previewKey ? `?jako=${encodeURIComponent(previewKey)}` : ""}`;
+  const fullHref = `/vzdelavani/akce/${encodeURIComponent(card.id)}`;
   const minutesReady = detail.recording.access === "reader" && Boolean(detail.recording.minutes);
   const handlesRecording = detail.recording.access === "handler" && !preview && card.past;
   const minutesLabel = detail.recording.access === "handler" ? minutesSectionLabel(detail.recording) : "Zápis";

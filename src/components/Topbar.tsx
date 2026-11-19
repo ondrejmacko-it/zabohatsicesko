@@ -4,14 +4,19 @@ import type { Persona } from "@/server/auth/personas";
 import type { CurrentUser } from "@/server/auth/session";
 import { ROLE_LABELS } from "@/lib/labels";
 import { isLiveWiki } from "@/server/config";
+import { PreviewSwitch } from "./PreviewSwitch";
 
-export function Topbar({ user, personas }: { user: CurrentUser; personas: Persona[] }) {
+type PreviewMenu = { groups: { key: string; label: string }[]; people: { key: string; label: string }[]; active: string | null };
+
+/** Horní lišta: vlevo značka, vpravo zvlášť „Pohled“ (jen správce) a skutečně přihlášený účet. */
+export function Topbar({ user, personas, preview }: { user: CurrentUser; personas: Persona[]; preview: PreviewMenu | null }) {
   return (
     <header className="topbar">
       <Link className="brand" href="/">
         <span className="brand-name">Firemní Wiki</span>
         <span className="brand-tagline">Za bohatší Česko – znalosti a procesy na jednom místě</span>
       </Link>
+      {preview && <PreviewSwitch groups={preview.groups} people={preview.people} active={preview.active} />}
       <div className={user.signedInWith === "google" ? "account account-google" : "account"}>
         {!isLiveWiki() && (
           <span className="demo-badge" title="Fiktivní data a ukázkové režimy integrací">
