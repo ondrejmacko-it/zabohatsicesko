@@ -1,8 +1,64 @@
-# Opravné kolo UX/UI k PR #73 – průběžný report (po relaci 8)
+# Opravné kolo UX/UI k PR #73 – závěrečný report (relace 1–9)
 
 Větev `claude/focused-cerf-gr1tdi` z HEAD PR #73 (`ff7ac54`, shodné s referenčním commitem screenshotů).
-Zadání: `ZBC_KOMPLETNI_PROMPT_CLAUDE_CODE_PR73.md` (u uživatele, do repa se nedává). Relace končí na limitu
-kontextu, práce pokračuje v navazující relaci. Nic není mergnuto ani nasazeno.
+Zadání: `ZBC_KOMPLETNI_PROMPT_CLAUDE_CODE_PR73.md` (u uživatele, do repa se nedává). Nic není mergnuto ani nasazeno,
+do větve PR #73 (`claude/rychle-akce-a-planovani-temat`) se nepushovalo.
+
+## Shrnutí po oblastech
+
+**Design konzistence.** Vzhled Wiki zachován, žádný redesign, žádná nová knihovna. Jedna menší varianta pole
+(`.select-small`), jeden focus ring (A-14, okrový 2 px), ⋯ všude stejné 36 × 32 px s rámečkem (A-01), tóny stavů
+z existujících proměnných (`--line`, `--beige`, `status-*`). Bez podbarvení řádků témat (T-04/C-04/T-11), čísla priorit
+decentní (T-03). Nápovědy, na kterých závisí výsledek, 13 px a vyšší kontrast (C-01), ostatní beze změny.
+
+**Duplicity a nadbytečný text (D-01–D-03).**
+* D-01: název akce neopakuje typ ani skupinu (`eventTitle`/`eventContext`, `src/lib/labels.ts`, unit
+  `tests/duplicity-nazvu.test.ts`). Snímek `okno-zapisu-1280`: dřív „… · Firemní vzdělávání RM · Relationship manažeři ·
+  Vede…“, nově „Pá 6. 11. 2026 · Vede: Vedoucí akce“.
+* D-02: kratší nápovědy, bez druhého Zavřít v Naplánovat téma, bez řádku opakujícího titulek okna; nové samostatné
+  potvrzení „Zahodit změny“ (neveřejné úpravy se dřív zahazovaly bez dotazu). Snímek `naplanovat-tema-1280`.
+* D-03: okno zápisu odděluje metadata / stav verze (tónovaný pruh se Změnit zdroj) / obsah / akce. Snímek
+  `okno-zapisu-1280` a `-390`.
+
+**Rozhodovací overlaye.** Ztráta, zveřejnění a nahrazení dat se rozhodují v samostatném okně (`ConfirmDialog`,
+`alertdialog`, Esc = zpět, návrat fokusu): neuložené změny (Z-14), zveřejnění bez tématu/vedoucího a dopad změn
+(EventDialog), zveřejnit/smazat vybrané (PlanSelection), nahrazení rozepsaného zápisu (Z-02), zahození neveřejných
+změn (D-02). Žádné „Opravdu?“ u neškodných akcí; „Zrušit úpravy“ zahazuje bez dotazu a říká to popiskem (C-03).
+V relaci 9 opravena regrese ze Z-14: potvrzení u neplatného formuláře spouštělo `checkValidity()` a pod oknem se
+objevil souhrn chyb (eb67ebd, snímek `potvrzeni-zmen-1280`). Otevřené: „Zahodit změny“ a dalších 9 potvrzení přes
+`ActionForm` používá vlastní `Modal` (role `dialog`), ne `ConfirmDialog` (`alertdialog`) – funkčně samostatné okno,
+sjednocení je kandidát na rozhodnutí uživatele.
+
+**Dropdowny / combobox.** Téma v okně akce = vlastní ARIA combobox (`src/components/Combobox.tsx`) se skupinami
+Doporučená/ostatní, filtr bez diakritiky, ruční text povolen. `PrepareMonthDialog` si nechává `<datalist>` (záměrně,
+viz tabulka). Menu ⋯ se zarovná podle strany a zůstane v okně (A-08).
+
+**Wizard.** Nezaváděn. Formulář akce má kroky 1/2 jako sekce na jedné obrazovce, přínos vícekrokového průvodce se
+neprokázal (víc kliknutí, ztráta přehledu při úpravě jednoho pole).
+
+**Témata a DnD.** T-01 přetažení úchytem jen pro správce (myš, dotyk, klávesnice), jen v rámci skupiny, server
+ověřuje očekávané pořadí, při souběhu návrat. T-02–T-11 texty a vzhled. Snímek `temata-1280`.
+
+**Zápisy a verze.** Z-01 úprava schváleného zápisu založí nový návrh a schválená verze zůstává vidět; Z-02 nic se
+nemaže, nahrazení s potvrzením na serveru; Z-04–Z-13 kratší volba zdroje, `FilePicker`, Rozpracováno u prázdného,
+Změnit zdroj bez ztráty úprav, nadpis „Zápis“; C-02 popisky podle obsahu.
+
+**Kalendář / role.** Technické informace a stav Kalendáře jen správce (A-10), chyba Kalendáře není zelená (S-01),
+okno vedoucího a účastníka bez technických řádků (A-11). Snímek `okno-akce-spravce-1280`.
+
+## Vizuální před/po
+
+`docs/screenshots/opravne-kolo/`, `pred-*.png` = `ff7ac54` (HEAD PR #73), `po-*.png` = tato větev (eb67ebd), stejná
+fiktivní data, Chromium, 1280 × 800 a 390 × 760. Pořízeno dočasným specem ve worktree (necommitováno).
+
+| Snímek | Co ukazuje |
+|---|---|
+| `okno-zapisu-1280`, `okno-zapisu-390` | D-01 (eyebrow bez typu a skupiny), D-03 (oddělené části), Z-07/Z-11 (bez věty nahoře a zeleného banneru), Z-10 Změnit zdroj u stavu verze |
+| `naplanovat-tema-1280`, `-390` | T-08–T-10, D-02: stávající termín nahoře s hlavní akcí, krátké řádky „návrh“, bez druhého Zavřít |
+| `potvrzeni-zmen-1280` | Z-14: místo banneru ve formuláři samostatné okno „Neuložené změny“, bez souhrnu chyb pod ním |
+| `okno-akce-spravce-1280` | A-05/A-06 příjemci u „Pro koho“, Další údaje oddělené čarou, A-07/A-13 Beze změn = tlačítka neaktivní, combobox tématu |
+| `temata-1280` | T-01 úchyty, T-03 čísla, T-04 bez podbarvení, T-06 bez vnitřního nadpisu |
+| `plan-390` | A-03 „Doplnit 8“ místo „Chybí údaje“, A-01 viditelné ⋯ |
 
 ## Stav nálezů
 
@@ -55,13 +111,19 @@ kontextu, práce pokračuje v navazující relaci. Nic není mergnuto ani nasaze
 | D-01 | **Opraveno** (0c3a42b) | Sdílené `eventTitle` a `eventContext` v `src/lib/labels.ts`: porovnání bez diakritiky, velikosti písmen a interpunkce, po celých slovech. Téma, které obsahuje typ (nebo naopak), se nespojuje „Typ: Téma“; typ v názvu se znovu nepíše; skupina, kterou říká typ (Trénink poradců/FV FP = Finanční poradci, Trénink RM/FV RM = RM), se vynechá. Použito: detail akce (eyebrow), okno zápisu, karta Nejbližší akce, Zápisy, Naplánovat téma, úkoly (`journey.ts`), název pozvánky (`calendarSummary`), návrh zápisu. Unit `tests/duplicity-nazvu.test.ts` (9), e2e `temata-planovani` hlídá, že u FP se skupina neopakuje. Okno akce a karty Plánu skupinu nespojovaly (pole Pro koho). Snímky 1280/390 prohlédnuty. |
 | D-02 | **Opraveno** (a7ccd3c) | Naplánovat téma: důvod u návrhu „návrh“ (dřív „návrh, uloží se jen návrh“ vedle tlačítka Přidat do návrhu), bez druhého Zavřít dole (zavírá hlavička). Zápis: nápověda textu, souboru, ruční šablony a návrhu kratší; zrušen řádek „Použije se pro zápis akce: …“ (opakoval titulek okna). Navrhnout téma a svátek: jedna věta. Potvrzení ztráty/zveřejnění ponechána. Nově: **Zahodit změny** (okno i detail akce) zahazovalo neveřejné úpravy bez dotazu → samostatné potvrzovací okno (Zpět / Zahodit změny); otevřené okno po zahození hned ukáže zveřejněnou verzi (`key` = revize, dřív držel staré hodnoty a hrozilo jejich nové uložení). e2e `priprava-mesice` „zahození neveřejných změn se potvrzuje“. |
 | D-03 | **Opraveno** (502c53c) | Okno zápisu: metadata nad čarou `--line`, stav verze + Změnit zdroj v tónovaném pruhu `--beige`, obsah, pod ním akce (Upravit zápis, Pracovní přepis) oddělené čarou. Jen CSS pod `.peek-section`, žádné nové barvy. Okno akce (stavový pruh / údaje v rámečku / lišta akcí s čarou), Naplánovat téma a detail akce už oddělené byly – beze změny. Karty Plánu beze změny (kompaktní mřížka, zásah by byl redesign). Snímky 1280/390 prohlédnuty; e2e zapisy, zapisy-schvaleni, pristupnost (1280/390/320) OK. |
+| Souhrn chyb pod potvrzením | **Opraveno** (eb67ebd, relace 9) | Regrese ze Z-14 nalezená na snímku po: `Modal` zjišťoval platnost přes `checkValidity()`, která spouští `invalid`, a okno akce pod potvrzením ukázalo „Akci zatím nejde uložit“ a rozbalilo Další údaje. Nově `formIsValid` čte `validity` polí. e2e `priprava-mesice` „okno akce se ptá…“ hlídá, že souhrn chybí a Uložit jako návrh se u neplatného formuláře nenabízí. |
 | Filtry Plánu 320 px | **Opraveno** (f43f8d5) | Regrese po A-03: kratší štítky souhrnu (44 px) vs. zalomené „Vybrat návrhy“ (52 px) – `grid-auto-rows: 1fr`. e2e `mobilni-ovladani` „filtry 2 × 2“ (320/360/390). |
 
-## Ověření (skutečně spuštěno v této relaci)
+## Spuštěné testy
 
+* **Relace 9 (závěr):** `npm run build` OK; **celé e2e na 7a37622: 1162 passed / 111 skipped / 0 failed** (8,2 min,
+  všech 7 projektů 1280/1920/1440/1512/390/360/320), nestabilní nález axe z relace 7 se neobjevil. Po opravě eb67ebd:
+  typecheck OK, lint OK, unit **395/395**, build OK, e2e priprava-mesice + okna + temata-planovani + pristupnost +
+  zapisy-schvaleni (1280/390/320) **148 passed / 8 skipped / 0 failed**. Celé e2e po eb67ebd znovu nespuštěno
+  (změna je v jedné funkci `Modal`, příslušné sady prošly).
 * Relace 8: typecheck OK, lint OK, unit **395/395**; e2e okna, priprava-mesice, plan-planovani, rychle-akce,
   temata-planovani, zapisy, zapisy-schvaleni, stranky (1280 + 390) **261 passed / 0 failed**; po D-03 zapisy,
-  zapisy-schvaleni, pristupnost (1280/390/320) 17 passed. Celé e2e po D-01–D-03 zatím NEběželo (krok 8).
+  zapisy-schvaleni, pristupnost (1280/390/320) 17 passed.
 * Relace 7 (konec): celé e2e 1161 passed / 108 skipped / 0 failed.
 
 * typecheck OK, lint OK, unit **381/381** (vitest, celá sada).
@@ -87,10 +149,33 @@ kontextu, práce pokračuje v navazující relaci. Nic není mergnuto ani nasaze
   rychle-akce + zapisy (1280/390) 29 passed / 4 skipped; zapisy + okna + priprava-mesice + zapisy-schvaleni (1280/320)
   2× 87 passed / 1 skipped (první běh 1 nestabilní nález axe, při opakování neprošel znovu – sledovat v celém e2e);
   mobilni-ovladani + plan-planovani (1280/320/360/390) prošly. Celé e2e: **1161 passed / 108 skipped / 0 failed** (7,7 min).
-* NEOVĚŘENO: celé e2e, screenshoty před/po, Firefox/WebKit, Preview, živý Kalendář.
+* NEOVĚŘENO: Firefox a skutečný WebKit (jen Chromium s UA macOS), Preview po této větvi, živý Google Kalendář (jen simulace `google-test`), čtečka obrazovky naživo (jen axe a role v e2e).
 
 ## Změněná pravidla (pro integraci do Wiki)
 
 * Úprava schváleného zápisu už neruší zveřejnění. Stažení dělá jen „Stáhnout zápis“ (`withdrawMinutes`).
 * Nahrazení rozepsaného zápisu s obsahem vyžaduje `confirmReplace=on` (server).
 * `moveTopicAction` přijímá i `to` (cílová pozice ve skupině) a `expected` (pořadí, které správce viděl); při rozdílu `conflict`.
+
+## Rizika před nasazením
+
+* **DEP-01 – migrace 0013/0014** (z PR #73, toto kolo schéma nemění) se spouštějí automaticky při startu aplikace.
+  Na Preview už proběhly, na produkci proběhnou po merge. Před merge: záloha / branch Neonu, ověření na stagingu,
+  kontrola, že stávající zveřejněné zápisy dostaly `approved_version` (jinak by je čtenáři přestali vidět).
+  Rozhoduje uživatel (případně ruční migrace místo automatické).
+* Změněná serverová pravidla (níže) mění chování pro uživatele: úprava schváleného zápisu už nestahuje zveřejnění,
+  nahrazení zápisu vyžaduje `confirmReplace`, `moveTopic` odmítne zastaralé pořadí. Integrace do firemní Wiki musí
+  převzít i tyto kontroly, ne jen UI.
+* Sdílená Preview DB obsahuje ručně zadaná data („NJBJK“) – před prezentací vyčistit nebo znovu nasadit seed (C-08).
+* Firefox/Safari neověřeny: `field-sizing: content` (Z-09) má zálohu `rows`, nativní `<dialog>` a pointer events DnD
+  jsou podporované, ale neotestované.
+* Ukázka běží na fiktivních datech a v režimu simulace integrací; živý test Kalendáře a přihlášení Google není součástí.
+
+## Otevřené otázky pro uživatele (nic neblokují)
+
+1. Pushnout tuto větev do větve PR #73 (`claude/rychle-akce-a-planovani-temat`)? Zatím ne.
+2. DEP-01: nechat migrace 0013/0014 automaticky při startu, nebo je pustit ručně před merge?
+3. Sjednotit 10 potvrzení přes `ActionForm` na `ConfirmDialog` (`alertdialog`)?
+4. `PrepareMonthDialog`: převést `<datalist>` na combobox i tam?
+5. Zdroj zápisu z PDF/DOCX (Z-13) – chcete ho (vyžaduje bezpečný parser)?
+6. Vyčistit Preview DB („NJBJK“)?

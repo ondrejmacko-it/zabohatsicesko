@@ -1,32 +1,17 @@
 # Prompt pro další session
 
-**OPRAVNÉ KOLO UX/UI K PR #73 (19. 11. 2026, po relaci 8, větev `claude/focused-cerf-gr1tdi` z `ff7ac54` = HEAD PR #73).**
-Zadání: `ZBC_KOMPLETNI_PROMPT_CLAUDE_CODE_PR73.md` (do repa ne). Plné znění nálezů: `list_events` session
-`session_01HpUiryRW9ytAdLUy6o6Gah`, kinds `["user"]`, limit 100, `before_id` `336c7f62-1d81-4538-9217-ab258752be39` →
-výsledek do souboru, JSON mezi první `{` a poslední `}`, nálezy v řetězci s „A-03 |“ a „P0“ (scratchpad, ne repo).
-Report: `docs/report-ux-opravne-kolo.md` (stav každého ID s důkazem). Kontejner nemá `node_modules`: `npm ci`. Prettier ne.
-* HOTOVO: relace 1–6 (viz report), relace 7: C-03 (ddf3143), A-14 (78bd8cd), C-01 (5c05205), C-06 test (121f5e4),
-  filtry 320 px po A-03 (f43f8d5); A-11 a C-08 ověřeny a zdokumentovány (Již v pořádku). Všechna ID kroku 7 mají stav.
-  Lint, typecheck, unit 386/386 OK. Celé e2e na 859c9f4: **1161 passed / 108 skipped / 0 failed** (7,7 min), axe nestabilita se neobjevila.
-* RELACE 8 HOTOVO: D-01 (0c3a42b, `eventTitle`/`eventContext` v `src/lib/labels.ts` + unit), D-02 (a7ccd3c, kratší
-  nápovědy, Naplánovat téma bez druhého Zavřít, potvrzení „Zahodit změny“ + čerstvý formulář po zahození, e2e),
-  D-03 (502c53c, okno zápisu: čára/tón mezi metadaty, stavem, obsahem a akcemi). Report aktualizován. Unit 395/395.
-  Dočasný spec na snímky je ve scratchpadu relace 8 (nepřenese se): napsat znovu podle kroku 8.2 (`test.use
-  storageState authFile(role)`, `page.goto` + `dialog.screenshot`, výstup do `SNIMKY_DIR`), přidat do `.git/info/exclude`.
-* DALŠÍ KROK = 8 (D-01–D-03 hotové):
-  1. `npm run build`, celé e2e (`npx playwright test --trace off`, ~7 min). Pozor na nestabilní axe nález (relace 7,
-     zapisy/okna/priprava-mesice/zapisy-schvaleni, 1× ze 3 běhů) – pokud se objeví, zjistit pravidlo a opravit.
-  2. Screenshoty před/po: `git worktree add --detach <scratchpad>/pred ff7ac54`, `ln -s` node_modules, dočasný spec
-     `e2e/zz-snimky.spec.ts` (necommitovat; snímky detailu a okna akce `ev-11-18`/`tr-rm-1112` správce/vedoucí, fokus
-     karty a okna, + témata, okno Naplánovat téma, zápis, Plán 320) spustit v obou stromech postupně (port 3310).
-     Vybrané páry po uložit do `docs/screenshots/opravne-kolo/` (před = `pred-*.png`, po = `po-*.png`).
-  3. Finální report v `docs/report-ux-opravne-kolo.md` (oddíly: design konzistence, rozhodovací overlaye,
-     dropdowny/combobox, wizard, témata a DnD, zápisy a verze, kalendář/role, vizuální před/po, spuštěné testy, rizika
-     před nasazením vč. DEP-01 migrací 0013/0014), zpráva uživateli s otázkou, zda pushnout do větve PR #73.
-* OTEVŘENÉ (nezastavují práci): push do větve PR #73 (`claude/rychle-akce-a-planovani-temat`) jen se souhlasem. DEP-01
-  (migrace 0013/0014 při startu) rozhoduje uživatel. `PrepareMonthDialog` nechává `<datalist>`. Wizard: nezaváděn
-  (formuláře mají kroky 1/2 jako sekce, přínos wizardu neprokázán). „Zrušit úpravy“ zahodí bez dotazu (záměr, popisek
-  to říká). Preview DB obsahuje ručně zadané „NJBJK“ – vyčištění rozhoduje uživatel. PDF/DOCX zdroj zápisu ne (Z-13).
+**OPRAVNÉ KOLO UX/UI K PR #73 – HOTOVO (19. 11. 2026, relace 9, větev `claude/focused-cerf-gr1tdi` z `ff7ac54` = HEAD PR #73).**
+Závěrečný report: `docs/report-ux-opravne-kolo.md` (shrnutí po oblastech, stav každého ID, před/po, testy, rizika, otázky).
+Snímky před/po: `docs/screenshots/opravne-kolo/` (`pred-*` = ff7ac54, `po-*` = eb67ebd).
+* Relace 9: build OK, celé e2e na 7a37622 **1162 passed / 111 skipped / 0 failed**; oprava eb67ebd (souhrn chyb pod
+  potvrzením neuložených změn, `formIsValid` v `Modal`), po ní typecheck, lint, unit 395/395, build, e2e 5 sad
+  (1280/390/320) 148 passed. Uživatel dostal závěrečnou zprávu s otázkou na push do PR #73.
+* ČEKÁ NA UŽIVATELE (nic dalšího bez pokynu): push do větve PR #73 (`claude/rychle-akce-a-planovani-temat`); DEP-01
+  (migrace 0013/0014 při startu); sjednocení potvrzení `ActionForm` na `ConfirmDialog`; combobox v `PrepareMonthDialog`;
+  PDF/DOCX zdroj zápisu; vyčištění Preview DB („NJBJK“).
+* Když uživatel push schválí: `git push origin claude/focused-cerf-gr1tdi:claude/rychle-akce-a-planovani-temat`
+  (fast-forward, větev vychází z HEAD PR #73 – před pushem ověřit, že PR #73 mezitím nedostal nové commity), pak
+  aktualizovat popis draft PR #73 (výsledky testů, simulace vs. živý test).
 
 **RYCHLÉ AKCE, PLÁNOVÁNÍ TÉMAT, ZÁPISY SE SCHVÁLENÍM (18. 11. 2026, větev `claude/rychle-akce-a-planovani-temat` z main 59cadc0).**
 Zadání uživatele: velké UX zadání (Quick Actions, garantovaná témata, Naplánovat téma, doporučení, Připravit měsíc,
