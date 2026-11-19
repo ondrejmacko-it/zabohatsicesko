@@ -157,7 +157,7 @@ Spuštění na Preview: nesecretní `APPROVED_MIGRATIONS=0015_topic_priority_unl
 větev `claude/finalni-kontrola-novy-pr-g2r2wd` (Production ji nemá), redeploy 8c2fa73 → `dpl_Hc4z5f5w7z2x7QEa7bF2bNxa4M9X` READY.
 Migrace se spouští při prvním dotazu do DB (`getDb`), ne při buildu.
 
-**Stav:** do konce relace 0015 na Preview **neproběhla** – nikdo zatím nasazení neotevřel a z cloudu ho nedosáhneme
+**Stav:** 0015 na Preview **proběhla 19. 11. 18:07:11 UTC** po otevření uživatelem (`topics_priority_rank_positive`, `integer`); dříve – nikdo zatím nasazení neotevřel a z cloudu ho nedosáhneme
 (proxy na `*.vercel.app` 403, nasazení chrání Vercel Authentication). Proběhne při prvním otevření preview PR #74.
 Funkční ověření 4–6 garantovaných témat na Preview vyžaduje přístupový kód ukázky (tajemství) → čeká na uživatele.
 Produkce `APPROVED_MIGRATIONS` nemá: po merge tam 0015 nepoběží, server odmítne 4. garantované téma čitelnou chybou.

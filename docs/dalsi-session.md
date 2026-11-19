@@ -1,5 +1,17 @@
 # Prompt pro další session
 
+**ZPĚTNÁ VAZBA UŽIVATELE NA PREVIEW PR #74 (19. 11. 2026 večer, větev `claude/finalni-kontrola-novy-pr-g2r2wd`).**
+Migrace 0015 na Preview PROBĚHLA 18:07:11 UTC (`topics_priority_rank_positive CHECK >= 1`, `integer`). Témata podle
+uživatele fungují. Nové požadavky (větší změny nejdřív navrhnout uživateli, pak dělat; vše do PR #74, žádný merge):
+1. Téma přiřazené jen do NÁVRHU akce ukazuje „bez termínu“ (červeně) → místo toho oranžově „v návrhu na <datum>“.
+2. Smazat pomocné texty (např. „Při plánování se nabízejí jako první, v tomto pořadí.“ a podobné napříč modulem).
+3. Hlavní výzva modulu výraznější (Témata: „Navrhněte téma nebo podpořte návrh kolegů.“ + „Navrhnout téma“) – pravidlo
+   pro CELOU aplikaci: hlavní akce/účel stránky nesmí splývat se zbytkem (inventura stránek + návrh vizuálu).
+4. Změna ZVEŘEJNĚNÉ akce uložená jen jako návrh: graficky jako návrh „nad“ originálem, rozkliknout originál, akce
+   Zveřejnit změny / Zrušit návrh (nechat originál). Čistý nový návrh nic takového nemá. Ostatní návrhy nevidí
+   (beze změny). Zjistit, jak dnes `events`/`event_revisions` drží rozpracovanou změnu zveřejněné akce, navrhnout UI.
+**Další krok:** krátký návrh bodů 1–4 uživateli (hlavně 3 a 4), po souhlasu implementace + testy + celé e2e + snímky.
+
 **PŘED MERGE PR #74 – RELACE 5 HOTOVA (19. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd`, draft PR #74).**
 Report: `docs/report-opravne-kolo-pr74.md` (sekce Relace 5).
 * HOTOVO: read-only ověření Preview DB (oddělená od produkce, omezení `topics_priority_rank_check` 1–3, poslední 0014,
