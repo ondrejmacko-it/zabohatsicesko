@@ -8,7 +8,7 @@ import { Icon } from "@/components/Icon";
 import { Menu } from "@/components/Menu";
 import { Modal } from "@/components/Modal";
 import { submitKeepingValues } from "@/features/shared/keep-values";
-import { GROUP_LABELS } from "@/lib/labels";
+import { GROUP_LABELS, eventContext } from "@/lib/labels";
 import { formatDayMonth } from "@/lib/time";
 import type { Group } from "@/lib/types";
 import type { TopicPlanOptions } from "@/server/services/topics";
@@ -228,7 +228,7 @@ function PlanTopicDialog({ topic, onClose }: { topic: { id: string; name: string
                     {c.label} · {formatDayMonth(c.dateKey)}
                   </p>
                   <p className="item-meta">
-                    {GROUP_LABELS[c.audience as Group] ?? c.audience} · {c.reason}
+                    {[...eventContext(c.label, c.type, c.audience as Group), c.reason].join(" · ")}
                   </p>
                 </div>
                 {c.draft ? (

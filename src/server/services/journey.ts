@@ -1,4 +1,5 @@
 import { and, desc, eq, isNull, or, sql } from "drizzle-orm";
+import { eventTitle } from "@/lib/labels";
 import { minutesStarted } from "@/lib/minutes";
 import { formatDayMonth, toDateKey } from "@/lib/time";
 import type { EventType, Group } from "@/lib/types";
@@ -42,7 +43,7 @@ export async function listPublishedMinutes(viewer: Viewer, filter: MinutesFilter
     .filter(({ event }) => canReadPublishedMinutes(viewer, event) && !seen.has(event.id) && Boolean(seen.add(event.id)))
     .map(({ event, content, publishedAt }) => {
       const snapshot = event.published!;
-      const title = snapshot.topicTitle ? `${snapshot.label}: ${snapshot.topicTitle}` : snapshot.label;
+      const title = eventTitle(snapshot.label, snapshot.topicTitle);
       const haystack = fold([title, content.summary, ...content.keyPoints, ...content.decisions, ...content.nextSteps].join("\n"));
       return {
         item: {
@@ -144,7 +145,7 @@ export async function listMissingMinutes(viewer: Viewer): Promise<{ items: Missi
       const state = byEvent.get(row.id) ?? "none";
       return {
         eventId: row.id,
-        title: snapshot.topicTitle ? `${snapshot.label}: ${snapshot.topicTitle}` : snapshot.label,
+        title: eventTitle(snapshot.label, snapshot.topicTitle),
         type: snapshot.type,
         startsAt: snapshot.startsAt,
         leadName: snapshot.leadId ? (names.get(snapshot.leadId) ?? null) : null,
@@ -197,7 +198,7 @@ export async function listTasks(viewer: Viewer): Promise<JourneyTask[]> {
       if (state === "published") continue;
       const snapshot = row.published!;
       // Datum v názvu: stejně pojmenované akce se opakují každý týden.
-      const title = `${snapshot.topicTitle ? `${snapshot.label}: ${snapshot.topicTitle}` : snapshot.label} · ${formatDayMonth(toDateKey(new Date(snapshot.startsAt)))}`;
+      const title = `${eventTitle(snapshot.label, snapshot.topicTitle)} · ${formatDayMonth(toDateKey(new Date(snapshot.startsAt)))}`;
       if (tasks.length >= MAX_MINUTES_TASKS) break;
       const today = toDateKey(new Date(snapshot.endsAt)) === toDateKey(reference);
       const href = `/vzdelavani/akce/${row.id}?odkud=prehled#nahravka`;

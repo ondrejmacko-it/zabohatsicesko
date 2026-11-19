@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Icon } from "@/components/Icon";
-import { TYPE_LABELS } from "@/lib/labels";
+import { eventContext, eventTitle } from "@/lib/labels";
 import {
   addDays,
   formatDayMonth,
@@ -398,12 +398,11 @@ export function Agenda({
 export function NextEventCard({ card }: { card: EventCard | null }) {
   if (!card) return <p className="muted">V nejbližších týdnech vás nečeká žádná zveřejněná akce.</p>;
   const day = dayOf(card);
+  const title = eventTitle(card.label, card.topicTitle);
   return (
     <Link href={pageHref(card)} className="item-card">
-      <p className="eyebrow">
-        {TYPE_LABELS[card.type]} · {weekdayShort(day)} {formatDayMonth(day)}
-      </p>
-      <p className="item-title">{card.topicTitle ? `${card.label}: ${card.topicTitle}` : card.label}</p>
+      <p className="eyebrow">{[...eventContext(title, card.type), `${weekdayShort(day)} ${formatDayMonth(day)}`].join(" · ")}</p>
+      <p className="item-title">{title}</p>
       <p className="item-meta">
         {formatEventTime(new Date(card.startsAt), new Date(card.endsAt), card.allDay)}
         {card.leadName ? ` · Vede: ${card.leadName}` : ""}
@@ -428,7 +427,7 @@ export function NextEventsList({ cards, todayKey, hrefFor = pageHref, emptyText 
               </span>
               <span className="brief-main">
                 <span className="item-title">
-                  {card.topicTitle ? `${card.label}: ${card.topicTitle}` : card.label}
+                  {eventTitle(card.label, card.topicTitle)}
                   {card.planStatus === "draft" && (
                     <span className="badge badge-draft" title="Návrh, do Kalendáře zatím nejde">
                       Návrh

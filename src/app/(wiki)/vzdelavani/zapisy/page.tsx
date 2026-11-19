@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { GROUP_LABELS, TYPE_LABELS } from "@/lib/labels";
+import { GROUP_LABELS, TYPE_LABELS, eventContext } from "@/lib/labels";
 import { AddMinutesPicker, MinutesPeek } from "@/features/vzdelavani/components/MinutesPeek";
 import { TopicsAnchorRedirect } from "@/features/vzdelavani/components/TopicsAnchorRedirect";
 import { groupByMonth } from "@/features/vzdelavani/minutes";
@@ -132,7 +132,7 @@ export default async function MinutesPage({ searchParams }: { searchParams: Sear
                 <li key={m.eventId}>
                   <Link className="item-card" href={link({ zapis: m.eventId })} scroll={false}>
                     <p className="eyebrow">
-                      {formatDate(toDateKey(new Date(m.startsAt)))} · {TYPE_LABELS[m.type]} · {GROUP_LABELS[m.audience]}
+                      {[formatDate(toDateKey(new Date(m.startsAt))), ...eventContext(m.title, m.type, m.audience)].join(" · ")}
                     </p>
                     <p className="item-title">{m.title}</p>
                     <p className="item-meta clamp">{m.summary}</p>

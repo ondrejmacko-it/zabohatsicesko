@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { and, asc, eq, gt, isNotNull, inArray, isNull, ne, sql } from "drizzle-orm";
 import { toDateKey } from "@/lib/time";
+import type { EventType } from "@/lib/types";
 import { audit } from "@/server/audit";
 import { config, now } from "@/server/config";
 import { getDb, queryRows, type Executor } from "@/server/db/client";
@@ -321,7 +322,7 @@ export type TopicPlanOptions = {
   topic: { id: string; name: string; audience: string };
   /** Nejbližší budoucí akce, která téma už má (zveřejněná i návrh). */
   scheduled: { id: string; label: string; dateKey: string; draft: boolean } | null;
-  candidates: Array<{ id: string; revision: number; label: string; dateKey: string; audience: string; draft: boolean; reason: string }>;
+  candidates: Array<{ id: string; revision: number; label: string; type: EventType; dateKey: string; audience: string; draft: boolean; reason: string }>;
 };
 
 /**
@@ -351,7 +352,7 @@ export async function topicPlanOptions(viewer: Viewer, topicId: string): Promise
   return {
     topic: { id: topic.id, name: topic.name, audience: topic.audience },
     scheduled: scheduled && { id: scheduled.id, label: scheduled.label, dateKey: toDateKey(scheduled.startsAt), draft: scheduled.status === "draft" },
-    candidates: candidates.map((c) => ({ id: c.id, revision: c.revision, label: c.label, dateKey: toDateKey(c.startsAt), audience: c.audience, draft: c.draft, reason: c.reason })),
+    candidates: candidates.map((c) => ({ id: c.id, revision: c.revision, label: c.label, type: c.type, dateKey: toDateKey(c.startsAt), audience: c.audience, draft: c.draft, reason: c.reason })),
   };
 }
 

@@ -9,7 +9,7 @@ import { Todo, missingText } from "@/components/Todo";
 import { RecordingSection } from "@/features/vzdelavani/components/RecordingSection";
 import { SyncPanelView } from "@/features/vzdelavani/components/SyncPanelView";
 import { badgeClass, detailBadges, statusAdvice } from "@/features/vzdelavani/status";
-import { GROUP_LABELS, TYPE_LABELS } from "@/lib/labels";
+import { GROUP_LABELS, eventContext, eventTitle } from "@/lib/labels";
 import { safeDecode } from "@/lib/params";
 import { formatDate, formatEventWhen, monthOf, toDateKey } from "@/lib/time";
 import { requireUser } from "@/server/auth/session";
@@ -43,7 +43,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
   const organizer = isOrganizer(user) && !preview;
   const start = new Date(card.startsAt);
   const dayKey = toDateKey(start);
-  const title = card.topicTitle ? `${card.label}: ${card.topicTitle}` : card.label;
+  const title = eventTitle(card.label, card.topicTitle);
   const advice = statusAdvice(card);
   // Úpravy akce jsou jen v okně akce v Plánu. Tahle stránka nese nahrávku, zápis a stav v Kalendáři.
   const editable = organizer && detail.form && card.planStatus !== "cancelled" && card.type !== "holiday";
@@ -73,8 +73,12 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
 
       <div className="page-head detail-head">
         <div>
-          {/* Typ nad nadpisem jen tehdy, když ho název akce neopakuje. */}
-          {card.label !== TYPE_LABELS[card.type] && <p className="eyebrow">{TYPE_LABELS[card.type]}</p>}
+          {/* Typ nad nadpisem jen tehdy, když ho název akce neopakuje. Skupinu ukazuje „Pro koho“. */}
+          {eventContext(title, card.type).map((part) => (
+            <p key={part} className="eyebrow">
+              {part}
+            </p>
+          ))}
           <h2 className="detail-title">{title}</h2>
           <div className="row detail-badges">
             {detailBadges(card).map((badge) => (

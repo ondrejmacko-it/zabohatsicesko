@@ -90,3 +90,55 @@ export const ERROR_LABELS: Record<string, string> = {
   transcription_unavailable: "Služba přepisu je dočasně nedostupná. Zkuste přepis znovu.",
   invalid_output: "Návrh zápisu neprošel kontrolou formátu. Zkuste přepis znovu.",
 };
+
+/**
+ * Skupina, kterou už říká název typu („Trénink poradců“ = finanční poradci). U takové akce se skupina
+ * vedle typu neopakuje. Ostatní typy (Action time, Portfolio tým…) skupinu v názvu nenesou.
+ */
+const AUDIENCE_IN_TYPE: Partial<Record<EventType, Group>> = {
+  "training-fp": "fp",
+  "education-fp": "fp",
+  "training-rm": "rm",
+  "education-rm": "rm",
+};
+
+/** Text pro porovnání: bez diakritiky, velikosti písmen a interpunkce. */
+export function comparableText(text: string): string {
+  return text
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim();
+}
+
+function mentions(text: string, part: string): boolean {
+  const haystack = ` ${comparableText(text)} `;
+  const needle = comparableText(part);
+  return needle !== "" && haystack.includes(` ${needle} `);
+}
+
+/**
+ * Název akce „Typ: Téma“. Když jedna část obsahuje druhou („Trénink poradců: Trénink poradců – Q4“),
+ * zobrazí se jen delší, aby se nic neopakovalo.
+ */
+export function eventTitle(label: string, topicTitle?: string | null): string {
+  const topic = topicTitle?.trim() ?? "";
+  if (!topic) return label;
+  if (!label.trim() || mentions(topic, label)) return topic;
+  if (mentions(label, topic)) return label;
+  return `${label}: ${topic}`;
+}
+
+/**
+ * Typ a skupina k názvu akce, ale jen to, co název ještě neříká. Jiná akce typ nemá, skupinu vynechá
+ * i typ, který ji sám pojmenovává. Sdílí ho okna, karty, Zápisy a úkoly, aby se nikde neopakovalo
+ * „Trénink poradců · Trénink poradců“. Bez skupiny vrací jen typ (kde skupinu ukazuje jiné pole).
+ */
+export function eventContext(title: string, type: EventType, audience?: Group): string[] {
+  const parts: string[] = [];
+  const typeLabel = TYPE_LABELS[type];
+  if (type !== "other" && !mentions(title, typeLabel)) parts.push(typeLabel);
+  if (audience && AUDIENCE_IN_TYPE[type] !== audience && !mentions(title, GROUP_LABELS[audience])) parts.push(GROUP_LABELS[audience]);
+  return parts;
+}

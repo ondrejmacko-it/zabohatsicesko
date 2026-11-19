@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { RouteModal, UnavailableModal } from "@/components/RouteModal";
-import { GROUP_LABELS, TYPE_LABELS } from "@/lib/labels";
+import { eventContext, eventTitle } from "@/lib/labels";
 import { formatDate, toDateKey } from "@/lib/time";
 import type { Viewer } from "@/server/policy";
 import { getEventDetail } from "@/server/services/detail";
@@ -34,12 +34,11 @@ export async function MinutesPeek({ user, eventId, closeHref }: { user: Viewer; 
   if (!detail || detail.recording.access === "none") return <UnavailableModal title="Zápis není dostupný" closeHref={closeHref} backLabel="Zpět na zápisy" />;
   const { card } = detail;
   const day = formatDate(toDateKey(new Date(card.startsAt)));
-  const title = card.topicTitle ? `${card.label}: ${card.topicTitle}` : card.label;
+  const title = eventTitle(card.label, card.topicTitle);
   return (
     <RouteModal title={title} closeHref={closeHref} wide>
       <p className="eyebrow peek-eyebrow">
-        {day} · {TYPE_LABELS[card.type]} · {GROUP_LABELS[card.audience]}
-        {` · ${detail.leadName ? `Vede: ${detail.leadName}` : "Vedoucí neurčen"}`}
+        {[day, ...eventContext(title, card.type, card.audience), detail.leadName ? `Vede: ${detail.leadName}` : "Vedoucí neurčen"].join(" · ")}
       </p>
       <div className="peek-section">
         <RecordingSection eventId={card.id} eventLabel={`${title} · ${day}`} panel={detail.recording} />

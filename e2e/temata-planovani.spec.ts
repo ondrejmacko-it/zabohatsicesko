@@ -77,7 +77,9 @@ test.describe("Témata: garantovaná a ostatní", () => {
     const items = plan.getByRole("list", { name: "Vhodné akce" }).getByRole("listitem");
     expect(await items.count()).toBeLessThanOrEqual(3);
     await expect(items.first()).toContainText("Firemní vzdělávání FP · 13. 11.");
-    await expect(items.first()).toContainText("Finanční poradci · návrh, uloží se jen návrh");
+    // D-01: skupinu už říká typ „Firemní vzdělávání FP“, proto se neopakuje.
+    await expect(items.first()).toContainText("návrh, uloží se jen návrh");
+    await expect(items.first()).not.toContainText("Finanční poradci");
     const more = plan.getByRole("button", { name: /^Zobrazit další/ });
     if (await more.isVisible()) {
       await more.click();
