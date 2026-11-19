@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, test } from "vitest";
 import { getDb } from "@/server/db/client";
+import { minutesSectionLabel } from "@/lib/minutes";
 import { auditLog, events, minutes } from "@/server/db/schema";
 import { draftFromText } from "@/server/integrations/minutes-drafter";
 import type { Viewer } from "@/server/policy";
@@ -303,5 +304,14 @@ describe("migrace 0014", () => {
     await pg.exec(`INSERT INTO minutes (id, org_id, event_id, content, detected_template, template_mismatch, status, source) VALUES ('m-text', 'org', 'e3', '{}', 'unknown', false, 'draft', 'notes')`);
     await expect(pg.exec(`INSERT INTO minutes (id, org_id, event_id, content, detected_template, template_mismatch, status) VALUES ('m-bad', 'org', 'e3', '{}', 'unknown', false, 'draft')`)).rejects.toThrow();
     await pg.close();
+  });
+});
+
+describe("název sekce zápisu (C-02)", () => {
+  test("„Nahrávka a zápis“ jen s nahrávkou nebo zápisem z nahrávky", () => {
+    expect(minutesSectionLabel({ recording: null, minutes: null })).toBe("Zápis");
+    expect(minutesSectionLabel({ recording: null, minutes: { source: "notes" } })).toBe("Zápis");
+    expect(minutesSectionLabel({ recording: { name: "a.mp3" }, minutes: null })).toBe("Nahrávka a zápis");
+    expect(minutesSectionLabel({ recording: null, minutes: { source: "recording" } })).toBe("Nahrávka a zápis");
   });
 });

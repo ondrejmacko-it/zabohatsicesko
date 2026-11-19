@@ -246,8 +246,8 @@ export function cardActions(card: EventCard, ctx: CardActionContext): CardAction
   add("details", "Otevřít podrobnosti");
   if (!cancelled && card.past) {
     if (card.minutesPublished) add("minutes", "Zobrazit zápis");
-    // Nahrávku a zápis obsluhuje vedoucí, kontrolor a správce, nikdy v náhledu očima jiného.
-    if (card.handler && !ctx.preview) add("recording", card.minutesPublished ? "Nahrávka a zápis" : "Doplnit zápis");
+    // Zápis (a případnou nahrávku) obsluhuje vedoucí, kontrolor a správce, nikdy v náhledu očima jiného.
+    if (card.handler && !ctx.preview) add("recording", card.minutesPublished ? "Upravit zápis" : "Doplnit zápis");
   }
   if (manage) add("duplicate", "Duplikovat jako novou");
   return manage || actions.length >= 2 ? actions : [];

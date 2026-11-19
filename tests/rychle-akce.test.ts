@@ -65,6 +65,8 @@ describe("menu ⋯ na kartě: položky podle stavu a role", () => {
   test("proběhlá: podrobnosti, zápis podle zveřejnění, nahrávka pro obsluhu, kopie jen správce", () => {
     expect(kinds(card({ ...PAST, minutesPublished: true }), manager)).toEqual(["details", "minutes", "recording", "duplicate"]);
     expect(cardActions(card(PAST), manager).find((a) => a.kind === "recording")?.label).toBe("Doplnit zápis");
+    // C-02: vedle „Zobrazit zápis“ (čtení) je obsluha „Upravit zápis“, ne „Nahrávka a zápis“.
+    expect(cardActions(card({ ...PAST, minutesPublished: true }), manager).find((a) => a.kind === "recording")?.label).toBe("Upravit zápis");
     expect(cardActions(card(PAST), manager).find((a) => a.kind === "duplicate")?.label).toBe("Duplikovat jako novou");
     // Vedoucí (obsluha nahrávky), bez úprav a bez kopie.
     expect(kinds(card({ ...PAST, minutesPublished: true }), reader)).toEqual(["details", "minutes", "recording"]);

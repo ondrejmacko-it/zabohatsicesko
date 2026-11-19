@@ -16,6 +16,7 @@ import { requireUser } from "@/server/auth/session";
 import { isOrganizer } from "@/server/policy";
 import { getEventDetail } from "@/server/services/detail";
 import { resolvePreview } from "@/server/services/preview";
+import { minutesSectionLabel } from "@/lib/minutes";
 
 export const metadata: Metadata = { title: "Detail akce" };
 
@@ -87,7 +88,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
         <div className="row">
           {handler && card.past && (
             <a className="btn btn-primary" href="#nahravka">
-              Nahrávka a zápis
+              {detail.recording.access === "handler" ? minutesSectionLabel(detail.recording) : "Zápis"}
             </a>
           )}
           {!organizer && detail.recording.access === "reader" && detail.recording.minutes && (

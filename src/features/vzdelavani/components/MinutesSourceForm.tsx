@@ -123,7 +123,7 @@ export function MinutesSourceForm({ eventId, eventLabel, hasRecording, replaceId
       {choice === "text" && (
         <DraftForm eventId={eventId} replaceId={replaceId} replacingDraft={replacingDraft} submitLabel="Připravit návrh zápisu" disabled={!text.trim() || textTooLarge}>
           <label className="field">
-            <span className="field-label">Druh textu</span>
+            <span className="field-label">Co vkládáte</span>
             <select className="select" name="source" defaultValue="transcript">
               <option value="transcript">Přepis schůzky</option>
               <option value="notes">Poznámky</option>

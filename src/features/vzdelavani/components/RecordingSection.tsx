@@ -1,7 +1,7 @@
 import { ActionForm } from "@/components/ActionForm";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { Menu } from "@/components/Menu";
-import { minutesStarted } from "@/lib/minutes";
+import { minutesSectionLabel, minutesStarted } from "@/lib/minutes";
 import { ERROR_LABELS, MINUTES_SOURCE_LABELS, RECORDING_STATE_LABELS, TEMPLATE_LABELS } from "@/lib/labels";
 import { formatDate, toDateKey } from "@/lib/time";
 import type { MinutesContent, RecordingState } from "@/lib/types";
@@ -116,7 +116,7 @@ export function RecordingSection({ eventId, eventLabel, panel }: { eventId: stri
       <AutoRefresh active={state === "processing"} />
       <div className="spread">
         {/* Nahrávku nadpis zmíní, jen když opravdu existuje nebo je zdrojem zápisu. */}
-        <h2 id="nahravka-title">{recording || fromRecording ? "Nahrávka a zápis" : "Zápis"}</h2>
+        <h2 id="nahravka-title">{minutesSectionLabel(panel)}</h2>
         <span className="row">
           <span className={STATE_BADGE[state]} role="status">
             {stateLabel}

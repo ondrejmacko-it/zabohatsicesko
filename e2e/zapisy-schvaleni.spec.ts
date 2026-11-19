@@ -35,7 +35,7 @@ test.describe("Zápisy: schválení vedoucím @desktop", () => {
 
     // Prázdnou šablonu nový zdroj nahradí bez potvrzovacího okna (nic se neztratí).
     await section.getByRole("radio", { name: /Vložit text/ }).check();
-    await section.getByLabel("Druh textu").selectOption("notes");
+    await section.getByLabel("Co vkládáte").selectOption("notes");
     await expectNoSeriousA11y(page);
     await expectNoHorizontalScroll(page);
     await section.getByLabel("Text přepisu nebo poznámek").fill(NOTES);

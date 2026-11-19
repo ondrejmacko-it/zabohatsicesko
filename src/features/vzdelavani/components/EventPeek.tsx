@@ -16,6 +16,7 @@ import { discardChangesAction } from "../actions";
 import { cardTone, primaryStatus, statusAdvice } from "../status";
 import { EventWindow } from "./EventDialog";
 import { EventMenu } from "./EventMenu";
+import { minutesSectionLabel } from "@/lib/minutes";
 
 type Props = {
   user: Viewer;
@@ -47,6 +48,7 @@ export async function EventPeek({ user, eventId, preview, previewKey, closeHref,
   const fullHref = `/vzdelavani/akce/${encodeURIComponent(card.id)}${previewKey ? `?jako=${encodeURIComponent(previewKey)}` : ""}`;
   const minutesReady = detail.recording.access === "reader" && Boolean(detail.recording.minutes);
   const handlesRecording = detail.recording.access === "handler" && !preview && card.past;
+  const minutesLabel = detail.recording.access === "handler" ? minutesSectionLabel(detail.recording) : "Zápis";
 
   const statusBand = (
     // Tón pásu se řídí hlavním stavem: chyba Kalendáře nikdy nesmí vypadat jako úspěch (S-01).
@@ -90,7 +92,7 @@ export async function EventPeek({ user, eventId, preview, previewKey, closeHref,
     );
     // Funkční Kalendář se v okně neukazuje. Oprava je odkaz jen při chybě, technické informace jsou v nabídce.
     const links = card.past
-      ? [{ href: `${fullHref}#nahravka`, label: "Nahrávka a zápis", icon: "file" as const }]
+      ? [{ href: `${fullHref}#nahravka`, label: minutesLabel, icon: "file" as const }]
       : card.syncStatus === "attention"
         ? [{ href: `${fullHref}#kalendar`, label: "Opravit v Kalendáři", icon: "calendar" as const }]
         : [{ href: fullHref, label: "Technické informace", icon: "settings" as const }];
@@ -125,7 +127,7 @@ export async function EventPeek({ user, eventId, preview, previewKey, closeHref,
 
   const links = [
     ...(minutesReady ? [{ href: `/vzdelavani/zapisy?zapis=${encodeURIComponent(card.id)}`, label: "Zobrazit zápis" }] : []),
-    ...(handlesRecording ? [{ href: `${fullHref}#nahravka`, label: "Nahrávka a zápis" }] : []),
+    ...(handlesRecording ? [{ href: `${fullHref}#nahravka`, label: minutesLabel }] : []),
     // Zrušení do Kalendáře nedošlo: správce dostane opravu. Jinak se technický stav v okně neukazuje.
     ...(managing && !holiday && card.syncStatus === "attention" ? [{ href: `${fullHref}#kalendar`, label: "Opravit v Kalendáři" }] : []),
   ];
