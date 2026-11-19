@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
+import { useActionState, useMemo, useRef, useState } from "react";
 import { ActionForm, ActionMessage } from "@/components/ActionForm";
+import { Combobox } from "@/components/Combobox";
 import { Modal } from "@/components/Modal";
 import { submitKeepingValues } from "@/features/shared/keep-values";
 import { publishInviteNote, type InviteMode } from "@/lib/invite-mode";
@@ -104,6 +105,8 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
       return next;
     });
 
+  // Nabídka témat je pro všechny řádky stejná (stejně jako dřív jeden <datalist>).
+  const topicOptions = useMemo(() => topics.map((value) => ({ value })), [topics]);
   // Pole řádků jsou neřízená, mezery a publikum se proto čtou z formuláře.
   type Filled = { topic: boolean; topicText: string; lead: boolean; audience: Group };
   const [filled, setFilled] = useState<Record<string, Filled>>({});
@@ -239,16 +242,18 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
                     </option>
                   ))}
                 </select>
-                <input
-                  className="input"
+                <Combobox
                   name={`topic-${d.id}`}
                   defaultValue={d.topicTitle ?? ""}
+                  options={topicOptions}
+                  listLabel="Témata"
                   placeholder="Téma"
-                  aria-label={`Téma: ${name}`}
-                  aria-describedby={suggested(d) ? `suggest-${d.id}` : undefined}
-                  data-suggested={suggested(d) || undefined}
-                  list="publish-topics"
                   maxLength={120}
+                  inputProps={{
+                    "aria-label": `Téma: ${name}`,
+                    "aria-describedby": suggested(d) ? `suggest-${d.id}` : undefined,
+                    "data-suggested": suggested(d) || undefined,
+                  }}
                 />
                 <select className="select" name={`lead-${d.id}`} defaultValue={d.leadId ?? ""} aria-label={`Vedoucí: ${name}`}>
                   <option value="">Bez vedoucího</option>
@@ -303,11 +308,6 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
   return (
     <form ref={formRef} action={action} onSubmit={submitKeepingValues(action)} onKeyDown={ignoreEnter} onInput={(e) => readFilled(e.currentTarget)} onChange={(e) => readFilled(e.currentTarget)} className="stack">
       <input type="hidden" name="month" value={monthKey} />
-      <datalist id="publish-topics">
-        {topics.map((topic) => (
-          <option key={topic} value={topic} />
-        ))}
-      </datalist>
       <section className="prepare-step" aria-labelledby="prepare-gaps">
         <h3 id="prepare-gaps">2. Zkontrolovat</h3>
         <PrepareOverview items={overview} onJump={jump} />

@@ -39,6 +39,52 @@ test.describe("Připravit měsíc: přehled a hromadné doplnění vedoucího", 
     await expectNoHorizontalScroll(page);
   });
 
+  test("téma řádku: stejná nabídka jako v okně akce, přehled se aktualizuje", async ({ page }) => {
+    const prepare = await openPrepare(page);
+    const overview = prepare.getByRole("list", { name: "Stav návrhů" });
+    const missingTopic = async () => Number((await overview.getByRole("button", { name: /^Chybí téma: / }).textContent())?.match(/\d+/)?.[0]);
+    const topic = prepare.getByRole("combobox", { name: /^Téma: / }).first();
+    const list = prepare.getByRole("listbox", { name: "Témata" }).first();
+    await expect(prepare.locator("datalist")).toHaveCount(0);
+
+    await topic.fill("");
+    const before = await missingTopic();
+    // Diakritika se při hledání nerozlišuje, Enter vybere první shodu a formulář se neodešle.
+    await topic.fill("uvodni");
+    await expect(list).toBeVisible();
+    await expect(list.getByRole("option").first()).toContainText(/úvodní/i);
+    await page.keyboard.press("Enter");
+    await expect(list).toBeHidden();
+    await expect(topic).toHaveValue(/úvodní/i);
+    await expect(prepare).toBeVisible();
+    await expect.poll(missingTopic).toBe(before - 1);
+
+    // Esc zavře jen nabídku, okno Připravit měsíc zůstane.
+    await topic.click();
+    await expect(list).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(list).toBeHidden();
+    await expect(prepare).toBeVisible();
+    // Ruční text bez shody: nabídka se schová, hodnota zůstane. Tab nabídku zavře.
+    await topic.fill("Vlastní téma e2e");
+    await expect(topic).toHaveAttribute("aria-expanded", "false");
+    await expect(topic).toHaveValue("Vlastní téma e2e");
+    await page.keyboard.press("Tab");
+
+    // Poslední řádek: zvýrazněná možnost je vidět, nabídka se neořízne.
+    const last = prepare.getByRole("combobox", { name: /^Téma: / }).last();
+    await last.focus();
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("ArrowDown");
+    await expect(prepare.locator(".combobox-option[aria-selected=true]")).toBeInViewport();
+    await page.keyboard.press("Escape");
+    await expectNoHorizontalScroll(page);
+
+    // Výběr se počítá jako rozepsaná změna: zavření se zeptá.
+    await prepare.getByRole("button", { name: "Zavřít" }).first().click();
+    await expect(page.getByRole("alertdialog", { name: "Neuložené změny" })).toBeVisible();
+  });
+
   test("doplnění vedoucího jen do prázdných polí, vyplněná zůstanou", async ({ page }) => {
     const prepare = await openPrepare(page);
     const leads = prepare.getByLabel(/^Vedoucí: /);

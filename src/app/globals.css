@@ -3124,7 +3124,8 @@ p.cal-status {
 /* Téma doporučené systémem, o kterém správce ještě nerozhodl. Po přijetí vypadá jako každé jiné téma. */
 .publish-row .input[data-suggested] {
   border-color: var(--ochre);
-  background: var(--ochre-soft);
+  /* Jen barva: šipka nabídky (background-image comboboxu) zůstane. */
+  background-color: var(--ochre-soft);
 }
 
 .topic-suggestion {

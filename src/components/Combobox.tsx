@@ -13,16 +13,33 @@ export type ComboboxOption = {
 };
 
 type Props = {
-  id: string;
+  id?: string;
   name: string;
-  value: string;
-  onChange: (value: string) => void;
   options: ComboboxOption[];
   placeholder?: string;
   /** Název nabídky pro čtečky, například „Témata“. */
   listLabel: string;
   maxLength?: number;
-};
+  /** Další atributy pole (aria-label, aria-describedby, data-*). */
+  inputProps?: React.InputHTMLAttributes<HTMLInputElement> & { [key: `data-${string}`]: string | boolean | undefined };
+} & (
+  | {
+      /** Řízené pole: hodnotu drží rodič. */
+      value: string;
+      onChange: (value: string) => void;
+      defaultValue?: never;
+    }
+  | {
+      /**
+       * Neřízené pole uvnitř formuláře, který čte hodnoty z DOM (Připravit měsíc s mnoha řádky).
+       * Výběr z nabídky zapíše hodnotu do pole a vyvolá událost `input`, takže ho formulář zaznamená
+       * stejně jako psaní (přehled mezer, neuložené změny). Rodič se při psaní nepřekresluje kvůli poli.
+       */
+      defaultValue: string;
+      value?: never;
+      onChange?: never;
+    }
+);
 
 /** Porovnání bez ohledu na velikost písmen a diakritiku: „uvodni“ najde „Úvodní“. */
 const normalize = (text: string) =>
@@ -40,9 +57,14 @@ const normalize = (text: string) =>
  * zvýrazněnou možnost, Esc zavře jen nabídku. Ručně napsaný text je platná hodnota, nabídka jen pomáhá.
  * Panel je pod polem uvnitř okna, ne v portálu: posouvá se s formulářem a nepřekryje jiná okna.
  */
-export function Combobox({ id, name, value, onChange, options, placeholder, listLabel, maxLength }: Props) {
+export function Combobox({ id, name, value, onChange, defaultValue, options, placeholder, listLabel, maxLength, inputProps }: Props) {
   const listId = useId();
   const listRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const controlled = value !== undefined;
+  // Hodnota pole v okamžiku otevření nabídky (u neřízeného pole se čte z DOM, ne při vykreslení).
+  const [current, setCurrent] = useState(value ?? defaultValue ?? "");
+  const selected = controlled ? value : current;
   const [open, setOpen] = useState(false);
   // Filtr platí jen pro text, který člověk právě píše. Otevření šipkou nebo klikem ukáže všechno.
   const [query, setQuery] = useState<string | null>(null);
@@ -54,8 +76,10 @@ export function Combobox({ id, name, value, onChange, options, placeholder, list
 
   const show = (filter: string | null) => {
     const list = filter ? options.filter((o) => normalize(o.value).includes(normalize(filter))) : options;
+    const now = controlled ? value : (inputRef.current?.value ?? "");
+    setCurrent(now);
     setQuery(filter);
-    setActive(filter ? (list.length > 0 ? 0 : -1) : list.findIndex((o) => o.value === value));
+    setActive(filter ? (list.length > 0 ? 0 : -1) : list.findIndex((o) => o.value === now));
     setOpen(true);
   };
   const close = () => {
@@ -64,7 +88,11 @@ export function Combobox({ id, name, value, onChange, options, placeholder, list
     setActive(-1);
   };
   const choose = (option: ComboboxOption) => {
-    onChange(option.value);
+    if (controlled) onChange(option.value);
+    else if (inputRef.current) {
+      inputRef.current.value = option.value;
+      inputRef.current.dispatchEvent(new Event("input", { bubbles: true }));
+    }
     close();
   };
 
@@ -110,7 +138,7 @@ export function Combobox({ id, name, value, onChange, options, placeholder, list
       role="option"
       aria-selected={index === active}
       className="combobox-option"
-      data-current={option.value === value || undefined}
+      data-current={option.value === selected || undefined}
       // Fokus zůstává v poli, jinak by se nabídka zavřela dřív, než klik doběhne.
       onMouseDown={(event) => event.preventDefault()}
       onMouseMove={() => setActive(index)}
@@ -127,10 +155,12 @@ export function Combobox({ id, name, value, onChange, options, placeholder, list
   return (
     <div className="combobox">
       <input
+        {...inputProps}
+        ref={inputRef}
         id={id}
         className="input combobox-input"
         name={name}
-        value={value}
+        {...(controlled ? { value } : { defaultValue })}
         role="combobox"
         aria-autocomplete="list"
         aria-expanded={visible}
@@ -140,7 +170,7 @@ export function Combobox({ id, name, value, onChange, options, placeholder, list
         maxLength={maxLength}
         placeholder={placeholder}
         onChange={(event) => {
-          onChange(event.target.value);
+          if (controlled) onChange(event.target.value);
           show(event.target.value);
         }}
         // Klik nabídku jen otevře. Zavírá ji výběr, Esc, Tab nebo odchod z pole, takže klik do rozepsaného
