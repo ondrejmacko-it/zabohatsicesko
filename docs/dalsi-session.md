@@ -1,5 +1,16 @@
 # Prompt pro další session
 
+**SJEDNOCENÍ WIKI, HIERARCHIE, FILTRY, GLOBÁLNÍ POHLED (19. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd`, PR #74, HEAD 4d83b3f+).**
+Zadání: prompt uživatele „ZBČ – PR #74: sjednocení Wiki, vizuální hierarchie, filtry a globální pohled“ (P1 hierarchie podle
+dialogu Přidat akci: Připravit měsíc, Nastavit pravidelný rozvrh, Zápisy, Témata, Domů/Harmonogram/Detail/Správa; P2 globální
+„Zobrazit jako“ v horní liště – NEJDŘÍV analýza `Topbar.tsx`, `(wiki)/layout.tsx`, `PlanFilters.tsx`, `services/preview.ts`
+a stránek, větší zásah nejdřív navrhnout; P3 vícenásobné filtry Plánu (OR v kategorii, AND mezi, chipy, URL); P4 jen animace
+1 hover karet, 2 otevírání dialogů, 3 potvrzení uložení, 4 DnD zvednutí/dosednutí, 7 rozbalení – reduced-motion, bez knihovny;
+P5 izolace e2e témat (oddělit zapisující a čtecí, žádné „přijmi oba stavy“ – vrátit dočasnou toleranci z 434b3a7);
+P6 kontrola textů; plné ověření + snímky před/po 320–1920; finální report body 1–10). Plné znění: `list_events` session
+`session_01HpUirwZ4XH6LuKaqHTR6A4`, kinds `["user"]`, poslední user zpráva. Bez migrací, bez merge, bez produkce.
+Hotové funkce (stoh, ChangeBanner, PageCall, DnD témat, 0015, zápisy) nepřepisovat bez konkrétní regrese.
+
 **ZPĚTNÁ VAZBA UŽIVATELE NA PREVIEW PR #74 (19. 11. 2026 večer, větev `claude/finalni-kontrola-novy-pr-g2r2wd`).**
 Migrace 0015 na Preview PROBĚHLA 18:07:11 UTC (`topics_priority_rank_positive CHECK >= 1`, `integer`). Témata podle
 uživatele fungují. Nové požadavky (větší změny nejdřív navrhnout uživateli, pak dělat; vše do PR #74, žádný merge):
