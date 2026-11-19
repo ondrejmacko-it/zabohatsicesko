@@ -30,7 +30,10 @@
   --danger-soft: #f9e6e4;
   --ok: #2f6b48;
   --ok-soft: #e4f0e8;
-  --focus: 0 0 0 3px rgba(157, 98, 25, 0.35);
+  /* Jediný focus ring (A-14): plná okrová má kontrast aspoň 3 : 1 vůči všem plochám včetně tmavého menu, dřívější
+     průsvitný stín měl 1,6 : 1. Outline, ne stín: v režimu vynucených barev (Windows) stín zmizí. */
+  --focus-ring: 2px solid var(--ochre);
+  --focus-offset: 2px;
   --radius: 10px;
   --radius-sm: 6px;
   --font-sans: "Inter Variable", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -105,8 +108,8 @@ textarea {
 }
 
 :focus-visible {
-  outline: none;
-  box-shadow: var(--focus);
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
 }
 
 .visually-hidden {
@@ -700,12 +703,14 @@ fieldset.field > legend {
   padding: 0;
 }
 
+/* Pole: stejný ring, jen přes vlastní rámeček (offset -1 px), aby nepřekrýval sousední pole. Datum a čas mají fokus
+   ve vnitřním segmentu, :focus na nich Chrome nehlásí, proto i :focus-within. */
 .input:focus,
+.input:focus-within,
 .select:focus,
 .textarea:focus {
-  border-color: var(--ink);
-  box-shadow: none;
-  outline: 2px solid var(--ink);
+  border-color: var(--ochre);
+  outline: var(--focus-ring);
   outline-offset: -1px;
 }
 
@@ -848,8 +853,8 @@ fieldset.field > legend {
   background: var(--beige);
 }
 
+/* Položka v rolovaném seznamu nabídky: ring dovnitř, venku by ho seznam ořízl. */
 .menu-list .btn:focus-visible {
-  outline: 2px solid var(--ochre);
   outline-offset: -2px;
 }
 
@@ -943,8 +948,6 @@ fieldset.field > legend {
 }
 
 .menu-card-trigger:focus-visible {
-  outline: 2px solid var(--ochre);
-  outline-offset: 1px;
   color: var(--ink);
 }
 
@@ -1475,7 +1478,8 @@ body > .dialog[open]:has(~ .dialog[open]:not(.confirm-dialog)) {
 }
 
 .file-pick .btn:focus-within {
-  box-shadow: var(--focus);
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
 }
 
 .file-pick-name {

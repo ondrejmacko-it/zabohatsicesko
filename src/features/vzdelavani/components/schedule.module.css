@@ -518,9 +518,9 @@
     -webkit-user-select: none;
   }
 
+  /* Úchyt sedí těsně u okraje karty, ring proto dovnitř. */
   .handle:focus-visible {
-    outline: 2px solid var(--ochre);
-    outline-offset: -4px;
+    outline-offset: -2px;
   }
 
   .agendaDay[data-drop-over] {
