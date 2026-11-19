@@ -1,5 +1,32 @@
 # Prompt pro další session
 
+**OPRAVNÉ KOLO PR #74 – RELACE 1 HOTOVA (19. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd`, draft PR #74).**
+Zadání: `list_events` session `session_01HpUiruJkjFtPcUM3L92gGi`, kinds `["user"]`, poslední user zpráva „ZBČ – Opravné kolo
+PR #74…“ (uložit do souboru v scratchpadu, číst odtud). Průběžný report: `docs/report-opravne-kolo-pr74.md`.
+* HOTOVO P0-3 (0b1c0d2): příčina reprodukována v Chromiu – formulář Připravit měsíc přepočítával přehled na `input`,
+  re-render vrátil řízený hromadný `<select>` na starou hodnotu před `change`. Oprava `readOnInput` (u selectů jen
+  `change`). E2E se skutečnou klávesnicí, uložením a obnovením (měsíc 2027-05, jen windows-1280) – bez opravy padá.
+  Unit: uložení bez zveřejnění, neznámá osoba (nic se neuloží), člen týmu nesmí, souběh revize.
+* HOTOVO P0-2 server (bea1c6c): bez `MAX_PRIORITY`, `nextFreePriority` = konec, `recommendTopics` garantovaná vždy
+  první, `placeInSections` (doména) + `placeTopic` (služba, jedna transakce, zámek, `expected` obou seznamů → `conflict`,
+  audit priority_set/clear/move_to) + `placeTopicAction`. Migrace **0015 s `approval: true`**: na vzdálené DB jen
+  s `APPROVED_MIGRATIONS=0015_topic_priority_unlimited` (migrace běží při startu, push by ji jinak spustil na Preview).
+  Bez ní `priority_pending_migration` (čitelná chyba). „Nastaveno N ze 3“ pryč. Unit 405/405, lint, typecheck OK.
+* DALŠÍ KROKY: 1) **P0-1 UI**: přepsat `TopicOrderList.tsx` na jeden DnD kontext přes obě sekce (TopicsSection předá
+  oba seznamy jedné klientské komponentě): pointer events na úchytu, NEměnit DOM pořadí během tažení (overlay +
+  indikátor místa vložení, výpočet cíle z obdélníků zachycených při startu), autoscroll u okraje okna, Esc zruší,
+  po puštění jedno volání `placeTopicAction` (expectedGuaranteed/expectedOthers), optimisticky + rollback; klávesnice
+  šipky v sekci (moveTopicAction) + přesun do druhé sekce (např. Alt+šipka nebo stávající Nastavit/Zrušit prioritu);
+  prázdná sekce Garantovaná musí být cíl (zobrazit drop zónu i při 0 garantovaných, jen správci). E2E: 1→poslední,
+  poslední→1, o 1/3/5, mezi sekcemi, do prázdné, Esc, dotyk, klávesnice, autoscroll, 20+ témat (seed v testu přes
+  Navrhnout téma ve vlastním scénáři nebo unit). 2) P1-2 barvy (garantovaná okrový podklad tokeny, Nejžádanější zelený
+  akcent jen štítkem u garantovaných). 3) P1-1 Quick Actions. 4) P1-4/P1-3/P1-5 cíleně (hromadný vedoucí: zvážit
+  Wiki výběr osoby s ID). 5) P2. 6) celé ověření + screenshoty před/po 320/390/768/1280/1440/1920
+  do `docs/screenshots/opravne-kolo-pr74/` (před = c4c3a9a přes `git worktree`).
+* Otázky pro uživatele (poslední relace): spustit 0015 na Preview (= nastavit nesecretní `APPROVED_MIGRATIONS` v Vercel
+  Preview env + redeploy; produkce až po merge a dalším souhlasu); vedoucí bez kontroly příslušnosti ke skupině
+  (server ověří jen existenci účtu v organizaci, stejně jako okno akce) – ponecháno.
+
 **OPRAVNÉ KOLO PR #74 (19. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd`, draft PR #74, CI zelené na c4c3a9a).**
 Zadání: prompt uživatele „ZBČ – Opravné kolo PR #74: DnD témat, plánování, Quick Actions a finální vizuální hierarchie“
 (P0-1 DnD témat i mezi sekcemi, P0-2 bez limitu 3 garantovaných + nová migrace jen na Preview, P0-3 reprodukce a oprava
