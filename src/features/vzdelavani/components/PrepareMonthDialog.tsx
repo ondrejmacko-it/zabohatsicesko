@@ -126,6 +126,12 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
       ),
     );
   };
+  // Výběr v <select> pošle v prohlížeči `input` a `change` jako dvě samostatné události. Překreslení už na
+  // `input` vrátilo řízený výběr (hromadný vedoucí) na starou hodnotu dřív, než `change` uložil novou,
+  // a volba osoby se neuchytila. U výběrů proto stačí `change`, psaní v polích dál přepočítá přehled hned.
+  const readOnInput = (event: React.FormEvent<HTMLFormElement>) => {
+    if (!(event.target instanceof HTMLSelectElement)) readFilled(event.currentTarget);
+  };
   const current = (d: MonthDraft): Filled =>
     filled[d.id] ?? { topic: Boolean(d.topicTitle), topicText: d.topicTitle ?? "", lead: Boolean(d.leadId), audience: d.audience };
   // Doporučení systému platí, dokud správce téma v poli nepřepsal. Pak jde o jeho vlastní volbu.
@@ -306,7 +312,7 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
   }
 
   return (
-    <form ref={formRef} action={action} onSubmit={submitKeepingValues(action)} onKeyDown={ignoreEnter} onInput={(e) => readFilled(e.currentTarget)} onChange={(e) => readFilled(e.currentTarget)} className="stack">
+    <form ref={formRef} action={action} onSubmit={submitKeepingValues(action)} onKeyDown={ignoreEnter} onInput={readOnInput} onChange={(e) => readFilled(e.currentTarget)} className="stack">
       <input type="hidden" name="month" value={monthKey} />
       <section className="prepare-step" aria-labelledby="prepare-gaps">
         <h3 id="prepare-gaps">2. Zkontrolovat</h3>

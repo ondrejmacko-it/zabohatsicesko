@@ -129,6 +129,74 @@ test.describe("Připravit měsíc: přehled a hromadné doplnění vedoucího", 
   });
 });
 
+// Reprodukce chyby z Preview: skutečná volba v prohlížeči pošle `input` a `change` zvlášť (klávesnice,
+// myš v nabídce). `selectOption` je pošle naráz, a proto chybu dřív neodhalil. Tady se vybírá klávesnicí.
+test.describe("Připravit měsíc: vedoucí vybraný klávesnicí se doplní a uloží @desktop", () => {
+  test.use({ storageState: authFile("spravce") });
+  // Vlastní měsíc, zápis nepotká ostatní testy nad sdílenými daty ukázky.
+  const PLAN = "/vzdelavani/harmonogram?mesic=2027-05";
+
+  test("hromadný i řádkový výběr, opakovaná změna, uložení a obnovení", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "windows-1280", "zápis jen jednou");
+    await page.goto(PLAN);
+    await settle(page);
+    await page.getByRole("button", { name: /^Připravit měsíc/ }).click();
+    const prepare = dialog(page, /Připravit měsíc:/);
+    await prepare.getByRole("button", { name: "Doplnit chybějící termíny" }).click();
+    const leads = prepare.getByLabel(/^Vedoucí: /);
+    await expect.poll(() => leads.count()).toBeGreaterThanOrEqual(3);
+    const values = () => leads.evaluateAll((list) => list.map((s) => (s as HTMLSelectElement).value));
+    expect((await values()).every((v) => v === "")).toBe(true);
+    const count = (await values()).length;
+    const missing = prepare.getByRole("list", { name: "Stav návrhů" }).getByRole("button", { name: /^Chybí vedoucí: / });
+    await expect(missing).toHaveAccessibleName(new RegExp(`^Chybí vedoucí: ${count}`));
+
+    // Jeden řádek ručně klávesnicí: první osoba v seznamu.
+    await leads.nth(0).focus();
+    await page.keyboard.press("ArrowDown");
+    const first = await leads.nth(0).inputValue();
+    expect(first).not.toBe("");
+    await expect(missing).toHaveAccessibleName(new RegExp(`^Chybí vedoucí: ${count - 1}`));
+
+    // Hromadný výběr klávesnicí: druhá osoba. Výběr musí zůstat vidět a aktivovat tlačítko.
+    const bulk = prepare.getByLabel("Doplnit vedoucího do prázdných polí");
+    await bulk.focus();
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("ArrowDown");
+    const second = await bulk.inputValue();
+    expect(second).not.toBe("");
+    expect(second).not.toBe(first);
+    const fill = prepare.getByRole("button", { name: new RegExp(`^Doplnit do ${count - 1} řádk`) });
+    await expect(fill).toBeEnabled();
+    await fill.click();
+    expect(await values()).toEqual([first, ...Array(count - 1).fill(second)]);
+    await expect(missing).toHaveAccessibleName(/^Chybí vedoucí: 0/);
+
+    // Opakovaná změna: poslední řádek vyprázdnit, hromadně zvolit jinou osobu a doplnit znovu.
+    await leads.last().focus();
+    await page.keyboard.press("Home");
+    await expect(leads.last()).toHaveValue("");
+    await bulk.focus();
+    await page.keyboard.press("ArrowUp");
+    const third = await bulk.inputValue();
+    expect(third).not.toBe(second);
+    expect(third).not.toBe("");
+    await prepare.getByRole("button", { name: /^Doplnit do 1 řádku/ }).click();
+    const expected = [first, ...Array(count - 2).fill(second), third];
+    expect(await values()).toEqual(expected);
+
+    await prepare.getByRole("button", { name: "Uložit změny" }).click();
+    await expect(prepare.getByText(new RegExp(`^Uloženo: ${count} návrh`))).toBeVisible();
+
+    // Po obnovení stránky zůstali vedoucí uložení, nic se nezveřejnilo.
+    await page.reload();
+    await settle(page);
+    await page.getByRole("button", { name: /^Připravit měsíc/ }).click();
+    await expect.poll(values).toEqual(expected);
+    await expect(prepare.getByRole("button", { name: /^Zveřejnit/ })).toBeVisible();
+  });
+});
+
 test.describe("okno akce: ochrana neuložených změn", () => {
   test.use({ storageState: authFile("spravce") });
 
