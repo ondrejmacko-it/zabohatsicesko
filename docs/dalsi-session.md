@@ -1,5 +1,26 @@
 # Prompt pro další session
 
+**OPRAVNÉ KOLO PR #74 – RELACE 3 HOTOVA (19. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd`, draft PR #74).**
+Zadání: `list_events` session `session_01HpUiruJkjFtPcUM3L92gGi`, kinds `["user"]`, před nejnovější stránkou (`before_id`
+= `first_id`), user zpráva „ZBČ – Opravné kolo PR #74…“ (výsledek do souboru, `json.JSONDecoder().raw_decode`, klíče
+`text`/`content`). Report: `docs/report-opravne-kolo-pr74.md` (tabulka + sekce Relace 3).
+* HOTOVO: P1-1 (eda8a14) ⋯ vpravo nahoře s vyhrazeným místem, agenda bez `transform` (menu na telefonu mimo okno),
+  dlouhé menu do okna + testy v `rychle-akce.spec.ts`. P1-3 cíleně (7f04ef9): Správa role štítkem, nulové počty
+  v Připravit měsíc tiše, kratší úvod rozvrhu. P1-4 jen inventura + návrh (report), P1-5 beze změny.
+* DALŠÍ KROK: 4) celé ověření na HEAD: lint, typecheck, `npm test`, build, celé e2e (`npx playwright test --trace off`,
+  běží ~15–20 min, pustit na pozadí, číst jen souhrn). Pak screenshoty před/po 320/390/768/1280/1440/1920 do
+  `docs/screenshots/opravne-kolo-pr74/` (`pred-*` = c4c3a9a přes `git worktree add`, `po-*` = HEAD): Domů, Plán,
+  karta s ⋯ a otevřené menu, Připravit měsíc, Pravidelný rozvrh, Přidat akci, okno akce, Témata, Zápisy, Správa.
+  Pomůcka: server `PGLITE_DIR=<tmp> SESSION_SECRET=<40 znaků> DEMO_ACCESS_CODE=<kód> NODE_ENV=production npx next
+  start -p 3320`, přihlášení přes `/vstup` (kód, persona „Správce ZBC ukázky“, každý kontext jiné `x-forwarded-for`,
+  jinak limit přihlášení). Na telefonu jsou karty v agendě (odkaz v mřížce skrytý → `:visible`). Snímky
+  komprimovat (PNG, deviceScaleFactor 1), nepřidávat stovky MB.
+  5) poslední relace: popis PR #74 (výsledky, simulace vs. živý test), CI, report uživateli body 1–10 + odkaz na
+  preview (`zbc-vzdelavani-demo-git-claude-finalni-kontrola-nov-1082bb-maci.vercel.app`, ověřit v komentáři vercel[bot]).
+* Otázky pro uživatele (poslední relace): migrace 0015 na Preview (nesecretní `APPROVED_MIGRATIONS=0015_topic_priority_unlimited`
+  + redeploy, předtím SELECT názvu omezení v `pg_constraint`); vedoucí bez kontroly příslušnosti ke skupině;
+  P1-4 výběr osob přes Combobox s vyhledáváním (zatím nativní select).
+
 **OPRAVNÉ KOLO PR #74 – RELACE 2 HOTOVA (19. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd`, draft PR #74).**
 Zadání: `list_events` session `session_01HpUiruJkjFtPcUM3L92gGi`, kinds `["user"]`, poslední user zpráva „ZBČ – Opravné kolo
 PR #74…“ (výsledek se uloží do souboru, vytáhnout skriptem: `json.JSONDecoder().raw_decode`, klíče `text`/`content`).

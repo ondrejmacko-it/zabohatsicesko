@@ -10,6 +10,8 @@ Větev `claude/finalni-kontrola-novy-pr-g2r2wd` (draft PR #74). Výchozí HEAD `
 | P0-2 | Pevný limit 3 garantovaných (doména, služba, DB CHECK 1–3, text „Nastaveno N ze 3“) | Potvrzeno v kódu | Bez maxima, garantovaná vždy první v doporučení, migrace 0015 se schválením | bea1c6c |
 | P0-1 | DnD jen v rámci sekce, nestabilní na delší vzdálenost | Potvrzeno v kódu (DOM se přeskládává během tažení) | Atomický `placeTopic` na serveru; UI `TopicBoard`: jeden kontext přes obě skupiny, DOM se během tažení nemění | bea1c6c, ba4b169 |
 | P1-2 | Garantovaná jen tenký pruh, nejžádanější bez akcentu | Potvrzeno v CSS | Garantovaná okrový podklad a pruh, nejžádanější mezi ostatními zelený pruh a štítek (tokeny `--ochre-soft`, `--ok`) | ba4b169 |
+| P1-1 | ⋯ v mřížce vpravo dole 36 × 32 px přes čas, téma a štítek; v agendě `transform` dělal rámec pro `position: fixed`, menu se na telefonu otevíralo mimo obrazovku | Potvrzeno snímky 768/1280 a měřením (seznam y=1593 při okně 900) | ⋯ 26 × 22 px (dotykově 30 × 26, plocha 44 px) vpravo nahoře v řádku názvu s vyhrazeným místem, výstraha vlevo od něj; agenda bez `transform`; dlouhé menu na stranu s víc místem s `maxHeight`, v nízkém okně posun do okna | eda8a14 |
+| P1-3 | Správa: e-mail, role i skupiny stejným písmem; Připravit měsíc: nulové počty jako tlačítka; Pravidelný rozvrh: dva úvodní odstavce | Potvrzeno snímky | Role štítkem (správce okrový), e-mail menší tlumený; nuly tichým textem; úvod rozvrhu jedním odstavcem | 7f04ef9 |
 
 ## P0-3: výsledek reprodukce
 
@@ -67,3 +69,19 @@ Uložení a obnovení stránky ověřeno e2e, server beze změny (oprávnění, 
   prst na 390 px (stránka se neposune), každý krok ověřen i po obnovení stránky. Unit: seznamy 1/3/10/25.
 * Lint, typecheck OK. E2E temata-planovani, klavesnice, pristupnost, stranky, domu-ukoly, doporucene-tema, kdo-tema
   na všech projektech: 654 passed, 27 skipped, 0 failed.
+
+## Relace 3 (P1-1, P1-3 cíleně)
+
+* P1-1 testy (`rychle-akce.spec.ts`): nový test ⋯ nepřekrývá žádný text ani ikonu v žádné kartě mřížky, klik
+  na ⋯ neotevře okno akce a stisk + tažení za ⋯ nespustí `dragstart`; dlouhé menu v okně 1280 × 260 celé v okně.
+  Ověřeno: typecheck, lint, e2e rychle-akce + mobilni-ovladani + okna (1280, 1920, 1440, 390, 320) 220 passed / 43 skipped.
+* P1-3: e2e pristupnost, stranky, priprava-mesice, okna, ostra-wiki na všech projektech 891 passed / 42 skipped /
+  7 failed (jen změněný text úvodu rozvrhu v `okna.spec.ts`, test upraven, 11/11 passed).
+* P1-4 inventura (záměrně beze změny v této relaci): Combobox (s vyhledáváním) mají Téma v okně akce i v Připravit
+  měsíc. Nativní `<select>` se stylem Wiki: Vede, Pověřený kontrolor, Typ akce, Skupina (okno akce), vedoucí
+  a skupina v řádcích Připravit měsíc a hromadný vedoucí, filtry Plánu a Zápisů, role ve Správě, zdroj zápisu.
+  Datum a čas nativní `type=date/time` (bez vlastního datepickeru, dohodnuto dřív). Seznam osob je v ukázce krátký
+  (5), nativní výběr je na telefonu nejpřístupnější. Návrh k rozhodnutí: výběr osoby (Vede, Kontrolor, vedoucí
+  v Připravit měsíc) přes Combobox s vyhledáváním a hodnotou ID, až bude osob víc (riziko: P0-3 právě opravený).
+* P1-5: průchody (vytvoření, editace, duplikace, přesun, doplnění měsíce, hromadné vyplnění, naplánování tématu,
+  zápis) mají přímé formuláře, potvrzení nevratných kroků a rozdíl Uložit × Zveřejnit; beze změny.
