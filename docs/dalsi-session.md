@@ -1,5 +1,18 @@
 # Prompt pro další session
 
+**PŘED MERGE PR #74 – RELACE 5 HOTOVA (19. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd`, draft PR #74).**
+Report: `docs/report-opravne-kolo-pr74.md` (sekce Relace 5).
+* HOTOVO: read-only ověření Preview DB (oddělená od produkce, omezení `topics_priority_rank_check` 1–3, poslední 0014,
+  PITR 6 h + záložní Neon větev `zaloha-pred-0015-2026-11-19`); 0015 bezpečně selže bez očekávaného omezení (8c2fa73,
+  `tests/migrace-0015.test.ts`); Vercel `APPROVED_MIGRATIONS=0015_topic_priority_unlimited` jen Preview + git větev PR #74,
+  redeploy `dpl_Hc4z5f5w7z2x7QEa7bF2bNxa4M9X` READY. Lint, typecheck, unit 410/410, build, celé e2e 1178 passed /
+  114 skipped / 0 failed (kód 8c2fa73). Snímky `po-*` prohlédnuty, regrese nenalezena (kód UI se neměnil, nepřegenerováno).
+* ČEKÁ NA UŽIVATELE: 0015 se spustí až při prvním dotazu do DB na Preview; z cloudu Preview nedosáhneme (proxy 403,
+  Vercel Authentication). Uživatel otevře preview PR #74, pak SELECT `schema_migrations` / `pg_constraint` na
+  `still-shadow-86247101` a ověření 4–6 garantovaných témat v UI (přístupový kód ukázky má jen uživatel). Ruční merge.
+* Produkce nemá `APPROVED_MIGRATIONS` → po merge 0015 na produkci nepoběží (log „čeká na schválení“), 4. garantované
+  téma server odmítne čitelnou chybou. Spuštění na produkci je samostatné rozhodnutí uživatele.
+
 **PŘED MERGE PR #74 (19. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd`, HEAD `4549f30`, CI zelené).**
 Uživatel ověřil report opravného kola a před merge chce (jeho rozhodnutí, závazné):
 1. **Migrace 0015 na Preview – SOUHLAS, ale nejdřív read-only ověřit:** (a) Preview DB je opravdu oddělená od produkční

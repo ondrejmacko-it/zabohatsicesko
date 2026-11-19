@@ -156,3 +156,23 @@ s očekávaným omezením, selhání bez omezení i s jinou horní mezí, schém
 Spuštění na Preview: nesecretní `APPROVED_MIGRATIONS=0015_topic_priority_unlimited` jen pro Preview a jen git
 větev `claude/finalni-kontrola-novy-pr-g2r2wd` (Production ji nemá), redeploy 8c2fa73 → `dpl_Hc4z5f5w7z2x7QEa7bF2bNxa4M9X` READY.
 Migrace se spouští při prvním dotazu do DB (`getDb`), ne při buildu.
+
+**Stav:** do konce relace 0015 na Preview **neproběhla** – nikdo zatím nasazení neotevřel a z cloudu ho nedosáhneme
+(proxy na `*.vercel.app` 403, nasazení chrání Vercel Authentication). Proběhne při prvním otevření preview PR #74.
+Funkční ověření 4–6 garantovaných témat na Preview vyžaduje přístupový kód ukázky (tajemství) → čeká na uživatele.
+Produkce `APPROVED_MIGRATIONS` nemá: po merge tam 0015 nepoběží, server odmítne 4. garantované téma čitelnou chybou.
+
+### 2.–3. Rozhodnutí bez změny kódu
+
+Výběr osob zůstává nativní `<select>`. Vedoucí bez kontroly příslušnosti ke skupině (ověřuje se existence účtu a oprávnění).
+
+### 4. Testy na kódu 8c2fa73 (HEAD 9111358 mění jen dokumentaci)
+
+Lint OK, typecheck OK, unit **410/410**, build OK, celé e2e (`npx playwright test --trace off`) **1178 passed /
+114 skipped / 0 failed** (7,5 min, Chromium, kalendář v simulaci).
+
+### 5. Vizuální kontrola
+
+Snímky `po-*` (Plán s ⋯ a otevřeným menu 390/1280, Témata 1280, Připravit měsíc 390) prohlédnuty: ⋯ vpravo nahoře bez
+překryvu textu, menu celé v okně, garantovaná okrová, nejžádanější zelený pruh, hromadný vedoucí nativním selectem.
+Potvrzená regrese nenalezena; UI kód se v této relaci neměnil, snímky se nepřegenerovaly.
