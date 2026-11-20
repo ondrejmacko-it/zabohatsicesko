@@ -1,3 +1,27 @@
+# OPRAVA SNÍMKU Z ŽIVÉHO TESTU – RELACE 20 → 21 (20. 11. 2026) – začni tímto
+
+Uživatel poslal živé hlášení z Preview (Android Chrome 157, okno 411 × 807 CSS px, DPR 2,63, harmonogram,
+verze 1ea092c). Doručení do Make FUNGUJE (report.json, snimek.webp, souhrn.txt na Disku). Uživatel: „přišlo to
+blbě, opravit!!“. Vady viditelné na snímku (screenshoty od uživatele v relaci 20, nejsou v repu):
+1) Zalamování textu v kopii stránky je rozbité: „Plá|n“, „Zápis|y“, „Témat|a“ na pilulkách, „Správa systém“
+   useknuté, nadpis „Vzdělávání“ OK. Hypotéza: v kopii (`modern-screenshot` `domToCanvas`, foreignObject)
+   se nepoužije webový font Inter (fontsource) → širší záložní font → zalomení. Ověřit reprodukcí: Playwright
+   Chromium, viewport 411×807, deviceScaleFactor 2.63, isMobile, hasTouch, `e2e/.auth/vedouci.json`, server
+   `node e2e/server.mjs` (port 3310), /vzdelavani/harmonogram, brouček → … → Pořídit snímek, uložit
+   `img.feedback-shot-preview` a prohlédnout. Možné opravy: vložení fontů (volba `font`/`fetch` v modern-screenshot,
+   ověřit CSP `font-src`/`connect-src`), případně `onCloneNode` s `white-space`/šířkou; bez nové knihovny.
+2) Duplicitní značky: 3 a 4 = stejný selektor i rámeček (`header > div:nth-of-type(2) > form:nth-of-type(1) >
+   button > span`). Opravit v `MarkingLayer.tsx`: stejný prvek podruhé nepřidat (nebo ho přepnout pryč) + unit/e2e.
+3) Značky 8 a 9 leží mimo prvky (8 úzký vysoký rámeček od menu dolů, 9 obdélník přes nadpis a pilulky).
+   Souhrn ukázal jen značky 1–6 (6 = „Prvek stránky v záhlaví“). Zeptat se uživatele, co označoval, a požádat
+   o zbytek souhrn.txt (značky 7–9); zkontrolovat geometrii tažení prstem (pointercancel / konec tažení)
+   a posun `mark.scroll` vs. `window.scroll`. Nic neměnit bez reprodukce.
+4) Popisek čísla značky překrývá obsah (např. „Zpětn|9|azba“) – menší vada, zvážit až po 1–3.
+* Hlavička: selecty účtu/role jsou přetřené záměrně (pole se přetírají) – ne vada.
+* Make se nemění (souhrn.txt tvoří Make). PR #75 zůstává draft. Po opravě: e2e zpětné vazby (windows-1280,
+  telefon-390, telefon-320), lint/typecheck/test/build, push, zpráva uživateli s odkazem na Preview
+  https://zbc-vzdelavani-demo-git-claude-funkcezpetna-vazba-broucek-maci.vercel.app a prosba o nové testovací hlášení.
+
 # FINÁLNÍ DOKONČENÍ PR #75 – RELACE 20 HOTOVO (20. 11. 2026) – začni tímto
 
 * Relace 20: e2e zpětné vazby (windows-1280, telefon-390/320) 24 OK / 0 fail; lint, typecheck, unit 440/440, build OK;
