@@ -1,5 +1,45 @@
 # Prompt pro další session
 
+**FÁZE B BROUČEK – RELACE 15 → 16 (20. 11. 2026, větev `claude/funkce/zpetna-vazba-broucek` z main 4699a60).**
+Zadání: user zpráva „ZBČ: finální release audit + integrace zpětné vazby z Novi“ (session
+`session_01HpUirygb1N8XmnorbnJSA8`, `list_events` kinds `["user"]`, stránka PŘED nejnovější, hledej „FÁZE B“), body B1–B7.
+Rozhodnutí uživatele (relace 15): doručení = **webhook Make.com** (ne DB); snímek = **`modern-screenshot` 4.7.0** jako Novi.
+Zdroj: `add_repo` ondrejmacko-it/novi-ai-tutor-app (read), klon `/home/user/novi-ai-tutor-app`; prostudováno:
+`src/feedback/{bug-dock,model,submit,actions,page-context,screenshot}.ts`, `src/components/feedback/*`, `docs/FEEDBACK_MAKE_SETUP.md`.
+* HOTOVO (WIP commit, typecheck OK, testy zatím žádné):
+  - `package.json`: `modern-screenshot` 4.7.0 (MIT, bez závislostí).
+  - `src/lib/feedback.ts`: typy (Chyba / Vzhled / Nápad / Ostatní), limity, chybové hlášky, `screenshotAllowed`
+    (snímek zakázán na `/sprava` a `/vzdelavani/integrace`).
+  - `src/lib/bug-dock.ts`: poloha, přichycení, šipky, `placeBug` (vyhnutí překážkám, jazýček), z Novi.
+  - `src/server/feedback.ts`: zod validace, magické bajty snímku, DB rate limit `feedback:<user>` 10/h (`withinRateLimit`),
+    ochrana dvojího odeslání `feedback-once:<hash>` (uvolní se při chybě), POST na Make s hlavičkou
+    `x-zbc-feedback-secret`, timeout 10 s, `redirect: "error"`, log jen kódem. Reporter = hash id + role, bez jména/e-mailu.
+  - `src/server/config.ts`: `feedbackWebhook()` (https nebo http jen localhost, secret ≥ 32), `FEEDBACK_ENV`.
+  - `src/app/(wiki)/feedback-actions.ts`: server action `submitFeedback` (session, Pohled ze `currentPreview`).
+  - Migrace NENÍ potřeba (rate limit i dedupe přes existující `rate_limits`).
+* DALŠÍ KROKY:
+  1) Klient `src/components/feedback/`: `BugButton` (44 px, vpravo dole, tažení + přichycení, šipky, jazýček, pozice
+     v localStorage s try/catch, jen `(min-width: 900px) and (pointer: fine)`, skrýt při `dialog[open]` a `body[data-moving]`,
+     překážky `[data-bug-avoid], .select-bar, .move-panel, .flash, .btn-primary`; BEZ setInterval, měření přes rAF na
+     scroll/resize/MutationObserver), `FeedbackRoot` (okno přes `Modal` 3 kroky: typ → popis + „Označit místo“ + u chyby
+     „Co by mělo fungovat jinak?“ → kontrola: souhrn, tlačítko „Pořídit snímek“, náhled jako data: URL (CSP img-src nemá
+     blob:), „Odebrat snímek“, Odeslat; úspěch až po `ok: true`; chyba = data zůstanou; `hasUnsavedChanges`),
+     `MarkingLayer` (prvek / obdélník, čísla, Odebrat, Zrušit vše, Esc, overflow hidden, `data-feedback-ui`),
+     `page-context.ts` (popis značky BEZ hodnot polí), `screenshot.ts` (domToCanvas, filter `data-feedback-ui`,
+     onCloneEachNode vymaže hodnoty input/textarea/select, po vykreslení přetřít neprůhledně boxy polí a
+     `.minutes, .transcript, .recording, [data-feedback-redact], .account, .signed-in`; chyba = jen text).
+     Položka „Zpětná vazba“ v `Sidebar` (desktop) otevře okno a vrátí skrytého broučka. Vložit `FeedbackRoot` do
+     `src/app/(wiki)/layout.tsx`. Styly v `globals.css` tokeny ZBČ (okrová, žádná fialová), `prefers-reduced-motion`.
+  2) Unit: `tests/zpetna-vazba.test.ts` (parse, mime, not_configured, rate limit, duplicate + uvolnění po chybě,
+     payload bez jména/e-mailu, snímek na /sprava odmítnut, Pohled v kontextu) + `bug-dock`.
+  3) E2E: falešný webhook v `e2e/server.mjs` (http://127.0.0.1:<port>, env `FEEDBACK_WEBHOOK_URL/SECRET` jen demo),
+     `e2e/zpetna-vazba.spec.ts`: klik, tažení, jazýček, skrytí/obnova, neuložené změny, označení, snímek se souhlasem
+     i bez, úspěch/chyba, mobil bez broučka. Pak lint, typecheck, unit, build, celé `npm run e2e` (před tím
+     `fuser -k 3310/tcp 3311/tcp 3410/tcp`), WebKit dle relace 14 (`E2E_WEBKIT=1`).
+  4) `docs/zpetna-vazba.md` (Make scénář, env, tvar payloadu, mazání po 12 měsících), README tabulka env,
+     `.env.example`. Report feedback widgetu (B7). Draft PR podle šablony repa, předávka.
+* Pravidla: žádný merge, deploy, migrace ani zápis do produkční DB.
+
 **RELEASE AUDIT PR #74 (FÁZE A) – RELACE 14 HOTOVO (20. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd`).**
 * bba0adb: CSP `upgrade-insecure-requests` vypíná jen e2e server (`CSP_UPGRADE_INSECURE=0`), `tests/csp.test.ts`.
   06cbf23: WebKit projekty přes lokální HTTPS proxy (`DEMO_TLS_PORT` 3410, `e2e/server.mjs`), kvůli cookie `__Host-`.
