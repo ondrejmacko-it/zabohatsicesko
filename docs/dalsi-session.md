@@ -1,4 +1,4 @@
-# OPRAVA SNÍMKU Z ŽIVÉHO TESTU – RELACE 21 HOTOVO (20. 11. 2026) – začni tímto
+# OPRAVA SNÍMKU Z ŽIVÉHO TESTU – RELACE 21 HOTOVO, MERGNUTO (20. 11. 2026) – začni tímto
 
 * Commit 18671d4: (1) zalamování v kopii – příčina prokázaná: modern-screenshot přenáší do kopie pevné šířky
   (width/height vždy, viz `getDefaultStyle` ignoredStyles), pilulky Plán/Zápisy/Témata mají nulovou rezervu
@@ -9,9 +9,9 @@
   2,63 nebo škálování písma v Androidu/Chromu; v headless Chromiu nejde nasimulovat).
   (2) duplicitní značky: `sameMark` v `MarkingLayer.tsx` (stejný selektor + stejná poloha v dokumentu), unit + e2e.
 * Ověření: lint, typecheck, unit 442/442, e2e zpětné vazby windows-1280/telefon-390/telefon-320 24 OK / 0 fail.
-* Otevřené: značky 8/9 mimo prvky – čeká se na odpověď uživatele (co označoval, zbytek souhrn.txt 7–9).
-  `pointercancel` vrstva neobsluhuje, ale pointerdown počátek přepíše a `touch-action: none` → bez reprodukce nic
-  neměněno. Bod 4 (číslo značky nad rámečkem překrývá obsah) neřešen. Uživatel má poslat nové hlášení z Preview.
+* Uzavřeno: značky 8/9 byly záměrné tažení prstem (oblast), ne vada. PR #75 mergnut do main (afafddd).
+* Zbývá jen: bod 4 (číslo značky nad rámečkem překrývá obsah), neřešen. Ověření opravy snímku na telefonu
+  novým hlášením z Production po nasazení.
 
 # OPRAVA SNÍMKU Z ŽIVÉHO TESTU – RELACE 20 → 21 (20. 11. 2026) – začni tímto
 
