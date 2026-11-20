@@ -41,7 +41,26 @@ Stav k 20. 11. 2026, větev `claude/funkce/zpetna-vazba-broucek`. Make.com (scé
 
 ## D. Testy (skutečně naměřené)
 
-VYPLNÍ SE
+Měřeno 20. 11. 2026 na HEAD s kódem 4e2e8f8 (další commity jen dokumentace), v cloudovém kontejneru.
+
+| Brána | Výsledek |
+|-------|----------|
+| `npm run lint` | OK, 0 chyb |
+| `npm run typecheck` | OK |
+| `npm test` | 45 souborů, 440/440 OK |
+| `npm run build` | OK |
+| e2e zpětná vazba (windows-1280, telefon-390, telefon-320) | 24 OK, 30 přeskočeno (odeslání jen v jednom projektu na prohlížeč, desktopové testy na telefonu), 0 selhání |
+| e2e celá sada Chromium (všechny projekty) | 1257 OK, 173 přeskočeno, 0 selhání (9,8 min) |
+| WebKit (webkit-390/1440/320), Firefox (firefox-1280/390) | **neověřeno** – prohlížeče v kontejneru nejsou nainstalované |
+| Vizuální kontrola (Playwright, windows-1280 a telefon-390) | brouček vpravo/vlevo, jazýček, typ, text, označování, kontrola, náhled snímku, chyba, úspěch, potvrzení neuložených změn – bez objektivních vad |
+| Živé hlášení do Make z Preview | **neověřeno** – čeká na testovací hlášení uživatele (telefon i počítač) |
+
+Pozorování z vizuální kontroly (ne vada): na telefonu 390 px plovoucí brouček částečně překrývá pravý konec
+širokého tlačítka „Filtry“ v harmonogramu; hlavní akce (`.quick-actions`, `.btn-primary`) nezakrývá a jde ho
+přesunout podržením.
+
+Simulace vs. živý test: všechna e2e odesílají na falešný webhook (`e2e/server.mjs`, včetně chyby 500, pomalé
+odpovědi a vypršení času). Skutečné doručení do Make.com tímto ověřené není.
 
 ## E. Make.com
 
