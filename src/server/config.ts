@@ -315,3 +315,24 @@ export const integrationModes = {
   },
   transcription: "fixture",
 } as const;
+
+export const FEEDBACK_ENV = ["FEEDBACK_WEBHOOK_URL", "FEEDBACK_WEBHOOK_SECRET"] as const;
+
+/**
+ * Webhook Make.com pro zpětnou vazbu, nebo null, když není nastavený. Adresa i tajemství zůstávají na serveru.
+ * Jen https, http jen na vlastní počítač (lokální test). Tajemství aspoň 32 znaků.
+ */
+export function feedbackWebhook(): { url: string; secret: string } | null {
+  const url = process.env.FEEDBACK_WEBHOOK_URL?.trim();
+  const secret = process.env.FEEDBACK_WEBHOOK_SECRET?.trim();
+  if (!url || !secret || secret.length < 32) return null;
+  try {
+    const parsed = new URL(url);
+    const local = parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1";
+    if (parsed.protocol !== "https:" && !(parsed.protocol === "http:" && local)) return null;
+    if (parsed.username || parsed.password) return null;
+    return { url: parsed.toString(), secret };
+  } catch {
+    return null;
+  }
+}

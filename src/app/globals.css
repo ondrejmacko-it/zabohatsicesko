@@ -321,6 +321,25 @@ a.nav-item:hover {
     display: none;
   }
 
+  /* Zpětná vazba zůstává v menu i na telefonu: stejný řádek jako navigace, zalomí se jen při nedostatku místa. */
+  .sidebar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .sidebar > nav {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .sidebar-feedback {
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
   .panel {
     padding: 20px 16px 28px;
   }
@@ -4343,5 +4362,359 @@ body[data-moving] .quick-actions,
   .preview-bar {
     padding: 6px 16px;
     font-size: 13px;
+  }
+}
+
+/* Zpětná vazba (brouček). Okno používá .dialog, tady jen tlačítko, označování a obsah kroků. */
+.sidebar-feedback {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--sidebar-line);
+}
+
+.sidebar-feedback .nav-item {
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sidebar-feedback .nav-item:hover {
+  background: #262626;
+}
+
+.bug-dock {
+  position: fixed;
+  z-index: 40;
+  width: 44px;
+  height: 44px;
+}
+
+.bug-button {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--ochre-dark);
+  border-radius: 50%;
+  background: var(--ochre);
+  color: #fff;
+  box-shadow: 0 4px 14px rgb(35 35 35 / 22%);
+  cursor: grab;
+  touch-action: none;
+}
+
+.bug-button:hover {
+  background: var(--ochre-dark);
+}
+
+.bug-button:focus-visible,
+.bug-tuck:focus-visible,
+.bug-tab:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
+.bug-dock[data-dragging] .bug-button {
+  cursor: grabbing;
+}
+
+/* Telefon a dotyk: větší cíl, podržení nesmí vybrat text ani otevřít systémovou nabídku. */
+.bug-dock-touch,
+.bug-dock-touch .bug-button {
+  width: 48px;
+  height: 48px;
+}
+
+.bug-button {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.bug-dock[data-dragging] .bug-button {
+  box-shadow: 0 8px 22px rgb(35 35 35 / 30%);
+}
+
+.bug-tuck {
+  position: absolute;
+  top: -6px;
+  display: none;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+
+.bug-dock-right .bug-tuck {
+  left: -6px;
+}
+
+.bug-dock-left .bug-tuck {
+  right: -6px;
+}
+
+.bug-dock:hover .bug-tuck,
+.bug-dock:focus-within .bug-tuck {
+  display: grid;
+}
+
+.bug-dock[data-dragging] .bug-tuck {
+  display: none;
+}
+
+.bug-tab {
+  position: fixed;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--ochre-dark);
+  background: var(--ochre);
+  color: #fff;
+  cursor: pointer;
+}
+
+.bug-tab-right {
+  border-right: 0;
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+}
+
+.bug-tab-left {
+  border-left: 0;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.mark-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.mark-surface {
+  position: absolute;
+  inset: 0;
+  background: rgb(35 35 35 / 8%);
+  cursor: crosshair;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.mark-surface:focus {
+  outline: none;
+}
+
+.mark-box {
+  position: absolute;
+  border-radius: 3px;
+  pointer-events: none;
+}
+
+.mark-hover {
+  outline: 2px dashed var(--ochre);
+  background: rgb(157 98 25 / 8%);
+}
+
+.mark-drawing,
+.mark-done {
+  outline: 3px solid var(--ochre);
+  background: rgb(157 98 25 / 12%);
+}
+
+.mark-number {
+  position: absolute;
+  top: -22px;
+  left: -3px;
+  min-width: 22px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: var(--ochre);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.mark-toolbar {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(360px, calc(100vw - 32px));
+  max-height: 60vh;
+  overflow: auto;
+  padding: 12px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: 0 8px 24px rgb(35 35 35 / 20%);
+  pointer-events: auto;
+}
+
+/* Přepínač polohy panelu dává smysl jen na telefonu, kde panel zabírá celou šířku a může zakrýt označované místo. */
+.mark-toolbar-flip {
+  display: none;
+}
+
+.mark-surface,
+.mark-toolbar {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+@media (max-width: 760px) {
+  .mark-toolbar {
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: auto;
+    max-height: 45vh;
+    max-height: 45dvh;
+    padding: 10px 12px max(12px, env(safe-area-inset-bottom));
+    border-width: 1px 0 0;
+    border-radius: var(--radius) var(--radius) 0 0;
+  }
+
+  .mark-toolbar-top {
+    top: 0;
+    bottom: auto;
+    padding-top: max(10px, env(safe-area-inset-top));
+    padding-bottom: 12px;
+    border-width: 0 0 1px;
+    border-radius: 0 0 var(--radius) var(--radius);
+  }
+
+  .mark-toolbar-flip {
+    display: inline-flex;
+  }
+}
+
+.mark-hint {
+  margin: 0;
+  font-size: 14px;
+}
+
+.mark-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+}
+
+.mark-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.feedback-types {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.feedback-types legend {
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.feedback-type {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.feedback-type:has(input:checked) {
+  border-color: var(--ochre);
+  background: var(--ochre-soft);
+}
+
+.feedback-type > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.feedback-marks {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.feedback-summary {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 6px 14px;
+  margin: 0;
+  font-size: 14px;
+}
+
+.feedback-summary dt {
+  color: var(--muted);
+}
+
+.feedback-summary dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.feedback-summary-text {
+  white-space: pre-wrap;
+}
+
+.feedback-shot {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  background: var(--band);
+}
+
+.feedback-shot-preview {
+  max-width: 100%;
+  max-height: 240px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+
+.feedback-error {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .bug-button {
+    transition: background-color 0.15s ease, box-shadow 0.15s ease;
   }
 }

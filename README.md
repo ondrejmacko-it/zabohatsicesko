@@ -86,6 +86,7 @@ Vzor je v `.env.example`. Hodnoty tajemství patří do správce tajemství host
 | `LOGIN_MODE` | ne | `google-test` přidá přihlášení účtem Google. Jinak jen fiktivní role. |
 | `GOOGLE_LOGIN_ACCOUNTS` | ne | Zaváděcí seznam účtů pro ukázku, ostatní zve a schvaluje Správa systému, viz [docs/google-prihlaseni.md](docs/google-prihlaseni.md). Ostrá Wiki ho ignoruje. |
 | `BOOTSTRAP_ADMIN_EMAILS` | ne | Adresy oddělené čárkou, jejichž první přihlášení Googlem založí aktivního správce. Slouží ke spuštění prázdné ostré Wiki. |
+| `FEEDBACK_WEBHOOK_URL`, `FEEDBACK_WEBHOOK_SECRET` | ne | Webhook Make.com pro zpětnou vazbu (brouček). Jen `https`, tajemství min. 32 znaků. Bez nich okno poctivě hlásí, že odesílání není nastavené. Viz [docs/zpetna-vazba.md](docs/zpetna-vazba.md). |
 
 ## Architektura
 

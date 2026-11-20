@@ -3,9 +3,9 @@
 // pro lokální test a nikde neplatí. Produkční build, ne `next dev`: chyby CSP se projeví jen v něm.
 import { spawn, spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync, rmSync } from "node:fs";
-import { request as httpRequest } from "node:http";
+import { createServer as createHttpServer, request as httpRequest } from "node:http";
 import { createServer as createHttpsServer } from "node:https";
-import { DEMO_CODE, DEMO_PORT, DEMO_TLS_PORT, LIVE_PORT } from "./constants.mjs";
+import { DEMO_CODE, DEMO_PORT, DEMO_TLS_PORT, FEEDBACK_HOOK_PORT, FEEDBACK_HOOK_SECRET, LIVE_PORT } from "./constants.mjs";
 
 
 const shared = {
@@ -20,7 +20,13 @@ const shared = {
 };
 delete shared.DATABASE_URL;
 
-const demoEnv = { ...shared, PGLITE_DIR: ".data/e2e-demo" };
+// Ukázka posílá zpětnou vazbu na falešný webhook níže. Ostrá Wiki ho nemá, tam platí „není nastavené“.
+const demoEnv = {
+  ...shared,
+  PGLITE_DIR: ".data/e2e-demo",
+  FEEDBACK_WEBHOOK_URL: `http://127.0.0.1:${FEEDBACK_HOOK_PORT}/hook`,
+  FEEDBACK_WEBHOOK_SECRET: FEEDBACK_HOOK_SECRET,
+};
 const liveEnv = {
   ...shared,
   PGLITE_DIR: ".data/e2e-live",
@@ -47,6 +53,38 @@ if (process.env.E2E_SKIP_BUILD !== "1") {
   const build = spawnSync("npx", ["next", "build"], { env: shared, stdio: "inherit" });
   if (build.status !== 0) process.exit(build.status ?? 1);
 }
+
+// Falešný webhook Make.com: ověří tajemství, hlášení drží v paměti a vrátí je testu (GET /hlaseni).
+// Text s „SIMULOVAT-CHYBU“ poprvé odmítne stavem 500, aby šlo ověřit chybu doručení a opakování.
+// „SIMULOVAT-POMALU“ hlášení přijme a odpoví po 3 s (dvojklik, zavření okna během odesílání).
+// „SIMULOVAT-TIMEOUT“ hlášení přijme a odpoví až po vypršení času Wiki (10 s): přijato, ale bez potvrzení.
+const reports = [];
+const failedOnce = new Set();
+createHttpServer((req, res) => {
+  if (req.method === "GET" && req.url === "/hlaseni") {
+    res.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify(reports));
+    return;
+  }
+  if (req.method !== "POST" || req.url !== "/hook") return void res.writeHead(404).end();
+  if (req.headers["x-zbc-feedback-secret"] !== FEEDBACK_HOOK_SECRET) return void res.writeHead(401).end();
+  const chunks = [];
+  req.on("data", (chunk) => chunks.push(chunk));
+  req.on("end", () => {
+    try {
+      const report = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+      if (String(report.text).includes("SIMULOVAT-CHYBU") && !failedOnce.has(report.text)) {
+        failedOnce.add(report.text);
+        return void res.writeHead(500).end();
+      }
+      reports.push(report);
+      const text = String(report.text);
+      const delay = text.includes("SIMULOVAT-TIMEOUT") ? 11_000 : text.includes("SIMULOVAT-POMALU") ? 3_000 : 0;
+      setTimeout(() => res.writeHead(200).end("Accepted"), delay);
+    } catch {
+      res.writeHead(400).end();
+    }
+  });
+}).listen(FEEDBACK_HOOK_PORT, "127.0.0.1");
 
 const start = (env, port) => spawn("npx", ["next", "start", "-p", String(port)], { env, stdio: "inherit" });
 

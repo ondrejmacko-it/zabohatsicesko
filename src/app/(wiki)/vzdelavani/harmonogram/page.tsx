@@ -33,6 +33,7 @@ import { listTasks } from "@/server/services/journey";
 import { currentPreview } from "@/server/services/preview-context";
 import { duplicateFormValues, topicFormValues } from "@/server/services/detail";
 import { listTopics } from "@/server/services/topics";
+import { ShotGrant } from "@/components/feedback/ShotGrant";
 
 export const metadata: Metadata = { title: "Plán vzdělávání" };
 
@@ -166,6 +167,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   );
   return (
     <>
+      <ShotGrant page="/vzdelavani/harmonogram" />
       <AutoRefresh active={syncing} />
       {peekId && <EventPeek key={`${peekId}|${topicParam ?? ""}`} user={user} eventId={peekId} preview={preview} closeHref={link({})} presetTopicId={topicParam ?? undefined} />}
       {/* V režimu osobních kalendářů se do kalendáře správce nezapisuje, jeho propojení Plán nehlídá. */}

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { after } from "next/server";
+import { ShotGrant } from "@/components/feedback/ShotGrant";
 import { RefreshOnReturn } from "@/components/RefreshOnReturn";
 import { EventPeek } from "@/features/vzdelavani/components/EventPeek";
 import { PersonalCalendarStatus } from "@/features/vzdelavani/components/PersonalCalendarStatus";
@@ -68,7 +69,11 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   return (
     <>
       {peekId && <EventPeek key={peekId} user={user} eventId={peekId} preview={preview} closeHref="/" />}
-      <h1>Vítejte, {user.name}.</h1>
+      {/* Jméno přihlášeného se do snímku zpětné vazby nedostane, hlášení jméno záměrně neposílá. */}
+      <h1>
+        Vítejte, <span data-feedback-redact="">{user.name}</span>.
+      </h1>
+      <ShotGrant page="/" />
       {personal && <PersonalCalendarStatus state={personal} />}
       {/* Odpověď na pozvánku se dává v Gmailu, po návratu do okna se úkol obnoví. */}
       {invite && <RefreshOnReturn />}

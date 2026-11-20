@@ -1,4 +1,228 @@
+# OPRAVA SNÍMKU Z ŽIVÉHO TESTU – RELACE 21 HOTOVO (20. 11. 2026) – začni tímto
+
+* Commit 18671d4: (1) zalamování v kopii – příčina prokázaná: modern-screenshot přenáší do kopie pevné šířky
+  (width/height vždy, viz `getDefaultStyle` ignoredStyles), pilulky Plán/Zápisy/Témata mají nulovou rezervu
+  (inline-block, ws normal), menu `nowrap`. Nepatrně širší písmo v kopii → „Plá|n“ / useknutí. Simulace (+3 %
+  letter-spacing v kopii, 411×807, DPR 2,63) dala přesně vady z telefonu; s opravou čisté. Oprava:
+  `keepSingleLine` ve `scrubClone` (jednořádkový text v kopii `white-space: nowrap`, šířky beze změny),
+  `clonedTextIsSingleLine` + unit test. Proč je písmo na telefonu širší, neověřeno (podezření: měřítko 2 vs.
+  2,63 nebo škálování písma v Androidu/Chromu; v headless Chromiu nejde nasimulovat).
+  (2) duplicitní značky: `sameMark` v `MarkingLayer.tsx` (stejný selektor + stejná poloha v dokumentu), unit + e2e.
+* Ověření: lint, typecheck, unit 442/442, e2e zpětné vazby windows-1280/telefon-390/telefon-320 24 OK / 0 fail.
+* Otevřené: značky 8/9 mimo prvky – čeká se na odpověď uživatele (co označoval, zbytek souhrn.txt 7–9).
+  `pointercancel` vrstva neobsluhuje, ale pointerdown počátek přepíše a `touch-action: none` → bez reprodukce nic
+  neměněno. Bod 4 (číslo značky nad rámečkem překrývá obsah) neřešen. Uživatel má poslat nové hlášení z Preview.
+
+# OPRAVA SNÍMKU Z ŽIVÉHO TESTU – RELACE 20 → 21 (20. 11. 2026) – začni tímto
+
+Uživatel poslal živé hlášení z Preview (Android Chrome 157, okno 411 × 807 CSS px, DPR 2,63, harmonogram,
+verze 1ea092c). Doručení do Make FUNGUJE (report.json, snimek.webp, souhrn.txt na Disku). Uživatel: „přišlo to
+blbě, opravit!!“. Vady viditelné na snímku (screenshoty od uživatele v relaci 20, nejsou v repu):
+1) Zalamování textu v kopii stránky je rozbité: „Plá|n“, „Zápis|y“, „Témat|a“ na pilulkách, „Správa systém“
+   useknuté, nadpis „Vzdělávání“ OK. Hypotéza: v kopii (`modern-screenshot` `domToCanvas`, foreignObject)
+   se nepoužije webový font Inter (fontsource) → širší záložní font → zalomení. Ověřit reprodukcí: Playwright
+   Chromium, viewport 411×807, deviceScaleFactor 2.63, isMobile, hasTouch, `e2e/.auth/vedouci.json`, server
+   `node e2e/server.mjs` (port 3310), /vzdelavani/harmonogram, brouček → … → Pořídit snímek, uložit
+   `img.feedback-shot-preview` a prohlédnout. Možné opravy: vložení fontů (volba `font`/`fetch` v modern-screenshot,
+   ověřit CSP `font-src`/`connect-src`), případně `onCloneNode` s `white-space`/šířkou; bez nové knihovny.
+2) Duplicitní značky: 3 a 4 = stejný selektor i rámeček (`header > div:nth-of-type(2) > form:nth-of-type(1) >
+   button > span`). Opravit v `MarkingLayer.tsx`: stejný prvek podruhé nepřidat (nebo ho přepnout pryč) + unit/e2e.
+3) Značky 8 a 9 leží mimo prvky (8 úzký vysoký rámeček od menu dolů, 9 obdélník přes nadpis a pilulky).
+   Souhrn ukázal jen značky 1–6 (6 = „Prvek stránky v záhlaví“). Zeptat se uživatele, co označoval, a požádat
+   o zbytek souhrn.txt (značky 7–9); zkontrolovat geometrii tažení prstem (pointercancel / konec tažení)
+   a posun `mark.scroll` vs. `window.scroll`. Nic neměnit bez reprodukce.
+4) Popisek čísla značky překrývá obsah (např. „Zpětn|9|azba“) – menší vada, zvážit až po 1–3.
+* Hlavička: selecty účtu/role jsou přetřené záměrně (pole se přetírají) – ne vada.
+* Make se nemění (souhrn.txt tvoří Make). PR #75 zůstává draft. Po opravě: e2e zpětné vazby (windows-1280,
+  telefon-390, telefon-320), lint/typecheck/test/build, push, zpráva uživateli s odkazem na Preview
+  https://zbc-vzdelavani-demo-git-claude-funkcezpetna-vazba-broucek-maci.vercel.app a prosba o nové testovací hlášení.
+
+# FINÁLNÍ DOKONČENÍ PR #75 – RELACE 20 HOTOVO (20. 11. 2026) – začni tímto
+
+* Relace 20: e2e zpětné vazby (windows-1280, telefon-390/320) 24 OK / 0 fail; lint, typecheck, unit 440/440, build OK;
+  celé Chromium e2e 1257 OK / 173 skip / 0 fail. WebKit/Firefox neověřeno (prohlížeče nejsou v kontejneru).
+  Vizuální snímky bez objektivních vad (pozorování: brouček na 390 px přesahuje konec tlačítka Filtry).
+  `docs/zpetna-vazba.md` aktualizováno, `docs/report-pr75.md` (A–F) napsán, popis PR #75 aktualizován, PR zůstává draft.
+* Vercel: konektor projekt vidí (prj_MYpwzB5KekzHAVwbiUDrZv6CG12i, tým team_PtkXmFd9hI7UeUYovGkbwZQG).
+  `FEEDBACK_WEBHOOK_URL` (plain) i `FEEDBACK_WEBHOOK_SECRET` (sensitive) pro Preview i Production existují
+  (URL nastavila relace 17, webhook 4144942). Uživateli o přepojení konektoru NEpsat. Produkční deploy nedělat.
+* Další krok: nic bez pokynu. Uživatel pošle testovací hlášení z Preview (telefon i počítač), případně ověří
+  WebKit/Firefox, pak sám přepne PR na Ready a mergne. Otevřené: tlačítko Odeslat po `uncertain` zůstává
+  (bezpečné, vrátí „už bylo odesláno“).
+
+# FINÁLNÍ DOKONČENÍ PR #75 – RELACE 19 → 20 (20. 11. 2026) – začni tímto
+
+Zadání beze změny (oddíly níže + úvodní zpráva). Relace 19 skončila na hooku kontextu (200 tis.). Šetři, nečti celé soubory.
+
+* HOTOVO v relaci 19 (commity 7f5c9f5, 4e2e8f8; typecheck, eslint, unit `tests/zpetna-vazba.test.ts` 19/19 OK):
+  - Krok 1 CSS: `.mark-toolbar` ≤ 760 px přes celou šířku dole, `.mark-toolbar-top` nahoře, `.mark-toolbar-flip` jen
+    ≤ 760 px, `user-select: none` na vrstvě. Okno `.dialog` a pole 16 px na dotyku už splňovaly (beze změny).
+  - Krok 2: `lib/feedback.ts` `FEEDBACK_ELEMENT_KINDS`/`FEEDBACK_ELEMENT_PLACES`/`FEEDBACK_SELECTOR_PATTERN`,
+    `feedbackMarkIsStructural`; server `.refine` na každé značce; `page-context.ts` typovaný na tyto seznamy.
+  - Krok 3: `FEEDBACK_SHOT_PAGES` (/, harmonogram, témata), `src/server/feedback-grant.ts` (HMAC `feedback-shot:`,
+    token `stránka|exp|podpis`, 12 h), `src/components/feedback/ShotGrant.tsx` ve 3 stránkách; klient čte
+    `[data-feedback-shot-grant]` při otevření okna, grant uloží se snímkem, FormData `screenshotGrant`; server
+    `deps.grantSecret` = `config.sessionSecret`; `screenshotAllowed` odstraněn. Úvod: jméno v h1 `data-feedback-redact`.
+  - Krok 4: `readScreenshotSize` (VP8/VP8L/VP8X, JPEG SOF) musí = deklarovaným; `FEEDBACK_SCREENSHOT_MAX_SIDE` 2000.
+  - Krok 5: TimeoutError → `uncertain` (klíč zůstává), nová hláška v `FEEDBACK_ERROR_MESSAGE`. Unit test + souběh.
+  - Krok 6: `screenshot.ts` značky posunuté o scroll, číslo uvnitř u horního okraje, DPR ≤ 2 a ≤ 2000 px, plné
+    vykreslení omezené na 16 Mpx / 16 000 px (Safari), zmenšení ×0.75 až 3×, uvolnění canvasů.
+  - Krok 7: e2e – nové testy (citlivá fixture + pixely, dlouhá stránka, jméno na Úvodu, podvržený grant, dvojklik
+    s `SIMULOVAT-POMALU`, `SIMULOVAT-TIMEOUT`, Escape + Skrýt broučka, telefon viditelnost a celý průchod).
+    `e2e/server.mjs` umí POMALU (3 s) a TIMEOUT (11 s, hlášení uloží).
+    Běh windows-1280 + telefon-390 PŘED posledními opravami: 19 OK, 3 FAIL – opraveno v 4e2e8f8 (inline onsubmit
+    ve fixture → CSP chyba; očekávaný popis karty = „Karta v harmonogramu“; „Skrýt broučka“ je jen v kroku 1).
+    Po opravě NEspuštěno.
+* DALŠÍ KROKY:
+  1) `fuser -k 3310/tcp 3311/tcp 3312/tcp 3410/tcp`; `npx playwright test e2e/zpetna-vazba.spec.ts --project=windows-1280
+     --project=telefon-390 --project=telefon-320 --trace off`; opravit, co padá (jen objektivní vady).
+  2) Lint, typecheck, `npm test`, build, celé e2e na pozadí; WebKit/Firefox (E2E_WEBKIT=1), co nejde = „neověřeno“.
+  3) Vizuální snímky (scale 1, scratchpad), `docs/zpetna-vazba.md` (grant, pozitivní seznam, uncertain, rozměry, mez
+     obsahu obrázku, server action limit 4200kb je stávající), `docs/report-pr75.md` (A–F), popis PR #75, Vercel
+     `get_project zbc-vzdelavani-demo` (team_PtkXmFd9hI7UeUYovGkbwZQG), zpráva uživateli.
+* Otevřené: na povolených stránkách se text karet harmonogramu ve snímku nepřetírá (fiktivní ukázková data, stránky
+  ověřené) – uvést v reportu; UI po `uncertain` nechává tlačítko Odeslat (druhý pokus vrátí „už bylo odesláno“).
+
+# FINÁLNÍ DOKONČENÍ PR #75 – RELACE 18 → 19 (20. 11. 2026) – začni tímto
+
+Zadání beze změny (oddíl „NOVÝ ÚKOL“ níže + úvodní zpráva relace). `add_repo` Novi znovu zamítl klasifikátor →
+mobil podle popisu v oddílu níže, ne podle zdrojáku. Relace 18 skončila kvůli hooku kontextu (201 tis. hned po čtení).
+Šetři: nečti znovu celé soubory, které jsou popsané tady.
+
+* HOTOVO (commit 86afe20, typecheck + eslint + unit `tests/zpetna-vazba.test.ts` 15/15 OK, e2e NEspuštěno):
+  - `page-context.ts` přepsán: popis = druh (`KINDS`) + místo (`PLACES`: „v okně / v nabídce / v tabulce /
+    ve formuláři / v menu / v záhlaví“), karta `table a[href^='/vzdelavani/akce/']` = „Karta v harmonogramu“.
+    Selektor jen tagy + `:nth-of-type`, max 8 úrovní. Žádný text, aria-label, title, id, třídy, data-*.
+    `FEEDBACK_RECT_LABEL = "Označená oblast"` v `lib/feedback.ts`.
+  - `bug-dock.ts`: `placeBug(dock, width, viewport, obstacles, { touch, insets })`, `BUG_SIZE_TOUCH` 48, okraj 12.
+  - `BugButton.tsx`: bez omezení na desktop; `TOUCH_QUERY = "(max-width: 900px), (pointer: coarse)"`
+    (useSyncExternalStore), podržení 400 ms + vibrate, švihnutí > 10 px nic, `onContextMenu` prevent, překážky
+    + `.quick-actions`, safe-area přes pomocný prvek `measureInsets()`. CSS `.bug-dock-touch` 48 px, user-select none.
+  - `MarkingLayer.tsx`: `ClientMark` (= FeedbackMark + `scroll`), `toFeedbackMark`, Menší/Větší (state `picked`),
+    „Panel nahoru/dolů“ (`.mark-toolbar-top` – CSS ZATÍM CHYBÍ), preventDefault na pointerdown.
+  - `FeedbackRoot.tsx`: zavření během odesílání jen schová (`sendingRef`), „sent“ zůstane po znovuotevření,
+    změna typu nemaže `expected`.
+  - CSS ≤ 900 px: `.sidebar` flex-wrap, `.sidebar-feedback` viditelná na telefonu. Sidebar komentář upraven.
+* DALŠÍ KROKY (pořadí):
+  1) CSS: `.mark-toolbar` na ≤ 760 px přes celou šířku dole (left/right 0, bottom safe-area), `.mark-toolbar-top`
+     nahoře; `.mark-toolbar-flip` jen ≤ 760 px; `.mark-surface { user-select: none }`; okno na telefonu: šířka
+     `calc(100vw - 1.75rem)`, max výška `calc(100dvh - 1.75rem)`, posuvné, textarea font-size ≥ 16 px (ověř `.dialog`).
+  2) Server: validace `marks[].description` jen z povolených řetězců (KINDS × PLACES + rect) a `selector` regex
+     `^[a-z][a-z0-9-]*(:nth-of-type\(\d+\))?( > [a-z][a-z0-9-]*(:nth-of-type\(\d+\))?)*$` → přesunout seznamy
+     labelů do `lib/feedback.ts`, ať je sdílí klient i server. Unit test.
+  3) Snímek – POZITIVNÍ seznam + autorizace nezávislá na `context.path` (navrženo, neimplementováno):
+     server komponenta `ShotGrant` (renderuje `<span hidden data-feedback-shot-grant={token}>`) jen na ověřených
+     stránkách: `/`, `/vzdelavani/harmonogram`, `/vzdelavani/temata` (Zápisy, detail akce, Správa, Integrace,
+     Přehled, Moje cesta NE). Token = `${page}.${exp}.${HMAC(config.sessionSecret, "feedback-shot:"+userId+":"+page+":"+exp)}`
+     (vzor `src/server/auth/gate.ts`), platnost 12 h. Klient: snímek nabídne jen když grant v DOM existuje, grant uloží
+     se snímkem; draft `screenshot.grant`. Server ověří podpis, uživatele, expiraci a page ∈ seznam; odstraní refine
+     `screenshotAllowed(context.path)` a `screenshotAllowed` vůbec; do payloadu Make grant NEposílat (tvar beze změny).
+     Poctivě do docs: obsah obrázku server ověřit nemůže, token jen dokládá, že uživatel měl otevřenou povolenou stránku.
+  4) Server: skutečné rozměry obrázku z hlavičky (JPEG SOF0–SOF15 mimo C4/C8/CC; WebP `VP8 ` LE16 na 26/28 & 0x3fff,
+     `VP8L` bity od 21, `VP8X` 1+LE24 na 24/27) musí = deklarovaným, max 2000×2000; nečitelná hlavička = invalid.
+  5) Timeout po přijetí (prokázaná chyba: retry po timeoutu = duplicita v Make): u `TimeoutError` klíč
+     `feedback-once` NEuvolňovat a vrátit nový důvod `uncertain` („Odpověď se nepodařilo ověřit, hlášení nejspíš dorazilo,
+     znovu ho neposíláme. Text zůstává v okně.“); u HTTP chyby a chyby spojení uvolnit jako dnes. Unit test s mock fetch.
+  6) `screenshot.ts`: značky posunout o (mark.scroll − aktuální scroll), číslo uvnitř když y < 22, DPR škálování
+     (min(DPR,2), delší strana ≤ 2000), při > 500 kB snižovat kvalitu a pak rozměr ×0.75 (max 3×), uvolnit
+     `full.width = full.height = 0`. Výkon: změřit čas a velikost plného canvasu na harmonogramu (dlouhá stránka);
+     přepnout na výřez jen při prokázaném problému.
+  7) E2E `e2e/zpetna-vazba.spec.ts`: nahradit test „na telefonu není brouček“ → mobil (390/320) otevře broučka
+     i položku v menu, vyplní, Zpět/Pokračovat, Zavřít s potvrzením, odešle (odeslání jen v projektech SENDING).
+     Test označení: popisy teď „Nadpis stránky“ / „Označená oblast“ (dnes čeká „nadpis“ / „vyznačená oblast“).
+     Nový test: fixture fiktivních citlivých řetězců vložená `page.evaluate` (karta, tabulka, dynamický h2, tlačítko
+     s aria-label, input s hodnotou, vnořený span) → označit → odeslat → JSON z `/hlaseni` je nesmí obsahovat.
+     Snímek: pixelová kontrola redakce (fixture `[data-feedback-redact]` s barevným pozadím → v PNG/WebP z base64
+     dekódovat v prohlížeči přes canvas a ověřit, že oblast má barvu přetření #4a4642). Podvržená cesta/grant → invalid.
+     Před e2e `fuser -k 3310/tcp 3311/tcp 3312/tcp 3410/tcp`.
+  8) Lint, typecheck, `npm test`, build, celé e2e na pozadí; WebKit/Firefox dle relace 14 (co nejde = „neověřeno“).
+  9) Vizuální snímky (scale 1, do scratchpadu), docs `docs/zpetna-vazba.md`, `docs/report-pr75.md` (A–F),
+     popis PR #75, Vercel `get_project zbc-vzdelavani-demo` (team_PtkXmFd9hI7UeUYovGkbwZQG), zpráva uživateli.
+* Inventura nálezů (pro report A): potvrzené – únik textu v popisech (opraveno 86afe20), mobil bez broučka
+  (opraveno), snímek podle klientské cesty (krok 3), rozměry obrázku neověřené (krok 4), retry po timeoutu
+  duplicita (krok 5), znovuotevření po úspěchu při skrytém okně vracelo starý koncept do kroku 1 → druhé odeslání
+  = „duplicate“ (opraveno), změna typu mazala „Co by mělo fungovat jinak“ (opraveno), Zahodit během odesílání
+  (opraveno). Potřebuje reprodukci: značky po rolování po označení (krok 6), výkon dlouhé stránky (krok 6).
+
+# NOVÝ ÚKOL – FINÁLNÍ DOKONČENÍ PR #75 (relace 18 →, 20. 11. 2026) – začni tímto
+
+Uživatel zadal „ZBČ – FINÁLNÍ DOKONČENÍ PR #75“ (plné znění v úvodní zprávě navazující relace). Upřesnění uživatele:
+* **Make.com zůstává, jak je** – oddíly 7 (doručování, idempotence, autentizace Make) a 15 (předávka Make) se NEdělají.
+  Scénář 8694292, webhook ani `x-zbc-feedback-secret` neměnit. Serverové limity velikosti (7/5) a autorizaci snímku
+  (5) ale ověřit, to je kód Wiki.
+* **Telefon: brouček i na mobilu podle Novi** (uživatel schválil návrh relace 17), ne jen položka v menu:
+  - zrušit `(min-width: 900px) and (pointer: fine)` (BugButton.tsx:9) a skrytí `.sidebar-feedback` ≤ 900 px;
+  - 48 px, 12 px od okraje, uhýbá `.quick-actions` (≤ 760 px), `.move-panel`, safe-area;
+  - klepnutí = otevřít; podržení 400 ms = přesun (+ `navigator.vibrate?.(15)`); posun > 10 px před tím = švihnutí, nic;
+    `touch-action: none`, `-webkit-touch-callout: none`, `user-select: none`, přichycení k okraji;
+  - MarkingLayer: klepnutí označí prvek, tažení prstem obdélník; panel přes celou šířku dole (přepínač nahoru),
+    Menší / Větší (rodič / potomek), Odebrat, Zrušit vše, Hotovo;
+  - snímek jen viditelný výřez (viewport), škálování podle DPR, snižování kvality a pak rozměru do 500 kB, značky dokreslit;
+  - okno: střed, šířka `calc(100vw - 1.75rem)`, max výška `calc(100dvh - 1.75rem)`, posuvný obsah, pole ≥ 16 px.
+  Vzor: repo `ondrejmacko-it/novi-ai-tutor-app` (jen čtení): `src/components/feedback/{bug-button,marking-layer,
+  feedback-root}.tsx`, `src/feedback/{bug-dock,screenshot,page-context}.ts`, `src/components/shell/novi-modal.tsx`.
+  Nepřebírat průvodce broučkem ani jméno/e-mail.
+* Po dokončení uživatel mergne na main sám. Žádný merge, produkční deploy ani migrace.
+
+Ověřit „připojené správně“: Vercel konektor vidí v týmu maci (team_PtkXmFd9hI7UeUYovGkbwZQG) jen `novi-ai-tutor-app`,
+`zbc-vzdelavani-demo` → 404 i po `authorize_team_access`. Zkusit znovu `get_project`; když 404, napsat uživateli:
+odpojit a znovu připojit Vercel v claude.ai → Settings → Connectors a při souhlasu zvolit tým maci + všechny projekty.
+Pak ověřit `FEEDBACK_WEBHOOK_URL`/`FEEDBACK_WEBHOOK_SECRET` (jen názvy a cíle, nedešifrovat) a Preview deploy PR #75.
+
 # Prompt pro další session
+
+**FÁZE B BROUČEK – RELACE 16 HOTOVO (20. 11. 2026, větev `claude/funkce/zpetna-vazba-broucek`, draft PR #75).**
+* Klient `src/components/feedback/` (BugButton, FeedbackRoot, MarkingLayer, page-context, screenshot), položka
+  „Zpětná vazba“ v Sidebar (jen ≥ 900 px), ikona `bug`, styly v globals.css, `FeedbackRoot` v `(wiki)/layout.tsx`.
+  Snímek: celý `<html>` (u `<body>` knihovna posune o 8 px), filtr dialog/noscript/`data-feedback-ui`, citlivé části
+  skryté už v kopii, pole přetřená. Omezení: sticky menu se v kopii vykreslí na přirozeném místě (docs).
+* Novi repo NEŠLO připojit (add_repo zamítl klasifikátor), klient je napsaný podle specifikace z relace 15.
+* Testy: unit `tests/zpetna-vazba.test.ts` 15, e2e `e2e/zpetna-vazba.spec.ts` (falešný webhook 127.0.0.1:3312
+  v `e2e/server.mjs`, odeslání jen ve windows-1280 / webkit-1440 / firefox-1280 kvůli limitu 10/h).
+  Před e2e `fuser -k 3310/tcp 3311/tcp 3312/tcp 3410/tcp`. Ověřeno: lint, typy, unit 436/436, build, Chromium e2e 1235/139/0, WebKit cíleně 0 failed; Firefox neověřen (není nainstalovaný).
+* Docs `docs/zpetna-vazba.md` (Make scénář, payload, mazání po 12 měsících), README, `.env.example`.
+**Další krok:** nic bez pokynu. Uživatel: Make scénář + filtr hlavičky, env `FEEDBACK_WEBHOOK_URL/SECRET` ve Vercelu
+(Preview), ruční zkouška na Preview, review a merge PR. Otevřené: report B7 (feedback widget) zatím jen v popisu PR.
+
+**FÁZE B BROUČEK – RELACE 15 → 16 (20. 11. 2026, větev `claude/funkce/zpetna-vazba-broucek` z main 4699a60).**
+Zadání: user zpráva „ZBČ: finální release audit + integrace zpětné vazby z Novi“ (session
+`session_01HpUirygb1N8XmnorbnJSA8`, `list_events` kinds `["user"]`, stránka PŘED nejnovější, hledej „FÁZE B“), body B1–B7.
+Rozhodnutí uživatele (relace 15): doručení = **webhook Make.com** (ne DB); snímek = **`modern-screenshot` 4.7.0** jako Novi.
+Zdroj: `add_repo` ondrejmacko-it/novi-ai-tutor-app (read), klon `/home/user/novi-ai-tutor-app`; prostudováno:
+`src/feedback/{bug-dock,model,submit,actions,page-context,screenshot}.ts`, `src/components/feedback/*`, `docs/FEEDBACK_MAKE_SETUP.md`.
+* HOTOVO (WIP commit, typecheck OK, testy zatím žádné):
+  - `package.json`: `modern-screenshot` 4.7.0 (MIT, bez závislostí).
+  - `src/lib/feedback.ts`: typy (Chyba / Vzhled / Nápad / Ostatní), limity, chybové hlášky, `screenshotAllowed`
+    (snímek zakázán na `/sprava` a `/vzdelavani/integrace`).
+  - `src/lib/bug-dock.ts`: poloha, přichycení, šipky, `placeBug` (vyhnutí překážkám, jazýček), z Novi.
+  - `src/server/feedback.ts`: zod validace, magické bajty snímku, DB rate limit `feedback:<user>` 10/h (`withinRateLimit`),
+    ochrana dvojího odeslání `feedback-once:<hash>` (uvolní se při chybě), POST na Make s hlavičkou
+    `x-zbc-feedback-secret`, timeout 10 s, `redirect: "error"`, log jen kódem. Reporter = hash id + role, bez jména/e-mailu.
+  - `src/server/config.ts`: `feedbackWebhook()` (https nebo http jen localhost, secret ≥ 32), `FEEDBACK_ENV`.
+  - `src/app/(wiki)/feedback-actions.ts`: server action `submitFeedback` (session, Pohled ze `currentPreview`).
+  - Migrace NENÍ potřeba (rate limit i dedupe přes existující `rate_limits`).
+* DALŠÍ KROKY:
+  1) Klient `src/components/feedback/`: `BugButton` (44 px, vpravo dole, tažení + přichycení, šipky, jazýček, pozice
+     v localStorage s try/catch, jen `(min-width: 900px) and (pointer: fine)`, skrýt při `dialog[open]` a `body[data-moving]`,
+     překážky `[data-bug-avoid], .select-bar, .move-panel, .flash, .btn-primary`; BEZ setInterval, měření přes rAF na
+     scroll/resize/MutationObserver), `FeedbackRoot` (okno přes `Modal` 3 kroky: typ → popis + „Označit místo“ + u chyby
+     „Co by mělo fungovat jinak?“ → kontrola: souhrn, tlačítko „Pořídit snímek“, náhled jako data: URL (CSP img-src nemá
+     blob:), „Odebrat snímek“, Odeslat; úspěch až po `ok: true`; chyba = data zůstanou; `hasUnsavedChanges`),
+     `MarkingLayer` (prvek / obdélník, čísla, Odebrat, Zrušit vše, Esc, overflow hidden, `data-feedback-ui`),
+     `page-context.ts` (popis značky BEZ hodnot polí), `screenshot.ts` (domToCanvas, filter `data-feedback-ui`,
+     onCloneEachNode vymaže hodnoty input/textarea/select, po vykreslení přetřít neprůhledně boxy polí a
+     `.minutes, .transcript, .recording, [data-feedback-redact], .account, .signed-in`; chyba = jen text).
+     Položka „Zpětná vazba“ v `Sidebar` (desktop) otevře okno a vrátí skrytého broučka. Vložit `FeedbackRoot` do
+     `src/app/(wiki)/layout.tsx`. Styly v `globals.css` tokeny ZBČ (okrová, žádná fialová), `prefers-reduced-motion`.
+  2) Unit: `tests/zpetna-vazba.test.ts` (parse, mime, not_configured, rate limit, duplicate + uvolnění po chybě,
+     payload bez jména/e-mailu, snímek na /sprava odmítnut, Pohled v kontextu) + `bug-dock`.
+  3) E2E: falešný webhook v `e2e/server.mjs` (http://127.0.0.1:<port>, env `FEEDBACK_WEBHOOK_URL/SECRET` jen demo),
+     `e2e/zpetna-vazba.spec.ts`: klik, tažení, jazýček, skrytí/obnova, neuložené změny, označení, snímek se souhlasem
+     i bez, úspěch/chyba, mobil bez broučka. Pak lint, typecheck, unit, build, celé `npm run e2e` (před tím
+     `fuser -k 3310/tcp 3311/tcp 3410/tcp`), WebKit dle relace 14 (`E2E_WEBKIT=1`).
+  4) `docs/zpetna-vazba.md` (Make scénář, env, tvar payloadu, mazání po 12 měsících), README tabulka env,
+     `.env.example`. Report feedback widgetu (B7). Draft PR podle šablony repa, předávka.
+* Pravidla: žádný merge, deploy, migrace ani zápis do produkční DB.
 
 **RELEASE AUDIT PR #74 (FÁZE A) – RELACE 14 HOTOVO (20. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd`).**
 * bba0adb: CSP `upgrade-insecure-requests` vypíná jen e2e server (`CSP_UPGRADE_INSECURE=0`), `tests/csp.test.ts`.
