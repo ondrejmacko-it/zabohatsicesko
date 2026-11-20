@@ -1,3 +1,13 @@
+# NOVÝ ÚKOL od uživatele (po relaci 17) – začni tímto
+
+Brouček má fungovat a správně se zobrazovat i na telefonu „jako v Novi“, pak nový push na Preview PR #75
+(větev `claude/funkce/zpetna-vazba-broucek`). Dnes je brouček jen ≥ 900 px + `pointer: fine` (BugButton.tsx).
+Postup: nejdřív navrhnout uživateli (větší změna): umístění na telefonu (nad spodní lištou / safe-area), dotyk
+místo tažení myší, označování místa dotykem, snímek na mobilu, velikost okna 390 px. Zdroj Novi se minule
+nepodařilo připojit (zeptat se na repo nebo snímky). Po schválení: úprava, unit + e2e `zpetna-vazba.spec.ts`
+na 390 (Chromium + webkit-390), push. Uživatel tvrdí, že tajemství je v Make i ve Vercelu (Preview i Production);
+URL ve Vercelu ověřit (konektor projekt nevidí). Uživatel chce pak hned mergovat na main – merge dělá on.
+
 # Navazující prompt (relace 17: brouček → Make + Drive, PR #75)
 
 Stav:
