@@ -1,3 +1,64 @@
+# FINÁLNÍ DOKONČENÍ PR #75 – RELACE 18 → 19 (20. 11. 2026) – začni tímto
+
+Zadání beze změny (oddíl „NOVÝ ÚKOL“ níže + úvodní zpráva relace). `add_repo` Novi znovu zamítl klasifikátor →
+mobil podle popisu v oddílu níže, ne podle zdrojáku. Relace 18 skončila kvůli hooku kontextu (201 tis. hned po čtení).
+Šetři: nečti znovu celé soubory, které jsou popsané tady.
+
+* HOTOVO (commit 86afe20, typecheck + eslint + unit `tests/zpetna-vazba.test.ts` 15/15 OK, e2e NEspuštěno):
+  - `page-context.ts` přepsán: popis = druh (`KINDS`) + místo (`PLACES`: „v okně / v nabídce / v tabulce /
+    ve formuláři / v menu / v záhlaví“), karta `table a[href^='/vzdelavani/akce/']` = „Karta v harmonogramu“.
+    Selektor jen tagy + `:nth-of-type`, max 8 úrovní. Žádný text, aria-label, title, id, třídy, data-*.
+    `FEEDBACK_RECT_LABEL = "Označená oblast"` v `lib/feedback.ts`.
+  - `bug-dock.ts`: `placeBug(dock, width, viewport, obstacles, { touch, insets })`, `BUG_SIZE_TOUCH` 48, okraj 12.
+  - `BugButton.tsx`: bez omezení na desktop; `TOUCH_QUERY = "(max-width: 900px), (pointer: coarse)"`
+    (useSyncExternalStore), podržení 400 ms + vibrate, švihnutí > 10 px nic, `onContextMenu` prevent, překážky
+    + `.quick-actions`, safe-area přes pomocný prvek `measureInsets()`. CSS `.bug-dock-touch` 48 px, user-select none.
+  - `MarkingLayer.tsx`: `ClientMark` (= FeedbackMark + `scroll`), `toFeedbackMark`, Menší/Větší (state `picked`),
+    „Panel nahoru/dolů“ (`.mark-toolbar-top` – CSS ZATÍM CHYBÍ), preventDefault na pointerdown.
+  - `FeedbackRoot.tsx`: zavření během odesílání jen schová (`sendingRef`), „sent“ zůstane po znovuotevření,
+    změna typu nemaže `expected`.
+  - CSS ≤ 900 px: `.sidebar` flex-wrap, `.sidebar-feedback` viditelná na telefonu. Sidebar komentář upraven.
+* DALŠÍ KROKY (pořadí):
+  1) CSS: `.mark-toolbar` na ≤ 760 px přes celou šířku dole (left/right 0, bottom safe-area), `.mark-toolbar-top`
+     nahoře; `.mark-toolbar-flip` jen ≤ 760 px; `.mark-surface { user-select: none }`; okno na telefonu: šířka
+     `calc(100vw - 1.75rem)`, max výška `calc(100dvh - 1.75rem)`, posuvné, textarea font-size ≥ 16 px (ověř `.dialog`).
+  2) Server: validace `marks[].description` jen z povolených řetězců (KINDS × PLACES + rect) a `selector` regex
+     `^[a-z][a-z0-9-]*(:nth-of-type\(\d+\))?( > [a-z][a-z0-9-]*(:nth-of-type\(\d+\))?)*$` → přesunout seznamy
+     labelů do `lib/feedback.ts`, ať je sdílí klient i server. Unit test.
+  3) Snímek – POZITIVNÍ seznam + autorizace nezávislá na `context.path` (navrženo, neimplementováno):
+     server komponenta `ShotGrant` (renderuje `<span hidden data-feedback-shot-grant={token}>`) jen na ověřených
+     stránkách: `/`, `/vzdelavani/harmonogram`, `/vzdelavani/temata` (Zápisy, detail akce, Správa, Integrace,
+     Přehled, Moje cesta NE). Token = `${page}.${exp}.${HMAC(config.sessionSecret, "feedback-shot:"+userId+":"+page+":"+exp)}`
+     (vzor `src/server/auth/gate.ts`), platnost 12 h. Klient: snímek nabídne jen když grant v DOM existuje, grant uloží
+     se snímkem; draft `screenshot.grant`. Server ověří podpis, uživatele, expiraci a page ∈ seznam; odstraní refine
+     `screenshotAllowed(context.path)` a `screenshotAllowed` vůbec; do payloadu Make grant NEposílat (tvar beze změny).
+     Poctivě do docs: obsah obrázku server ověřit nemůže, token jen dokládá, že uživatel měl otevřenou povolenou stránku.
+  4) Server: skutečné rozměry obrázku z hlavičky (JPEG SOF0–SOF15 mimo C4/C8/CC; WebP `VP8 ` LE16 na 26/28 & 0x3fff,
+     `VP8L` bity od 21, `VP8X` 1+LE24 na 24/27) musí = deklarovaným, max 2000×2000; nečitelná hlavička = invalid.
+  5) Timeout po přijetí (prokázaná chyba: retry po timeoutu = duplicita v Make): u `TimeoutError` klíč
+     `feedback-once` NEuvolňovat a vrátit nový důvod `uncertain` („Odpověď se nepodařilo ověřit, hlášení nejspíš dorazilo,
+     znovu ho neposíláme. Text zůstává v okně.“); u HTTP chyby a chyby spojení uvolnit jako dnes. Unit test s mock fetch.
+  6) `screenshot.ts`: značky posunout o (mark.scroll − aktuální scroll), číslo uvnitř když y < 22, DPR škálování
+     (min(DPR,2), delší strana ≤ 2000), při > 500 kB snižovat kvalitu a pak rozměr ×0.75 (max 3×), uvolnit
+     `full.width = full.height = 0`. Výkon: změřit čas a velikost plného canvasu na harmonogramu (dlouhá stránka);
+     přepnout na výřez jen při prokázaném problému.
+  7) E2E `e2e/zpetna-vazba.spec.ts`: nahradit test „na telefonu není brouček“ → mobil (390/320) otevře broučka
+     i položku v menu, vyplní, Zpět/Pokračovat, Zavřít s potvrzením, odešle (odeslání jen v projektech SENDING).
+     Test označení: popisy teď „Nadpis stránky“ / „Označená oblast“ (dnes čeká „nadpis“ / „vyznačená oblast“).
+     Nový test: fixture fiktivních citlivých řetězců vložená `page.evaluate` (karta, tabulka, dynamický h2, tlačítko
+     s aria-label, input s hodnotou, vnořený span) → označit → odeslat → JSON z `/hlaseni` je nesmí obsahovat.
+     Snímek: pixelová kontrola redakce (fixture `[data-feedback-redact]` s barevným pozadím → v PNG/WebP z base64
+     dekódovat v prohlížeči přes canvas a ověřit, že oblast má barvu přetření #4a4642). Podvržená cesta/grant → invalid.
+     Před e2e `fuser -k 3310/tcp 3311/tcp 3312/tcp 3410/tcp`.
+  8) Lint, typecheck, `npm test`, build, celé e2e na pozadí; WebKit/Firefox dle relace 14 (co nejde = „neověřeno“).
+  9) Vizuální snímky (scale 1, do scratchpadu), docs `docs/zpetna-vazba.md`, `docs/report-pr75.md` (A–F),
+     popis PR #75, Vercel `get_project zbc-vzdelavani-demo` (team_PtkXmFd9hI7UeUYovGkbwZQG), zpráva uživateli.
+* Inventura nálezů (pro report A): potvrzené – únik textu v popisech (opraveno 86afe20), mobil bez broučka
+  (opraveno), snímek podle klientské cesty (krok 3), rozměry obrázku neověřené (krok 4), retry po timeoutu
+  duplicita (krok 5), znovuotevření po úspěchu při skrytém okně vracelo starý koncept do kroku 1 → druhé odeslání
+  = „duplicate“ (opraveno), změna typu mazala „Co by mělo fungovat jinak“ (opraveno), Zahodit během odesílání
+  (opraveno). Potřebuje reprodukci: značky po rolování po označení (krok 6), výkon dlouhé stránky (krok 6).
+
 # NOVÝ ÚKOL – FINÁLNÍ DOKONČENÍ PR #75 (relace 18 →, 20. 11. 2026) – začni tímto
 
 Uživatel zadal „ZBČ – FINÁLNÍ DOKONČENÍ PR #75“ (plné znění v úvodní zprávě navazující relace). Upřesnění uživatele:
