@@ -35,6 +35,12 @@ const normalize = (a: { x: number; y: number }, b: { x: number; y: number }): Fe
   height: Math.round(Math.abs(a.y - b.y)),
 });
 
+/** Stejný prvek na stejném místě. Obdélníky se nikdy neslučují, každý tah je záměr. */
+export function sameMark(a: ClientMark, b: ClientMark): boolean {
+  if (a.kind !== "element" || b.kind !== "element" || a.selector !== b.selector) return false;
+  return a.box.x + a.scroll.x === b.box.x + b.scroll.x && a.box.y + a.scroll.y === b.box.y + b.scroll.y && a.box.width === b.box.width && a.box.height === b.box.height;
+}
+
 const elementMark = (element: Element): ClientMark => ({
   kind: "element",
   description: describeElement(element),
@@ -79,6 +85,8 @@ export function MarkingLayer({ marks, onChange, onDone }: Props) {
 
   const add = (mark: ClientMark, element?: Element) => {
     if (full) return;
+    // Druhé klepnutí na už označený prvek (třeba když se první zdálo nezaregistrované) nepřidá stejnou značku znovu.
+    if (marks.some((other) => sameMark(other, mark))) return;
     setPicked(element ? { index: marks.length, path: [element] } : null);
     onChange([...marks, mark]);
   };

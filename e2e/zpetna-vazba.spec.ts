@@ -182,6 +182,9 @@ test.describe("brouček na počítači", () => {
     await page.mouse.click(heading.x + 10, heading.y + heading.height / 2);
     await expect(layer.locator(".mark-done")).toHaveCount(1);
     await expect(layer.locator(".mark-list li").first()).toContainText("Nadpis stránky");
+    // Druhý klik na stejný prvek nepřidá duplicitní značku.
+    await page.mouse.click(heading.x + 20, heading.y + heading.height / 2);
+    await expect(layer.locator(".mark-done")).toHaveCount(1);
     // Tažením obdélník.
     await page.mouse.move(400, 300);
     await page.mouse.down();

@@ -6,6 +6,8 @@ import { feedbackWebhook } from "@/server/config";
 import { getDb } from "@/server/db/client";
 import { rateLimits } from "@/server/db/schema";
 import { detectScreenshotMime, FEEDBACK_SECRET_HEADER, parseFeedbackDraft, readScreenshotSize, submitFeedbackCore, type FeedbackServerFacts } from "@/server/feedback";
+import { sameMark } from "@/components/feedback/MarkingLayer";
+import { clonedTextIsSingleLine } from "@/components/feedback/screenshot";
 import { issueShotGrant, SHOT_GRANT_TTL_SEC, shotGrantValid } from "@/server/feedback-grant";
 
 const SECRET = "test-jen-pro-unit-test-0000000000000000";
@@ -302,5 +304,28 @@ describe("brouček: poloha", () => {
   test("vlevo obejde vysoké levé menu", () => {
     const sidebar = { left: 0, top: 0, right: 240, bottom: 800 };
     expect(placeBug({ side: "left", y: 0.5 }, BUG_SIZE, viewport, [sidebar]).left).toBe(256);
+  });
+});
+
+describe("zpětná vazba: snímek a značky na telefonu", () => {
+  const style = (patch: Partial<Record<string, string>>) => ({ height: "20px", lineHeight: "20px", fontSize: "15px", boxSizing: "content-box", paddingTop: "0px", paddingBottom: "0px", borderTopWidth: "0px", borderBottomWidth: "0px", ...patch });
+
+  test("jednořádkový text v kopii stránky se nezalamuje, víceřádkový ano", () => {
+    expect(clonedTextIsSingleLine(style({}))).toBe(true);
+    // Pilulka: border-box s odsazením, uvnitř jeden řádek.
+    expect(clonedTextIsSingleLine(style({ height: "42px", boxSizing: "border-box", paddingTop: "10px", paddingBottom: "10px", borderTopWidth: "1px", borderBottomWidth: "1px" }))).toBe(true);
+    expect(clonedTextIsSingleLine(style({ height: "40px" }))).toBe(false);
+    expect(clonedTextIsSingleLine(style({ height: "19px", lineHeight: "normal" }))).toBe(true);
+    expect(clonedTextIsSingleLine(style({ height: "auto" }))).toBe(false);
+  });
+
+  test("stejný prvek se neoznačí dvakrát, ani po posunu stránky; obdélníky se neslučují", () => {
+    const element = { kind: "element" as const, description: "Tlačítko v záhlaví", selector: "header > button", box: { x: 10, y: 20, width: 30, height: 40 }, scroll: { x: 0, y: 0 } };
+    expect(sameMark(element, { ...element })).toBe(true);
+    expect(sameMark(element, { ...element, box: { ...element.box, y: 0 }, scroll: { x: 0, y: 20 } })).toBe(true);
+    expect(sameMark(element, { ...element, selector: "header > a" })).toBe(false);
+    expect(sameMark(element, { ...element, box: { ...element.box, width: 31 } })).toBe(false);
+    const rect = { ...element, kind: "rect" as const, selector: null };
+    expect(sameMark(rect, { ...rect })).toBe(false);
   });
 });

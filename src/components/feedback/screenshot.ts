@@ -55,6 +55,7 @@ function scrubClone(node: Node) {
     node.style.setProperty("visibility", "hidden", "important");
     return;
   }
+  if (node instanceof HTMLElement) keepSingleLine(node);
   if (node instanceof HTMLInputElement && !["checkbox", "radio", "button", "submit"].includes(node.type)) {
     node.setAttribute("value", "");
     node.value = "";
@@ -65,6 +66,29 @@ function scrubClone(node: Node) {
   } else if (node instanceof HTMLSelectElement) {
     for (const option of node.options) option.textContent = "";
   }
+}
+
+type ClonedBox = Pick<CSSStyleDeclaration, "height" | "lineHeight" | "fontSize" | "boxSizing" | "paddingTop" | "paddingBottom" | "borderTopWidth" | "borderBottomWidth">;
+
+/** Výška jednoho řádku textu podle stylu kopie; `normal` odhadem 1,3× velikost písma. */
+export function clonedTextIsSingleLine(style: ClonedBox): boolean {
+  const px = (value: string) => Number.parseFloat(value) || 0;
+  const height = px(style.height);
+  const line = px(style.lineHeight) || px(style.fontSize) * 1.3;
+  if (height <= 0 || line <= 0) return false;
+  const inner = style.boxSizing === "border-box" ? height - px(style.paddingTop) - px(style.paddingBottom) - px(style.borderTopWidth) - px(style.borderBottomWidth) : height;
+  return inner < line * 1.5;
+}
+
+/**
+ * modern-screenshot zapíše do kopie pevnou šířku a výšku každého prvku podle živé stránky. Text, který se na stránce
+ * vešel bez rezervy (pilulky, položky menu), se v kopii zalomí nebo usekne, jakmile v ní písmo vyjde nepatrně širší
+ * (telefon vykresluje kopii v jiném měřítku než stránku). Jednořádkový text proto v kopii nezalamujeme; šířky
+ * zůstávají, takže rozložení i polohy značek a přetření se nemění.
+ */
+function keepSingleLine(element: HTMLElement) {
+  const hasText = [...element.childNodes].some((child) => child.nodeType === Node.TEXT_NODE && child.textContent?.trim());
+  if (hasText && clonedTextIsSingleLine(element.style)) element.style.setProperty("white-space", "nowrap");
 }
 
 function toBlob(canvas: HTMLCanvasElement, mime: string, quality: number): Promise<Blob | null> {
