@@ -1,3 +1,21 @@
+# Navazující prompt (relace 17: brouček → Make + Drive, PR #75)
+
+Stav:
+* Make (eu1, tým 1689177): scénář **8694292 „ZBČ brouček → Google Drive“** (aktivní, okamžitý, webhook 4144942
+  `https://hook.eu1.make.com/163oto1mcuk7kngtbmpvixosrmqlzy69`, JSON pass-through + hlavičky). Tok: router →
+  [filtr „Tajemství sedí“ → Parse JSON → složka „YYYY-MM-DD HH-mm – Typ – id“ v Drive složce „ZBČ zpětná vazba“
+  (1xadVqjByxQklJR8VWYa8x2BpmkiaqiO5) → report.json → router: iterator míst+text aggregator+set var | get var +
+  souhrn.txt | snímek (jen když je) | odpověď 200] | [filtr „Tajemství nesedí“ → odpověď 401].
+  Drive spojení 13232759 „ZBC Google Drive“. Ve filtrech je DOČASNÉ testovací tajemství, uživatel ho nahradí svým.
+* Staré scénáře 5709267 a 5729179 (Sheets) deaktivované se souhlasem uživatele (limit 2 aktivních scénářů).
+* Testovací scénář 8694306 „DOČASNÉ – test brouček“ (neaktivní): běh selhal na BundleValidationError (3 parametry
+  HTTP MakeRequest v4, nejspíš chybí inputMethod/parametry body) → webhook se nezavolal. NEOVĚŘENO nic z běhu.
+* Vercel konektor nevidí projekt zbc-vzdelavani-demo (404) → FEEDBACK_WEBHOOK_URL nenastaveno, redeploy neproběhl.
+
+Další krok: opravit 8694306 (executions_get-detail 05cef0e1af014e1b9d53213f5f9be2ec, nebo test spustit až z Preview),
+zkontrolovat běh 8694292 (hlavičky `__IMTHEADERS__`, výstup Get variable `12.marksText`, délka běhu vůči 10 s timeoutu),
+složku na Drive, pak 8694306 smazat a nastavit scénář `confidential`. Doplnit docs/zpetna-vazba.md o skutečný scénář.
+
 # Prompt pro další session
 
 **RELEASE AUDIT PR #74 (FÁZE A) – RELACE 14 HOTOVO (20. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd`).**
