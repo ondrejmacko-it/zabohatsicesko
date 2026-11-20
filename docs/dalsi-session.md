@@ -1,3 +1,16 @@
+# FINÁLNÍ DOKONČENÍ PR #75 – RELACE 20 HOTOVO (20. 11. 2026) – začni tímto
+
+* Relace 20: e2e zpětné vazby (windows-1280, telefon-390/320) 24 OK / 0 fail; lint, typecheck, unit 440/440, build OK;
+  celé Chromium e2e 1257 OK / 173 skip / 0 fail. WebKit/Firefox neověřeno (prohlížeče nejsou v kontejneru).
+  Vizuální snímky bez objektivních vad (pozorování: brouček na 390 px přesahuje konec tlačítka Filtry).
+  `docs/zpetna-vazba.md` aktualizováno, `docs/report-pr75.md` (A–F) napsán, popis PR #75 aktualizován, PR zůstává draft.
+* Vercel: konektor projekt vidí (prj_MYpwzB5KekzHAVwbiUDrZv6CG12i, tým team_PtkXmFd9hI7UeUYovGkbwZQG).
+  `FEEDBACK_WEBHOOK_URL` (plain) i `FEEDBACK_WEBHOOK_SECRET` (sensitive) pro Preview i Production existují
+  (URL nastavila relace 17, webhook 4144942). Uživateli o přepojení konektoru NEpsat. Produkční deploy nedělat.
+* Další krok: nic bez pokynu. Uživatel pošle testovací hlášení z Preview (telefon i počítač), případně ověří
+  WebKit/Firefox, pak sám přepne PR na Ready a mergne. Otevřené: tlačítko Odeslat po `uncertain` zůstává
+  (bezpečné, vrátí „už bylo odesláno“).
+
 # FINÁLNÍ DOKONČENÍ PR #75 – RELACE 19 → 20 (20. 11. 2026) – začni tímto
 
 Zadání beze změny (oddíly níže + úvodní zpráva). Relace 19 skončila na hooku kontextu (200 tis.). Šetři, nečti celé soubory.

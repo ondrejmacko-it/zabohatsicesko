@@ -70,4 +70,13 @@ se z relace neposílalo; ověří uživatel testovacím hlášením z Preview (t
 
 ## F. GitHub
 
-VYPLNÍ SE
+* PR #75 `claude/funkce/zpetna-vazba-broucek` → `main`, **draft** (brány WebKit/Firefox a živý test Make zatím
+  neověřené). Merge provádí uživatel.
+* Kódové commity finálního kola: 86afe20, 7f5c9f5, 4e2e8f8; dokumentace a report 7422988 a další.
+  Diff vůči `main`: 30 souborů (klient `src/components/feedback/*`, `src/lib/{feedback,bug-dock}.ts`,
+  `src/server/{feedback,feedback-grant,config}.ts`, `(wiki)/feedback-actions.ts`, `(wiki)/layout.tsx`, 3 stránky
+  s `ShotGrant`, `Sidebar.tsx`, `Icon.tsx`, `globals.css`, testy, e2e server, docs). Modal, ConfirmDialog a
+  `server/audit` beze změny.
+* CI: na GitHubu běží jen „Vercel Preview Comments“ (success). Vercel Preview pro tuto větev se staví po každém
+  pushi (předchozí 019b2f6 = READY), produkční deploy se nedělal.
+* Blokery Ready: ověření ve WebKitu a Firefoxu, testovací hlášení z Preview (telefon i počítač) do Make.
