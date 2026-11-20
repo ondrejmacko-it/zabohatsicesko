@@ -1,3 +1,36 @@
+# FINÁLNÍ DOKONČENÍ PR #75 – RELACE 19 → 20 (20. 11. 2026) – začni tímto
+
+Zadání beze změny (oddíly níže + úvodní zpráva). Relace 19 skončila na hooku kontextu (200 tis.). Šetři, nečti celé soubory.
+
+* HOTOVO v relaci 19 (commity 7f5c9f5, 4e2e8f8; typecheck, eslint, unit `tests/zpetna-vazba.test.ts` 19/19 OK):
+  - Krok 1 CSS: `.mark-toolbar` ≤ 760 px přes celou šířku dole, `.mark-toolbar-top` nahoře, `.mark-toolbar-flip` jen
+    ≤ 760 px, `user-select: none` na vrstvě. Okno `.dialog` a pole 16 px na dotyku už splňovaly (beze změny).
+  - Krok 2: `lib/feedback.ts` `FEEDBACK_ELEMENT_KINDS`/`FEEDBACK_ELEMENT_PLACES`/`FEEDBACK_SELECTOR_PATTERN`,
+    `feedbackMarkIsStructural`; server `.refine` na každé značce; `page-context.ts` typovaný na tyto seznamy.
+  - Krok 3: `FEEDBACK_SHOT_PAGES` (/, harmonogram, témata), `src/server/feedback-grant.ts` (HMAC `feedback-shot:`,
+    token `stránka|exp|podpis`, 12 h), `src/components/feedback/ShotGrant.tsx` ve 3 stránkách; klient čte
+    `[data-feedback-shot-grant]` při otevření okna, grant uloží se snímkem, FormData `screenshotGrant`; server
+    `deps.grantSecret` = `config.sessionSecret`; `screenshotAllowed` odstraněn. Úvod: jméno v h1 `data-feedback-redact`.
+  - Krok 4: `readScreenshotSize` (VP8/VP8L/VP8X, JPEG SOF) musí = deklarovaným; `FEEDBACK_SCREENSHOT_MAX_SIDE` 2000.
+  - Krok 5: TimeoutError → `uncertain` (klíč zůstává), nová hláška v `FEEDBACK_ERROR_MESSAGE`. Unit test + souběh.
+  - Krok 6: `screenshot.ts` značky posunuté o scroll, číslo uvnitř u horního okraje, DPR ≤ 2 a ≤ 2000 px, plné
+    vykreslení omezené na 16 Mpx / 16 000 px (Safari), zmenšení ×0.75 až 3×, uvolnění canvasů.
+  - Krok 7: e2e – nové testy (citlivá fixture + pixely, dlouhá stránka, jméno na Úvodu, podvržený grant, dvojklik
+    s `SIMULOVAT-POMALU`, `SIMULOVAT-TIMEOUT`, Escape + Skrýt broučka, telefon viditelnost a celý průchod).
+    `e2e/server.mjs` umí POMALU (3 s) a TIMEOUT (11 s, hlášení uloží).
+    Běh windows-1280 + telefon-390 PŘED posledními opravami: 19 OK, 3 FAIL – opraveno v 4e2e8f8 (inline onsubmit
+    ve fixture → CSP chyba; očekávaný popis karty = „Karta v harmonogramu“; „Skrýt broučka“ je jen v kroku 1).
+    Po opravě NEspuštěno.
+* DALŠÍ KROKY:
+  1) `fuser -k 3310/tcp 3311/tcp 3312/tcp 3410/tcp`; `npx playwright test e2e/zpetna-vazba.spec.ts --project=windows-1280
+     --project=telefon-390 --project=telefon-320 --trace off`; opravit, co padá (jen objektivní vady).
+  2) Lint, typecheck, `npm test`, build, celé e2e na pozadí; WebKit/Firefox (E2E_WEBKIT=1), co nejde = „neověřeno“.
+  3) Vizuální snímky (scale 1, scratchpad), `docs/zpetna-vazba.md` (grant, pozitivní seznam, uncertain, rozměry, mez
+     obsahu obrázku, server action limit 4200kb je stávající), `docs/report-pr75.md` (A–F), popis PR #75, Vercel
+     `get_project zbc-vzdelavani-demo` (team_PtkXmFd9hI7UeUYovGkbwZQG), zpráva uživateli.
+* Otevřené: na povolených stránkách se text karet harmonogramu ve snímku nepřetírá (fiktivní ukázková data, stránky
+  ověřené) – uvést v reportu; UI po `uncertain` nechává tlačítko Odeslat (druhý pokus vrátí „už bylo odesláno“).
+
 # FINÁLNÍ DOKONČENÍ PR #75 – RELACE 18 → 19 (20. 11. 2026) – začni tímto
 
 Zadání beze změny (oddíl „NOVÝ ÚKOL“ níže + úvodní zpráva relace). `add_repo` Novi znovu zamítl klasifikátor →
