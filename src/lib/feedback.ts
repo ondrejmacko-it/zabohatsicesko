@@ -19,6 +19,8 @@ export const FEEDBACK_TEXT_MAX = 2000;
 export const FEEDBACK_EXPECTED_MAX = 1000;
 export const FEEDBACK_MARKS_MAX = 10;
 export const FEEDBACK_SCREENSHOT_MAX_BYTES = 500_000;
+/** Delší strana snímku v pixelech. Klient zmenšuje, server větší obrázek nepřijme. */
+export const FEEDBACK_SCREENSHOT_MAX_SIDE = 2000;
 /** Pokusy o odeslání na účet za hodinu. Počítá se i nepovedený pokus, proto s rezervou pro opakování. */
 export const FEEDBACK_REPORTS_PER_HOUR = 10;
 
@@ -27,6 +29,50 @@ export type FeedbackScreenshotMime = (typeof FEEDBACK_SCREENSHOT_MIMES)[number];
 
 /** Popis obdélníku vyznačeného tažením. Popisy prvků viz `page-context.ts`, jen strukturální názvy. */
 export const FEEDBACK_RECT_LABEL = "Označená oblast";
+
+/**
+ * Jediné povolené druhy a místa v popisu označeného prvku. Popis vzniká v prohlížeči jako „druh“ nebo
+ * „druh místo“ a server přijme jen tyto kombinace, takže do hlášení nemůže projít žádný text ze stránky,
+ * ani kdyby ho upravený prohlížeč poslal.
+ */
+export const FEEDBACK_ELEMENT_KINDS = [
+  "Karta v harmonogramu",
+  "Karta akce",
+  "Nadpis stránky",
+  "Nadpis sekce",
+  "Tlačítko",
+  "Zaškrtávací pole",
+  "Přepínač",
+  "Výběr",
+  "Textové pole",
+  "Popisek pole",
+  "Odkaz",
+  "Obrázek",
+  "Buňka tabulky",
+  "Tabulka",
+  "Položka seznamu",
+  "Okno",
+  "Položka nabídky",
+  "Prvek stránky",
+] as const;
+export type FeedbackElementKind = (typeof FEEDBACK_ELEMENT_KINDS)[number];
+
+export const FEEDBACK_ELEMENT_PLACES = ["v okně", "v nabídce", "v tabulce", "ve formuláři", "v menu", "v záhlaví"] as const;
+export type FeedbackElementPlace = (typeof FEEDBACK_ELEMENT_PLACES)[number];
+
+/** Selektor jen ze značek a pořadí: `main > section:nth-of-type(2) > button`, nejvýš 8 úrovní. */
+const SELECTOR_PART = "[a-z][a-z0-9-]{0,30}(:nth-of-type\\([1-9][0-9]{0,3}\\))?";
+export const FEEDBACK_SELECTOR_PATTERN = new RegExp(`^${SELECTOR_PART}( > ${SELECTOR_PART}){0,7}$`);
+
+const ELEMENT_DESCRIPTIONS: ReadonlySet<string> = new Set(
+  FEEDBACK_ELEMENT_KINDS.flatMap((kind) => [kind, ...FEEDBACK_ELEMENT_PLACES.map((place) => `${kind} ${place}`)]),
+);
+
+/** Platí pro značku jen strukturální popis a selektor? Obdélník nemá selektor a má pevný popis. */
+export function feedbackMarkIsStructural(mark: Pick<FeedbackMark, "kind" | "description" | "selector">): boolean {
+  if (mark.kind === "rect") return mark.description === FEEDBACK_RECT_LABEL && mark.selector === null;
+  return ELEMENT_DESCRIPTIONS.has(mark.description) && (mark.selector === null || FEEDBACK_SELECTOR_PATTERN.test(mark.selector));
+}
 
 export type FeedbackBox = { x: number; y: number; width: number; height: number };
 
@@ -56,7 +102,7 @@ export type FeedbackDraft = {
   context: FeedbackContext;
 };
 
-export type FeedbackFailure = "invalid" | "unauthorized" | "rate_limited" | "duplicate" | "not_configured" | "failed";
+export type FeedbackFailure = "invalid" | "unauthorized" | "rate_limited" | "duplicate" | "not_configured" | "failed" | "uncertain";
 export type FeedbackResult = { ok: true } | { ok: false; reason: FeedbackFailure };
 
 export const FEEDBACK_ERROR_MESSAGE: Record<FeedbackFailure, string> = {
@@ -66,14 +112,17 @@ export const FEEDBACK_ERROR_MESSAGE: Record<FeedbackFailure, string> = {
   duplicate: "Toto hlášení už bylo odesláno.",
   not_configured: "Odesílání zpětné vazby není na tomto serveru nastavené. Nic se neodeslalo.",
   failed: "Hlášení se nepodařilo odeslat. Zůstalo v okně, zkuste to za chvíli znovu.",
+  uncertain: "Odpověď se nepodařilo ověřit, hlášení nejspíš dorazilo. Znovu ho neposíláme, text zůstává v okně.",
 };
 
 /**
- * Části Wiki, kde se snímek obrazovky nenabízí vůbec: Správa systému (účty, e-maily, pozvánky) a Integrace
- * (stav propojení a technické údaje). Bezpečné zachycení tam nejde zaručit redakcí jednotlivých prvků.
+ * Stránky ověřené pro snímek obrazovky (pozitivní seznam). Jinde se snímek nenabízí a server ho nepřijme.
+ * Úvod, Plán a Témata: akce, témata a úkoly fiktivní ukázky, pole formulářů a účet se ve snímku začerní.
+ * Zápisy, detail akce, Správa, Integrace, Přehled ani Moje cesta tu nejsou (zápisy, účty, osobní postup).
+ * Povolení vydává server (`ShotGrant`), klientská cesta o snímku nerozhoduje.
  */
-const SCREENSHOT_BLOCKED_PATHS = ["/sprava", "/vzdelavani/integrace"];
+export const FEEDBACK_SHOT_PAGES = ["/", "/vzdelavani/harmonogram", "/vzdelavani/temata"] as const;
+export type FeedbackShotPage = (typeof FEEDBACK_SHOT_PAGES)[number];
 
-export function screenshotAllowed(path: string): boolean {
-  return !SCREENSHOT_BLOCKED_PATHS.some((blocked) => path === blocked || path.startsWith(`${blocked}/`));
-}
+/** Atribut značky s povolením snímku, kterou vkládá `ShotGrant`. */
+export const FEEDBACK_SHOT_GRANT_ATTR = "data-feedback-shot-grant";

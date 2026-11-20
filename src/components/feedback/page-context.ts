@@ -1,4 +1,4 @@
-import type { FeedbackBox, FeedbackContext } from "@/lib/feedback";
+import type { FeedbackBox, FeedbackContext, FeedbackElementKind, FeedbackElementPlace } from "@/lib/feedback";
 
 /**
  * Popis označeného místa pro hlášení. Používá jen strukturu stránky, nikdy její obsah: žádný text prvků,
@@ -8,7 +8,7 @@ import type { FeedbackBox, FeedbackContext } from "@/lib/feedback";
  */
 
 /** Druh prvku podle značky a role. Pořadí rozhoduje: první shoda vyhrává. */
-const KINDS: readonly (readonly [selector: string, label: string])[] = [
+const KINDS: readonly (readonly [selector: string, label: FeedbackElementKind])[] = [
   ["a[href^='/vzdelavani/akce/']", "Karta akce"],
   ["h1", "Nadpis stránky"],
   ["h2, h3, h4, h5, h6, legend", "Nadpis sekce"],
@@ -28,7 +28,7 @@ const KINDS: readonly (readonly [selector: string, label: string])[] = [
 ];
 
 /** Kde prvek leží, opět jen podle struktury. */
-const PLACES: readonly (readonly [selector: string, label: string])[] = [
+const PLACES: readonly (readonly [selector: string, label: FeedbackElementPlace])[] = [
   ["dialog, [role='dialog'], [role='alertdialog']", "v okně"],
   ["[role='menu']", "v nabídce"],
   ["table", "v tabulce"],
@@ -40,7 +40,7 @@ const PLACES: readonly (readonly [selector: string, label: string])[] = [
 /** Harmonogram je tabulka týdnů. Karta akce v ní dostane přesnější název. */
 const SCHEDULE = "table a[href^='/vzdelavani/akce/']";
 
-function kindOf(element: Element): string {
+function kindOf(element: Element): FeedbackElementKind {
   // Prvek uvnitř karty nebo tlačítka (ikona, text) se popíše jako celek, který uživatel vidí.
   const card = element.closest(SCHEDULE);
   if (card) return "Karta v harmonogramu";
@@ -50,7 +50,7 @@ function kindOf(element: Element): string {
   return "Prvek stránky";
 }
 
-function placeOf(element: Element): string | null {
+function placeOf(element: Element): FeedbackElementPlace | null {
   for (const [selector, label] of PLACES) if (element.parentElement?.closest(selector)) return label;
   return null;
 }
@@ -71,13 +71,13 @@ export function cssSelector(element: Element): string {
   let node: Element | null = element;
   while (node && node !== document.body && node !== document.documentElement && parts.length < 8) {
     const tag = node.tagName.toLowerCase();
-    if (!/^[a-z][a-z0-9-]*$/.test(tag)) break;
+    if (!/^[a-z][a-z0-9-]{0,30}$/.test(tag)) break;
     const parent: Element | null = node.parentElement;
     const sameTag = parent ? [...parent.children].filter((child) => child.tagName === node!.tagName) : [];
     parts.unshift(sameTag.length > 1 ? `${tag}:nth-of-type(${sameTag.indexOf(node) + 1})` : tag);
     node = parent;
   }
-  return parts.join(" > ").slice(0, 500);
+  return parts.join(" > ");
 }
 
 export function boxOf(element: Element): FeedbackBox {

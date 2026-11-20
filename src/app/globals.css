@@ -4564,6 +4564,45 @@ body[data-moving] .quick-actions,
   pointer-events: auto;
 }
 
+/* Přepínač polohy panelu dává smysl jen na telefonu, kde panel zabírá celou šířku a může zakrýt označované místo. */
+.mark-toolbar-flip {
+  display: none;
+}
+
+.mark-surface,
+.mark-toolbar {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+@media (max-width: 760px) {
+  .mark-toolbar {
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: auto;
+    max-height: 45vh;
+    max-height: 45dvh;
+    padding: 10px 12px max(12px, env(safe-area-inset-bottom));
+    border-width: 1px 0 0;
+    border-radius: var(--radius) var(--radius) 0 0;
+  }
+
+  .mark-toolbar-top {
+    top: 0;
+    bottom: auto;
+    padding-top: max(10px, env(safe-area-inset-top));
+    padding-bottom: 12px;
+    border-width: 0 0 1px;
+    border-radius: 0 0 var(--radius) var(--radius);
+  }
+
+  .mark-toolbar-flip {
+    display: inline-flex;
+  }
+}
+
 .mark-hint {
   margin: 0;
   font-size: 14px;

@@ -3,7 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { headers } from "next/headers";
 import { getCurrentUser } from "@/server/auth/session";
-import { feedbackWebhook, wikiMode } from "@/server/config";
+import { config, feedbackWebhook, wikiMode } from "@/server/config";
 import { getDb } from "@/server/db/client";
 import { submitFeedbackCore } from "@/server/feedback";
 import { currentPreview } from "@/server/services/preview-context";
@@ -22,6 +22,7 @@ export async function submitFeedback(formData: FormData): Promise<FeedbackResult
     {
       draftJson: formData.get("draft"),
       screenshot: screenshot instanceof Blob && screenshot.size > 0 ? screenshot : null,
+      screenshotGrant: formData.get("screenshotGrant"),
       facts: {
         id: randomUUID(),
         createdAt: new Date().toISOString().replace(/\.\d{3}Z$/, "Z"),
@@ -33,6 +34,6 @@ export async function submitFeedback(formData: FormData): Promise<FeedbackResult
         preview: preview ? { key: preview.key, label: preview.label } : null,
       },
     },
-    { db: await getDb(), webhook: feedbackWebhook(), fetchImpl: fetch },
+    { db: await getDb(), webhook: feedbackWebhook(), fetchImpl: fetch, grantSecret: config.sessionSecret },
   );
 }

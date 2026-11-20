@@ -9,7 +9,7 @@ import {
   FEEDBACK_TEXT_MAX,
   FEEDBACK_TYPE_LABEL,
   FEEDBACK_TYPES,
-  screenshotAllowed,
+  FEEDBACK_SHOT_GRANT_ATTR,
   type FeedbackDraft,
   type FeedbackType,
 } from "@/lib/feedback";
@@ -31,7 +31,13 @@ const TYPE_HINT: Record<FeedbackType, string> = {
 
 type Step = "type" | "text" | "review" | "sent";
 
-type Draft = { submissionId: string; type: FeedbackType | null; text: string; expected: string; marks: ClientMark[]; screenshot: CapturedScreenshot | null };
+/** Snímek s povolením stránky, na které vznikl. Povolení ověří server, do Make.com nejde. */
+type DraftScreenshot = CapturedScreenshot & { grant: string };
+
+type Draft = { submissionId: string; type: FeedbackType | null; text: string; expected: string; marks: ClientMark[]; screenshot: DraftScreenshot | null };
+
+/** Povolení snímku, které server vložil do ověřené stránky (`ShotGrant`). Jinde `null` a snímek se nenabízí. */
+const readShotGrant = () => document.querySelector(`[${FEEDBACK_SHOT_GRANT_ATTR}]`)?.getAttribute(FEEDBACK_SHOT_GRANT_ATTR) || null;
 
 const emptyDraft = (): Draft => ({ submissionId: crypto.randomUUID(), type: null, text: "", expected: "", marks: [], screenshot: null });
 
@@ -49,6 +55,7 @@ export function FeedbackRoot() {
   const [step, setStep] = useState<Step>("type");
   const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [path, setPath] = useState("/");
+  const [shotGrant, setShotGrant] = useState<string | null>(null);
   const [capturing, setCapturing] = useState(false);
   const [captureFailed, setCaptureFailed] = useState(false);
   const [sending, setSending] = useState(false);
@@ -63,6 +70,7 @@ export function FeedbackRoot() {
 
   const openWindow = useCallback(() => {
     setPath(collectContext().path);
+    setShotGrant(readShotGrant());
     setError(null);
     // Úspěch odeslaného hlášení zůstane vidět i po znovuotevření, nový koncept začne až po „Hotovo“ nebo zavření.
     setOpen(true);
@@ -109,11 +117,13 @@ export function FeedbackRoot() {
   };
 
   const takeScreenshot = async () => {
+    const grant = shotGrant;
+    if (!grant) return;
     setCapturing(true);
     setCaptureFailed(false);
     const shot = await captureScreenshot(draft.marks);
     setCapturing(false);
-    if (shot) update({ screenshot: shot });
+    if (shot) update({ screenshot: { ...shot, grant } });
     else setCaptureFailed(true);
   };
 
@@ -123,7 +133,7 @@ export function FeedbackRoot() {
     setSending(true);
     setError(null);
     const context = collectContext();
-    const shot = screenshotAllowed(context.path) ? draft.screenshot : null;
+    const shot = draft.screenshot;
     const payload: FeedbackDraft = {
       submissionId: draft.submissionId,
       type: draft.type,
@@ -135,7 +145,10 @@ export function FeedbackRoot() {
     };
     const form = new FormData();
     form.set("draft", JSON.stringify(payload));
-    if (shot) form.set("screenshot", shot.blob, "snimek");
+    if (shot) {
+      form.set("screenshot", shot.blob, "snimek");
+      form.set("screenshotGrant", shot.grant);
+    }
     try {
       const result = await submitFeedback(form);
       if (result.ok) setStep("sent");
@@ -149,7 +162,7 @@ export function FeedbackRoot() {
   };
 
   const type = draft.type;
-  const canShoot = screenshotAllowed(path);
+  const canShoot = shotGrant !== null;
 
   return (
     <>
@@ -265,9 +278,7 @@ export function FeedbackRoot() {
             <p className="small muted">Přidáme i technické údaje: velikost okna, prohlížeč, verzi Wiki a vaši roli. Jméno ani e-mail se neposílají.</p>
 
             <section className="feedback-shot" aria-label="Snímek obrazovky">
-              {!canShoot ? (
-                <p className="small muted">Na této stránce se snímek obrazovky nepořizuje.</p>
-              ) : draft.screenshot ? (
+              {draft.screenshot ? (
                 <>
                   {/* eslint-disable-next-line @next/next/no-img-element -- náhled z data: URL, next/image ho neoptimalizuje */}
                   <img className="feedback-shot-preview" src={draft.screenshot.dataUrl} alt="Náhled snímku, který se odešle" />
@@ -275,6 +286,8 @@ export function FeedbackRoot() {
                     Odebrat snímek
                   </button>
                 </>
+              ) : !canShoot ? (
+                <p className="small muted">Na této stránce se snímek obrazovky nepořizuje.</p>
               ) : (
                 <>
                   <p className="small muted">Snímek je nepovinný. Zachytí viditelnou část stránky, pole formulářů, zápisy a údaje účtu začerníme. Před odesláním ho uvidíte.</p>
