@@ -62,7 +62,7 @@ export function Sidebar({ badge, canManageUsers, pendingRequests, live }: Props)
           })}
         </ul>
       </nav>
-      {/* Zpětná vazba z menu jen na počítači. Otevře okno a vrátí skrytého broučka. */}
+      {/* Zpětná vazba z menu na všech šířkách. Otevře okno a vrátí skrytého broučka. */}
       <div className="sidebar-feedback">
         <button type="button" className="nav-item" onClick={() => window.dispatchEvent(new Event(FEEDBACK_OPEN_EVENT))}>
           <Icon name="bug" />

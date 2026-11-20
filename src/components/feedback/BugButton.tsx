@@ -1,15 +1,32 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { BUG_SIZE, BUG_TAB_WIDTH, moveBugDock, parseBugDock, placeBug, serializeBugDock, snapBugDock, type BugDock, type BugPlacement, type ScreenBox } from "@/lib/bug-dock";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
+import {
+  BUG_SIZE,
+  BUG_SIZE_TOUCH,
+  BUG_TAB_WIDTH,
+  moveBugDock,
+  parseBugDock,
+  placeBug,
+  serializeBugDock,
+  snapBugDock,
+  type BugDock,
+  type BugPlacement,
+  type SafeInsets,
+  type ScreenBox,
+} from "@/lib/bug-dock";
 import { Icon } from "../Icon";
 
 export const BUG_STORAGE_KEY = "zbc-broucek";
-/** Brouček jen na počítači s myší. Telefon a tablet mají položku v menu. */
-const DESKTOP_QUERY = "(min-width: 900px) and (pointer: fine)";
+/** Telefon nebo dotyková obrazovka: větší brouček blíž okraji a přesun podržením (jako v Novi). */
+const TOUCH_QUERY = "(max-width: 900px), (pointer: coarse)";
 /** Hlavní ovládání, které brouček nesmí zakrýt. */
-const OBSTACLES = "[data-bug-avoid], .select-bar, .move-panel, .flash, .btn-primary, .sidebar";
+const OBSTACLES = "[data-bug-avoid], .select-bar, .move-panel, .flash, .btn-primary, .sidebar, .quick-actions";
+/** Myš: tah delší než pár pixelů je přesun. */
 const DRAG_THRESHOLD = 4;
+/** Prst: přesun až po podržení, aby se brouček nehýbal při rolování stránky. Posun před tím je švihnutí. */
+const LONG_PRESS_MS = 400;
+const SWIPE_THRESHOLD = 10;
 
 export function readBugDock(): BugDock {
   try {
@@ -38,6 +55,25 @@ function measureObstacles(): ScreenBox[] {
   return boxes;
 }
 
+const subscribeNever = () => () => {};
+function subscribeTouch(onChange: () => void) {
+  const query = window.matchMedia(TOUCH_QUERY);
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+}
+
+/** Výřez displeje a domovská lišta (`env(safe-area-inset-*)`) změřené pomocným prvkem. */
+function measureInsets(): SafeInsets {
+  const probe = document.createElement("div");
+  probe.style.cssText =
+    "position:fixed;visibility:hidden;pointer-events:none;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)";
+  document.body.appendChild(probe);
+  const style = getComputedStyle(probe);
+  const insets = { top: parseFloat(style.paddingTop) || 0, right: parseFloat(style.paddingRight) || 0, bottom: parseFloat(style.paddingBottom) || 0, left: parseFloat(style.paddingLeft) || 0 };
+  probe.remove();
+  return insets;
+}
+
 /** Brouček se schová, když je otevřené okno nebo běží přesun akce. */
 const coveredByUi = () => document.querySelector("dialog[open]") !== null || document.body.hasAttribute("data-moving");
 
@@ -50,15 +86,19 @@ type Props = {
 };
 
 /**
- * Plovoucí tlačítko zpětné vazby. Tažením se přesune a po puštění přichytí k bližšímu okraji, šipky ho
- * posunou z klávesnice. Poloha se měří jen při rolování, změně velikosti okna a změně stránky (rAF), ne v intervalu.
+ * Plovoucí tlačítko zpětné vazby na všech šířkách. Myší se přesune tažením, prstem podržením a tažením, po puštění
+ * se přichytí k bližšímu okraji. Šipky ho posunou z klávesnice. Poloha se měří jen při rolování, změně velikosti
+ * okna a změně stránky (rAF), ne v intervalu.
  */
 export function BugButton({ dock, onDockChange, onOpen, busy }: Props) {
-  const [desktop, setDesktop] = useState(false);
+  // Až v prohlížeči (ne při vykreslení na serveru) a s aktuální shodou dotazu na dotyk a šířku.
+  const ready = useSyncExternalStore(subscribeNever, () => true, () => false);
+  const touch = useSyncExternalStore(subscribeTouch, () => window.matchMedia(TOUCH_QUERY).matches, () => false);
   const [covered, setCovered] = useState(false);
   const [placement, setPlacement] = useState<BugPlacement | null>(null);
   const [dragPoint, setDragPoint] = useState<{ x: number; y: number } | null>(null);
-  const drag = useRef<{ x: number; y: number; moved: boolean } | null>(null);
+  /** `armed`: myš, nebo prst po podržení. Jen tehdy pohyb brouček přesouvá. */
+  const drag = useRef<{ x: number; y: number; moved: boolean; armed: boolean; timer: number } | null>(null);
   /** Klik, který přijde hned po tažení, okno neotevře. */
   const justDragged = useRef(false);
   const frame = useRef(0);
@@ -69,20 +109,13 @@ export function BugButton({ dock, onDockChange, onOpen, busy }: Props) {
     frame.current = requestAnimationFrame(() => {
       setCovered(coveredByUi());
       const viewport = { width: window.innerWidth, height: window.innerHeight };
-      setPlacement(placeBug(dock, tucked ? BUG_TAB_WIDTH : BUG_SIZE, viewport, measureObstacles()));
+      const size = touch ? BUG_SIZE_TOUCH : BUG_SIZE;
+      setPlacement(placeBug(dock, tucked ? BUG_TAB_WIDTH : size, viewport, measureObstacles(), { touch, insets: measureInsets() }));
     });
-  }, [dock, tucked]);
-
-  useEffect(() => {
-    const query = window.matchMedia(DESKTOP_QUERY);
-    const update = () => setDesktop(query.matches);
-    update();
-    query.addEventListener("change", update);
-    return () => query.removeEventListener("change", update);
-  }, []);
+  }, [dock, tucked, touch]);
 
   useLayoutEffect(() => {
-    if (!desktop || dock.mode === "hidden") return;
+    if (!ready || dock.mode === "hidden") return;
     measure();
     const observer = new MutationObserver(measure);
     observer.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ["open", "data-moving", "class", "hidden"] });
@@ -94,12 +127,20 @@ export function BugButton({ dock, onDockChange, onOpen, busy }: Props) {
       window.removeEventListener("resize", measure);
       window.removeEventListener("scroll", measure, { capture: true });
     };
-  }, [desktop, dock.mode, measure]);
+  }, [ready, dock.mode, measure]);
 
-  if (!desktop || dock.mode === "hidden" || busy || covered || !placement) return null;
+  useEffect(() => () => window.clearTimeout(drag.current?.timer), []);
 
+  if (!ready || dock.mode === "hidden" || busy || covered || !placement) return null;
+
+  const size = touch ? BUG_SIZE_TOUCH : BUG_SIZE;
   const peek = tucked || placement.peek;
-  const style = dragPoint ? { left: dragPoint.x - BUG_SIZE / 2, top: dragPoint.y - BUG_SIZE / 2 } : { left: placement.left, top: placement.top };
+  const style = dragPoint ? { left: dragPoint.x - size / 2, top: dragPoint.y - size / 2 } : { left: placement.left, top: placement.top };
+  const endDrag = () => {
+    window.clearTimeout(drag.current?.timer);
+    drag.current = null;
+    setDragPoint(null);
+  };
 
   if (peek && !dragPoint) {
     return (
@@ -119,37 +160,56 @@ export function BugButton({ dock, onDockChange, onOpen, busy }: Props) {
   }
 
   return (
-    <div className={`bug-dock bug-dock-${dock.side}`} style={style} data-feedback-ui="" data-dragging={dragPoint ? "" : undefined}>
+    <div className={`bug-dock bug-dock-${dock.side}${touch ? " bug-dock-touch" : ""}`} style={style} data-feedback-ui="" data-dragging={dragPoint ? "" : undefined}>
       <button
         type="button"
         className="bug-button"
         data-testid="broucek"
         aria-label="Nahlásit chybu nebo nápad"
         aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight"
-        title="Zpětná vazba (šipkami přesunete)"
+        title={touch ? "Zpětná vazba (podržením přesunete)" : "Zpětná vazba (šipkami přesunete)"}
         onPointerDown={(event) => {
           if (event.button !== 0) return;
-          drag.current = { x: event.clientX, y: event.clientY, moved: false };
+          const point = { x: event.clientX, y: event.clientY };
+          const finger = event.pointerType !== "mouse";
+          const state = { ...point, moved: false, armed: !finger, timer: 0 };
+          if (finger) {
+            state.timer = window.setTimeout(() => {
+              if (drag.current !== state || state.moved) return;
+              state.armed = true;
+              state.moved = true;
+              navigator.vibrate?.(15);
+              setDragPoint(point);
+            }, LONG_PRESS_MS);
+          }
+          drag.current = state;
           event.currentTarget.setPointerCapture(event.pointerId);
         }}
         onPointerMove={(event) => {
           const state = drag.current;
           if (!state) return;
-          if (!state.moved && Math.hypot(event.clientX - state.x, event.clientY - state.y) < DRAG_THRESHOLD) return;
+          const distance = Math.hypot(event.clientX - state.x, event.clientY - state.y);
+          if (!state.armed) {
+            // Švihnutí prstem před podržením brouček nepřesune ani neotevře.
+            if (distance > SWIPE_THRESHOLD) {
+              window.clearTimeout(state.timer);
+              state.moved = true;
+            }
+            return;
+          }
+          if (!state.moved && distance < DRAG_THRESHOLD) return;
           state.moved = true;
           setDragPoint({ x: event.clientX, y: event.clientY });
         }}
         onPointerUp={(event) => {
           const state = drag.current;
-          drag.current = null;
-          setDragPoint(null);
+          endDrag();
           justDragged.current = Boolean(state?.moved);
-          if (state?.moved) onDockChange({ ...dock, ...snapBugDock({ x: event.clientX, y: event.clientY }, { width: window.innerWidth, height: window.innerHeight }) });
+          if (state?.moved && state.armed) onDockChange({ ...dock, ...snapBugDock({ x: event.clientX, y: event.clientY }, { width: window.innerWidth, height: window.innerHeight }) });
         }}
-        onPointerCancel={() => {
-          drag.current = null;
-          setDragPoint(null);
-        }}
+        onPointerCancel={endDrag}
+        // Podržení prstem nesmí otevřít systémovou nabídku (Android) ani výběr textu (iOS).
+        onContextMenu={(event) => event.preventDefault()}
         onClick={(event) => {
           // Klik po tažení nic neotevře. Klávesnice (Enter, mezerník) má detail 0 a otevře vždy.
           const dragged = justDragged.current && event.detail > 0;
@@ -163,7 +223,7 @@ export function BugButton({ dock, onDockChange, onOpen, busy }: Props) {
           onDockChange(next);
         }}
       >
-        <Icon name="bug" size={22} />
+        <Icon name="bug" size={touch ? 24 : 22} />
       </button>
       <button type="button" className="bug-tuck" aria-label="Schovat tlačítko zpětné vazby k okraji" title="Schovat k okraji" onClick={() => onDockChange({ ...dock, mode: "tucked" })}>
         <Icon name="close" size={12} />

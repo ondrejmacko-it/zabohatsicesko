@@ -1,12 +1,19 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { FEEDBACK_MARKS_MAX, type FeedbackBox, type FeedbackMark } from "@/lib/feedback";
+import { FEEDBACK_MARKS_MAX, FEEDBACK_RECT_LABEL, type FeedbackBox, type FeedbackMark } from "@/lib/feedback";
 import { boxOf, cssSelector, describeElement } from "./page-context";
 
+/** Označení v okně. `scroll` je posun stránky v okamžiku označení, aby šlo značku do snímku dokreslit na správné místo. Neodesílá se. */
+export type ClientMark = FeedbackMark & { scroll: { x: number; y: number } };
+
+export function toFeedbackMark({ kind, description, selector, box }: ClientMark): FeedbackMark {
+  return { kind, description, selector, box };
+}
+
 type Props = {
-  marks: FeedbackMark[];
-  onChange: (marks: FeedbackMark[]) => void;
+  marks: ClientMark[];
+  onChange: (marks: ClientMark[]) => void;
   /** Návrat do okna. Označení zůstanou. */
   onDone: () => void;
 };
@@ -28,16 +35,29 @@ const normalize = (a: { x: number; y: number }, b: { x: number; y: number }): Fe
   height: Math.round(Math.abs(a.y - b.y)),
 });
 
+const elementMark = (element: Element): ClientMark => ({
+  kind: "element",
+  description: describeElement(element),
+  selector: cssSelector(element),
+  box: boxOf(element),
+  scroll: { x: window.scrollX, y: window.scrollY },
+});
+
 /**
- * Označení místa na stránce: klik vybere prvek, tah myší nakreslí obdélník. Vrstva leží nad celou stránkou,
- * takže klik nic nespustí. Esc nebo „Hotovo“ vrátí do okna.
+ * Označení místa na stránce: klik nebo klepnutí vybere prvek, tah myší či prstem nakreslí obdélník. Vrstva leží
+ * nad celou stránkou, takže klik nic nespustí (ani tažení karty v harmonogramu). Esc nebo „Hotovo“ vrátí do okna.
+ * U posledního prvku jde výběr zvětšit na nadřazený prvek a zase zmenšit.
  */
 export function MarkingLayer({ marks, onChange, onDone }: Props) {
   const layer = useRef<HTMLDivElement>(null);
   const start = useRef<{ x: number; y: number } | null>(null);
+  /** Poslední označený prvek a cesta, kterou se k němu došlo přes „Větší“ (pro „Menší“). Jen v paměti. */
+  const [picked, setPicked] = useState<{ index: number; path: Element[] } | null>(null);
   const [hover, setHover] = useState<FeedbackBox | null>(null);
   const [drawing, setDrawing] = useState<FeedbackBox | null>(null);
+  const [toolbarTop, setToolbarTop] = useState(false);
   const full = marks.length >= FEEDBACK_MARKS_MAX;
+  const last = picked && picked.index === marks.length - 1 ? picked : null;
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -57,8 +77,26 @@ export function MarkingLayer({ marks, onChange, onDone }: Props) {
     };
   }, [onDone]);
 
-  const add = (mark: FeedbackMark) => {
-    if (!full) onChange([...marks, mark]);
+  const add = (mark: ClientMark, element?: Element) => {
+    if (full) return;
+    setPicked(element ? { index: marks.length, path: [element] } : null);
+    onChange([...marks, mark]);
+  };
+
+  /** „Větší“ vybere nadřazený prvek, „Menší“ se vrátí o krok zpět. */
+  const resize = (direction: "up" | "down") => {
+    if (!last) return;
+    const path = [...last.path];
+    if (direction === "up") {
+      const parent = path.at(-1)?.parentElement;
+      if (!parent || parent === document.body || parent === document.documentElement) return;
+      path.push(parent);
+    } else if (path.length > 1) path.pop();
+    else return;
+    const target = path.at(-1);
+    if (!target) return;
+    setPicked({ index: last.index, path });
+    onChange(marks.map((mark, index) => (index === last.index ? elementMark(target) : mark)));
   };
 
   return (
@@ -79,6 +117,8 @@ export function MarkingLayer({ marks, onChange, onDone }: Props) {
         onPointerLeave={() => setHover(null)}
         onPointerDown={(event) => {
           if (event.button !== 0 || full) return;
+          // Žádný výběr textu ani nativní tažení pod vrstvou.
+          event.preventDefault();
           start.current = { x: event.clientX, y: event.clientY };
           event.currentTarget.setPointerCapture(event.pointerId);
         }}
@@ -89,11 +129,11 @@ export function MarkingLayer({ marks, onChange, onDone }: Props) {
           if (!from || !layer.current) return;
           const box = normalize(from, { x: event.clientX, y: event.clientY });
           if (box.width >= MIN_RECT && box.height >= MIN_RECT) {
-            add({ kind: "rect", description: "vyznačená oblast", selector: null, box });
+            add({ kind: "rect", description: FEEDBACK_RECT_LABEL, selector: null, box, scroll: { x: window.scrollX, y: window.scrollY } });
             return;
           }
           const element = elementAt(layer.current, event.clientX, event.clientY);
-          if (element) add({ kind: "element", description: describeElement(element).slice(0, 300), selector: cssSelector(element), box: boxOf(element) });
+          if (element) add(elementMark(element), element);
         }}
       />
       {hover && !drawing && !full && <div className="mark-box mark-hover" style={{ left: hover.x, top: hover.y, width: hover.width, height: hover.height }} />}
@@ -103,9 +143,9 @@ export function MarkingLayer({ marks, onChange, onDone }: Props) {
           <span className="mark-number">{index + 1}</span>
         </div>
       ))}
-      <div className="mark-toolbar" role="region" aria-label="Označení místa">
+      <div className={toolbarTop ? "mark-toolbar mark-toolbar-top" : "mark-toolbar"} role="region" aria-label="Označení místa">
         <p className="mark-hint" aria-live="polite">
-          {full ? `Označeno ${FEEDBACK_MARKS_MAX} míst, víc už nejde.` : "Klikněte na prvek, nebo tažením vyznačte oblast. Esc vrátí do okna."}
+          {full ? `Označeno ${FEEDBACK_MARKS_MAX} míst, víc už nejde.` : "Klikněte nebo klepněte na prvek, tažením vyznačíte oblast."}
         </p>
         {marks.length > 0 && (
           <ol className="mark-list">
@@ -114,16 +154,39 @@ export function MarkingLayer({ marks, onChange, onDone }: Props) {
                 <span>
                   {index + 1}. {mark.description}
                 </span>
-                <button type="button" className="btn btn-small" onClick={() => onChange(marks.filter((_, i) => i !== index))} aria-label={`Odebrat označení ${index + 1}`}>
+                <button type="button" className="btn btn-small" onClick={() => {
+                    setPicked(null);
+                    onChange(marks.filter((_, i) => i !== index));
+                  }} aria-label={`Odebrat označení ${index + 1}`}>
                   Odebrat
                 </button>
               </li>
             ))}
           </ol>
         )}
-        <div className="row">
+        <div className="row mark-actions">
+          {last && (
+            <>
+              <button type="button" className="btn btn-small" onClick={() => resize("down")} disabled={last.path.length < 2}>
+                Menší
+              </button>
+              <button type="button" className="btn btn-small" onClick={() => resize("up")}>
+                Větší
+              </button>
+            </>
+          )}
+          <button type="button" className="btn btn-small mark-toolbar-flip" onClick={() => setToolbarTop((top) => !top)}>
+            {toolbarTop ? "Panel dolů" : "Panel nahoru"}
+          </button>
           {marks.length > 0 && (
-            <button type="button" className="btn btn-small" onClick={() => onChange([])}>
+            <button
+              type="button"
+              className="btn btn-small"
+              onClick={() => {
+                setPicked(null);
+                onChange([]);
+              }}
+            >
               Zrušit vše
             </button>
           )}

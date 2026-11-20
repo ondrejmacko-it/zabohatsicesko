@@ -25,11 +25,14 @@ export const FEEDBACK_REPORTS_PER_HOUR = 10;
 export const FEEDBACK_SCREENSHOT_MIMES = ["image/webp", "image/jpeg"] as const;
 export type FeedbackScreenshotMime = (typeof FEEDBACK_SCREENSHOT_MIMES)[number];
 
+/** Popis obdélníku vyznačeného tažením. Popisy prvků viz `page-context.ts`, jen strukturální názvy. */
+export const FEEDBACK_RECT_LABEL = "Označená oblast";
+
 export type FeedbackBox = { x: number; y: number; width: number; height: number };
 
 export type FeedbackMark = {
   kind: "element" | "rect";
-  /** Čitelný popis bez obsahu polí: „tlačítko „Uložit“ v sekci „Témata““. */
+  /** Strukturální popis bez obsahu stránky: „Tlačítko v okně“, „Karta v harmonogramu“, „Označená oblast“. */
   description: string;
   selector: string | null;
   box: FeedbackBox;

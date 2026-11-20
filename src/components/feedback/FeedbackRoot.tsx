@@ -11,12 +11,11 @@ import {
   FEEDBACK_TYPES,
   screenshotAllowed,
   type FeedbackDraft,
-  type FeedbackMark,
   type FeedbackType,
 } from "@/lib/feedback";
 import { Modal } from "../Modal";
 import { BugButton, readBugDock, writeBugDock } from "./BugButton";
-import { MarkingLayer } from "./MarkingLayer";
+import { MarkingLayer, toFeedbackMark, type ClientMark } from "./MarkingLayer";
 import { collectContext } from "./page-context";
 import { captureScreenshot, type CapturedScreenshot } from "./screenshot";
 
@@ -32,7 +31,7 @@ const TYPE_HINT: Record<FeedbackType, string> = {
 
 type Step = "type" | "text" | "review" | "sent";
 
-type Draft = { submissionId: string; type: FeedbackType | null; text: string; expected: string; marks: FeedbackMark[]; screenshot: CapturedScreenshot | null };
+type Draft = { submissionId: string; type: FeedbackType | null; text: string; expected: string; marks: ClientMark[]; screenshot: CapturedScreenshot | null };
 
 const emptyDraft = (): Draft => ({ submissionId: crypto.randomUUID(), type: null, text: "", expected: "", marks: [], screenshot: null });
 
@@ -65,7 +64,7 @@ export function FeedbackRoot() {
   const openWindow = useCallback(() => {
     setPath(collectContext().path);
     setError(null);
-    setStep((current) => (current === "sent" ? "type" : current));
+    // Úspěch odeslaného hlášení zůstane vidět i po znovuotevření, nový koncept začne až po „Hotovo“ nebo zavření.
     setOpen(true);
   }, []);
 
@@ -96,6 +95,11 @@ export function FeedbackRoot() {
 
   // Zavření s rozepsaným hlášením potvrdí uživatel v okně „Neuložené změny“. Zahozením začne nový koncept.
   const requestClose = () => {
+    // Během odesílání se okno jen schová. Koncept zůstane a výsledek se ukáže po znovuotevření.
+    if (sendingRef.current) {
+      setOpen(false);
+      return;
+    }
     if (dirty()) {
       setDraft(emptyDraft());
       setStep("type");
@@ -125,7 +129,7 @@ export function FeedbackRoot() {
       type: draft.type,
       text: draft.text,
       expected: draft.type === "bug" ? draft.expected : null,
-      marks: draft.marks,
+      marks: draft.marks.map(toFeedbackMark),
       screenshot: shot && { mime: shot.mime, width: shot.width, height: shot.height },
       context,
     };
@@ -160,14 +164,14 @@ export function FeedbackRoot() {
           }}
         />
       )}
-      <Modal open={open && !marking} title="Zpětná vazba" onRequestClose={requestClose} hasUnsavedChanges={dirty}>
+      <Modal open={open && !marking} title="Zpětná vazba" onRequestClose={requestClose} hasUnsavedChanges={() => !sendingRef.current && dirty()}>
         {step === "type" && (
           <div className="stack feedback-step">
             <fieldset className="feedback-types">
               <legend>Co chcete nahlásit?</legend>
               {FEEDBACK_TYPES.map((value) => (
                 <label key={value} className="feedback-type">
-                  <input type="radio" name="feedback-type" value={value} checked={type === value} onChange={() => update({ type: value, expected: value === "bug" ? draft.expected : "" })} />
+                  <input type="radio" name="feedback-type" value={value} checked={type === value} onChange={() => update({ type: value })} />
                   <span>
                     <strong>{FEEDBACK_TYPE_LABEL[value]}</strong>
                     <span className="small muted">{TYPE_HINT[value]}</span>
