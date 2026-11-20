@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { FEEDBACK_OPEN_EVENT } from "./feedback/FeedbackRoot";
 import { Icon, type IconName } from "./Icon";
 
 type Item = { label: string; /** Část názvu, kterou úzký telefon skryje jen vizuálně, čtečka ji přečte. */ labelTail?: string; icon: IconName; href?: string; match?: (path: string) => boolean; badgeKey?: "education" | "admin" };
@@ -61,6 +62,13 @@ export function Sidebar({ badge, canManageUsers, pendingRequests, live }: Props)
           })}
         </ul>
       </nav>
+      {/* Zpětná vazba z menu jen na počítači. Otevře okno a vrátí skrytého broučka. */}
+      <div className="sidebar-feedback">
+        <button type="button" className="nav-item" onClick={() => window.dispatchEvent(new Event(FEEDBACK_OPEN_EVENT))}>
+          <Icon name="bug" />
+          <span>Zpětná vazba</span>
+        </button>
+      </div>
       {!live && (
         <div className="sidebar-section">
           <p className="sidebar-label">Dokumenty</p>

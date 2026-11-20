@@ -1,4 +1,5 @@
 import { isLiveWiki } from "@/server/config";
+import { FeedbackRoot } from "@/components/feedback/FeedbackRoot";
 import { FlashMessage } from "@/components/FlashMessage";
 import { Sidebar } from "@/components/Sidebar";
 import { Topbar } from "@/components/Topbar";
@@ -34,6 +35,7 @@ export default async function WikiLayout({ children }: { children: React.ReactNo
           {children}
         </main>
       </div>
+      <FeedbackRoot />
     </>
   );
 }

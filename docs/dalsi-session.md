@@ -1,5 +1,18 @@
 # Prompt pro další session
 
+**FÁZE B BROUČEK – RELACE 16 HOTOVO (20. 11. 2026, větev `claude/funkce/zpetna-vazba-broucek`, draft PR).**
+* Klient `src/components/feedback/` (BugButton, FeedbackRoot, MarkingLayer, page-context, screenshot), položka
+  „Zpětná vazba“ v Sidebar (jen ≥ 900 px), ikona `bug`, styly v globals.css, `FeedbackRoot` v `(wiki)/layout.tsx`.
+  Snímek: celý `<html>` (u `<body>` knihovna posune o 8 px), filtr dialog/noscript/`data-feedback-ui`, citlivé části
+  skryté už v kopii, pole přetřená. Omezení: sticky menu se v kopii vykreslí na přirozeném místě (docs).
+* Novi repo NEŠLO připojit (add_repo zamítl klasifikátor), klient je napsaný podle specifikace z relace 15.
+* Testy: unit `tests/zpetna-vazba.test.ts` 15, e2e `e2e/zpetna-vazba.spec.ts` (falešný webhook 127.0.0.1:3312
+  v `e2e/server.mjs`, odeslání jen ve windows-1280 / webkit-1440 / firefox-1280 kvůli limitu 10/h).
+  Před e2e `fuser -k 3310/tcp 3311/tcp 3312/tcp 3410/tcp`. Výsledky ověření viz popis draft PR.
+* Docs `docs/zpetna-vazba.md` (Make scénář, payload, mazání po 12 měsících), README, `.env.example`.
+**Další krok:** nic bez pokynu. Uživatel: Make scénář + filtr hlavičky, env `FEEDBACK_WEBHOOK_URL/SECRET` ve Vercelu
+(Preview), ruční zkouška na Preview, review a merge PR. Otevřené: report B7 (feedback widget) zatím jen v popisu PR.
+
 **FÁZE B BROUČEK – RELACE 15 → 16 (20. 11. 2026, větev `claude/funkce/zpetna-vazba-broucek` z main 4699a60).**
 Zadání: user zpráva „ZBČ: finální release audit + integrace zpětné vazby z Novi“ (session
 `session_01HpUirygb1N8XmnorbnJSA8`, `list_events` kinds `["user"]`, stránka PŘED nejnovější, hledej „FÁZE B“), body B1–B7.
