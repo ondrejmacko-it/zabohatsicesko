@@ -9,8 +9,8 @@ Fáze B (zpětná vazba „brouček“) není součástí tohoto PR a přijde v 
 |---|---|---|---|
 | Lint, typová kontrola | lokálně | `eslint .`, `tsc --noEmit` bez chyb | ověřeno |
 | Unit testy | Vitest | 44 souborů, 421 testů, 0 selhání (včetně nového `tests/csp.test.ts`) | ověřeno |
-| Produkční build | `next build` | viz bod 6 | ověřeno |
-| Celé e2e Chromium (výchozí projekty 320–1920, Windows/macOS UA) | Playwright Chromium | viz bod 6 | ověřeno |
+| Produkční build | `next build` | OK | ověřeno |
+| Celé e2e Chromium (výchozí projekty 320–1920, Windows/macOS UA) | Playwright Chromium | 1210 passed / 108 skipped / 0 failed (8,2 min) | ověřeno |
 | Chromium 768 a 1024 | Playwright Chromium | 7d124c3: 402 passed / 50 skipped / 0 failed; po změnách testů znovu v běhu níže, 0 selhání | ověřeno |
 | Firefox 1280 a telefon 390 (úzké okno s dotykem) | Playwright Firefox 1543 | celé e2e: 0 selhání | ověřeno |
 | WebKit 1440 Retina, iPhone 13 (390), iPhone SE (320) | Playwright WebKit 2359 přes HTTPS | první běh 16 selhání, všechna jsou rozdíly prohlížeče v testech (bod 2). Po úpravě testů opakovány dotčené soubory: 45 passed / 22 skipped / 0 failed | ověřeno (Playwright WebKit) |
@@ -95,7 +95,7 @@ Data zůstanou beze změny, náprava = smazat proměnnou a redeploy.
 | P0 | Oprávnění a únik dat (pohled, RSC, e-maily) | e2e a unit zelené | Go |
 | P0 | Bezpečná migrace | merge DB nemění, 0015 jen po schválení, postup a rollback popsané | Go |
 | P1 | Vzhled a ovládání 320–1920 px, Chromium, Firefox, WebKit | e2e zelené | Go |
-| P1 | CI na posledním commitu | viz popis PR | Go, pokud je zelené |
+| P1 | CI na posledním commitu | lint, typy, testy, build, citlivé cesty a Vercel Preview zelené | Go |
 | P2 | Skutečné zařízení (Safari macOS, iPhone, Android), dotyk prstem v Safari | neověřeno | nebrání merge, ručně na Preview |
 | P2 | Hláška WebKitu u přerušeného prefetchu | jen konzole, bez dopadu | sledovat |
 
@@ -104,4 +104,10 @@ podle bodu 4.
 
 ## 6. Výsledky finálního ověření (relace 14)
 
-Doplněno níže po doběhu.
+Lint OK, typecheck OK, unit 421/421, build OK, celé e2e Chromium 1210 passed / 108 skipped / 0 failed.
+WebKit, Firefox, Chromium 768/1024: souhrnný běh 1169 / 133 / 16 (jen testové příčiny z bodu 2), opakování dotčených
+souborů ve WebKitu 45 / 22 / 0. CI na 64c5589 zelené. Produkční DB jen čtena (SELECT), nic nebylo mergnuto ani nasazeno.
+
+Spuštění testů v ostatních prohlížečích: `npx playwright install webkit firefox`, `npx playwright install-deps webkit
+firefox`, pak `E2E_WEBKIT=1 npm run e2e -- --project=webkit-1440 --project=webkit-390 --project=webkit-320
+--project=firefox-1280 --project=firefox-390 --project=chromium-768 --project=chromium-1024`.

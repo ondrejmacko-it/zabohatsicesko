@@ -1,5 +1,16 @@
 # Prompt pro další session
 
+**RELEASE AUDIT PR #74 (FÁZE A) – RELACE 14 HOTOVO (20. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd`).**
+* bba0adb: CSP `upgrade-insecure-requests` vypíná jen e2e server (`CSP_UPGRADE_INSECURE=0`), `tests/csp.test.ts`.
+  06cbf23: WebKit projekty přes lokální HTTPS proxy (`DEMO_TLS_PORT` 3410, `e2e/server.mjs`), kvůli cookie `__Host-`.
+  5ecbcc6: WebKit filtr přerušeného prefetch `_rsc=` (`e2e/support.ts`), dotyk přes CDP jen v Chromiu, čekání na
+  zavření okna v `temata-planovani.spec.ts:155`. Chyba aplikace P0/P1 v žádném jádře nenalezena.
+* Ověřeno: lint, typy, unit 421/421, build, celé Chromium e2e 1210/108/0, Firefox + Chromium 768/1024 bez chyb,
+  WebKit po úpravě testů 0 failed. Report `docs/report-release-audit-pr74.md` (Go/No-Go, nasazení a rollback 0015).
+  Skutečná zařízení neověřena. Uživatel dostal finální zprávu: PR #74 ready.
+**Další krok:** nic bez pokynu. Uživatel převede PR #74 na Ready, mergne a schválí 0015 na produkci (report bod 4).
+Po merge fáze B (feedback brouček z `novi-ai-tutor-app`) v NOVÉM PR.
+
 **RELEASE AUDIT PR #74 (FÁZE A) – RELACE 13 → 14 (19. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd`).**
 Zadání: user zpráva „ZBČ: finální release audit + integrace zpětné vazby z Novi“ (session
 `session_01HpUirygb1N8XmnorbnJSA8`, `list_events` kinds `["user"]`, poslední). Uživatel: NEJDŘÍV dokončit PR #74 (fáze A),
