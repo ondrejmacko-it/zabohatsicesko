@@ -15,6 +15,7 @@ describe("stav nahrávky napříč obrazovkami", () => {
     expect(progressOf(null, "failed", "unsupported_fixture")).toBe("unsupported");
     expect(progressOf(null, "queued", null)).toBe("processing");
     expect(progressOf("draft", "done", null)).toBe("draft");
+    expect(progressOf("draft", null, null, false)).toBe("started");
     expect(progressOf("published", "done", null)).toBe("published");
   });
 

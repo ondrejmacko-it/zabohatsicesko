@@ -1,4 +1,5 @@
 import { ActionForm } from "@/components/ActionForm";
+import { Icon } from "@/components/Icon";
 import { Menu } from "@/components/Menu";
 import { ERROR_LABELS, SYNC_STATUS_LABELS } from "@/lib/labels";
 import { formatDayMonth, formatEventTime, toDateKey } from "@/lib/time";
@@ -138,6 +139,7 @@ export function SyncPanelView({ eventId, sync }: { eventId: string; sync: SyncPa
   const simulationTools = sync.mode === "simulation" && sync.status === "synced" && Boolean(sync.externalId);
   const createInvite = (inMenu: boolean) => (
     <ActionForm action={createInviteAction} fields={{ id: eventId }} label={inMenu ? "Vytvořit novou pozvánku…" : "Vytvořit novou pozvánku"} variant={inMenu ? "default" : "primary"}
+      icon={inMenu ? "send" : undefined}
       confirm={inMenu ? { title: "Vytvořit novou pozvánku", text: "V Kalendáři je v tomto čase pozvánka, kterou jde spárovat. Nová pozvánka vznikne vedle ní a pozvaní dostanou e-mail.", confirmLabel: "Vytvořit" } : undefined}
     />
   );
@@ -161,10 +163,11 @@ export function SyncPanelView({ eventId, sync }: { eventId: string; sync: SyncPa
           <Menu label="Další možnosti Kalendáře" small iconOnly>
             {createInMenu && createInvite(true)}
             {simulationTools && (
-              <ActionForm action={simulateManualEditAction} fields={{ externalId: sync.externalId! }} label="Simulovat ruční úpravu v Kalendáři" />
+              <ActionForm action={simulateManualEditAction} fields={{ externalId: sync.externalId! }} label="Simulovat ruční úpravu v Kalendáři" icon="pencil" />
             )}
             {(createInMenu || simulationTools) && <hr className="menu-divider" />}
             <a className="btn" href="/vzdelavani/integrace">
+              <Icon name="settings" />
               Technické nastavení Kalendáře
             </a>
           </Menu>

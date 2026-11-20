@@ -231,3 +231,110 @@ test.describe("Rychlé akce ⋯ na telefonu", () => {
     await expect(picker).toBeHidden();
   });
 });
+
+test.describe("⋯ a „+“ v mřížce @desktop", () => {
+  test.use({ storageState: authFile("spravce") });
+
+  // A-01, A-08, A-02: ⋯ je vidět bez najetí a trefí se, menu roste do volné strany, „+“ v prázdném dni je naznačené.
+  test("viditelné tlačítko, menu podle strany, decentní plus", async ({ page }) => {
+    await page.goto("/vzdelavani/harmonogram?mesic=2026-11");
+    await settle(page);
+    const triggers = page.locator(".menu-card-trigger:visible");
+    const first = triggers.first();
+    const box = (await first.boundingBox())!;
+    // Malé, ale nalezitelné: viditelná plocha aspoň 24 × 20 px, dotyková (pseudo-prvek) větší.
+    expect(box.width).toBeGreaterThanOrEqual(24);
+    expect(box.height).toBeGreaterThanOrEqual(20);
+    expect(await first.evaluate((el) => getComputedStyle(el).opacity)).toBe("1");
+
+    const viewport = page.viewportSize()!;
+    for (const trigger of [first, triggers.last()]) {
+      await trigger.scrollIntoViewIfNeeded();
+      await trigger.click();
+      const anchor = (await trigger.boundingBox())!;
+      const list = page.locator(".menu-list:visible");
+      const menu = (await list.boundingBox())!;
+      if (anchor.x + anchor.width / 2 < viewport.width / 2) expect(Math.abs(menu.x - anchor.x)).toBeLessThan(2);
+      else expect(Math.abs(menu.x + menu.width - (anchor.x + anchor.width))).toBeLessThan(2);
+      await page.keyboard.press("Escape");
+      await expect(list).toHaveCount(0);
+    }
+
+    await page.goto("/vzdelavani/harmonogram?mesic=2027-02");
+    await settle(page);
+    const emptyPlus = page.locator("td:not(:has(a[class*='event'])) a[aria-label^='Přidat akci na']").first();
+    await page.mouse.move(0, 0);
+    expect(Number(await emptyPlus.evaluate((el) => getComputedStyle(el).opacity))).toBeCloseTo(0.35, 2);
+  });
+});
+
+test.describe("⋯ v kartě mřížky: místo, překryv a kliknutí @desktop", () => {
+  test.use({ storageState: authFile("spravce") });
+
+  // P1-1: ⋯ má v kartě vyhrazené místo (vpravo nahoře v řádku názvu) a nepřekrývá žádný text ani výstrahu.
+  test("⋯ nepřekrývá text karty a klik na něj neotevře detail ani nezačne tažení", async ({ page }) => {
+    await page.goto("/vzdelavani/harmonogram?mesic=2026-11");
+    await settle(page);
+    const overlaps = await page.evaluate(() => {
+      const hits: string[] = [];
+      for (const wrap of document.querySelectorAll("td [class*='cardWrap']")) {
+        const trigger = wrap.querySelector(".menu-card-trigger");
+        const card = wrap.querySelector("a");
+        if (!trigger || !card) continue;
+        const t = trigger.getBoundingClientRect();
+        const walker = document.createTreeWalker(card, NodeFilter.SHOW_TEXT);
+        const parts: Element[] = [...card.querySelectorAll("svg")];
+        for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+          if (!node.textContent?.trim() || (node.parentElement?.closest(".visually-hidden"))) continue;
+          const range = document.createRange();
+          range.selectNodeContents(node);
+          for (const r of range.getClientRects()) {
+            if (r.right > t.left && r.left < t.right && r.bottom > t.top && r.top < t.bottom) hits.push(`${card.textContent?.slice(0, 30)}: ${node.textContent}`);
+          }
+        }
+        for (const icon of parts) {
+          const r = icon.getBoundingClientRect();
+          if (r.right > t.left && r.left < t.right && r.bottom > t.top && r.top < t.bottom) hits.push(`${card.textContent?.slice(0, 30)}: ikona`);
+        }
+      }
+      return hits;
+    });
+    expect(overlaps).toEqual([]);
+
+    // Klik na ⋯ karty, kterou jde táhnout: menu se otevře, okno akce ne a tažení nezačne.
+    await page.evaluate(() => {
+      (window as unknown as { dragStarts: number }).dragStarts = 0;
+      document.addEventListener("dragstart", () => (window as unknown as { dragStarts: number }).dragStarts++, true);
+    });
+    const draggable = page.locator("[class*='cardWrap']:has(> a[draggable='true'])").first();
+    const trigger = draggable.locator(".menu-card-trigger");
+    const before = page.url();
+    await trigger.click();
+    await expect(page.locator(".menu-list:visible")).toBeVisible();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    expect(page.url()).toBe(before);
+    // Pokus o tažení za ⋯ také tažení karty nespustí.
+    await page.keyboard.press("Escape");
+    const box = (await trigger.boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + 80, box.y + 120, { steps: 6 });
+    await page.mouse.up();
+    expect(await page.evaluate(() => (window as unknown as { dragStarts: number }).dragStarts)).toBe(0);
+    expect(page.url()).toBe(before);
+  });
+
+  test("dlouhé menu se přizpůsobí nízkému oknu a neořízne se", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 260 });
+    await page.goto("/vzdelavani/harmonogram?mesic=2026-11");
+    await settle(page);
+    const trigger = page.locator(".menu-card-trigger:visible").nth(4);
+    await trigger.scrollIntoViewIfNeeded();
+    await trigger.click();
+    const list = page.locator(".menu-list:visible");
+    await expect(list).toBeVisible();
+    const menu = (await list.boundingBox())!;
+    expect(menu.y).toBeGreaterThanOrEqual(0);
+    expect(menu.y + menu.height).toBeLessThanOrEqual(260);
+  });
+});

@@ -131,7 +131,7 @@ describe("zpracování nahrávky", () => {
     const content = { summary: "Opraveno", keyPoints: ["Bod"], decisions: [], nextSteps: [] };
     await updateMinutes(lead, PAST_FP, row!.id, 1, content);
     await expect(updateMinutes(lead, PAST_FP, row!.id, 1, content)).rejects.toMatchObject({ code: "conflict" });
-    await expect(updateMinutes(lead, PAST_FP, row!.id, 2, { ...content, summary: "" })).rejects.toThrow();
+    await expect(updateMinutes(lead, PAST_FP, row!.id, 2, { ...content, keyPoints: ["x".repeat(501)] })).rejects.toMatchObject({ code: "minutes_invalid" });
   });
 
   test("rozpoznání typu jen doporučuje šablonu", () => {

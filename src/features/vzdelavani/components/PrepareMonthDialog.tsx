@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
+import { useActionState, useMemo, useRef, useState } from "react";
 import { ActionForm, ActionMessage } from "@/components/ActionForm";
+import { Combobox } from "@/components/Combobox";
 import { Modal } from "@/components/Modal";
 import { submitKeepingValues } from "@/features/shared/keep-values";
 import { publishInviteNote, type InviteMode } from "@/lib/invite-mode";
@@ -62,7 +63,9 @@ export function PrepareMonthDialog(props: Props) {
       <Modal open={open} title={`Připravit měsíc: ${props.monthName}`} onRequestClose={() => setOpen(false)} wide="extra">
         <div className="stack">
           <section className="prepare-step" aria-labelledby="prepare-fill">
-            <h3 id="prepare-fill">1. Doplnit termíny</h3>
+            <h3 id="prepare-fill">
+              <span className="step-no">1</span> Doplnit termíny
+            </h3>
             <p className="hint">Doplní návrhy podle pravidelného rozvrhu, nic nezveřejní.</p>
             <div className="row prepare-fill">
               <ActionForm action={generateMonthAction} fields={{ month: props.monthKey }} label="Doplnit chybějící termíny" pendingLabel="Doplňuji…" />
@@ -104,6 +107,8 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
       return next;
     });
 
+  // Nabídka témat je pro všechny řádky stejná (stejně jako dřív jeden <datalist>).
+  const topicOptions = useMemo(() => topics.map((value) => ({ value })), [topics]);
   // Pole řádků jsou neřízená, mezery a publikum se proto čtou z formuláře.
   type Filled = { topic: boolean; topicText: string; lead: boolean; audience: Group };
   const [filled, setFilled] = useState<Record<string, Filled>>({});
@@ -122,6 +127,12 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
         ]),
       ),
     );
+  };
+  // Výběr v <select> pošle v prohlížeči `input` a `change` jako dvě samostatné události. Překreslení už na
+  // `input` vrátilo řízený výběr (hromadný vedoucí) na starou hodnotu dřív, než `change` uložil novou,
+  // a volba osoby se neuchytila. U výběrů proto stačí `change`, psaní v polích dál přepočítá přehled hned.
+  const readOnInput = (event: React.FormEvent<HTMLFormElement>) => {
+    if (!(event.target instanceof HTMLSelectElement)) readFilled(event.currentTarget);
   };
   const current = (d: MonthDraft): Filled =>
     filled[d.id] ?? { topic: Boolean(d.topicTitle), topicText: d.topicTitle ?? "", lead: Boolean(d.leadId), audience: d.audience };
@@ -207,6 +218,14 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
             {all ? "Zrušit výběr" : "Vybrat vše"}
           </button>
         </legend>
+        {/* Záhlaví sloupců jen pro oko; každé pole má vlastní přístupný popisek (Datum: …, Skupina: …). */}
+        <div className="publish-head" aria-hidden="true">
+          <span>Návrh</span>
+          <span>Datum</span>
+          <span>Skupina</span>
+          <span>Téma</span>
+          <span>Vedoucí</span>
+        </div>
         <ul className="publish-list">
           {list.map((d) => {
             const start = new Date(d.startsAt);
@@ -239,16 +258,18 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
                     </option>
                   ))}
                 </select>
-                <input
-                  className="input"
+                <Combobox
                   name={`topic-${d.id}`}
                   defaultValue={d.topicTitle ?? ""}
+                  options={topicOptions}
+                  listLabel="Témata"
                   placeholder="Téma"
-                  aria-label={`Téma: ${name}`}
-                  aria-describedby={suggested(d) ? `suggest-${d.id}` : undefined}
-                  data-suggested={suggested(d) || undefined}
-                  list="publish-topics"
                   maxLength={120}
+                  inputProps={{
+                    "aria-label": `Téma: ${name}`,
+                    "aria-describedby": suggested(d) ? `suggest-${d.id}` : undefined,
+                    "data-suggested": suggested(d) || undefined,
+                  }}
                 />
                 <select className="select" name={`lead-${d.id}`} defaultValue={d.leadId ?? ""} aria-label={`Vedoucí: ${name}`}>
                   <option value="">Bez vedoucího</option>
@@ -301,19 +322,19 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
   }
 
   return (
-    <form ref={formRef} action={action} onSubmit={submitKeepingValues(action)} onKeyDown={ignoreEnter} onInput={(e) => readFilled(e.currentTarget)} onChange={(e) => readFilled(e.currentTarget)} className="stack">
+    <form ref={formRef} action={action} onSubmit={submitKeepingValues(action)} onKeyDown={ignoreEnter} onInput={readOnInput} onChange={(e) => readFilled(e.currentTarget)} className="stack">
       <input type="hidden" name="month" value={monthKey} />
-      <datalist id="publish-topics">
-        {topics.map((topic) => (
-          <option key={topic} value={topic} />
-        ))}
-      </datalist>
       <section className="prepare-step" aria-labelledby="prepare-gaps">
-        <h3 id="prepare-gaps">2. Zkontrolovat</h3>
+        <h3 id="prepare-gaps">
+          <span className="step-no">2</span> Zkontrolovat
+        </h3>
         <PrepareOverview items={overview} onJump={jump} />
-        <div className="prepare-bulk">
+        <div className="prepare-bulk" role="group" aria-labelledby="prepare-bulk-title">
+          <span className="prepare-tool-title" id="prepare-bulk-title">
+            Hromadně doplnit vedoucího
+          </span>
           <label className="field">
-            <span className="field-label">Doplnit vedoucího do prázdných polí</span>
+            <span className="field-label">Vedoucí do prázdných polí</span>
             {/* Pomocná volba bez jména: neodesílá se a sama o sobě není rozepsaná změna (Modal). */}
             <select className="select" value={bulkLead} onChange={(e) => setBulkLead(e.target.value)} data-unsaved-ignore aria-describedby="prepare-bulk-hint">
               <option value="">Vyberte vedoucího</option>
@@ -327,7 +348,7 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
           <button type="button" className="btn" onClick={fillLeads} disabled={!bulkLead || leadTargets === 0}>
             {leadTargets ? `Doplnit do ${plural(leadTargets, "řádku", "řádků", "řádků")}` : "Doplnit"}
           </button>
-          <p className="field-hint" id="prepare-bulk-hint">
+          <p className="field-hint field-hint-key" id="prepare-bulk-hint">
             {leadTargets
               ? `Doplní se jen ${plural(leadTargets, "řádek", "řádky", "řádků")} bez vedoucího, vyplněné vedoucí se nepřepíšou.`
               : "Všechny návrhy už vedoucího mají."}
@@ -341,16 +362,24 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
         {changeDrafts > 0 && <ChangeDraftsNote count={changeDrafts} />}
       </section>
       <section className="prepare-step" aria-labelledby="prepare-publish">
-        <h3 id="prepare-publish">3. Zveřejnit</h3>
-        <div className="publish-impact" role="status">
-          <strong>
-            {chosen.length
-              ? `Ke zveřejnění ${chosen.length} z ${plural(drafts.length, "návrhu", "návrhů", "návrhů")}${incomplete ? ` · ${plural(incomplete, "neúplný", "neúplné", "neúplných")}` : ""}`
-              : "Ke zveřejnění není vybraný žádný návrh"}
-          </strong>
-          <span className="small">
-            {chosen.length > 0 && publishInviteNote(inviteMode, audiences, recipients)}
-          </span>
+        <h3 id="prepare-publish">
+          <span className="step-no">3</span> Zveřejnit
+        </h3>
+        {/* Počet vybraných a připravenost jsou dvě různé informace: výběr říká co, stav říká, zda to jde hned. */}
+        <div className="publish-impact" role="status" data-empty={chosen.length === 0 || undefined}>
+          {chosen.length ? (
+            <>
+              <span className="publish-impact-count">
+                Vybráno ke zveřejnění: <strong>{chosen.length}</strong> z {plural(drafts.length, "návrhu", "návrhů", "návrhů")}
+              </span>
+              <span className="publish-impact-state" data-state={incomplete ? "incomplete" : "ready"}>
+                {incomplete ? `${plural(incomplete, "termín je neúplný", "termíny jsou neúplné", "termínů je neúplných")} (chybí téma nebo vedoucí)` : "Vše vybrané je připravené"}
+              </span>
+              <span className="small muted">{publishInviteNote(inviteMode, audiences, recipients)}</span>
+            </>
+          ) : (
+            "Ke zveřejnění není vybraný žádný návrh."
+          )}
         </div>
         {incomplete > 0 && (
           <label className="check">
@@ -371,7 +400,7 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
           Uložit změny
         </button>
         <button type="button" className="btn" onClick={onCancel}>
-          Zrušit
+          Zrušit úpravy
         </button>
       </div>
     </form>

@@ -1,3 +1,4 @@
+import { eventTitle } from "@/lib/labels";
 import type { MinutesContent } from "@/lib/types";
 
 /**
@@ -84,7 +85,7 @@ export function draftFromText(text: string, context: { label: string; topicTitle
     else sections.keyPoints.push(item);
   }
   if (!summary) summary = sections.keyPoints[0] ?? sections.decisions[0] ?? sections.nextSteps[0] ?? "";
-  if (!summary) summary = context.topicTitle ? `${context.label}: ${context.topicTitle}` : context.label;
+  if (!summary) summary = eventTitle(context.label, context.topicTitle);
 
   const list = (items: string[]) => items.slice(0, MAX_ITEMS).map((item) => clip(item, MAX_LINE));
   return {

@@ -105,7 +105,8 @@
   vertical-align: top;
 }
 
-/* „+“ pro přidání akce na den: správci se ukáže při najetí nebo fokusu, na dotyku je vidět stále. */
+/* „+“ pro přidání akce na den: v prázdném dni decentně vidět (správce ví, kam kliknout), ve dni s akcemi
+   až při najetí nebo fokusu, aby nerušil karty. Na dotyku je vidět stále. */
 .addDay {
   position: absolute;
   top: 4px;
@@ -119,6 +120,10 @@
   background: #fff;
   color: var(--ink);
   opacity: 0;
+}
+
+.cell:not(:has(.event)) .addDay {
+  opacity: 0.35;
 }
 
 .cell:hover .addDay,
@@ -513,9 +518,9 @@
     -webkit-user-select: none;
   }
 
+  /* Úchyt sedí těsně u okraje karty, ring proto dovnitř. */
   .handle:focus-visible {
-    outline: 2px solid var(--ochre);
-    outline-offset: -4px;
+    outline-offset: -2px;
   }
 
   .agendaDay[data-drop-over] {
@@ -549,29 +554,60 @@
   outline: 2px dashed var(--line-strong);
 }
 
-/* ——— Menu ⋯ s rychlými akcemi (sourozenec odkazu karty). Karta kvůli němu nemění výšku. ——— */
+/* ——— Menu ⋯ s rychlými akcemi (sourozenec odkazu karty). Karta kvůli němu nemění výšku. ———
+   Mřížka: ⋯ vpravo nahoře v řádku názvu. Název má vpravo vyhrazené místo, ostatní řádky jsou pod tlačítkem,
+   takže nic nepřekrývá. Dřív bylo vpravo dole a zakrývalo čas, téma i štítek stavu. Výstraha chybějících údajů
+   (karta bez štítku) se posune vlevo od ⋯. */
 .menuGrid {
-  right: 2px;
-  bottom: 2px;
+  top: 4px;
+  right: 4px;
 }
 
+.cardWrap:has(> .menuGrid) > .event .title {
+  padding-right: 24px;
+}
+
+.cardWrap:has(> .menuGrid) > .event .meta:not(:has(:global(.badge))) {
+  right: 32px;
+}
+
+.cardWrap:has(> .menuGrid) > .event:has(> .meta > .missing:only-child) .title {
+  padding-right: 46px;
+}
+
+/* Svisle na střed bez transform: transform by se stal rámcem pro `position: fixed` seznamu menu a to by se
+   otevřelo mimo obrazovku. */
 .menuAgenda,
 .menuAgendaHandle {
-  top: 50%;
-  right: 6px;
-  transform: translateY(-50%);
+  top: 0;
+  right: 8px;
+  bottom: 0;
+  align-items: center;
 }
 
 .withMenu {
-  padding-right: 44px;
+  padding-right: 42px;
+}
+
+@media (pointer: coarse) {
+  .cardWrap:has(> .menuGrid) > .event .title {
+    padding-right: 28px;
+  }
+
+  .cardWrap:has(> .menuGrid) > .event .meta:not(:has(:global(.badge))) {
+    right: 36px;
+  }
+
+  .cardWrap:has(> .menuGrid) > .event:has(> .meta > .missing:only-child) .title {
+    padding-right: 50px;
+  }
 }
 
 @media (max-width: 760px) {
   /* Telefon: ⋯ vpravo nahoře, úchyt přesunu pod ním vpravo dole. Oba mají vlastní dotykovou plochu. */
   .menuAgendaHandle {
-    top: 6px;
-    right: 8px;
-    transform: none;
+    top: 8px;
+    bottom: auto;
   }
 
   .withMenu.withHandle {
@@ -588,4 +624,106 @@
 
 :global([data-selecting]) .withMenu {
   padding-right: 36px;
+}
+
+/* ——— Návrh změny zveřejněné akce jako „stoh“ (jen správce) ———
+   Okrová karta návrhu leží na zveřejněné verzi, která nad ní vykukuje pruhem „Zveřejněná verze“. Při najetí myší
+   na pruh se originál vysune dopředu (stejná plocha jako karta, nic nepřesahuje buňku, mřížka má vodorovné
+   posouvání) a návrh ustoupí. Originál je jen pro myš; okno akce ho ukazuje i klávesnici a čtečkám. */
+.stacked {
+  padding-top: 20px;
+}
+
+.stacked > .event:not(.original) {
+  z-index: 1;
+  transition: opacity 0.18s ease;
+}
+
+.original {
+  position: absolute;
+  inset: 0 0 20px;
+  z-index: 0;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  background: var(--surface, #fff);
+  color: var(--muted);
+  /* Vysunutí = pruh se roztáhne přes kartu návrhu; myš zůstává nad originálem, takže stav nebliká. */
+  transition:
+    bottom 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.originalTab {
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 14px;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* Pruh zabírá horních 20 px; obsah originálu začíná pod ním, aby byl ve vysunutém stavu celý vidět. */
+.stacked > .original {
+  padding-top: 1px;
+}
+
+.original .originalTab {
+  margin: 0 0 6px;
+}
+
+.stacked > .original:hover {
+  z-index: 2;
+  bottom: 0;
+  color: var(--ink);
+  box-shadow: 0 6px 16px rgb(0 0 0 / 0.12);
+}
+
+.stacked:has(> .original:hover) > .event:not(.original) {
+  opacity: 0.35;
+}
+
+/* ⋯ a checkbox patří návrhu: nad vysunutým originálem by mátly. */
+.stacked:has(> .original:hover) > .menuGrid,
+.stacked:has(> .original:hover) > :global(.pick-box) {
+  visibility: hidden;
+}
+
+/* Úchyty karty (⋯, checkbox výběru) zůstávají na kartě návrhu, ne na pruhu. */
+.stacked > .menuGrid {
+  top: 24px;
+}
+
+.stacked > :global(.pick-box) {
+  top: 28px;
+}
+
+/* Agenda (telefon): bez stohu, jen řádek, co návrh mění. */
+.changes {
+  color: var(--ochre-dark);
+  font-size: 13px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .original,
+  .stacked > .event:not(.original) {
+    transition: none;
+  }
+}
+
+/* Hover interaktivních karet: jemný stín a posun o 1 px. Jen samostatné karty, ne stoh (má vlastní vysouvání)
+   ani zvednutá karta při přesunu; obal karty se nehýbe, aby ⋯ a pevně ukotvené menu zůstaly na místě. */
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .cardWrap:not(.stacked):not([data-lifted]) > .event,
+  .agendaEvent {
+    transition:
+      transform 0.15s ease,
+      box-shadow 0.15s ease,
+      border-color 0.15s ease;
+  }
+
+  .cardWrap:not(.stacked):not([data-lifted]) > .event:hover,
+  .agendaEvent:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgb(0 0 0 / 0.08);
+  }
 }

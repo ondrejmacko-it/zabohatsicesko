@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from "vitest";
-import { filterCards, monthSummary, statusAdvice } from "@/features/vzdelavani/status";
+import { PLAN_STATES, filterCards, filterValues, monthSummary, statusAdvice } from "@/features/vzdelavani/status";
 import { getDb } from "@/server/db/client";
 import { snapshotOf } from "@/server/domain/snapshot";
 import { formValuesOf } from "@/server/services/detail";
@@ -103,6 +103,13 @@ describe("stín původního termínu a průvodce měsícem", () => {
     expect(theirs.movedFrom).toBeNull();
   });
 
+  test("hodnoty filtru z adresy: opakovaný parametr, čárky, jen povolené a bez duplicit", () => {
+    expect(filterValues(["doplnit", "navrhy"], PLAN_STATES)).toEqual(["navrhy", "doplnit"]);
+    expect(filterValues("navrhy,doplnit,navrhy", PLAN_STATES)).toEqual(["navrhy", "doplnit"]);
+    expect(filterValues("<script>", PLAN_STATES)).toEqual([]);
+    expect(filterValues(undefined, PLAN_STATES)).toEqual([]);
+  });
+
   test("souhrn měsíce, filtry a rada ke stavu odpovídají plánu", async () => {
     const cards = await listMonth(organizer, "2026-11");
     const summary = monthSummary(cards, "2026-11");
@@ -111,12 +118,20 @@ describe("stín původního termínu a průvodce měsícem", () => {
     expect(summary.toComplete).toBeGreaterThan(0);
     expect(monthSummary([], "2027-03")).toEqual({ planned: 0, toPublish: 0, toComplete: 0 });
 
-    const drafts = filterCards(cards, "2026-11", { state: "navrhy" });
+    const drafts = filterCards(cards, "2026-11", { states: ["navrhy"] });
     expect(drafts.filter((c) => c.startsAt.startsWith("2026-11"))).toHaveLength(summary.toPublish);
     expect(drafts.every((c) => c.planStatus === "draft" || c.unpublishedChanges)).toBe(true);
-    expect(filterCards(cards, "2026-11", { state: "doplnit" })).toHaveLength(summary.toComplete);
-    expect(filterCards(cards, "2026-11", { type: "action" }).every((c) => c.type === "action")).toBe(true);
+    const gaps = filterCards(cards, "2026-11", { states: ["doplnit"] });
+    expect(gaps).toHaveLength(summary.toComplete);
+    expect(filterCards(cards, "2026-11", { types: ["action"] }).every((c) => c.type === "action")).toBe(true);
     expect(filterCards(cards, "2026-11", {})).toBe(cards);
+    // Více hodnot: v kategorii NEBO, mezi kategoriemi A.
+    const both = filterCards(cards, "2026-11", { states: ["navrhy", "doplnit"] });
+    expect(new Set(both.map((c) => c.id))).toEqual(new Set([...drafts, ...gaps].map((c) => c.id)));
+    const twoTypes = filterCards(cards, "2026-11", { types: ["action", "education-fp"] });
+    expect(twoTypes.length).toBe(cards.filter((c) => c.type === "action" || c.type === "education-fp").length);
+    const combined = filterCards(cards, "2026-11", { types: ["action", "education-fp"], states: ["navrhy"] });
+    expect(combined.map((c) => c.id)).toEqual(twoTypes.filter((c) => drafts.includes(c)).map((c) => c.id));
 
     const draft = cards.find((c) => c.planStatus === "draft")!;
     expect(statusAdvice(draft)).toContain("Kolegové návrh zatím nevidí");

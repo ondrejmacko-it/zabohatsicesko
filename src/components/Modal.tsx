@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
+import { ConfirmDialog } from "./ConfirmDialog";
 
 type Props = {
   open: boolean;
@@ -34,6 +35,11 @@ function fieldsFingerprint(root: HTMLElement): string {
   return [...fields].map((field) => (field instanceof HTMLInputElement && (field.type === "checkbox" || field.type === "radio") ? String(field.checked) : field.value)).join("\u0001");
 }
 
+/** Platnost formuláře bez události `invalid` (na rozdíl od `checkValidity()`). */
+function formIsValid(form: HTMLFormElement): boolean {
+  return Array.from(form.elements).every((element) => !("validity" in element) || (element as HTMLInputElement).validity.valid);
+}
+
 /**
  * Vrátí fokus tam, odkud se okno otevřelo. Položka zavřeného menu je skrytá a fokus by nepřijala,
  * proto se fokus vrátí na tlačítko menu.
@@ -57,6 +63,7 @@ export function Modal({ open, title, onRequestClose, children, wide, selfGuarded
   const initialFields = useRef("");
   const titleId = useId();
   const [confirming, setConfirming] = useState(false);
+  const [save, setSave] = useState<HTMLButtonElement | null>(null);
   const inBrowser = useSyncExternalStore(subscribeNever, () => true, () => false);
   const shown = open && inBrowser;
 
@@ -74,9 +81,20 @@ export function Modal({ open, title, onRequestClose, children, wide, selfGuarded
 
   if (!shown) return null;
 
+  // Bezpečné uložení nabídne potvrzení jen tehdy, když ho okno má (`data-confirm-save`) a formulář je platný.
+  // Platnost se čte z `validity` polí, ne přes `checkValidity()`: ta spouští událost `invalid` a formulář by
+  // pod potvrzením ukázal souhrn chyb, i když uživatel nic ukládat nechtěl.
+  const saveButton = () => {
+    const button = ref.current?.querySelector<HTMLButtonElement>("button[data-confirm-save]");
+    return button && !button.disabled && button.form && formIsValid(button.form) ? button : null;
+  };
+
   const requestClose = () => {
     const unsaved = hasUnsavedChanges ? hasUnsavedChanges() : ref.current !== null && fieldsFingerprint(ref.current) !== initialFields.current;
-    if (!selfGuarded && unsaved) setConfirming(true);
+    if (!selfGuarded && unsaved) {
+      setSave(saveButton());
+      setConfirming(true);
+    }
     else onRequestClose();
   };
 
@@ -100,30 +118,48 @@ export function Modal({ open, title, onRequestClose, children, wide, selfGuarded
         pressedOutside.current = false;
       }}
     >
-      <div className="dialog-body">
+      <div
+        className="dialog-body"
+        // Tlačítko „Zavřít“ dole ve formuláři (`data-modal-close`) se chová stejně jako to v záhlaví: s rozepsanými
+        // změnami se nejdřív zeptá. „Zrušit úpravy“ naopak změny zahodí bez dotazu, říká to samo.
+        onClick={(event) => {
+          if ((event.target as HTMLElement).closest("[data-modal-close]")) requestClose();
+        }}
+      >
         <div className="spread dialog-head">
           <h2 id={titleId}>{title}</h2>
           <button type="button" className="btn btn-small" onClick={requestClose}>
             Zavřít
           </button>
         </div>
-        {confirming && (
-          <div className="notice dialog-confirm" role="alertdialog" aria-label="Zavřít bez uložení">
-            <p>
-              <strong>Máte rozepsané změny.</strong> Zavřením o ně přijdete.
-            </p>
-            <div className="row">
-              <button type="button" className="btn btn-danger btn-small" onClick={onRequestClose}>
-                Zavřít bez uložení
-              </button>
-              <button type="button" className="btn btn-small" onClick={() => setConfirming(false)} autoFocus>
-                Pokračovat v úpravách
-              </button>
-            </div>
-          </div>
-        )}
         {children}
       </div>
+      <ConfirmDialog
+        open={confirming}
+        title="Neuložené změny"
+        urgent
+        description={<p>Změny ještě nejsou uložené.</p>}
+        onCancel={() => setConfirming(false)}
+      >
+        <button type="button" className="btn btn-primary" onClick={() => setConfirming(false)} autoFocus>
+          Pokračovat v úpravách
+        </button>
+        {save && (
+          <button
+            type="button"
+            className="btn"
+            onClick={() => {
+              setConfirming(false);
+              save.form?.requestSubmit(save);
+            }}
+          >
+            {save.dataset.confirmSave}
+          </button>
+        )}
+        <button type="button" className="btn btn-danger confirm-destructive" onClick={onRequestClose}>
+          Zahodit změny
+        </button>
+      </ConfirmDialog>
     </dialog>,
     document.body,
   );

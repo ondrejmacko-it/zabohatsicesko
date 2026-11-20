@@ -16,7 +16,7 @@ import { inviteModeOf } from "@/lib/invite-mode";
 import { PlanFilters, type StateChip } from "@/features/vzdelavani/components/PlanFilters";
 import { Agenda, NextEventsList, ScheduleGrid } from "@/features/vzdelavani/components/Schedule";
 import { TasksCard } from "@/features/vzdelavani/components/TasksCard";
-import { PLAN_STATES, cardActions, filterCards, isPickable, monthSummary, type CardActionKind } from "@/features/vzdelavani/status";
+import { PLAN_STATES, cardActions, filterCards, filterValues, isPickable, monthSummary, type CardActionKind } from "@/features/vzdelavani/status";
 import type { CardMenuFor } from "@/features/vzdelavani/components/Schedule";
 import styles from "@/features/vzdelavani/components/schedule.module.css";
 import { MoveDropZone } from "@/features/vzdelavani/components/MoveEvent";
@@ -30,13 +30,13 @@ import { isOrganizer } from "@/server/policy";
 import { listMonth, listMonthDrafts, listPeople, loadTemplate, nextEventFor } from "@/server/services/events";
 import { loadCalendarStatus, loadPersonalCalendar } from "@/server/services/calendar-status";
 import { listTasks } from "@/server/services/journey";
-import { listPreviewOptions, resolvePreview } from "@/server/services/preview";
+import { currentPreview } from "@/server/services/preview-context";
 import { duplicateFormValues, topicFormValues } from "@/server/services/detail";
 import { listTopics } from "@/server/services/topics";
 
 export const metadata: Metadata = { title: "Plán vzdělávání" };
 
-type SearchParams = Promise<{ mesic?: string; pohled?: string; jako?: string; typ?: string; stav?: string; akce?: string; den?: string; kopie?: string; tema?: string }>;
+type SearchParams = Promise<{ mesic?: string; pohled?: string; typ?: string | string[]; stav?: string | string[]; akce?: string; den?: string; kopie?: string; tema?: string }>;
 
 /** Nejbližší zveřejněná akce: z již načteného aktuálního měsíce, jinak jedním dotazem dopředu. */
 async function nearestEvent(viewer: Parameters<typeof nextEventFor>[0], monthCards: EventCard[]): Promise<EventCard | null> {
@@ -53,19 +53,18 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   const listView = params.pohled === "seznam";
   const organizer = isOrganizer(user);
 
-  // Náhled očima skupiny nebo kolegy počítá server stejnými pravidly jako pro skutečného uživatele.
-  const preview = await resolvePreview(user, params.jako);
+  // Globální náhled (lišta Pohled) očima skupiny nebo kolegy počítá server stejnými pravidly jako pro skutečného uživatele.
+  const preview = await currentPreview(user);
   const managing = organizer && !preview;
   // Celá stránka, tedy i úkoly, se počítá pro stejného diváka jako harmonogram.
   const viewer = preview?.viewer ?? user;
   // Všechna data stránky v jedné vlně: dotazy na sobě nezávisí, takže se čeká jen na nejpomalejší z nich.
-  const [monthCards, template, viewerTasks, people, topics, previewOptions, calendar, monthDrafts, personal] = await Promise.all([
+  const [monthCards, template, viewerTasks, people, topics, calendar, monthDrafts, personal] = await Promise.all([
     listMonth(viewer, monthKey),
     loadTemplate(),
     listTasks(viewer),
     organizer ? listPeople(user) : [],
     organizer ? listTopics(user) : [],
-    organizer ? listPreviewOptions(user) : null,
     managing ? loadCalendarStatus(user) : null,
     managing ? listMonthDrafts(user, monthKey) : null,
     // Vlastní kalendář patří přihlášenému, v náhledu očima kolegy se neukazuje.
@@ -76,21 +75,26 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   const inviteMode = calendar ? inviteModeOf(calendar) : "simulation";
 
   const types = EVENT_TYPES.filter((t) => monthCards.some((c) => c.type === t && monthOf(toDateKey(new Date(c.startsAt))) === monthKey));
-  const type = types.find((t) => t === params.typ);
-  const state = managing ? PLAN_STATES.find((s) => s === params.stav) : undefined;
-  const cards = filterCards(monthCards, monthKey, { type, state });
-  const filtering = Boolean(type || state);
+  // Více hodnot v jedné kategorii (`typ=a&typ=b`) platí NEBO, mezi typem a stavem A. Stavy jsou jen pro správce.
+  const selectedTypes = filterValues(params.typ, types);
+  const states = managing ? filterValues(params.stav, PLAN_STATES) : [];
+  const cards = filterCards(monthCards, monthKey, { types: selectedTypes, states });
+  const filtering = selectedTypes.length > 0 || states.length > 0;
   const syncing = monthCards.some((c) => c.syncStatus === "pending");
   // Čekající pozvánky (nový host ve skupině, obnovené propojení) i zveřejněné akce bez vazby se odešlou
   // samy, jakmile správce otevře Plán. Souběh hlídá zámek u každé vazby v `syncPending`.
   if (managing) after(() => syncPublished());
 
-  const current = { mesic: monthKey, pohled: listView ? "seznam" : undefined, jako: preview ? params.jako : undefined, typ: type, stav: state };
-  const link = (change: Partial<typeof current> & { akce?: string; den?: string; kopie?: string }) => {
+  type Current = { mesic: string; pohled?: string; typ: string[]; stav: string[]; akce?: string; den?: string; kopie?: string };
+  const current: Current = { mesic: monthKey, pohled: listView ? "seznam" : undefined, typ: selectedTypes, stav: states };
+  const link = (change: Partial<Current>) => {
     const query = new URLSearchParams();
-    for (const [key, value] of Object.entries({ ...current, ...change })) if (value) query.set(key, value);
+    for (const [key, value] of Object.entries({ ...current, ...change })) {
+      for (const v of Array.isArray(value) ? value : [value]) if (v) query.append(key, v);
+    }
     return `/vzdelavani/harmonogram?${query}`;
   };
+  const toggled = (list: string[], value: string) => (list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
   // Klik na akci otevře náhled v okně nad Plánem. Měsíc, pohled i filtry zůstávají v adrese.
   const peekHref = (card: EventCard) => link({ akce: card.id });
   const peekId = (params.akce ?? "").slice(0, 120);
@@ -108,7 +112,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   const topicValues = topicParam && !peekId && !copyValues ? await topicFormValues(user, topicParam, todayKey) : null;
 
   // Menu ⋯ na kartách: položky podle stavu a role (`cardActions`), adresy se zachovaným měsícem a filtry.
-  const fullHref = (card: EventCard) => `/vzdelavani/akce/${encodeURIComponent(card.id)}${current.jako ? `?jako=${encodeURIComponent(current.jako)}` : ""}`;
+  const fullHref = (card: EventCard) => `/vzdelavani/akce/${encodeURIComponent(card.id)}`;
   const actionHref: Partial<Record<CardActionKind, (card: EventCard) => string>> = {
     edit: peekHref,
     duplicate: (card) => link({ kopie: card.id }),
@@ -133,11 +137,13 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   const summary = managing && monthKey >= monthOf(todayKey) ? monthSummary(monthCards, monthKey) : null;
   const chips: StateChip[] = summary
     ? [
-        { state: "navrhy" as const, label: "Návrhy", count: summary.toPublish },
-        { state: "doplnit" as const, label: "Chybí údaje", count: summary.toComplete },
+        { state: "navrhy" as const, label: "Návrhy", spoken: "ke zveřejnění", count: summary.toPublish, hint: "Návrhy, které kolegové uvidí až po zveřejnění." },
+        { state: "doplnit" as const, label: "Doplnit", spoken: summary.toComplete <= 4 ? "akce" : "akcí", count: summary.toComplete, hint: "Chybí téma, vedoucí nebo oprava v Kalendáři." },
       ]
         .filter((chip) => chip.count > 0)
-        .map((chip) => ({ ...chip, href: `${link({ stav: chip.state === state ? undefined : chip.state })}#mesic` }))
+        // Kotva #mesic: zúžený plán pak začíná první akcí, kterou štítek počítá (mřížka i agenda jsou v DOM zároveň,
+        // kotva na kartu by na telefonu mířila na skrytou mřížku).
+        .map((chip) => ({ ...chip, href: `${link({ stav: toggled(states, chip.state) })}#mesic` }))
     : [];
   // Vlastní úkoly diváka (záznam, zápis…) jsou v Plánu sbalené do jednoho řádku. Celé jsou na Úvodu.
   const tasks = viewerTasks;
@@ -161,12 +167,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   return (
     <>
       <AutoRefresh active={syncing} />
-      {peekId && <EventPeek key={`${peekId}|${topicParam ?? ""}`} user={user} eventId={peekId} preview={preview} previewKey={current.jako} closeHref={link({})} presetTopicId={topicParam ?? undefined} />}
-      {preview && (
-        <p className="notice plan-preview" role="status">
-          Pohled: <strong>{preview.label}</strong> · jen ke čtení. <Link href={link({ jako: undefined })}>Zpět na můj pohled</Link>
-        </p>
-      )}
+      {peekId && <EventPeek key={`${peekId}|${topicParam ?? ""}`} user={user} eventId={peekId} preview={preview} closeHref={link({})} presetTopicId={topicParam ?? undefined} />}
       {/* V režimu osobních kalendářů se do kalendáře správce nezapisuje, jeho propojení Plán nehlídá. */}
       {calendar && !personal && <CalendarAlert status={calendar} now={now()} />}
       {personal && <PersonalCalendarStatus state={personal} />}
@@ -267,14 +268,13 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
           invite={calendar ? { recipients: calendar.recipients, mode: inviteMode } : null}
         >
           <PlanFilters
-            key={`${params.jako ?? ""}|${type ?? ""}`}
-            keep={Object.fromEntries(Object.entries({ mesic: monthKey, pohled: current.pohled, stav: state }).filter((e): e is [string, string] => Boolean(e[1])))}
+            key={preview?.key ?? ""}
+            keep={[["mesic", monthKey], ...(current.pohled ? [["pohled", current.pohled] as [string, string]] : []), ...states.map((s): [string, string] => ["stav", s])]}
             types={types}
-            type={type}
-            typeResetHref={type ? link({ typ: undefined }) : null}
-            preview={previewOptions && { ...previewOptions, value: preview ? (params.jako ?? "") : "" }}
+            selectedTypes={selectedTypes.map((t) => ({ type: t, removeHref: link({ typ: selectedTypes.filter((x) => x !== t) }) }))}
+            resetHref={filtering ? link({ typ: [], stav: [] }) : null}
             chips={chips}
-            state={state}
+            states={states}
             quick={{ monthKey, todayKey, planHref: link({}), addDate: managing ? (monthOf(todayKey) === monthKey ? todayKey : `${monthKey}-01`) : null }}
           />
 

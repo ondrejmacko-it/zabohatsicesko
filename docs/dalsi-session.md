@@ -1,5 +1,357 @@
 # Prompt pro další session
 
+**RELEASE AUDIT PR #74 (FÁZE A) – RELACE 14 HOTOVO (20. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd`).**
+* bba0adb: CSP `upgrade-insecure-requests` vypíná jen e2e server (`CSP_UPGRADE_INSECURE=0`), `tests/csp.test.ts`.
+  06cbf23: WebKit projekty přes lokální HTTPS proxy (`DEMO_TLS_PORT` 3410, `e2e/server.mjs`), kvůli cookie `__Host-`.
+  5ecbcc6: WebKit filtr přerušeného prefetch `_rsc=` (`e2e/support.ts`), dotyk přes CDP jen v Chromiu, čekání na
+  zavření okna v `temata-planovani.spec.ts:155`. Chyba aplikace P0/P1 v žádném jádře nenalezena.
+* Ověřeno: lint, typy, unit 421/421, build, celé Chromium e2e 1210/108/0, Firefox + Chromium 768/1024 bez chyb,
+  WebKit po úpravě testů 0 failed. Report `docs/report-release-audit-pr74.md` (Go/No-Go, nasazení a rollback 0015).
+  Skutečná zařízení neověřena. Uživatel dostal finální zprávu: PR #74 ready.
+**Další krok:** nic bez pokynu. Uživatel převede PR #74 na Ready, mergne a schválí 0015 na produkci (report bod 4).
+Po merge fáze B (feedback brouček z `novi-ai-tutor-app`) v NOVÉM PR.
+
+**RELEASE AUDIT PR #74 (FÁZE A) – RELACE 13 → 14 (19. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd`).**
+Zadání: user zpráva „ZBČ: finální release audit + integrace zpětné vazby z Novi“ (session
+`session_01HpUirygb1N8XmnorbnJSA8`, `list_events` kinds `["user"]`, poslední). Uživatel: NEJDŘÍV dokončit PR #74 (fáze A),
+napsat mu, až bude ready; on mergne. Fázi B (feedback brouček z `novi-ai-tutor-app`) až potom v NOVÉM PR, teď ne.
+* HOTOVO relace 13 (ověřeno):
+  - A1: CI na 1e9ee58 zelené (lint/typy/testy/build, citlivé cesty, Vercel). main e27b631 je předek HEAD (bez
+    konfliktů), review komentáře 0. Plné e2e Chromium 1210/108/0 (relace 12).
+  - Pohled: `preview-context.ts` a `nahled-actions.ts` prošly kontrolou. Cookie je vázaná na účet a ověřuje se
+    pokaždé, `startPreview` vyžaduje `isOrganizer`, `backPath` nedovolí cizí web. `currentPreview` se čte jen ve
+    stránkách, ne v `actions.ts`.
+  - A3 (jen SELECT): produkce `zbc-wiki-produkce` (bitter-breeze-02749976) má 0001–0014. CHECK je
+    `((priority_rank >= 1) AND (priority_rank <= 3))`, takže sedí s kontrolou v 0015. Sloupec je smallint, index
+    `topics_priority_rank_unique (org_id, priority_rank) WHERE … archived_at IS NULL`, 15 témat, 3 garantovaná, max 3.
+    Preview (still-shadow-86247101) má 0015, `topics_priority_rank_positive`, integer, 2 garantovaná.
+  - Vercel env: `APPROVED_MIGRATIONS` je JEN preview + git větev PR #74, produkce nemá. Před 0015 server u 4.
+    garantovaného hlásí `priority_pending_migration` (topics.ts:248, kód 23514).
+  - Riziko k reportu: selhání 0015 (RAISE) shodí `prepareDatabase`, takže aplikace nenastartuje (data beze změny).
+  - A2: `playwright.config.ts` s `E2E_WEBKIT=1` přidá webkit-1440 (Retina),
+    webkit-390 (iPhone 13), webkit-320 (iPhone SE), firefox-1280, firefox-390, chromium-768, chromium-1024.
+  - V Default prostředí blokuje stažení prohlížečů síť (`cdn.playwright.dev`). Vzniklo osobní prostředí
+    `zabohatsicesko` (env_01CUjMoUrHosAHXXVqx7UKmr), které ty hosty povoluje. Relace 14 běží na něm.
+* DALŠÍ KROKY:
+  1) `npm ci`; `npx playwright install webkit firefox`. Systémové knihovny: `npx playwright install-deps webkit
+     firefox`, případně apt. Když nejde, zapsat „neověřeno“.
+  2) `fuser -k 3310/tcp 3311/tcp`; na pozadí `E2E_WEBKIT=1 npm run e2e -- --project=webkit-1440 --project=webkit-390
+     --project=webkit-320 --project=firefox-1280 --project=firefox-390 --project=chromium-768
+     --project=chromium-1024`. Chyby roztřídit: skutečná chyba aplikace (P0/P1 opravit malým commitem a cíleným
+     testem) vs. rozdíl prohlížeče v testu. Cíleně zkontrolovat CSS `:has()`, sticky, `100dvh`, `safe-area`,
+     nativní date/time, vrstvení dialogů.
+  3) Report `docs/report-release-audit-pr74.md`: ověřené testy (Chromium / Playwright WebKit / Firefox / skutečné
+     zařízení = NEověřeno), chyby, opravy, migrace (výše) a přesný postup nasazení a rollbacku 0015:
+     záloha = Neon větev produkce + PITR 6 h; schválení = přidat `APPROVED_MIGRATIONS=0015_topic_priority_unlimited`
+     pro Production a redeploy; rollback = smazat proměnnou, `ALTER TABLE topics ADD CONSTRAINT
+     topics_priority_rank_check CHECK (priority_rank BETWEEN 1 AND 3)`, jen když max ≤ 3, nebo obnova z větve.
+     Plus tabulka Go/No-Go P0/P1/P2 a doporučení Draft → Ready.
+  4) Lint, typecheck, unit, build a plné Chromium e2e (0 failed), commit, push, popis PR #74.
+  5) FINÁLNÍ zpráva uživateli (česky, tykat): PR #74 ready ano/ne, Go/No-Go, co má udělat on (merge, migrace 0015
+     na produkci až po jeho schválení). Fáze B až po merge.
+* Pravidla: produkce jen SELECT, žádný merge, deploy ani migrace na produkci; P2 nerozšiřovat.
+
+**SJEDNOCENÍ WIKI – RELACE 12 HOTOVO (19. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd`, PR #74).**
+* 02109e7: `priprava-mesice.spec.ts:139` ukládal návrhy s předvyplněným garantovaným tématem → čtecí test Témat
+  (`temata-planovani.spec.ts:84`) padal v plném běhu. Teď ukládá bez tématu (P5). Lint, typecheck, unit 419/419,
+  build OK, celé e2e **1210 passed / 108 skipped / 0 failed**. Report bod 9 doplněn, popis PR #74 aktualizován,
+  uživatel dostal finální audit relací 8–12 a seznam ručních kroků na Preview.
+**Další krok:** nic bez pokynu; uživatel ručně zkouší Preview a merguje PR #74.
+
+**SJEDNOCENÍ WIKI – RELACE 11 → 12 (19. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd`, PR #74).**
+Zadání beze změny (viz blok relace 10 → 11 níže). P6 plné znění: soubor z `list_events` hledej „P6 – Kontrola konzistence“.
+* HOTOVO relace 11: P2 dokončen (4e29d78): Domů, Témata (`TopicsSection readOnly`), Zápisy (`MinutesPeek previewLabel`)
+  podle `currentPreview`; lišta na ≤640 px (Pohled na celou šířku, šipka ve výběru); `e2e/nahled.spec.ts` (6 testů,
+  1280/320/390 zelené), unit `tests/nahled.test.ts` 9/9. Unit celkem 419/419, lint OK, typecheck OK. Report body 1–10
+  sepsaný: `docs/report-opravne-kolo-pr74.md`, sekce „Relace 9–11“ (doplnit jen výsledky testů relace 11).
+  Snímky `po-*` generuje dočasný `e2e/zz-snimky.spec.ts` (NECOMMITOVAT, po doběhu smazat).
+* Relace 11 dál: snímky `po-*` commitnuté (88 ks, `zz-snimky` smazán). Build OK. CELÉ e2e: 1203 passed / 108 skipped /
+  **7 failed** = jen `temata-planovani.spec.ts:75` na všech 7 projektech: ř. 84 `.topic-unscheduled` („ · bez termínu“)
+  u „Otevřené otázky na schůzce“ chybí. Samostatně test PROJDE; v plném běhu `--project=windows-1280` selže taky →
+  jiný (ne-@zapis-temat) test uloží akci/návrh s tímto garantovaným tématem (pravděpodobně Připravit měsíc nebo okno
+  akce, kde se garantované téma předvyplní jako doporučené; hledej v `priprava-mesice`, `okna`, `doporucene-tema`,
+  `rychle-akce`, `plan-planovani`, `mobilni-ovladani` uložení do sdílené DB). Oprava podle P5: ten zapisující test
+  označit `@zapis-temat` NEBO ať ukládá bez tématu / s negarantovaným; NEpřidávat toleranci dvou stavů. Pak znovu
+  celé e2e (0 failed) a doplnit výsledek do reportu (sekce „Relace 9–11“, bod 9).
+* ZBÝVÁ (bez bodu 1–2 výše hotových): 2) celé e2e 0 failed (`fuser -k 3310/tcp 3311/tcp`,
+  `npm run e2e` na pozadí, 0 failed) → výsledky do reportu; 3) popis PR #74 (aktualizovat, výsledky, simulace vs. živý
+  test); 4) FINÁLNÍ zpráva uživateli: audit relací 8–11 (8: 7aa044e, 290ea09, 1033643, eb7e9ee; 9: df1d205, 419909c,
+  22354d8, 618e18b, d1c7a42; 10: 3ee6f9f, 1eaaa7d; 11: 4e29d78 + další) a ruční kroky na Preview (níže v reportu bod 6).
+
+**SJEDNOCENÍ WIKI – RELACE 10 → 11 (19. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd`, PR #74).**
+Zadání beze změny. Plné znění: session `session_01HpUirwZ4XH6LuKaqHTR6A4`, `list_events` kinds `["user"]` s
+`before_id` `0455a2be-3fb4-47ff-b406-24eb644cb310` (výsledek se uloží do souboru, hledej „ZBČ – PR #74: sjednocení“).
+* HOTOVO relace 10 (3ee6f9f): P1 Zápisy – `.minutes-version` = štítek stavu `.minutes-state-{waiting,ok,draft}` +
+  `.minutes-source` (text `data-testid="stav-verze"` beze změny), `.persona` bílá + okrový výběr + fokus (platí i
+  pro vstup), kratší `draftHint`. Správa: ⋯ účtu `variant="card" className="menu-inline"`. Domů a detail akce
+  prohlédnuty (1280 px), hierarchie OK, beze změny. P2 ROZPRACOVÁNO: `services/preview-context.ts`
+  (`currentPreview`, cookie `zbc_nahled` = `userId|klíč`, HttpOnly, Lax, 12 h, ověřuje `resolvePreview`),
+  `app/(wiki)/nahled-actions.ts` (`startPreview`/`endPreview`, návrat přes referer jen na cestu Wiki),
+  `components/PreviewSwitch.tsx` (`PreviewSwitch` v `Topbar` jen pro správce, `PreviewBar` pod lištou,
+  `previewApplies`), CSS `.view-switch`, `.preview-bar` na konci globals.css. Plán a detail akce čtou cookie,
+  `?jako=` a výběr ve Filtrech odstraněny. Typecheck + eslint změněných souborů OK. NEOVĚŘENO: build, e2e, vzhled lišty.
+* ZBÝVÁ (pořadí): 1) P2 dokončit: Domů (`app/(wiki)/page.tsx`: `viewer = preview?.viewer ?? user` pro
+  `nextEventsFor`, `listTasks`, `listMonth` (planner podle diváka); v náhledu bez `loadPersonalCalendar`,
+  pozvánek a `PersonalCalendarStatus`; `TasksCard readOnly`; nadpis „Vítejte, …“ ponechat), Témata
+  (`TopicsSection` prop `readOnly`: bez `PageCall`/návrhu, bez `InterestButton` → jen stav, bez `TopicManage`,
+  `sortable=false`, bez reset/obnovit; data `listTopics(viewer)`), Zápisy (`listPublishedMinutes(viewer)`,
+  `canAdd=false`, `MinutesPeek` v náhledu převést panel handler → reader, ať nejsou formuláře). Zkontrolovat lištu
+  na 320/390 px (`.account` + `.view-switch` se musí vejít) a Firefox ne. E2E nový `e2e/nahled.spec.ts`: správce
+  zapne pohled skupiny FP → pruh na Domů/Plán/Témata/Zápisy, žádné „Přidat akci“, „Navrhnout téma“, „Mám zájem“
+  tlačítko; Správa ukazuje pruh „tu neplatí“ a skutečný účet; Ukončit pohled vrátí vlastní pohled; účastník
+  s podvrženou cookie `zbc_nahled` (`demo-…|skupina-rm`) nic nevidí jinak; unit pro `previewKeyFor`.
+  2) P6 průchod textů. 3) lint, typecheck, unit, build, celé e2e na pozadí 0 failed (`fuser -k 3310/tcp 3311/tcp`
+  předem). 4) snímky `po-*` (návod v bloku relace 9 níže; přidat pohled „nahled“ = aktivní náhled). 5) report body
+  1–10 do `docs/report-opravne-kolo-pr74.md` (sekce Relace 10+). 6) popis PR #74. 7) FINÁLNÍ zpráva uživateli:
+  audit relací 8–N s commity (relace 8: 7aa044e, 290ea09, 1033643, eb7e9ee; 9: df1d205, 419909c, 22354d8,
+  618e18b, d1c7a42; 10: 3ee6f9f) + seznam ručních kroků na Preview (role, stránky, šířky).
+
+**SJEDNOCENÍ WIKI – RELACE 9 → 10 (19. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd`, PR #74).**
+Zadání beze změny (plné znění: `list_events` session `session_01HpUirwZ4XH6LuKaqHTR6A4`, kinds `["user"]`, stránka
+před `757f686b-…`, zpráva „ZBČ – PR #74: sjednocení Wiki…“; uloží se do souboru, hledej text „ZBČ – PR #74: sjednocení“).
+* HOTOVO relace 9: (a) test „více filtrů“ OVĚŘEN – skutečná chyba: `key` u `PlanFilters` v `harmonogram/page.tsx`
+  obsahoval vybrané typy → komponenta se přemontovala a nabídka Filtry se po zaškrtnutí typu zavřela (22354d8);
+  plan-planovani 46/46. (b) 618e18b: Filtry na 320/390 px přetékaly okno (panel teď kotvený k řádku filtrů);
+  Připravit měsíc (kroky `.prepare-step` jako sekce s `.step-no`, hláška kroku 1 na vlastním řádku, `.publish-head`
+  záhlaví sloupců, `.prepare-bulk` jako nástroj „Hromadně doplnit vedoucího“ – popisek pole teď „Vedoucí do
+  prázdných polí“, krok 3 `publish-impact-count/state`, prázdný stav jen text); `.btn-primary:disabled` šedé;
+  rozvrh (`.slot-day`, `.slot-time`, `.slot-types` + `.check-chip`, neaktivní den bez okrového pruhu); Témata (⋯
+  `variant="card"` + `.menu-inline`, tlumenější zájemci/metadata, „bez termínu“ bez tučného); globálně `.item-title`
+  650 a `.item-meta` muted. P4: `dialog[open]` fade+6 px 150 ms, rozbalení `.filter-menu-panel` a
+  `.change-original-facts`, hover karet Plánu/agendy (stín + 1 px, ne stoh, ne `data-lifted`) a `a.item-card` (jen
+  stín – transformace by rozbila pevně ukotvené menu ⋯, zachytil test Správa). Vše v `prefers-reduced-motion: no-preference`.
+  Ověřeno: lint, typecheck, e2e (priprava-mesice, okna, plan-planovani, temata-planovani, zapisy-schvaleni,
+  pristupnost) na windows-1280 + telefon-320: 99+92 passed, 0 failed. NEOVĚŘENO: unit, build, celé e2e, snímky po.
+* Snímky PŘED: `docs/screenshots/sjednoceni-pr74/pred-*-{320,390,768,1280,1440,1920}.jpg` (13 pohledů). Skript
+  NENÍ v repu (scratchpad); v další relaci ho znovu vytvoř: přihlášení jako správce (viz `scripts/audit-screenshoty.mjs`),
+  návrh změny ev-11-26 pro stoh (viz `priprava-mesice.spec.ts` ř. ~269), pohledy domu, plan, lista (clip 160 px),
+  temata, zapisy, zapis-editor (`/vzdelavani/akce/ev-11-10#nahravka`), sprava, filtry (stav=navrhy&stav=doplnit + 2 typy),
+  karta-menu, stoh (hover `[data-original-of=ev-11-26]`, ≥768), pridat-akci, pripravit-mesic, rozvrh, nahled; JPEG q62.
+* ZBÝVÁ (pořadí): 1) P1 zbytek – Zápisy (karty zdrojů `.persona` bílé + okrový výběr, stav/zdroj výrazněji v
+  `RecordingSection`), Domů/Detail/Správa jen nadpis × metadata × stav × CTA; 2) P6 průchod textů; 3) P2 globální
+  „Zobrazit jako“ podle návrhu v reportu (sekce Relace 8; cookie `zbc_nahled`, odstranit výběr z `PlanFilters`,
+  e2e: náhled bez zapisujících tlačítek, Správa = skutečný účet, ne-správce cookie ignorována) – bezpečnostně citlivé,
+  pokud by vyšel rozsáhlý, nejdřív sepsat dopad; 4) lint, typecheck, unit, build, celé e2e na pozadí (0 failed);
+  5) snímky `po-*` stejným skriptem; 6) report body 1–10 do `docs/report-opravne-kolo-pr74.md`; 7) popis PR #74.
+  Před e2e: `fuser -k 3310/tcp 3311/tcp`. Bez merge, deploye, migrací.
+* Uživatel chce na konci AUDIT: co bylo uděláno + co má ručně vyzkoušet na Preview.
+
+**SJEDNOCENÍ WIKI – RELACE 8 → 9 (relaci 9 zakládá uživatel ručně: limit hloubky řetězu relací) (19. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd`, PR #74).**
+Zadání beze změny (blok níže; plné znění `list_events` session `session_01HpUirwZ4XH6LuKaqHTR6A4`, kinds `["user"]`,
+poslední user zpráva „ZBČ – PR #74: sjednocení Wiki…“). Report: `docs/report-opravne-kolo-pr74.md`, sekce Relace 8.
+* HOTOVO: P5 (7aa044e) – zapisující testy témat se značkou `@zapis-temat` běží jen v projektu `zapis-temat`, který
+  je teardown projektu `prihlaseni` (běží po všech projektech; playwright.config.ts); tolerance z 434b3a7 vrácena na „ · bez termínu“. P3 (290ea09) –
+  `filterCards({types, states})` NEBO v kategorii / A mezi, `filterValues` (opakovaný parametr i čárky), checkboxy
+  v nabídce Filtry (router.push, nabídka zůstává otevřená), štítky typů s křížkem, „Zrušit filtry“; unit + e2e
+  test „více filtrů…“ v `plan-planovani.spec.ts`. Ověřeno: typecheck, unit dokonceni, build OK; výsledek cílených
+  e2e: temata-planovani 2× samostatně 45/45 passed (P5 OVĚŘENO). Test „více filtrů…“ padal na strict mode
+  (`.plan-filters .filter-button` = 2 prvky, zřejmě i v rychlé nabídce); přidáno `.first()`, NEOVĚŘENO – nejdřív
+  spusť `plan-planovani.spec.ts` (před během zabij servery na portech 3310/3311: `fuser -k 3310/tcp 3311/tcp`).
+* P2: analýza a návrh v reportu (cookie `zbc_nahled`, `currentPreview`, lišta Účet vs. Pohled, okrový pruh, stránky
+  Domů/Témata/Zápisy jen ke čtení). Návrh poslán uživateli v relaci 8, odpověď zatím žádná → implementuj až na konci,
+  pokud uživatel nenamítne; při implementaci odstraň „Zobrazit jako“ z `PlanFilters` (je tam zatím dál).
+* ZBÝVÁ: P4 (jen animace 1 hover karet – pozor na stoh `.stacked`/`.original` v schedule.module.css; 2 `.dialog[open]`
+  fade + 4–8 px 150 ms; 3 `.flash` diskrétní; 4 `.topic-drag-overlay`/`.cardWrap[data-lifted]` zvednutí a dosednutí;
+  7 `.filter-menu-panel`, `.change-original-facts` – vše s `prefers-reduced-motion`), P1, P6, P2, plné ověření
+  (lint, typecheck, unit, build, celé e2e na pozadí 0 failed), snímky před/po 320–1920 (vlastní skript podle
+  `scripts/audit-screenshoty.mjs`), report body 1–10, popis PR #74, `subscribe_pr_activity`.
+
+**SJEDNOCENÍ WIKI, HIERARCHIE, FILTRY, GLOBÁLNÍ POHLED (19. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd`, PR #74, HEAD 4d83b3f+).**
+Zadání: prompt uživatele „ZBČ – PR #74: sjednocení Wiki, vizuální hierarchie, filtry a globální pohled“ (P1 hierarchie podle
+dialogu Přidat akci: Připravit měsíc, Nastavit pravidelný rozvrh, Zápisy, Témata, Domů/Harmonogram/Detail/Správa; P2 globální
+„Zobrazit jako“ v horní liště – NEJDŘÍV analýza `Topbar.tsx`, `(wiki)/layout.tsx`, `PlanFilters.tsx`, `services/preview.ts`
+a stránek, větší zásah nejdřív navrhnout; P3 vícenásobné filtry Plánu (OR v kategorii, AND mezi, chipy, URL); P4 jen animace
+1 hover karet, 2 otevírání dialogů, 3 potvrzení uložení, 4 DnD zvednutí/dosednutí, 7 rozbalení – reduced-motion, bez knihovny;
+P5 izolace e2e témat (oddělit zapisující a čtecí, žádné „přijmi oba stavy“ – vrátit dočasnou toleranci z 434b3a7);
+P6 kontrola textů; plné ověření + snímky před/po 320–1920; finální report body 1–10). Plné znění: `list_events` session
+`session_01HpUirwZ4XH6LuKaqHTR6A4`, kinds `["user"]`, poslední user zpráva. Bez migrací, bez merge, bez produkce.
+Hotové funkce (stoh, ChangeBanner, PageCall, DnD témat, 0015, zápisy) nepřepisovat bez konkrétní regrese.
+
+**ZPĚTNÁ VAZBA UŽIVATELE NA PREVIEW PR #74 (19. 11. 2026 večer, větev `claude/finalni-kontrola-novy-pr-g2r2wd`).**
+Migrace 0015 na Preview PROBĚHLA 18:07:11 UTC (`topics_priority_rank_positive CHECK >= 1`, `integer`). Témata podle
+uživatele fungují. Nové požadavky (větší změny nejdřív navrhnout uživateli, pak dělat; vše do PR #74, žádný merge):
+1. Téma přiřazené jen do NÁVRHU akce ukazuje „bez termínu“ (červeně) → místo toho oranžově „v návrhu na <datum>“.
+2. Smazat pomocné texty (např. „Při plánování se nabízejí jako první, v tomto pořadí.“ a podobné napříč modulem).
+3. Hlavní výzva modulu výraznější (Témata: „Navrhněte téma nebo podpořte návrh kolegů.“ + „Navrhnout téma“) – pravidlo
+   pro CELOU aplikaci: hlavní akce/účel stránky nesmí splývat se zbytkem (inventura stránek + návrh vizuálu).
+4. Změna ZVEŘEJNĚNÉ akce uložená jen jako návrh: graficky jako návrh „nad“ originálem, rozkliknout originál, akce
+   Zveřejnit změny / Zrušit návrh (nechat originál). Čistý nový návrh nic takového nemá. Ostatní návrhy nevidí
+   (beze změny). Zjistit, jak dnes `events`/`event_revisions` drží rozpracovanou změnu zveřejněné akce, navrhnout UI.
+**Relace 7 (d0e70f1):** body 1–4 HOTOVO. Stoh v mřížce (okrový návrh nad originálem, pruh „Zveřejněná verze“, hover
+originál roztáhne přes kartu, reduced-motion bez animace, Agenda jen „Mění …“), unit `tests/navrh-zmeny.test.ts`,
+e2e kontrola stohu v `priprava-mesice.spec.ts`. Report: sekce „Relace 6/7“ v `docs/report-opravne-kolo-pr74.md`
+včetně tabulky návrhu dalších animací (NEIMPLEMENTOVÁNO, čeká na souhlas uživatele).
+* Uživatel slíbil další rework → zapracovat do stejného PR (větší nejdřív krátce navrhnout).
+**Další krok:** čekat na rework / souhlas s animacemi; nic nemergovat.
+
+**PŘED MERGE PR #74 – RELACE 5 HOTOVA (19. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd`, draft PR #74).**
+Report: `docs/report-opravne-kolo-pr74.md` (sekce Relace 5).
+* HOTOVO: read-only ověření Preview DB (oddělená od produkce, omezení `topics_priority_rank_check` 1–3, poslední 0014,
+  PITR 6 h + záložní Neon větev `zaloha-pred-0015-2026-11-19`); 0015 bezpečně selže bez očekávaného omezení (8c2fa73,
+  `tests/migrace-0015.test.ts`); Vercel `APPROVED_MIGRATIONS=0015_topic_priority_unlimited` jen Preview + git větev PR #74,
+  redeploy `dpl_Hc4z5f5w7z2x7QEa7bF2bNxa4M9X` READY. Lint, typecheck, unit 410/410, build, celé e2e 1178 passed /
+  114 skipped / 0 failed (kód 8c2fa73). Snímky `po-*` prohlédnuty, regrese nenalezena (kód UI se neměnil, nepřegenerováno).
+* ČEKÁ NA UŽIVATELE: 0015 se spustí až při prvním dotazu do DB na Preview; z cloudu Preview nedosáhneme (proxy 403,
+  Vercel Authentication). Uživatel otevře preview PR #74, pak SELECT `schema_migrations` / `pg_constraint` na
+  `still-shadow-86247101` a ověření 4–6 garantovaných témat v UI (přístupový kód ukázky má jen uživatel). Ruční merge.
+* Produkce nemá `APPROVED_MIGRATIONS` → po merge 0015 na produkci nepoběží (log „čeká na schválení“), 4. garantované
+  téma server odmítne čitelnou chybou. Spuštění na produkci je samostatné rozhodnutí uživatele.
+
+**PŘED MERGE PR #74 (19. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd`, HEAD `4549f30`, CI zelené).**
+Uživatel ověřil report opravného kola a před merge chce (jeho rozhodnutí, závazné):
+1. **Migrace 0015 na Preview – SOUHLAS, ale nejdřív read-only ověřit:** (a) Preview DB je opravdu oddělená od produkční
+   (Vercel env `DATABASE_URL` Preview × Production – jen metadata, nedešifrovat; Neon projekt/větve), (b) název CHECK
+   omezení na `topics.priority_rank` (`pg_constraint`), (c) stav `schema_migrations`, (d) možnost obnovy Preview dat
+   (Neon PITR / záložní větev). Pak **upravit migraci 0015**: chybějící očekávané omezení = bezpečné selhání
+   (`DO $$ ... RAISE EXCEPTION`), ne tiché `DROP CONSTRAINT IF EXISTS`; unit/e2e na PGlite. Pak Preview migrace:
+   nesecretní `APPROVED_MIGRATIONS=0015_topic_priority_unlimited` jen pro Preview (ideálně jen git větev PR #74),
+   redeploy, ověřit runtime logy. **Žádná produkční migrace ani změna produkčních dat.** Po migraci na Preview ověřit
+   4–6 garantovaných témat, přesun mezi sekcemi, pořadí po reloadu, doporučení při plánování (přihlášení na Preview
+   vyžaduje přístupový kód ukázky – tajemství; když nejde ověřit UI, zeptat se uživatele nebo ověřit SELECTem).
+   Logika schválení: `src/server/db/client.ts` (ř. ~36–54), `src/server/db/migrations.ts`.
+2. **Výběr osob:** ponechat nativní select (žádný Combobox).
+3. **Vedoucí a skupiny:** žádné tvrdé omezení příslušnosti; současná kontrola existence účtu a oprávnění správce zůstává.
+4. **Testy:** po poslední změně kódu znovu KOMPLETNÍ e2e (`npx playwright test --trace off`, na pozadí, ~9 min),
+   požadavek **0 failed na aktuálním HEAD**; plus lint, typecheck, unit, build.
+5. **Vizuální kontrola** snímků `po-*` v `docs/screenshots/opravne-kolo-pr74/` (Quick Actions a umístění ⋯, DnD
+   a zvýraznění témat, Připravit měsíc, výběr vedoucího). Opravit jen potvrzené regrese, žádný redesign. Snímky
+   pořizuje `shots.js` (návod výše v relaci 3: `next start` s vlastním `PGLITE_DIR`, `DEMO_ACCESS_CODE` ≥ 12 znaků,
+   persona „Správce ZBC ukázky“); po změně kódu snímky `po-*` přegenerovat.
+6. **GitHub:** pokračovat v PR #74, aktualizovat report `docs/report-opravne-kolo-pr74.md`, popis PR a CI. Žádný merge
+   do main, žádný produkční deploy.
+**Finále:** poslat uživateli přehled: výsledky testů, stav Preview migrace, jasné doporučení, zda je PR připravené na merge.
+
+**OPRAVNÉ KOLO PR #74 – HOTOVO, RELACE 4 (19. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd`, draft PR #74).**
+Report: `docs/report-opravne-kolo-pr74.md` (body 1–10, sekce Relace 4). Snímky před/po: `docs/screenshots/opravne-kolo-pr74/`.
+* Ověřeno na HEAD: lint, typecheck, unit 406/406, build, celé e2e 1176 passed / 114 skipped / 1 failed → oprava
+  c36436b (fokus úchytu při přepisu pořadím ze serveru), po ní temata-planovani 3× 12/12. Popis PR #74 aktualizován.
+* ČEKÁ NA UŽIVATELE (nic dalšího bez pokynu): migrace 0015 na Preview (`APPROVED_MIGRATIONS=0015_topic_priority_unlimited`
+  + redeploy, předtím SELECT názvu omezení v `pg_constraint`); Combobox pro výběr osob (P1-4); kontrola příslušnosti
+  vedoucího ke skupině; ruční merge PR #74.
+
+**OPRAVNÉ KOLO PR #74 – RELACE 3 HOTOVA (19. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd`, draft PR #74).**
+Zadání: `list_events` session `session_01HpUiruJkjFtPcUM3L92gGi`, kinds `["user"]`, před nejnovější stránkou (`before_id`
+= `first_id`), user zpráva „ZBČ – Opravné kolo PR #74…“ (výsledek do souboru, `json.JSONDecoder().raw_decode`, klíče
+`text`/`content`). Report: `docs/report-opravne-kolo-pr74.md` (tabulka + sekce Relace 3).
+* HOTOVO: P1-1 (eda8a14) ⋯ vpravo nahoře s vyhrazeným místem, agenda bez `transform` (menu na telefonu mimo okno),
+  dlouhé menu do okna + testy v `rychle-akce.spec.ts`. P1-3 cíleně (7f04ef9): Správa role štítkem, nulové počty
+  v Připravit měsíc tiše, kratší úvod rozvrhu. P1-4 jen inventura + návrh (report), P1-5 beze změny.
+* DALŠÍ KROK: 4) celé ověření na HEAD: lint, typecheck, `npm test`, build, celé e2e (`npx playwright test --trace off`,
+  běží ~15–20 min, pustit na pozadí, číst jen souhrn). Pak screenshoty před/po 320/390/768/1280/1440/1920 do
+  `docs/screenshots/opravne-kolo-pr74/` (`pred-*` = c4c3a9a přes `git worktree add`, `po-*` = HEAD): Domů, Plán,
+  karta s ⋯ a otevřené menu, Připravit měsíc, Pravidelný rozvrh, Přidat akci, okno akce, Témata, Zápisy, Správa.
+  Pomůcka: server `PGLITE_DIR=<tmp> SESSION_SECRET=<40 znaků> DEMO_ACCESS_CODE=<kód> NODE_ENV=production npx next
+  start -p 3320`, přihlášení přes `/vstup` (kód, persona „Správce ZBC ukázky“, každý kontext jiné `x-forwarded-for`,
+  jinak limit přihlášení). Na telefonu jsou karty v agendě (odkaz v mřížce skrytý → `:visible`). Snímky
+  komprimovat (PNG, deviceScaleFactor 1), nepřidávat stovky MB.
+  5) poslední relace: popis PR #74 (výsledky, simulace vs. živý test), CI, report uživateli body 1–10 + odkaz na
+  preview (`zbc-vzdelavani-demo-git-claude-finalni-kontrola-nov-1082bb-maci.vercel.app`, ověřit v komentáři vercel[bot]).
+* Otázky pro uživatele (poslední relace): migrace 0015 na Preview (nesecretní `APPROVED_MIGRATIONS=0015_topic_priority_unlimited`
+  + redeploy, předtím SELECT názvu omezení v `pg_constraint`); vedoucí bez kontroly příslušnosti ke skupině;
+  P1-4 výběr osob přes Combobox s vyhledáváním (zatím nativní select).
+
+**OPRAVNÉ KOLO PR #74 – RELACE 2 HOTOVA (19. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd`, draft PR #74).**
+Zadání: `list_events` session `session_01HpUiruJkjFtPcUM3L92gGi`, kinds `["user"]`, poslední user zpráva „ZBČ – Opravné kolo
+PR #74…“ (výsledek se uloží do souboru, vytáhnout skriptem: `json.JSONDecoder().raw_decode`, klíče `text`/`content`).
+Průběžný report: `docs/report-opravne-kolo-pr74.md`. Relace 1: P0-3 (0b1c0d2), P0-2 server + migrace 0015 (bea1c6c).
+* HOTOVO P0-1 + P1-2 (ba4b169): `TopicBoard.tsx` nahradil `TopicOrderList.tsx` – jeden kontext tažení přes obě skupiny,
+  DOM se během tažení nemění (zástupné místo, `fixed` náhled, linka vložení, cíl z rozměrů zachycených při startu),
+  autoscroll u okraje (rAF) + přepočet na `scroll`, Esc (posluchač jen během tažení), ztráta zachycení = zrušení,
+  po puštění jedna `placeTopicAction`, optimisticky + rollback, `aria-busy` při ukládání. Prázdná skupina = cíl
+  (`.topic-drop-empty`, nahradila notice „Zatím nejsou nastavená…“). Šipky přes okraj skupiny = přesun do druhé.
+  Barvy: garantovaná `--ochre-soft` podklad + okrový pruh + tmavší nadpis, nejžádanější mezi ostatními zelený pruh `--ok`.
+  E2E `temata-planovani.spec.ts` (jen windows-1280, serial): 18 vlastních témat Tým A (ostatních 20+), o 1/3/5/6+,
+  poslední→první a první→poslední s autoscrollem, Esc, ostatní↔garantovaná, prázdná skupina, klávesnice, souběh dvou
+  oken, po archivaci, prst 390 px, úklid (archivace, Seřadit podle zájmu). Unit: přesuny v seznamech 1/3/10/25.
+  Ověřeno: lint, typecheck, unit temata-priority 25/25, e2e 7 sad (temata, klavesnice, pristupnost, stranky,
+  domu-ukoly, doporucene-tema, kdo-tema) na všech projektech 654 passed / 27 skipped.
+* DALŠÍ KROKY: 1) **P1-1 Quick Actions** (`Menu.tsx`, `CardMenu.tsx`, `Schedule.tsx`, `schedule.module.css`): menší
+  decentní ⋯, vyhrazené místo bez překryvu textu, hover/focus/open, dotyková plocha, menu v okně, destruktivní oddělené,
+  test klik na ⋯ neotevře detail ani DnD. 2) P1-4/P1-3/P1-5 cíleně (texty kratší, hierarchie; hromadný vedoucí: Wiki
+  výběr s ID jen pokud jasný přínos). 3) P2 jen s jasným přínosem. 4) celé ověření (lint, typecheck, unit, build,
+  celé e2e) + screenshoty před/po 320/390/768/1280/1440/1920 do `docs/screenshots/opravne-kolo-pr74/` (před = c4c3a9a
+  přes `git worktree`, hlavní obrazovky + otevřené nabídky). 5) poslední relace: popis PR #74, CI, report uživateli.
+* Otázky pro uživatele (poslední relace): spustit 0015 na Preview (nesecretní `APPROVED_MIGRATIONS=0015_topic_priority_unlimited`
+  v Vercel Preview env + redeploy, předtím SELECT názvu omezení v `pg_constraint`); vedoucí bez kontroly příslušnosti ke skupině.
+
+**OPRAVNÉ KOLO PR #74 – RELACE 1 HOTOVA (19. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd`, draft PR #74).**
+Zadání: `list_events` session `session_01HpUiruJkjFtPcUM3L92gGi`, kinds `["user"]`, poslední user zpráva „ZBČ – Opravné kolo
+PR #74…“ (uložit do souboru v scratchpadu, číst odtud). Průběžný report: `docs/report-opravne-kolo-pr74.md`.
+* HOTOVO P0-3 (0b1c0d2): příčina reprodukována v Chromiu – formulář Připravit měsíc přepočítával přehled na `input`,
+  re-render vrátil řízený hromadný `<select>` na starou hodnotu před `change`. Oprava `readOnInput` (u selectů jen
+  `change`). E2E se skutečnou klávesnicí, uložením a obnovením (měsíc 2027-05, jen windows-1280) – bez opravy padá.
+  Unit: uložení bez zveřejnění, neznámá osoba (nic se neuloží), člen týmu nesmí, souběh revize.
+* HOTOVO P0-2 server (bea1c6c): bez `MAX_PRIORITY`, `nextFreePriority` = konec, `recommendTopics` garantovaná vždy
+  první, `placeInSections` (doména) + `placeTopic` (služba, jedna transakce, zámek, `expected` obou seznamů → `conflict`,
+  audit priority_set/clear/move_to) + `placeTopicAction`. Migrace **0015 s `approval: true`**: na vzdálené DB jen
+  s `APPROVED_MIGRATIONS=0015_topic_priority_unlimited` (migrace běží při startu, push by ji jinak spustil na Preview).
+  Bez ní `priority_pending_migration` (čitelná chyba). „Nastaveno N ze 3“ pryč. Unit 405/405, lint, typecheck OK.
+* DALŠÍ KROKY: 1) **P0-1 UI**: přepsat `TopicOrderList.tsx` na jeden DnD kontext přes obě sekce (TopicsSection předá
+  oba seznamy jedné klientské komponentě): pointer events na úchytu, NEměnit DOM pořadí během tažení (overlay +
+  indikátor místa vložení, výpočet cíle z obdélníků zachycených při startu), autoscroll u okraje okna, Esc zruší,
+  po puštění jedno volání `placeTopicAction` (expectedGuaranteed/expectedOthers), optimisticky + rollback; klávesnice
+  šipky v sekci (moveTopicAction) + přesun do druhé sekce (např. Alt+šipka nebo stávající Nastavit/Zrušit prioritu);
+  prázdná sekce Garantovaná musí být cíl (zobrazit drop zónu i při 0 garantovaných, jen správci). E2E: 1→poslední,
+  poslední→1, o 1/3/5, mezi sekcemi, do prázdné, Esc, dotyk, klávesnice, autoscroll, 20+ témat (seed v testu přes
+  Navrhnout téma ve vlastním scénáři nebo unit). 2) P1-2 barvy (garantovaná okrový podklad tokeny, Nejžádanější zelený
+  akcent jen štítkem u garantovaných). 3) P1-1 Quick Actions. 4) P1-4/P1-3/P1-5 cíleně (hromadný vedoucí: zvážit
+  Wiki výběr osoby s ID). 5) P2. 6) celé ověření + screenshoty před/po 320/390/768/1280/1440/1920
+  do `docs/screenshots/opravne-kolo-pr74/` (před = c4c3a9a přes `git worktree`).
+* Otázky pro uživatele (poslední relace): spustit 0015 na Preview (= nastavit nesecretní `APPROVED_MIGRATIONS` v Vercel
+  Preview env + redeploy; produkce až po merge a dalším souhlasu); vedoucí bez kontroly příslušnosti ke skupině
+  (server ověří jen existenci účtu v organizaci, stejně jako okno akce) – ponecháno.
+
+**OPRAVNÉ KOLO PR #74 (19. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd`, draft PR #74, CI zelené na c4c3a9a).**
+Zadání: prompt uživatele „ZBČ – Opravné kolo PR #74: DnD témat, plánování, Quick Actions a finální vizuální hierarchie“
+(P0-1 DnD témat i mezi sekcemi, P0-2 bez limitu 3 garantovaných + nová migrace jen na Preview, P0-3 reprodukce a oprava
+hromadného vedoucího, P1-1 až P1-5, P2, povinné testy a screenshoty 320–1920). Plné znění: `list_events` session
+`session_01HpUiruJkjFtPcUM3L92gGi`, kinds `["user"]`, poslední user zpráva.
+* Text „Nastaveno N ze 3.“ z finální kontroly odstranit (P0-2).
+* Relace samy zakládají navazující (`create_session`, `source_revision` i `outcome_branch` =
+  `claude/finalni-kontrola-novy-pr-g2r2wd`), pushují do PR #74, uživateli se ozve až poslední s reportem a odkazem na preview.
+
+**FINÁLNÍ KONTROLA A NOVÝ PR – RELACE 2 (19. 11. 2026, větev `claude/finalni-kontrola-novy-pr-g2r2wd` = opravná větev + main `e27b631`).**
+Report: `docs/report-finalni-kontrola.md` (sekce Relace 2). Nový draft PR do main z této větve; PR #73 sloučený, jeho větev se nemění.
+* HOTOVO: 4A neúplný návrh zápisu (`minutesDraftSchema`, `minutes_invalid`), 4B test historie, 4C zámek akce ve schválení
+  a zápisu z nahrávky + reprodukční test; 2 `ActionForm` → `ConfirmDialog` (`urgent`/`busy`); 3 Combobox v Připravit měsíc
+  (neřízený režim); 5 „Nastaveno N ze 3“ a „bez termínu“. 4D, 6, 9 jen zjištění v reportu.
+* OTEVŘENÉ (čeká na uživatele): runtime logy migrací v produkci (bod 7), smazání/archivace „NJBJK“, úkol „Garantované
+  téma nemá termín“, PDF/DOCX (návrh: nejdřív DOCX), DEP-01 migrace mimo start, Firefox/WebKit (neověřeno).
+**Další krok:** nic bez pokynu; uživatel reviduje a merguje nový draft PR ručně.
+
+**FINÁLNÍ KONTROLA A NOVÝ PR (19. 11. 2026, po relaci 1, větev `claude/focused-cerf-gr1tdi`).**
+Zadání: dlouhý prompt uživatele „ZBČ – Finální kontrola, dokončení oprav a příprava nového PR“ (body 1–13). Plné znění:
+`list_events` session `session_01HpUiryoWyPcP1uKF2Ws911`, kinds `["user"]`, poslední user zpráva. PR #73 je SLOUČENÝ
+(main `e27b631` = strom `ff7ac54`), do jeho větve nepushovat. Průběžný report: `docs/report-finalni-kontrola.md`.
+* HOTOVO relace 1: inventura Gitu (bod 1), migrace a DB read-only (bod 7: produkce má 0013/0014, 0 zápisů), NJBJK read-only (bod 10).
+* DALŠÍ KROKY v pořadí (každý malý commit + cílené testy; větší změny nejdřív popsat v reportu):
+  1. Bod 7 dokončit: runtime logy produkce kolem 07:46–07:50 UTC (chyby migrací), návrh rollbacku/zálohy (Neon branch/PITR 6 h).
+  2. Bod 4A: `minutesSchema` vyžaduje Shrnutí i pro návrh → ověřit testem, případně oddělit schéma konceptu a schválení.
+     4B/4C: souběh `approveMinutes` vs `createMinutesDraft`/`updateMinutes` (kontroly před transakcí?) → reprodukční test, oprava.
+     4D: jen návrh PDF/DOCX do reportu.
+  3. Bod 2: sjednotit potvrzení `ActionForm` (vlastní `Modal`) se `ConfirmDialog` – sdílený základ, `dialog` vs `alertdialog`,
+     dvojí odeslání, Esc jen vnořené okno; regresní test eb67ebd existuje v `priprava-mesice.spec.ts`.
+  4. Bod 3: `PrepareMonthDialog` `<datalist>` → Combobox (nekontrolovaná pole, bez překreslování měsíce); testy Comboboxu.
+  5. Bod 5: garantovaná témata – stav „garantované bez termínu“ (návrh), 3 priority, archivace.
+  6. Bod 6: datum/čas AM/PM (locale `cs-CZ` v Playwrightu? snímky ukazují 11/18/2026 a AM) – zjistit příčinu, nepřidávat datepicker.
+  7. Bod 8: celé e2e + build + lint + typecheck + unit na finálním HEAD; Firefox/WebKit jen pokud jdou nainstalovat.
+  8. Bod 9 bezpečnost, bod 11 nový PR do main (draft, bez merge), bod 12 finální report + zpráva uživateli.
+* Pravidla: produkce jen SELECT; NJBJK nemazat; žádný merge/deploy; relace samy zakládají navazující (`create_session`,
+  `source_revision` a `outcome_branch` = `claude/focused-cerf-gr1tdi`), uživateli se ozvat až v poslední.
+
+**OPRAVNÉ KOLO UX/UI K PR #73 – HOTOVO (19. 11. 2026, relace 9, větev `claude/focused-cerf-gr1tdi` z `ff7ac54` = HEAD PR #73).**
+Závěrečný report: `docs/report-ux-opravne-kolo.md` (shrnutí po oblastech, stav každého ID, před/po, testy, rizika, otázky).
+Snímky před/po: `docs/screenshots/opravne-kolo/` (`pred-*` = ff7ac54, `po-*` = eb67ebd).
+* Relace 9: build OK, celé e2e na 7a37622 **1162 passed / 111 skipped / 0 failed**; oprava eb67ebd (souhrn chyb pod
+  potvrzením neuložených změn, `formIsValid` v `Modal`), po ní typecheck, lint, unit 395/395, build, e2e 5 sad
+  (1280/390/320) 148 passed. Uživatel dostal závěrečnou zprávu s otázkou na push do PR #73.
+* ČEKÁ NA UŽIVATELE (nic dalšího bez pokynu): push do větve PR #73 (`claude/rychle-akce-a-planovani-temat`); DEP-01
+  (migrace 0013/0014 při startu); sjednocení potvrzení `ActionForm` na `ConfirmDialog`; combobox v `PrepareMonthDialog`;
+  PDF/DOCX zdroj zápisu; vyčištění Preview DB („NJBJK“).
+* Když uživatel push schválí: `git push origin claude/focused-cerf-gr1tdi:claude/rychle-akce-a-planovani-temat`
+  (fast-forward, větev vychází z HEAD PR #73 – před pushem ověřit, že PR #73 mezitím nedostal nové commity), pak
+  aktualizovat popis draft PR #73 (výsledky testů, simulace vs. živý test).
+
 **RYCHLÉ AKCE, PLÁNOVÁNÍ TÉMAT, ZÁPISY SE SCHVÁLENÍM (18. 11. 2026, větev `claude/rychle-akce-a-planovani-temat` z main 59cadc0).**
 Zadání uživatele: velké UX zadání (Quick Actions, garantovaná témata, Naplánovat téma, doporučení, Připravit měsíc,
 zápisy z více zdrojů s povinným schválením vedoucím, dokumenty pro integraci). Plán a rozhodnutí: `docs/plan-rychle-akce-a-temata.md`.

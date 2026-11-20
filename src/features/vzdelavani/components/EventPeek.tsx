@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { ActionForm } from "@/components/ActionForm";
 import { Icon } from "@/components/Icon";
 import { RouteModal, UnavailableModal } from "@/components/RouteModal";
 import { Todo, missingText } from "@/components/Todo";
@@ -12,16 +11,16 @@ import { listPeople, loadTemplate } from "@/server/services/events";
 import type { PlanPreview } from "@/server/services/preview";
 import { listTopics } from "@/server/services/topics";
 import { loadInviteRecipients } from "@/server/services/calendar-status";
-import { discardChangesAction } from "../actions";
 import { cardTone, primaryStatus, statusAdvice } from "../status";
+import { ChangeBanner } from "./ChangeBanner";
 import { EventWindow } from "./EventDialog";
 import { EventMenu } from "./EventMenu";
+import { minutesSectionLabel } from "@/lib/minutes";
 
 type Props = {
   user: Viewer;
   eventId: string;
   preview: PlanPreview | null;
-  previewKey?: string;
   closeHref: string;
   /** Naplánovat téma u zveřejněné akce: téma je ve formuláři předvyplněné, uloží se až běžným uložením. */
   presetTopicId?: string;
@@ -32,7 +31,7 @@ type Props = {
  * ostatní vidí údaje a odkaz na zápis. Nahrávka a stav v Kalendáři zůstávají na celé stránce akce.
  * Neviditelná nebo neexistující akce ukáže neutrální „Akce není dostupná“.
  */
-export async function EventPeek({ user, eventId, preview, previewKey, closeHref, presetTopicId }: Props) {
+export async function EventPeek({ user, eventId, preview, closeHref, presetTopicId }: Props) {
   const detail = await getEventDetail(preview?.viewer ?? user, eventId);
   if (!detail) return <UnavailableModal title="Akce není dostupná" closeHref={closeHref} backLabel="Zpět na plán" />;
   const { card } = detail;
@@ -44,12 +43,14 @@ export async function EventPeek({ user, eventId, preview, previewKey, closeHref,
   const status = primaryStatus(card);
   // Návrh: pás už říká, že ho kolegové nevidí, a chybějící údaje jsou vidět přímo v prázdných polích.
   const advice = managing && card.planStatus !== "draft" ? statusAdvice(card) : null;
-  const fullHref = `/vzdelavani/akce/${encodeURIComponent(card.id)}${previewKey ? `?jako=${encodeURIComponent(previewKey)}` : ""}`;
+  const fullHref = `/vzdelavani/akce/${encodeURIComponent(card.id)}`;
   const minutesReady = detail.recording.access === "reader" && Boolean(detail.recording.minutes);
   const handlesRecording = detail.recording.access === "handler" && !preview && card.past;
+  const minutesLabel = detail.recording.access === "handler" ? minutesSectionLabel(detail.recording) : "Zápis";
 
   const statusBand = (
-    <div className={`status-band status-${cardTone(card)}`} role="status">
+    // Tón pásu se řídí hlavním stavem: chyba Kalendáře nikdy nesmí vypadat jako úspěch (S-01).
+    <div className={`status-band status-${status?.tone === "danger" ? "danger" : status?.tone === "ochre" && card.planStatus === "published" ? "attention" : cardTone(card)}`} role="status">
       <strong>
         {card.planStatus === "draft" ? "Návrh · kolegové ho zatím nevidí" : (status?.label ?? PLAN_STATUS_LABELS[card.planStatus])}
         {card.past && card.planStatus === "published" ? " · proběhlo" : ""}
@@ -74,26 +75,24 @@ export async function EventPeek({ user, eventId, preview, previewKey, closeHref,
       <>
         {statusBand}
         {preset && (
-          <p className="notice small" role="status">
-            Téma „{preset.name}“ je předvyplněné. Změnu uložte jako návrh, nebo ji zveřejněte s kontrolou dopadu na pozvané.
+          // Jen tichý řádek (A-12): hodnota je vidět v poli Téma, banner by přebil skutečné problémy akce.
+          <p className="small muted" role="status">
+            Téma „{preset.name}“ je předvyplněné, zatím nic není uložené ani zveřejněné.
           </p>
         )}
-        {card.unpublishedChanges && (
-          <div className="notice spread">
-            <p className="small">Kolegové a Kalendář zatím vidí zveřejněnou verzi.</p>
-            <ActionForm action={discardChangesAction} fields={{ id: card.id, revision: String(detail.revision) }} label="Zahodit změny" pendingLabel="Zahazuji…" small />
-          </div>
-        )}
+        {card.original && <ChangeBanner eventId={card.id} revision={detail.revision} original={card.original} />}
       </>
     );
     // Funkční Kalendář se v okně neukazuje. Oprava je odkaz jen při chybě, technické informace jsou v nabídce.
     const links = card.past
-      ? [{ href: `${fullHref}#nahravka`, label: "Nahrávka a zápis" }]
+      ? [{ href: `${fullHref}#nahravka`, label: minutesLabel, icon: "file" as const }]
       : card.syncStatus === "attention"
-        ? [{ href: `${fullHref}#kalendar`, label: "Opravit v Kalendáři" }]
-        : [{ href: fullHref, label: "Technické informace" }];
+        ? [{ href: `${fullHref}#kalendar`, label: "Opravit v Kalendáři", icon: "calendar" as const }]
+        : [{ href: fullHref, label: "Technické informace", icon: "settings" as const }];
     return (
       <EventWindow
+        // Nová revize (zahození, uložení jinde) = čerstvý formulář, jinak by okno drželo staré hodnoty.
+        key={detail.revision}
         title={card.label}
         closeHref={closeHref}
         intro={intro}
@@ -123,7 +122,7 @@ export async function EventPeek({ user, eventId, preview, previewKey, closeHref,
 
   const links = [
     ...(minutesReady ? [{ href: `/vzdelavani/zapisy?zapis=${encodeURIComponent(card.id)}`, label: "Zobrazit zápis" }] : []),
-    ...(handlesRecording ? [{ href: `${fullHref}#nahravka`, label: "Nahrávka a zápis" }] : []),
+    ...(handlesRecording ? [{ href: `${fullHref}#nahravka`, label: minutesLabel }] : []),
     // Zrušení do Kalendáře nedošlo: správce dostane opravu. Jinak se technický stav v okně neukazuje.
     ...(managing && !holiday && card.syncStatus === "attention" ? [{ href: `${fullHref}#kalendar`, label: "Opravit v Kalendáři" }] : []),
   ];
@@ -157,7 +156,7 @@ export async function EventPeek({ user, eventId, preview, previewKey, closeHref,
           <dd>{GROUP_LABELS[card.audience]}</dd>
         </div>
       </dl>
-      {holiday && <p className="hint">Svátek je v plánu jen pro přehled. Nedá se přesunout ani upravit a do Kalendáře se neposílá.</p>}
+      {holiday && <p className="hint">Jen pro přehled, do Kalendáře se neposílá.</p>}
       {technical && (
         <p className="small peek-tech">
           <Link href={fullHref}>Technické informace</Link>

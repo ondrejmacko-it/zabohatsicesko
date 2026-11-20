@@ -9,15 +9,33 @@ const NOTES = ["Shrnutí: Akce týmu A, rozbor oslovení klientů.", "Hlavní bo
 test.describe("Zápisy: schválení vedoucím @desktop", () => {
   test.use({ storageState: authFile("vedouci") });
 
-  test("vložit text → upravit → vedoucí schválí → zveřejněno → úprava schválení zruší", async ({ page, browser }, testInfo) => {
+  test("vložit text → upravit → vedoucí schválí → zveřejněno → oprava je nový návrh, schválená verze zůstává", async ({ page, browser }, testInfo) => {
     test.skip(testInfo.project.name !== "windows-1280", "zápis jen jednou");
     await page.goto(`/vzdelavani/akce/${EVENT}#nahravka`);
     await settle(page);
     const section = page.locator("#nahravka");
     await expect(section.getByRole("status").filter({ hasText: "Čeká na zápis" })).toBeVisible();
 
-    await section.getByRole("radio", { name: /Vložit přepis nebo poznámky/ }).check();
-    await section.getByLabel("Druh textu").selectOption("notes");
+    // Z-08: prázdná ruční šablona je rozpracovaná, ne „čeká na schválení“. Z-12: bez nahrávky nadpis jen „Zápis“.
+    await expect(section.getByRole("heading", { level: 2 })).toHaveText("Zápis");
+    await section.getByRole("radio", { name: /Napsat ručně/ }).check();
+    await section.getByRole("button", { name: "Napsat zápis ručně" }).click();
+    await expect(section.getByRole("status").filter({ hasText: "Rozpracováno" })).toBeVisible();
+    await expect(section.getByTestId("stav-verze")).toContainText("Rozpracováno, verze 1");
+    await expect(section).not.toContainText("čeká na schválení");
+
+    // Z-10: Změnit zdroj vymění v okně editor za volbu zdroje, rozepsaný text se návratem neztratí.
+    await section.getByLabel("Shrnutí", { exact: true }).fill("Rozepsáno");
+    await section.getByRole("button", { name: "Změnit zdroj" }).click();
+    await expect(section.getByLabel("Shrnutí", { exact: true })).toBeHidden();
+    await expect(section.getByRole("radio", { name: /Vložit text/ })).toBeFocused();
+    await section.getByRole("button", { name: "Zpět k zápisu" }).click();
+    await expect(section.getByLabel("Shrnutí", { exact: true })).toHaveValue("Rozepsáno");
+    await section.getByRole("button", { name: "Změnit zdroj" }).click();
+
+    // Prázdnou šablonu nový zdroj nahradí bez potvrzovacího okna (nic se neztratí).
+    await section.getByRole("radio", { name: /Vložit text/ }).check();
+    await section.getByLabel("Co vkládáte").selectOption("notes");
     await expectNoSeriousA11y(page);
     await expectNoHorizontalScroll(page);
     await section.getByLabel("Text přepisu nebo poznámek").fill(NOTES);
@@ -58,7 +76,8 @@ test.describe("Zápisy: schválení vedoucím @desktop", () => {
 
     await admin.goto("/vzdelavani/zapisy");
     await settle(admin);
-    await expect(admin.getByRole("main")).not.toContainText("tři kontakty na osobu");
+    // Z-01: rozpracovaná oprava schválený zápis neschová, publikum čte poslední schválenou verzi.
+    await expect(admin.getByRole("main")).toContainText("tři kontakty na osobu");
     await expect(admin.getByRole("main")).not.toContainText("opraveno správcem");
     await ctx.close();
 

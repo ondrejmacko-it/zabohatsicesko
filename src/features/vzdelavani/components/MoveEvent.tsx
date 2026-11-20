@@ -60,7 +60,6 @@ function MoveConfirm({ target, to, onClose }: { target: MoveTarget; to: string; 
       <p>
         Přesunout akci <strong>{target.label}</strong> z {dayLabel(target.from)} na {dayLabel(to)}?
       </p>
-      <p className="small muted">Čas, téma, vedoucí i publikum zůstanou stejné.</p>
       {!preview && !result && (
         <p className="small muted" role="status">
           Ověřuji dopad přesunu…
@@ -91,7 +90,7 @@ function MoveConfirm({ target, to, onClose }: { target: MoveTarget; to: string; 
           {pending ? "Přesouvám…" : "Potvrdit"}
         </button>
         <button type="button" className="btn" onClick={onClose}>
-          Zrušit
+          Nepřesouvat
         </button>
       </div>
     </div>

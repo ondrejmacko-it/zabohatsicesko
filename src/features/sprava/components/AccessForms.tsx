@@ -95,7 +95,7 @@ function AccessForm({ userId, roles, role, groups, mode, onDone }: AccessProps) 
           {pending ? "Ukládám…" : mode === "approve" ? "Schválit přístup" : mode === "restore" ? "Vrátit přístup" : "Uložit změny"}
         </button>
         <button type="button" className="btn" onClick={onDone}>
-          Zrušit
+          {mode === "edit" ? "Zrušit úpravy" : "Zavřít"}
         </button>
       </div>
     </form>
@@ -125,7 +125,7 @@ export function InviteLink({ link }: { link: string }) {
           {copied ? "Zkopírováno" : "Kopírovat"}
         </button>
       </div>
-      <p className="field-hint">Odkaz funguje jednou a jen na zařízení, kde ho kolega otevře. Pošlete ho jen jemu.</p>
+      <p className="field-hint field-hint-key">Odkaz funguje jednou a jen na zařízení, kde ho kolega otevře. Pošlete ho jen jemu.</p>
     </div>
   );
 }
@@ -153,8 +153,8 @@ function NewLink({ account: a, onClose }: { account: AccountActionsProps["accoun
             <button type="submit" className="btn btn-primary" disabled={pending}>
               {pending ? "Vytvářím…" : "Vytvořit odkaz"}
             </button>
-            <button type="button" className="btn" onClick={onClose}>
-              Zrušit
+            <button type="button" className="btn" data-modal-close>
+              Zavřít
             </button>
           </div>
         </form>
@@ -181,7 +181,7 @@ export function AccountActions({ account: a, roles, live, editable = true }: Acc
           Nastavit a schválit
         </button>
       )}
-      <Menu label={`Možnosti účtu ${a.name}`} small iconOnly>
+      <Menu label={`Možnosti účtu ${a.name}`} variant="card" className="menu-inline">
         {a.status === "pending" && (
           <ActionForm
             action={rejectRequestAction}
@@ -280,7 +280,7 @@ function RevokeAccess({ account: a, onClose }: { account: AccountActionsProps["a
             {pending ? "Odebírám…" : "Odebrat přístup"}
           </button>
           <button type="button" className="btn" onClick={onClose}>
-            Zrušit
+            Ponechat přístup
           </button>
         </div>
       </form>

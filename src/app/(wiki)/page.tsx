@@ -19,6 +19,7 @@ import { canPlan } from "@/server/policy";
 import { loadPersonalCalendar } from "@/server/services/calendar-status";
 import { listMonth, nextEventsFor } from "@/server/services/events";
 import { listTasks } from "@/server/services/journey";
+import { currentPreview } from "@/server/services/preview-context";
 
 /** Kolik nejbližších akcí úvod ukáže. Celý měsíc je v Plánu. */
 const NEXT_ROWS = 3;
@@ -32,13 +33,17 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   // Akce z Nejbližších se otevře v okně přímo nad Úvodem, stejně jako v Plánu.
   const peekId = ((await searchParams).akce ?? "").slice(0, 120);
   const monthKey = monthOf(toDateKey(now()));
-  const planner = canPlan(user);
+  // Globální náhled (lišta Pohled): akce a úkoly očima skupiny nebo kolegy, jen ke čtení. Vlastní Kalendář a
+  // pozvánky patří přihlášenému, v náhledu se nenačítají.
+  const preview = await currentPreview(user);
+  const viewer = preview?.viewer ?? user;
+  const planner = canPlan(viewer);
   const [upcoming, initial, own, monthCards, invitations] = await Promise.all([
-    nextEventsFor(user, NEXT_ROWS),
-    loadPersonalCalendar(user),
-    listTasks(user),
-    planner ? listMonth(user, monthKey) : null,
-    getDb().then((db) => invitationsFor(db, user)),
+    nextEventsFor(viewer, NEXT_ROWS),
+    preview ? null : loadPersonalCalendar(user),
+    listTasks(viewer),
+    planner ? listMonth(viewer, monthKey) : null,
+    preview ? null : getDb().then((db) => invitationsFor(db, user)),
   ]);
   // Režim organizátora: návštěva dožene frontu a odpovědi (nejvýš jednou za 5 minut), až po odeslání stránky.
   // Plánovač to dělá i bez návštěv, tady jde jen o čerstvější stav.
@@ -51,7 +56,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   // Osobní kalendáře doženou zmeškaný zápis (přechodná chyba Googlu, nový účet) a jednou za čas ověří, že
   // přístup u Googlu platí. Zjištění je jeden dotaz do databáze. Na výsledek stránka počká nejvýš chvilku,
   // aby hned ukázala skutečný stav (např. „Kalendář odpojen“), zbytek doběhne na pozadí.
-  if (personal) {
+  if (personal && !preview) {
     const db = await getDb();
     if (await personalSyncNeeded(db)) {
       const run = syncPersonalCalendars(db).catch(() => logError("calendar.personal", "home_sync_failed"));
@@ -62,7 +67,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   }
   return (
     <>
-      {peekId && <EventPeek key={peekId} user={user} eventId={peekId} preview={null} closeHref="/" />}
+      {peekId && <EventPeek key={peekId} user={user} eventId={peekId} preview={preview} closeHref="/" />}
       <h1>Vítejte, {user.name}.</h1>
       {personal && <PersonalCalendarStatus state={personal} />}
       {/* Odpověď na pozvánku se dává v Gmailu, po návratu do okna se úkol obnoví. */}
@@ -77,7 +82,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             </Link>
           </p>
         </section>
-        <TasksCard tasks={tasks} />
+        <TasksCard tasks={tasks} title={preview ? "Úkoly v náhledu" : undefined} readOnly={Boolean(preview)} />
       </div>
     </>
   );

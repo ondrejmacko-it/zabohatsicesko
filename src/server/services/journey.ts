@@ -1,4 +1,6 @@
 import { and, desc, eq, isNull, or, sql } from "drizzle-orm";
+import { eventTitle } from "@/lib/labels";
+import { minutesStarted } from "@/lib/minutes";
 import { formatDayMonth, toDateKey } from "@/lib/time";
 import type { EventType, Group } from "@/lib/types";
 import { needsCalendarConnection } from "@/server/calendar/google-auth";
@@ -41,7 +43,7 @@ export async function listPublishedMinutes(viewer: Viewer, filter: MinutesFilter
     .filter(({ event }) => canReadPublishedMinutes(viewer, event) && !seen.has(event.id) && Boolean(seen.add(event.id)))
     .map(({ event, content, publishedAt }) => {
       const snapshot = event.published!;
-      const title = snapshot.topicTitle ? `${snapshot.label}: ${snapshot.topicTitle}` : snapshot.label;
+      const title = eventTitle(snapshot.label, snapshot.topicTitle);
       const haystack = fold([title, content.summary, ...content.keyPoints, ...content.decisions, ...content.nextSteps].join("\n"));
       return {
         item: {
@@ -74,12 +76,13 @@ export type MissingMinutesItem = {
 
 /**
  * Stav aktuální (nevyměněné) nahrávky akce. `failed` = služba přepisu selhala, pomůže nový pokus.
- * `unsupported` = soubor nejde přepsat, pomůže jen jiná nahrávka. Bez záznamu v mapě akce nahrávku nemá.
+ * `unsupported` = soubor nejde přepsat, pomůže jen jiná nahrávka. `started` = prázdná šablona ručního zápisu,
+ * `draft` = návrh s obsahem čeká na schválení. Bez záznamu v mapě akce nahrávku nemá.
  */
-export type RecordingProgress = "none" | "processing" | "failed" | "unsupported" | "draft" | "published";
+export type RecordingProgress = "none" | "processing" | "failed" | "unsupported" | "started" | "draft" | "published";
 
-export function progressOf(minutesStatus: string | null, jobStatus: string | null, errorCode: string | null): RecordingProgress {
-  if (minutesStatus) return minutesStatus === "published" ? "published" : "draft";
+export function progressOf(minutesStatus: string | null, jobStatus: string | null, errorCode: string | null, started = true): RecordingProgress {
+  if (minutesStatus) return minutesStatus === "published" ? "published" : started ? "draft" : "started";
   if (jobStatus === "failed") return errorCode === "unsupported_fixture" ? "unsupported" : "failed";
   return "processing";
 }
@@ -96,7 +99,7 @@ async function recordingProgressByEvent(db: Awaited<ReturnType<typeof getDb>>): 
       .leftJoin(transcriptionJobs, eq(transcriptionJobs.recordingId, recordings.id))
       .where(and(eq(recordings.orgId, config.orgId), isNull(recordings.supersededAt))),
     db
-      .select({ eventId: minutes.eventId, status: minutes.status })
+      .select({ eventId: minutes.eventId, status: minutes.status, content: minutes.content })
       .from(minutes)
       .leftJoin(recordings, eq(recordings.id, minutes.recordingId))
       .where(and(eq(minutes.orgId, config.orgId), or(isNull(minutes.recordingId), isNull(recordings.supersededAt))))
@@ -107,7 +110,7 @@ async function recordingProgressByEvent(db: Awaited<ReturnType<typeof getDb>>): 
   for (const row of minutesRows) {
     if (seen.has(row.eventId)) continue;
     seen.add(row.eventId);
-    progress.set(row.eventId, progressOf(row.status, null, null));
+    progress.set(row.eventId, progressOf(row.status, null, null, minutesStarted(row.content)));
   }
   return progress;
 }
@@ -142,7 +145,7 @@ export async function listMissingMinutes(viewer: Viewer): Promise<{ items: Missi
       const state = byEvent.get(row.id) ?? "none";
       return {
         eventId: row.id,
-        title: snapshot.topicTitle ? `${snapshot.label}: ${snapshot.topicTitle}` : snapshot.label,
+        title: eventTitle(snapshot.label, snapshot.topicTitle),
         type: snapshot.type,
         startsAt: snapshot.startsAt,
         leadName: snapshot.leadId ? (names.get(snapshot.leadId) ?? null) : null,
@@ -162,6 +165,7 @@ const MINUTES_TASKS: Record<Exclude<RecordingProgress, "published">, { detail: s
   processing: { detail: "Nahrávka se přepisuje. Návrh zápisu bude za chvíli ke kontrole.", action: "Zobrazit stav" },
   failed: { detail: "Přepis nahrávky se nepovedl. Zkuste ho znovu.", action: "Zkusit přepis znovu" },
   unsupported: { detail: "Ukázkový přepis tento soubor nepřepíše, umí jen ukázkovou nahrávku.", action: "Vybrat jinou nahrávku" },
+  started: { detail: "Zápis je založený, ale zatím prázdný. Doplňte ho a uložte.", action: "Dokončit zápis" },
   draft: { detail: "Návrh zápisu čeká na kontrolu. Zveřejní ho vedoucí akce.", action: "Zkontrolovat zápis" },
 };
 
@@ -194,7 +198,7 @@ export async function listTasks(viewer: Viewer): Promise<JourneyTask[]> {
       if (state === "published") continue;
       const snapshot = row.published!;
       // Datum v názvu: stejně pojmenované akce se opakují každý týden.
-      const title = `${snapshot.topicTitle ? `${snapshot.label}: ${snapshot.topicTitle}` : snapshot.label} · ${formatDayMonth(toDateKey(new Date(snapshot.startsAt)))}`;
+      const title = `${eventTitle(snapshot.label, snapshot.topicTitle)} · ${formatDayMonth(toDateKey(new Date(snapshot.startsAt)))}`;
       if (tasks.length >= MAX_MINUTES_TASKS) break;
       const today = toDateKey(new Date(snapshot.endsAt)) === toDateKey(reference);
       const href = `/vzdelavani/akce/${row.id}?odkud=prehled#nahravka`;
@@ -204,7 +208,7 @@ export async function listTasks(viewer: Viewer): Promise<JourneyTask[]> {
         continue;
       }
       const task = state === "draft" && snapshot.leadId === viewer.id ? LEAD_DRAFT_TASK : MINUTES_TASKS[state];
-      tasks.push({ ...base, ...task, key: `${state === "draft" ? "zapis" : "nahravka"}-${row.id}`, title });
+      tasks.push({ ...base, ...task, key: `${state === "draft" || state === "started" ? "zapis" : "nahravka"}-${row.id}`, title });
     }
   }
 

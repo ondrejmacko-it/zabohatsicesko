@@ -39,6 +39,52 @@ test.describe("Připravit měsíc: přehled a hromadné doplnění vedoucího", 
     await expectNoHorizontalScroll(page);
   });
 
+  test("téma řádku: stejná nabídka jako v okně akce, přehled se aktualizuje", async ({ page }) => {
+    const prepare = await openPrepare(page);
+    const overview = prepare.getByRole("list", { name: "Stav návrhů" });
+    const missingTopic = async () => Number((await overview.getByRole("button", { name: /^Chybí téma: / }).textContent())?.match(/\d+/)?.[0]);
+    const topic = prepare.getByRole("combobox", { name: /^Téma: / }).first();
+    const list = prepare.getByRole("listbox", { name: "Témata" }).first();
+    await expect(prepare.locator("datalist")).toHaveCount(0);
+
+    await topic.fill("");
+    const before = await missingTopic();
+    // Diakritika se při hledání nerozlišuje, Enter vybere první shodu a formulář se neodešle.
+    await topic.fill("uvodni");
+    await expect(list).toBeVisible();
+    await expect(list.getByRole("option").first()).toContainText(/úvodní/i);
+    await page.keyboard.press("Enter");
+    await expect(list).toBeHidden();
+    await expect(topic).toHaveValue(/úvodní/i);
+    await expect(prepare).toBeVisible();
+    await expect.poll(missingTopic).toBe(before - 1);
+
+    // Esc zavře jen nabídku, okno Připravit měsíc zůstane.
+    await topic.click();
+    await expect(list).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(list).toBeHidden();
+    await expect(prepare).toBeVisible();
+    // Ruční text bez shody: nabídka se schová, hodnota zůstane. Tab nabídku zavře.
+    await topic.fill("Vlastní téma e2e");
+    await expect(topic).toHaveAttribute("aria-expanded", "false");
+    await expect(topic).toHaveValue("Vlastní téma e2e");
+    await page.keyboard.press("Tab");
+
+    // Poslední řádek: zvýrazněná možnost je vidět, nabídka se neořízne.
+    const last = prepare.getByRole("combobox", { name: /^Téma: / }).last();
+    await last.focus();
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("ArrowDown");
+    await expect(prepare.locator(".combobox-option[aria-selected=true]")).toBeInViewport();
+    await page.keyboard.press("Escape");
+    await expectNoHorizontalScroll(page);
+
+    // Výběr se počítá jako rozepsaná změna: zavření se zeptá.
+    await prepare.getByRole("button", { name: "Zavřít" }).first().click();
+    await expect(page.getByRole("alertdialog", { name: "Neuložené změny" })).toBeVisible();
+  });
+
   test("doplnění vedoucího jen do prázdných polí, vyplněná zůstanou", async ({ page }) => {
     const prepare = await openPrepare(page);
     const leads = prepare.getByLabel(/^Vedoucí: /);
@@ -56,7 +102,7 @@ test.describe("Připravit měsíc: přehled a hromadné doplnění vedoucího", 
 
     const fill = prepare.getByRole("button", { name: /^Doplnit do \d+ řádk/ });
     await expect(prepare.getByText(/vyplněné vedoucí se nepřepíšou/)).toBeVisible();
-    await prepare.getByLabel("Doplnit vedoucího do prázdných polí").selectOption(bulk);
+    await prepare.getByLabel("Vedoucí do prázdných polí").selectOption(bulk);
     await expect(fill).toHaveText(new RegExp(`Doplnit do ${empty} řádk`));
     await fill.click();
 
@@ -68,18 +114,91 @@ test.describe("Připravit měsíc: přehled a hromadné doplnění vedoucího", 
 
     // Doplnění je rozepsaná změna: zavření se zeptá a bez uložení nic nezmění.
     await page.keyboard.press("Escape");
-    await expect(page.getByRole("alertdialog", { name: "Zavřít bez uložení" })).toBeVisible();
-    await page.getByRole("button", { name: "Zavřít bez uložení" }).click();
+    await expect(page.getByRole("alertdialog", { name: "Neuložené změny" })).toBeVisible();
+    await page.getByRole("button", { name: "Zahodit změny" }).click();
     await expect(prepare).toBeHidden();
   });
 
   test("samotná volba pro hromadné doplnění není rozepsaná změna", async ({ page }) => {
     const prepare = await openPrepare(page);
-    const options = prepare.getByLabel("Doplnit vedoucího do prázdných polí").locator("option");
+    const options = prepare.getByLabel("Vedoucí do prázdných polí").locator("option");
     const value = await options.nth(1).getAttribute("value");
-    await prepare.getByLabel("Doplnit vedoucího do prázdných polí").selectOption(value!);
+    await prepare.getByLabel("Vedoucí do prázdných polí").selectOption(value!);
     await page.keyboard.press("Escape");
     await expect(prepare).toBeHidden();
+  });
+});
+
+// Reprodukce chyby z Preview: skutečná volba v prohlížeči pošle `input` a `change` zvlášť (klávesnice,
+// myš v nabídce). `selectOption` je pošle naráz, a proto chybu dřív neodhalil. Tady se vybírá klávesnicí.
+test.describe("Připravit měsíc: vedoucí vybraný klávesnicí se doplní a uloží @desktop", () => {
+  test.use({ storageState: authFile("spravce") });
+  // Vlastní měsíc, zápis nepotká ostatní testy nad sdílenými daty ukázky.
+  const PLAN = "/vzdelavani/harmonogram?mesic=2027-05";
+
+  test("hromadný i řádkový výběr, opakovaná změna, uložení a obnovení", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "windows-1280", "zápis jen jednou");
+    await page.goto(PLAN);
+    await settle(page);
+    await page.getByRole("button", { name: /^Připravit měsíc/ }).click();
+    const prepare = dialog(page, /Připravit měsíc:/);
+    await prepare.getByRole("button", { name: "Doplnit chybějící termíny" }).click();
+    const leads = prepare.getByLabel(/^Vedoucí: /);
+    await expect.poll(() => leads.count()).toBeGreaterThanOrEqual(3);
+    const values = () => leads.evaluateAll((list) => list.map((s) => (s as HTMLSelectElement).value));
+    expect((await values()).every((v) => v === "")).toBe(true);
+    const count = (await values()).length;
+    const missing = prepare.getByRole("list", { name: "Stav návrhů" }).getByRole("button", { name: /^Chybí vedoucí: / });
+    await expect(missing).toHaveAccessibleName(new RegExp(`^Chybí vedoucí: ${count}`));
+
+    // Jeden řádek ručně klávesnicí: první osoba v seznamu.
+    await leads.nth(0).focus();
+    await page.keyboard.press("ArrowDown");
+    const first = await leads.nth(0).inputValue();
+    expect(first).not.toBe("");
+    await expect(missing).toHaveAccessibleName(new RegExp(`^Chybí vedoucí: ${count - 1}`));
+
+    // Hromadný výběr klávesnicí: druhá osoba. Výběr musí zůstat vidět a aktivovat tlačítko.
+    const bulk = prepare.getByLabel("Vedoucí do prázdných polí");
+    await bulk.focus();
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("ArrowDown");
+    const second = await bulk.inputValue();
+    expect(second).not.toBe("");
+    expect(second).not.toBe(first);
+    const fill = prepare.getByRole("button", { name: new RegExp(`^Doplnit do ${count - 1} řádk`) });
+    await expect(fill).toBeEnabled();
+    await fill.click();
+    expect(await values()).toEqual([first, ...Array(count - 1).fill(second)]);
+    await expect(missing).toHaveAccessibleName(/^Chybí vedoucí: 0/);
+
+    // Opakovaná změna: poslední řádek vyprázdnit, hromadně zvolit jinou osobu a doplnit znovu.
+    await leads.last().focus();
+    await page.keyboard.press("Home");
+    await expect(leads.last()).toHaveValue("");
+    await bulk.focus();
+    await page.keyboard.press("ArrowUp");
+    const third = await bulk.inputValue();
+    expect(third).not.toBe(second);
+    expect(third).not.toBe("");
+    await prepare.getByRole("button", { name: /^Doplnit do 1 řádku/ }).click();
+    const expected = [first, ...Array(count - 2).fill(second), third];
+    expect(await values()).toEqual(expected);
+
+    // Téma tu není předmětem testu. Doplnění předvyplní i garantované téma, které čtecí testy Témat čekají
+    // „bez termínu“ (seed), proto se návrhy ukládají bez tématu.
+    const topics = prepare.getByRole("combobox", { name: /^Téma: / });
+    for (let i = 0; i < (await topics.count()); i++) await topics.nth(i).fill("");
+
+    await prepare.getByRole("button", { name: "Uložit změny" }).click();
+    await expect(prepare.getByText(new RegExp(`^Uloženo: ${count} návrh`))).toBeVisible();
+
+    // Po obnovení stránky zůstali vedoucí uložení, nic se nezveřejnilo.
+    await page.reload();
+    await settle(page);
+    await page.getByRole("button", { name: /^Připravit měsíc/ }).click();
+    await expect.poll(values).toEqual(expected);
+    await expect(prepare.getByRole("button", { name: /^Zveřejnit/ })).toBeVisible();
   });
 });
 
@@ -91,7 +210,7 @@ test.describe("okno akce: ochrana neuložených změn", () => {
     await settle(page);
     const open = page.getByRole("button", { name: "Přidat akci", exact: true });
     const add = dialog(page, "Přidat akci");
-    const confirm = page.getByRole("alertdialog", { name: "Zavřít bez uložení" });
+    const confirm = page.getByRole("alertdialog", { name: "Neuložené změny" });
 
     await open.click();
     await page.keyboard.press("Escape");
@@ -104,6 +223,9 @@ test.describe("okno akce: ochrana neuložených změn", () => {
     await topic.fill("Rozepsané téma");
     await add.getByRole("button", { name: "Zavřít", exact: true }).click();
     await expect(confirm).toBeVisible();
+    // Bez názvu nejde uložit: potvrzení uložení nenabídne a formulář pod ním nehlásí chyby (uživatel nic neukládal).
+    await expect(confirm.getByRole("button", { name: "Uložit jako návrh" })).toHaveCount(0);
+    await expect(add.getByText("Akci zatím nejde uložit")).toHaveCount(0);
     await confirm.getByRole("button", { name: "Pokračovat v úpravách" }).click();
     await expect(add).toBeVisible();
     await expect(topic).toHaveValue("Rozepsané téma");
@@ -111,6 +233,9 @@ test.describe("okno akce: ochrana neuložených změn", () => {
 
     // Porovnávají se hodnoty: vrácené pole už za změnu nestojí.
     await topic.fill(original);
+    // Psaní otevře nabídku témat; první Esc zavře jen ji, druhý okno.
+    await page.keyboard.press("Escape");
+    await expect(add.getByRole("listbox")).toBeHidden();
     await page.keyboard.press("Escape");
     await expect(add).toBeHidden();
   });
@@ -122,21 +247,85 @@ test.describe("okno akce: ochrana neuložených změn", () => {
     await expect(window.getByLabel(/^Téma/)).toHaveValue("Týmové priority");
     await page.keyboard.press("Escape");
     await expect(window).toBeHidden();
-    await expect(page.getByRole("alertdialog", { name: "Zavřít bez uložení" })).toHaveCount(0);
+    await expect(page.getByRole("alertdialog", { name: "Neuložené změny" })).toHaveCount(0);
   });
 
-  test("okno akce: změna se při zavření ohlásí, Zavřít bez uložení ji zahodí", async ({ page }) => {
+  test("okno akce: změna se při zavření ohlásí, Zahodit změny je zahodí", async ({ page }) => {
     await page.goto("/vzdelavani/harmonogram?mesic=2026-11&akce=ev-11-24");
     await settle(page);
     const window = page.getByRole("dialog").filter({ has: page.getByLabel(/^Téma/) });
     await window.getByLabel(/^Téma/).fill("Neuložená změna");
     await page.keyboard.press("Escape");
-    const confirm = page.getByRole("alertdialog", { name: "Zavřít bez uložení" });
+    const confirm = page.getByRole("alertdialog", { name: "Neuložené změny" });
     await expect(confirm).toBeVisible();
-    await confirm.getByRole("button", { name: "Zavřít bez uložení" }).click();
+    await confirm.getByRole("button", { name: "Zahodit změny" }).click();
     await expect(window).toBeHidden();
     await page.goto("/vzdelavani/harmonogram?mesic=2026-11&akce=ev-11-24");
     await settle(page);
     await expect(page.getByRole("dialog").getByLabel(/^Téma/)).toHaveValue("");
+  });
+});
+
+test.describe("okno akce: zahození neveřejných změn se potvrzuje @desktop", () => {
+  test.use({ storageState: authFile("spravce") });
+
+  test("Zahodit změny se nejdřív zeptá, Zpět nic nezahodí, potvrzení vrátí zveřejněnou verzi", async ({ page }, info) => {
+    test.skip(info.project.name !== "windows-1280", "Zapisuje do sdílených dat ukázky, stačí jeden projekt.");
+    await page.goto("/vzdelavani/harmonogram?mesic=2026-11&akce=ev-11-26");
+    await settle(page);
+    const window = page.getByRole("dialog").filter({ has: page.getByLabel(/^Vede/) });
+    await window.getByLabel(/^Vede/).selectOption({ label: "Správce ZBC ukázky" });
+    await window.getByRole("button", { name: "Uložit jako návrh" }).click();
+    await expect(page.getByRole("status").filter({ hasText: "Návrh změny je uložený" })).toBeVisible();
+    // Mřížka: okrový návrh leží na zveřejněné verzi, z níž vykukuje pruh. Najetí myší originál vysune dopředu.
+    await page.goto("/vzdelavani/harmonogram?mesic=2026-11");
+    await settle(page);
+    const original = page.locator('[data-original-of="ev-11-26"]');
+    await expect(original).toContainText("Zveřejněná verze");
+    await expect(original).toContainText("Vedoucí akce");
+    await expect(original).toHaveAttribute("aria-hidden", "true");
+    const draftCard = page.locator('a[data-move-id="ev-11-26"]');
+    await draftCard.scrollIntoViewIfNeeded();
+    const box = (await original.boundingBox())!;
+    const cell = (await page.locator("td").filter({ has: draftCard }).boundingBox())!;
+    expect(box.x).toBeGreaterThanOrEqual(cell.x);
+    expect(box.x + box.width).toBeLessThanOrEqual(cell.x + cell.width + 0.5);
+    await page.mouse.move(box.x + box.width / 2, box.y + 6);
+    await expect(original).toHaveCSS("z-index", "2");
+    await expect(draftCard).toHaveCSS("opacity", "0.35");
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await expect(original).toHaveCSS("transition-duration", "0s");
+    await page.emulateMedia({ reducedMotion: null });
+    await page.goto("/vzdelavani/harmonogram?mesic=2026-11&akce=ev-11-26");
+    await settle(page);
+    const notice = window.getByText("Kolegové a Kalendář zatím vidí zveřejněnou verzi.");
+    await expect(notice).toBeVisible();
+    // Panel návrhu změny říká, co se mění, a rozbalí zveřejněnou verzi (originál).
+    await expect(window.getByText(/Mění vedoucí\./)).toBeVisible();
+    await window.getByText("Zveřejněná verze", { exact: true }).click();
+    await expect(window.locator(".change-original-facts")).toContainText("Vedoucí akce");
+
+    await window.getByRole("button", { name: "Zrušit návrh" }).click();
+    const confirm = page.getByRole("dialog", { name: "Zrušit návrh změny?" });
+    await expect(confirm).toBeVisible();
+    // Sdílené potvrzení: bezpečná volba má fokus, pracovní okno pod ním zůstane vidět a Esc zavře jen potvrzení.
+    await expect(confirm.getByRole("button", { name: "Zpět" })).toBeFocused();
+    await expect(notice).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(confirm).toBeHidden();
+    await expect(notice).toBeVisible();
+    await window.getByRole("button", { name: "Zrušit návrh" }).click();
+    await confirm.getByRole("button", { name: "Zpět" }).click();
+    await expect(confirm).toBeHidden();
+    await expect(notice).toBeVisible();
+
+    await window.getByRole("button", { name: "Zrušit návrh" }).click();
+    await confirm.getByRole("button", { name: "Zrušit návrh" }).click();
+    await expect(notice).toBeHidden();
+    // Otevřené okno ukáže zveřejněnou verzi hned, bez nového načtení.
+    await expect(window.getByLabel(/^Vede/).locator("option:checked")).toHaveText("Vedoucí akce");
+    await page.reload();
+    await settle(page);
+    await expect(window.getByLabel(/^Vede/).locator("option:checked")).toHaveText("Vedoucí akce");
   });
 });

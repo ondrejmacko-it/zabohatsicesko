@@ -9,6 +9,7 @@ import {
   moveInOrder,
   nextFreePriority,
   otherTopics,
+  placeInSections,
   planCandidates,
   recommendTopics,
   suggestTopics,
@@ -22,6 +23,7 @@ import { listTasks } from "@/server/services/journey";
 import {
   listTopics,
   moveTopic,
+  placeTopic,
   resetTopicOrder,
   setTopicArchived,
   setTopicPriority,
@@ -65,10 +67,48 @@ describe("garantovaná témata a ruční pořadí: pravidla", () => {
     expect(hasManualOrder([topic("x", { priorityRank: 1, manualRank: 4 })])).toBe(false);
   });
 
-  test("volné pořadí je nejnižší neobsazené, nejvýš tři", () => {
+  test("nově garantované téma jde na konec, počet není omezený", () => {
     expect(nextFreePriority([])).toBe(1);
-    expect(nextFreePriority([{ priorityRank: 1 }, { priorityRank: 3 }])).toBe(2);
-    expect(nextFreePriority([{ priorityRank: 1 }, { priorityRank: 2 }, { priorityRank: 3 }])).toBeNull();
+    expect(nextFreePriority([{ priorityRank: 1 }, { priorityRank: 2 }, { priorityRank: 3 }])).toBe(4);
+    expect(nextFreePriority([{ priorityRank: null }, { priorityRank: 9 }])).toBe(10);
+  });
+
+  test("přesun mezi sekcemi: jen jedno místo, ostatní drží vzájemné pořadí", () => {
+    const order = { guaranteed: ["g1", "g2"], others: ["o1", "o2", "o3"] };
+    expect(placeInSections(order, "o3", "guaranteed", 0)).toEqual({ guaranteed: ["o3", "g1", "g2"], others: ["o1", "o2"] });
+    expect(placeInSections(order, "g1", "other", 1)).toEqual({ guaranteed: ["g2"], others: ["o1", "g1", "o2", "o3"] });
+    expect(placeInSections(order, "o3", "other", 0)).toEqual({ guaranteed: ["g1", "g2"], others: ["o3", "o1", "o2"] });
+    expect(placeInSections(order, "o1", "other", 99)).toEqual({ guaranteed: ["g1", "g2"], others: ["o2", "o3", "o1"] });
+    expect(placeInSections({ guaranteed: [], others: ["o1"] }, "o1", "guaranteed", 5)).toEqual({ guaranteed: ["o1"], others: [] });
+    expect(placeInSections(order, "g2", "guaranteed", 1)).toBeNull();
+    expect(placeInSections(order, "x", "other", 0)).toBeNull();
+  });
+
+  test("přetažení jedním krokem z libovolné pozice na libovolnou v seznamech 1, 3, 10 a 25 témat", () => {
+    for (const size of [1, 3, 10, 25]) {
+      const others = Array.from({ length: size }, (_, i) => `o${i}`);
+      const order = { guaranteed: ["g1"], others };
+      for (let from = 0; from < size; from++) {
+        for (let to = 0; to < size; to++) {
+          const next = placeInSections(order, `o${from}`, "other", to);
+          if (from === to) {
+            expect(next).toBeNull();
+            continue;
+          }
+          expect(next!.others.indexOf(`o${from}`)).toBe(to);
+          expect(next!.others.filter((id) => id !== `o${from}`)).toEqual(others.filter((id) => id !== `o${from}`));
+          expect(next!.guaranteed).toEqual(["g1"]);
+        }
+        // Do garantovaných na začátek i konec, ostatní drží vzájemné pořadí.
+        expect(placeInSections(order, `o${from}`, "guaranteed", 0)!.guaranteed).toEqual([`o${from}`, "g1"]);
+        expect(placeInSections(order, `o${from}`, "guaranteed", 1)!.guaranteed).toEqual(["g1", `o${from}`]);
+      }
+    }
+  });
+
+  test("doporučení: garantované s vysokým pořadím předběhne téma s velkým zájmem", () => {
+    const ranked = [topic("zajem", { interestCount: 50 }), topic("garant-7", { interestCount: 0, priorityRank: 7 }), topic("garant-2", { interestCount: 0, priorityRank: 2 })];
+    expect(recommendTopics(ranked, "fp").map((t) => t.id)).toEqual(["garant-2", "garant-7", "zajem"]);
   });
 
   test("posun vymění se sousedem, na kraji nic nedělá", () => {
@@ -77,6 +117,11 @@ describe("garantovaná témata a ruční pořadí: pravidla", () => {
     expect(moveInOrder(["a", "b"], "a", "up")).toBeNull();
     expect(moveInOrder(["a", "b"], "b", "down")).toBeNull();
     expect(moveInOrder(["a"], "x", "up")).toBeNull();
+    // Přetažení na pozici: přesune, ne vymění; mimo rozsah se ořízne, stejné místo = nic.
+    expect(moveInOrder(["a", "b", "c", "d"], "a", 2)).toEqual(["b", "c", "a", "d"]);
+    expect(moveInOrder(["a", "b", "c", "d"], "d", 0)).toEqual(["d", "a", "b", "c"]);
+    expect(moveInOrder(["a", "b", "c"], "a", 99)).toEqual(["b", "c", "a"]);
+    expect(moveInOrder(["a", "b", "c"], "b", 1)).toBeNull();
   });
 });
 
@@ -140,8 +185,8 @@ describe("Naplánovat téma: výběr akcí", () => {
       ev("svatek", 3, { type: "holiday" }),
     ]);
     expect(candidates.map((c) => c.id)).toEqual(["drivejsi", "pozdejsi", "trenink", "zverejnena"]);
-    expect(candidates[0]!.reason).toBe("Návrh bez tématu, uloží se jen návrh · typ akce vychází z témat · stejná skupina");
-    expect(candidates.at(-1)!.reason).toContain("Zveřejněná akce bez tématu");
+    expect(candidates[0]!.reason).toBe("návrh");
+    expect(candidates.at(-1)!.reason).toBe("zveřejněno, změnu potvrdíte");
     expect(scheduled).toBeNull();
   });
 
@@ -178,31 +223,83 @@ describe("garantovaná témata a pořadí: služby", () => {
     expect(await code(setTopicPriority(admin, "topic-priority", true))).toBe("ok");
   });
 
-  test("nejvýš tři garantovaná, zrušení pořadí sesype, opakované nastavení nic nemění", async () => {
+  test("libovolný počet garantovaných, zrušení pořadí sesype, opakované nastavení nic nemění", async () => {
     await setTopicPriority(organizer, "topic-priority", true);
     expect((await ranks())["topic-priority"]?.priority).toBe(3);
-    expect(await code(setTopicPriority(organizer, "topic-preparation", true))).toBe("priority_full");
+    expect(await code(setTopicPriority(organizer, "topic-preparation", true))).toBe("ok");
+    expect((await ranks())["topic-preparation"]?.priority).toBe(4);
     expect(await code(setTopicPriority(organizer, "topic-priority", true))).toBe("ok");
     await setTopicPriority(organizer, "topic-questions", false);
     const state = await ranks();
-    expect([state["topic-rm"]?.priority, state["topic-priority"]?.priority, state["topic-questions"]?.priority]).toEqual([1, 2, null]);
+    expect([state["topic-rm"]?.priority, state["topic-priority"]?.priority, state["topic-preparation"]?.priority, state["topic-questions"]?.priority]).toEqual([1, 2, 3, null]);
     const db = await getDb();
     const logs = await db.select().from(auditLog).where(and(eq(auditLog.entityType, "topic"), eq(auditLog.entityId, "topic-questions")));
     expect(logs.map((l) => l.action)).toContain("topic.priority_clear");
   });
 
-  test("souběžné nastavení posledního volného pořadí projde jen jednou", async () => {
+  test("souběžné nastavení dvou garantovaných dá různá pořadí", async () => {
     const results = await Promise.all([
       code(setTopicPriority(organizer, "topic-priority", true)),
       code(setTopicPriority(organizer, "topic-preparation", true)),
     ]);
-    expect(results.sort()).toEqual(["ok", "priority_full"]);
+    expect(results).toEqual(["ok", "ok"]);
+    const state = await ranks();
+    expect([state["topic-priority"]?.priority, state["topic-preparation"]?.priority].sort()).toEqual([3, 4]);
+  });
+
+  test("přetažení mezi sekcemi: atomicky, bez kopie, s auditem a kontrolou souběhu", async () => {
+    const list = async () => {
+      const all = await listTopics(organizer);
+      return { guaranteed: guaranteedTopics(all).map((t) => t.id), others: otherTopics(all).map((t) => t.id) };
+    };
+    const before = await list();
+    const count = (await listTopics(organizer)).length;
+    // Ostatní téma na první garantované místo.
+    await placeTopic(organizer, "topic-priority", "guaranteed", 0, before);
+    let after = await list();
+    expect(after.guaranteed).toEqual(["topic-priority", ...before.guaranteed]);
+    expect(after.others).toEqual(before.others.filter((id) => id !== "topic-priority"));
+    expect((await listTopics(organizer)).length).toBe(count);
+    // Zastaralé pořadí: conflict, nic se nezmění.
+    expect(await code(placeTopic(organizer, "topic-rm", "other", 0, before))).toBe("conflict");
+    expect(await list()).toEqual(after);
+    // Garantované mezi ostatní na druhé místo: priorita zmizí, ostatní dostanou ruční pořadí.
+    const snapshot = after;
+    await placeTopic(organizer, "topic-questions", "other", 1, snapshot);
+    after = await list();
+    expect(after.guaranteed).toEqual(snapshot.guaranteed.filter((id) => id !== "topic-questions"));
+    expect(after.others[1]).toBe("topic-questions");
+    expect(after.others.filter((id) => id !== "topic-questions")).toEqual(snapshot.others);
+    const state = await ranks();
+    expect(state["topic-questions"]?.priority).toBeNull();
+    expect(after.guaranteed.map((id) => state[id]?.priority)).toEqual(after.guaranteed.map((_, i) => i + 1));
+    const db = await getDb();
+    const logs = await db.select().from(auditLog).where(and(eq(auditLog.entityType, "topic"), eq(auditLog.entityId, "topic-questions")));
+    expect(logs.map((l) => l.action)).toContain("topic.priority_clear");
+    // Člen týmu pořadí měnit nesmí.
+    expect(await code(placeTopic(lead, "topic-rm", "other", 0))).toBe("forbidden");
+  });
+
+  test("přetažení na pozici: garantovaná drží čísla priorit, souběh se odmítne bez zápisu", async () => {
+    const before = await ranks();
+    // Druhé garantované na první místo: priority se jen přeskupí.
+    await moveTopic(organizer, "topic-rm", 0, ["topic-questions", "topic-rm"]);
+    const state = await ranks();
+    expect([state["topic-rm"]?.priority, state["topic-questions"]?.priority]).toEqual([before["topic-questions"]?.priority, before["topic-rm"]?.priority]);
+    // Zastaralé pořadí (správce viděl jiné) → conflict, nic se nezmění.
+    expect(await code(moveTopic(organizer, "topic-rm", 1, ["topic-questions", "topic-rm"]))).toBe("conflict");
+    expect(await ranks()).toEqual(state);
+    // Přetažením se nedá změnit skupina: ostatní téma zůstane bez priority.
+    await moveTopic(organizer, "topic-priority", 0);
+    expect((await ranks())["topic-priority"]?.priority ?? null).toBeNull();
   });
 
   test("unikátní index nedovolí stejné pořadí dvěma nearchivovaným tématům", async () => {
     const db = await getDb();
     await expect(db.update(topics).set({ priorityRank: 1 }).where(eq(topics.id, "topic-priority"))).rejects.toThrow();
-    await expect(db.update(topics).set({ priorityRank: 4 }).where(eq(topics.id, "topic-priority"))).rejects.toThrow();
+    // Po migraci 0015 platí jen kladné pořadí, horní mez už není.
+    await expect(db.update(topics).set({ priorityRank: 0 }).where(eq(topics.id, "topic-priority"))).rejects.toThrow();
+    await db.update(topics).set({ priorityRank: 40 }).where(eq(topics.id, "topic-priority"));
   });
 
   test("posun garantovaného vymění prioritu, posun ostatního uloží ruční pořadí", async () => {

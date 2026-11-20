@@ -11,9 +11,10 @@ async function focused(page: Page) {
     const style = getComputedStyle(element);
     const rect = element.getBoundingClientRect();
     return {
-      label: (element.getAttribute("aria-label") || element.innerText || element.tagName).replace(/\s+/g, " ").trim().slice(0, 50),
+      label: (element.getAttribute("aria-label") || element.innerText || `${element.tagName} ${element.getAttribute("type") ?? ""} ${element.className}`).replace(/\s+/g, " ").trim().slice(0, 50),
       visible: rect.width > 0 && rect.height > 0,
       ring: (style.outlineStyle !== "none" && parseFloat(style.outlineWidth) > 0) || style.boxShadow !== "none",
+      outline: `${style.outlineWidth} ${style.outlineStyle} ${style.outlineColor}`,
     };
   });
 }
@@ -35,6 +36,42 @@ test.describe("klávesnice @desktop", () => {
     }
     expect(seen).toContain("Plán");
     expect(seen).toContain("Přidat akci");
+  });
+
+  test("focus ring je všude stejný, Shift+Tab vrací fokus zpět (A-14)", async ({ page }) => {
+    await page.goto("/vzdelavani/harmonogram");
+    await settle(page);
+    const ring = "2px solid rgb(157, 98, 25)";
+    const labels: string[] = [];
+    for (let i = 0; i < 20; i++) {
+      await page.keyboard.press("Tab");
+      const current = (await focused(page))!;
+      expect(current.outline, `jiný focus ring: ${current.label}`).toBe(ring);
+      labels.push(current.label);
+    }
+    for (let i = 18; i >= 15; i--) {
+      await page.keyboard.press("Shift+Tab");
+      expect((await focused(page))!.label).toBe(labels[i]);
+    }
+
+    // V okně: stejný ring u tlačítek i polí, Tab zůstane v okně, Esc zavře a vrátí fokus.
+    const trigger = page.getByRole("button", { name: "Přidat akci" });
+    await trigger.focus();
+    await page.keyboard.press("Enter");
+    const opened = page.getByRole("dialog", { name: "Přidat akci" });
+    await expect(opened).toBeVisible();
+    for (let i = 0; i < 12; i++) {
+      await page.keyboard.press("Tab");
+      expect(await opened.evaluate((node) => node.contains(document.activeElement))).toBe(true);
+      const current = (await focused(page))!;
+      expect(current.outline, `jiný focus ring v okně: ${current.label}`).toBe(ring);
+    }
+    await page.keyboard.press("Shift+Tab");
+    expect(await opened.evaluate((node) => node.contains(document.activeElement))).toBe(true);
+    await page.keyboard.press("Escape");
+    // Rozepsané pole by se zeptalo; Tab nic nevyplnil, okno se zavře hned.
+    await expect(opened).toBeHidden();
+    await expect(trigger).toBeFocused();
   });
 
   test("Enter otevře okno, Esc zavře a fokus se vrátí", async ({ page }) => {

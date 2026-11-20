@@ -30,7 +30,10 @@
   --danger-soft: #f9e6e4;
   --ok: #2f6b48;
   --ok-soft: #e4f0e8;
-  --focus: 0 0 0 3px rgba(157, 98, 25, 0.35);
+  /* Jediný focus ring (A-14): plná okrová má kontrast aspoň 3 : 1 vůči všem plochám včetně tmavého menu, dřívější
+     průsvitný stín měl 1,6 : 1. Outline, ne stín: v režimu vynucených barev (Windows) stín zmizí. */
+  --focus-ring: 2px solid var(--ochre);
+  --focus-offset: 2px;
   --radius: 10px;
   --radius-sm: 6px;
   --font-sans: "Inter Variable", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -105,8 +108,8 @@ textarea {
 }
 
 :focus-visible {
-  outline: none;
-  box-shadow: var(--focus);
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
 }
 
 .visually-hidden {
@@ -439,14 +442,15 @@ a.item-card:hover {
   text-transform: uppercase;
 }
 
+/* Hierarchie položky v celé Wiki: název tučně a tmavě, metadata menší a tlumená. */
 .item-title {
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 650;
 }
 
 .item-meta {
   margin-top: 2px;
-  color: var(--ink-soft);
+  color: var(--muted);
   font-size: 14px;
 }
 
@@ -505,6 +509,14 @@ a.item-card:hover {
 .btn:disabled {
   cursor: not-allowed;
   opacity: 0.55;
+}
+
+/* Neaktivní hlavní akce nesmí vypadat jako výzva: šedá plocha místo okrové. */
+.btn-primary:disabled {
+  border-color: var(--line-strong);
+  background: var(--beige);
+  color: var(--muted);
+  opacity: 1;
 }
 
 .btn-primary {
@@ -635,6 +647,13 @@ a.item-card:hover {
   font-size: 12px;
 }
 
+/* Nápověda, na které záleží výsledek (co se přepíše, kdo pozvánku nedostane, limit souboru), je čitelnější (C-01).
+   Ostatní nápovědy zůstávají drobné a tlumené, aby formulář nezhoustl. */
+.field-hint-key {
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+
 .input,
 .select,
 .textarea {
@@ -700,12 +719,14 @@ fieldset.field > legend {
   padding: 0;
 }
 
+/* Pole: stejný ring, jen přes vlastní rámeček (offset -1 px), aby nepřekrýval sousední pole. Datum a čas mají fokus
+   ve vnitřním segmentu, :focus na nich Chrome nehlásí, proto i :focus-within. */
 .input:focus,
+.input:focus-within,
 .select:focus,
 .textarea:focus {
-  border-color: var(--ink);
-  box-shadow: none;
-  outline: 2px solid var(--ink);
+  border-color: var(--ochre);
+  outline: var(--focus-ring);
   outline-offset: -1px;
 }
 
@@ -848,8 +869,8 @@ fieldset.field > legend {
   background: var(--beige);
 }
 
+/* Položka v rolovaném seznamu nabídky: ring dovnitř, venku by ho seznam ořízl. */
 .menu-list .btn:focus-visible {
-  outline: 2px solid var(--ochre);
   outline-offset: -2px;
 }
 
@@ -902,8 +923,9 @@ fieldset.field > legend {
   color: var(--danger);
 }
 
-/* ⋯ v rohu karty akce: malé a tlumené, karta nemění rozměry. Dotyková plocha je větší než viditelná ikona
-   (pseudo-prvek), aby šla trefit prstem. Na desktopu se zvýrazní při najetí nebo fokusu na kartu. */
+/* ⋯ v rohu karty akce: malé, ale vždy viditelné tlačítko s jemným rámečkem. Karta mu vyhrazuje místo (odsazení
+   názvu v mřížce, pravý okraj v agendě), takže nikdy nepřekryje text a nezvětší výšku karty. Najetí, fokus
+   a otevření ho zvýrazní. Na dotykovém displeji je o kus větší a dotyková plocha (pseudo-prvek) má 44 px. */
 .menu-card {
   position: absolute;
   z-index: 2;
@@ -919,10 +941,10 @@ fieldset.field > legend {
   position: relative;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 24px;
+  width: 26px;
+  height: 22px;
   padding: 0;
-  border: 1px solid transparent;
+  border: 1px solid var(--line);
   border-radius: 6px;
   background: transparent;
   color: var(--muted);
@@ -931,33 +953,43 @@ fieldset.field > legend {
 
 .menu-card-trigger::before {
   position: absolute;
-  inset: -8px -6px;
+  inset: -4px;
   content: "";
 }
 
 .menu-card-trigger:hover,
-.menu-card[data-open] > .menu-card-trigger {
-  border-color: var(--line);
+.menu-card-trigger:focus-visible {
+  border-color: var(--line-strong);
   background: var(--surface);
   color: var(--ink);
 }
 
-.menu-card-trigger:focus-visible {
-  outline: 2px solid var(--ochre);
-  outline-offset: 1px;
+.menu-card[data-open] > .menu-card-trigger {
+  border-color: var(--ink);
+  background: var(--surface);
   color: var(--ink);
 }
 
-@media (hover: hover) and (pointer: fine) {
+@media (pointer: coarse) {
   .menu-card-trigger {
-    opacity: 0.6;
+    width: 30px;
+    height: 26px;
   }
 
-  :hover > .menu-card > .menu-card-trigger,
-  :focus-within > .menu-card > .menu-card-trigger,
-  .menu-card[data-open] > .menu-card-trigger {
-    opacity: 1;
+  .menu-card-trigger::before {
+    inset: -9px -7px;
   }
+}
+
+/* ⋯ stejného vzhledu jako na kartách Plánu, ale v řádku (Témata): stojí v toku a má výšku tlačítek vedle sebe. */
+.menu-card.menu-inline {
+  position: relative;
+  z-index: auto;
+}
+
+.menu-inline > .menu-card-trigger {
+  width: 32px;
+  height: 32px;
 }
 
 /* Při hromadném výběru má přednost checkbox, menu karty se schová stejně jako úchyt přesunu. */
@@ -970,7 +1002,7 @@ fieldset.field > legend {
 }
 
 /* Okno otevřené z jiného okna to první po dobu práce nahradí. Po zavření se první vrátí. */
-body > .dialog[open]:has(~ .dialog[open]) {
+body > .dialog[open]:has(~ .dialog[open]:not(.confirm-dialog)) {
   visibility: hidden;
 }
 
@@ -982,16 +1014,50 @@ body > .dialog[open]:has(~ .dialog[open]) {
   margin: 0;
 }
 
-.dialog-confirm {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: center;
-  justify-content: space-between;
+/* Potvrzení rozhodnutí: malé samostatné okno nad pracovním oknem, to zůstává vidět a nic se v něm neposune. */
+.confirm-dialog {
+  width: min(440px, calc(100vw - 32px));
 }
 
-.dialog-confirm p {
+.confirm-body {
+  gap: 12px;
+}
+
+.confirm-body h2 {
   margin: 0;
+  font-size: 20px;
+}
+
+.confirm-description p {
+  margin: 0;
+}
+
+.confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+/* Destruktivní volba stojí odděleně od bezpečných. */
+.confirm-destructive {
+  margin-left: auto;
+}
+
+@media (max-width: 480px) {
+  .confirm-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .confirm-destructive {
+    margin-left: 0;
+  }
+
+  /* Potvrzení přes formulář (ActionForm): tlačítko má stejnou šířku jako ostatní. */
+  .confirm-actions form .btn {
+    width: 100%;
+  }
 }
 
 /* ——— Tabulky ——— */
@@ -1285,19 +1351,30 @@ body > .dialog[open]:has(~ .dialog[open]) {
   margin-bottom: 8px;
 }
 
+/* Výběrové karty (osoba, zdroj zápisu) mají stejný jazyk jako volby `.check-chip`: bílá plocha, okrový výběr. */
 .persona {
   display: flex;
   gap: 12px;
   padding: 12px 14px;
-  border: 1px solid var(--beige-strong);
+  border: 1px solid var(--line-strong);
   border-radius: 8px;
-  background: var(--item);
+  background: var(--surface);
   cursor: pointer;
+}
+
+.persona:hover {
+  border-color: var(--ochre);
 }
 
 .persona:has(input:checked) {
   border-color: var(--ochre);
   background: var(--ochre-soft);
+  box-shadow: inset 0 0 0 1px var(--ochre);
+}
+
+.persona:has(input:focus-visible) {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
 }
 
 .persona input {
@@ -1311,9 +1388,16 @@ body > .dialog[open]:has(~ .dialog[open]) {
 }
 
 /* Volba zdroje zápisu: stejné dlaždice jako výběr osoby, na širším okně ve dvou sloupcích. */
+/* Čtyři zdroje: 2 × 2 na šířku okna, jeden sloupec na telefonu. Nikdy 3 + 1. */
 .source-list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 560px) {
+  .source-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .source-list legend {
@@ -1399,9 +1483,80 @@ body > .dialog[open]:has(~ .dialog[open]) {
   flex-direction: column;
   gap: 10px;
   margin: 0;
-  padding: 12px 14px;
+  padding: 12px 14px 14px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-left: 4px solid var(--ochre);
+  border-radius: var(--radius-sm);
+  background: var(--band);
+}
+
+/* Den bez „Používat“ zůstane čitelný, ale ustoupí do pozadí. */
+.slot:has(> .slot-time input[type="checkbox"]:not(:checked)) {
+  border-left-color: var(--line-strong);
+  background: var(--surface);
+}
+
+.slot-day {
+  padding: 0 6px;
+  font-size: 15px;
+  font-weight: 650;
+}
+
+/* Používat / Od / Do jako jeden kompaktní celek. */
+.slot-time {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+
+.slot-types {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.slot-types > legend {
+  float: left;
+  width: 100%;
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* Zaškrtávací volba ve stylu štítku: skutečný checkbox zůstává (klávesnice, čtečka), štítek jen ukáže stav. */
+.check-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 4px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.check-chip:has(input:checked) {
+  border-color: var(--ochre);
+  background: var(--ochre-soft);
+  color: var(--ochre-dark);
+  font-weight: 600;
+}
+
+.check-chip:has(input:focus-visible) {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
+.check-chip input {
+  margin: 0;
+  accent-color: var(--ochre);
 }
 
 .slot .field {
@@ -1440,6 +1595,79 @@ body > .dialog[open]:has(~ .dialog[open]) {
 .upload {
   padding-top: 14px;
   border-top: 1px dashed var(--line);
+}
+
+/* Výběr souboru ve vzhledu tlačítek Wiki. Skutečné pole je vizuálně skryté uvnitř popisku, fokus se kreslí na tlačítku. */
+.file-pick {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+}
+
+.file-pick .btn:focus-within {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
+.file-pick-name {
+  overflow-wrap: anywhere;
+}
+
+/* Hlavička zápisu: stav verze a vedlejší „Změnit zdroj“ na jednom řádku, na úzkém okně pod sebou. */
+.minutes-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+}
+
+.minutes-version {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin: 0;
+}
+
+.minutes-state {
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.minutes-state-waiting {
+  background: var(--draft-strong);
+  color: var(--ochre-dark);
+}
+
+.minutes-state-ok {
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+
+.minutes-state-draft {
+  border: 1px dashed var(--line-strong);
+  color: var(--ink-soft);
+}
+
+.minutes-source {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.stack[hidden] {
+  display: none;
+}
+
+/* Pole zápisu začínají nízko a rostou s textem (kde prohlížeč umí `field-sizing`, jinde podle `rows`). */
+.textarea.textarea-grow {
+  min-height: 60px;
+  max-height: 60vh;
+  field-sizing: content;
 }
 
 .minutes h3 {
@@ -1723,6 +1951,13 @@ details > summary {
   margin: 8px 0 0;
   max-width: 60ch;
 }
+/* Další údaje uvnitř rámečku formuláře: jen dělicí čára, žádný druhý rámeček. */
+.form-main > .more-settings {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
 .more-settings > summary {
   cursor: pointer;
   font-weight: 600;
@@ -2038,6 +2273,16 @@ a.brief-link:hover {
   background: var(--ok-soft);
 }
 
+.status-danger {
+  border-left-color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.status-attention {
+  border-left-color: var(--ochre);
+  background: var(--beige-strong);
+}
+
 .status-extra {
   border-left-color: var(--ink-soft);
   background: var(--beige-strong);
@@ -2106,10 +2351,6 @@ a.brief-link:hover {
   list-style: none;
 }
 
-/* Aktivní témata mají jemné teplé podbarvení, nejžádanější decentně zelené. Archiv zůstává bílý. */
-.topic-list:not(.archived-topics) > .topic-row {
-  background: var(--beige);
-}
 
 .topic-row {
   display: grid;
@@ -2123,11 +2364,6 @@ a.brief-link:hover {
   border-top: 1px solid var(--line);
 }
 
-/* Nejžádanější téma: zelený pruh vlevo a jemně zelené pozadí. */
-.topic-list > .topic-row.topic-wanted {
-  background: color-mix(in srgb, var(--ok-soft) 70%, var(--surface));
-  box-shadow: inset 3px 0 0 var(--ok);
-}
 
 .topic-main {
   display: flex;
@@ -2152,6 +2388,131 @@ a.brief-link:hover {
   margin: 0;
 }
 
+/* Úchyt pořadí (jen správce) a pořadové číslo garantovaných: úzký sloupec vlevo, tlumený, aby nesoupeřil
+   s tlačítkem Mám zájem ani s ⋯. Úchyt nepouští posun stránky prstem (touch-action), tažení řídí pointer events. */
+.topic-row.topic-has-lead {
+  grid-template-columns: auto minmax(0, 1fr) 10rem auto;
+}
+
+.topic-lead {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: -6px;
+}
+
+.topic-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink-soft);
+  cursor: grab;
+  touch-action: none;
+}
+
+.topic-handle:hover {
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+  color: var(--ink);
+}
+
+.topic-rank {
+  min-width: 1.25em;
+  color: var(--ink-soft);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  text-align: center;
+}
+
+.topic-dragging,
+.topic-dragging .topic-handle {
+  cursor: grabbing;
+  user-select: none;
+}
+
+/* Tažení: řádek zůstává na místě jako zástupné místo, ukazatel sleduje náhled, linka ukazuje místo vložení.
+   Linka je absolutně v `.topic-board`, náhled `fixed` u ukazatele; polohu jim dává `TopicBoard`. */
+.topic-board {
+  position: relative;
+}
+
+.topic-list > .topic-row.topic-dragged {
+  background: var(--band);
+  box-shadow: none;
+}
+
+.topic-row.topic-dragged > * {
+  opacity: 0.35;
+}
+
+.topic-drop-line {
+  position: absolute;
+  top: -2px;
+  left: 0;
+  right: 0;
+  z-index: 3;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--ochre);
+  pointer-events: none;
+}
+
+.topic-drag-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--ink) 22%, transparent);
+  color: var(--ink);
+  font-weight: 650;
+  pointer-events: none;
+}
+
+.topic-drag-overlay > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topic-drop-empty {
+  padding: 16px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius);
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.topic-group-guaranteed .topic-drop-empty {
+  border-color: var(--draft-line);
+  background: color-mix(in srgb, var(--ochre-soft) 60%, transparent);
+}
+
+.topic-drop-empty.is-target {
+  border: 2px solid var(--ochre);
+  padding: 15px;
+  background: var(--ochre-soft);
+  color: var(--ink);
+}
+
+.topic-order-error {
+  margin-top: 6px;
+}
+
 /* Archiv: stejné řádky, jen tlumené. */
 /* Garantovaná a ostatní témata: stejné řádky, jen malý nadpis skupiny. Garantovaná mají ochrový pruh. */
 .topic-group + .topic-group {
@@ -2163,12 +2524,37 @@ a.brief-link:hover {
   font-size: 1rem;
 }
 
+.topic-group-guaranteed .topic-group-title {
+  color: var(--ochre-dark);
+  font-size: 1.0625rem;
+}
+
 .topic-group > .item-meta {
   margin: 0 0 8px;
 }
 
+/* Tři úrovně (P1-2): garantovaná mají teplý okrový podklad a ochrový pruh, ostatní neutrální, Nejžádanější
+   mezi ostatními zelený pruh a štítek. Garantované a zároveň nejžádanější: hlavní tón zůstává okrový, jen štítek. */
+.topic-list.topic-guaranteed {
+  border-color: var(--draft-line);
+  background: var(--ochre-soft);
+}
+
 .topic-list.topic-guaranteed > .topic-row {
-  box-shadow: inset 3px 0 0 var(--ochre);
+  box-shadow: inset 4px 0 0 var(--ochre);
+}
+
+.topic-list.topic-guaranteed > .topic-row + .topic-row {
+  border-top-color: color-mix(in srgb, var(--draft-line) 70%, transparent);
+}
+
+.topic-list.topic-guaranteed .topic-rank,
+.topic-list.topic-guaranteed .topic-handle {
+  color: var(--ochre-dark);
+}
+
+.topic-list:not(.topic-guaranteed) > .topic-row.topic-wanted {
+  box-shadow: inset 4px 0 0 var(--ok);
 }
 
 .topic-priority-hint {
@@ -2211,6 +2597,31 @@ a.brief-link:hover {
   border-top: 1px solid var(--line);
 }
 
+.plan-topic-scheduled {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: inset 3px 0 0 var(--ochre);
+}
+
+.plan-topic-scheduled .item-title,
+.plan-topic-heading {
+  margin: 0;
+}
+
+.plan-topic-heading {
+  font-size: 1rem;
+}
+
+.plan-topic-more {
+  align-self: flex-start;
+}
+
 .plan-topic-action {
   display: flex;
   flex-direction: column;
@@ -2239,14 +2650,53 @@ a.brief-link:hover {
   .topic-main {
     grid-column: 1 / -1;
   }
+
+  .topic-row.topic-has-lead {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .topic-has-lead > .topic-main {
+    grid-column: 2 / -1;
+  }
+
+  .topic-has-lead > .topic-interest {
+    grid-column: 1 / 3;
+  }
+
+  .topic-handle {
+    width: 36px;
+    height: 44px;
+  }
+
+  .topic-row .topic-count,
+  .topic-row .topic-people > summary {
+    white-space: nowrap;
+  }
+}
+
+/* Nejužší telefony: počet zájemců a tlačítka by se do jednoho řádku nevešly, tlačítka jdou pod něj. */
+@media (max-width: 360px) {
+  .topic-row > .topic-interest {
+    grid-column: 1 / -1;
+  }
+
+  .topic-row > .topic-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+
+  .topic-has-lead > .topic-interest,
+  .topic-has-lead > .topic-actions {
+    grid-column: 2 / -1;
+  }
 }
 
 .topic-count,
 .topic-people > summary {
   margin: 0;
-  color: var(--ink-soft);
-  font-size: 14px;
-  font-weight: 600;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
 }
 
 .topic-people > summary {
@@ -2277,6 +2727,31 @@ a.brief-link:hover {
 /* ——— Zápis v okně: sekce uvnitř okna nemá vlastní rámeček ——— */
 .peek-eyebrow {
   margin: -8px 0 0;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+/*
+ * D-03: v okně zápisu jsou od sebe oddělené metadata (řádek nad), stav verze (tónovaný pruh),
+ * obsah zápisu a akce pod ním (čára). Jen rozestup, čára a tón stávající palety.
+ */
+.peek-section .minutes-head {
+  padding: 8px 8px 8px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--beige);
+}
+
+.peek-section .minutes-version {
+  margin: 0;
+}
+
+.peek-section .minutes-head .btn {
+  background: var(--surface);
+}
+
+.peek-section .minutes-head + .stack > details {
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
 }
 
 .peek-section > .section {
@@ -2310,6 +2785,13 @@ a.brief-link:hover {
   flex-wrap: wrap;
   gap: 4px 8px;
   align-items: center;
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.topic-main .item-meta {
+  color: var(--muted);
+  font-size: 13px;
 }
 
 .topic-main .item-title .topic-badge {
@@ -2541,6 +3023,48 @@ p.cal-status {
 .filter-menu-panel .field {
   display: grid;
   gap: 4px;
+}
+
+/* Typy a stavy jako zaškrtávací volby: víc hodnot v jedné skupině platí současně (NEBO). */
+.filter-group {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.filter-group > legend {
+  margin-bottom: 4px;
+  padding: 0;
+}
+
+.filter-check {
+  align-items: center;
+  min-height: 32px;
+  padding: 0 6px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.filter-check:hover {
+  background: var(--beige);
+}
+
+.filter-check input {
+  margin-top: 0;
+}
+
+/* Zrušit všechny filtry: tichý odkaz za štítky, ne další tlačítko. */
+.filter-reset {
+  align-self: center;
+  color: var(--muted);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.filter-reset:hover {
+  color: var(--ink);
 }
 
 /* ——— Hromadný výběr návrhů přímo v Plánu ——— */
@@ -2800,11 +3324,15 @@ p.cal-status {
 }
 
 /* Sloupce se skládají podle šířky seznamu v okně, ne obrazovky. */
-.publish-list {
+.publish-group {
   container-type: inline-size;
 }
 
 @container (max-width: 760px) {
+  .publish-head {
+    display: none;
+  }
+
   .publish-row {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
@@ -2814,19 +3342,102 @@ p.cal-status {
   }
 }
 
-/* Okno Připravit měsíc: kroky nad návrhy (doplnění, párování, mezery). */
+/* Okno Připravit měsíc: tři kroky jako sekce podle vzoru Přidat akci (číslo kroku, okrový pruh, světlý podklad). */
 .prepare-step {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 6px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--line);
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--ochre);
+  border-radius: var(--radius-sm);
+  background: var(--band);
 }
 
 .prepare-step h3 {
   margin: 0;
+  font-family: var(--font-sans);
   font-size: 1rem;
+  font-weight: 650;
+}
+
+.prepare-step > .hint {
+  margin-top: -6px;
+}
+
+/* Krok 1: obě tlačítka stojí vždy na stejném místě, hláška o výsledku má vlastní řádek pod nimi. */
+.prepare-fill {
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.prepare-fill > .action-form {
+  display: contents;
+}
+
+.prepare-fill > [role="status"],
+.prepare-fill > .action-form > [role="status"],
+.prepare-fill > .action-form > [role="alert"] {
+  order: 1;
+  flex: 1 0 100%;
+  margin: 0;
+}
+
+/* Výsledek doplnění (např. „Nic nového k doplnění“) jako tichý informační stav, ne jako další nadpis. */
+.prepare-fill > .action-form > [role="status"] {
+  color: var(--muted);
+}
+
+/* Záhlaví sloupců seznamu návrhů (jen na šířku, kde jsou pole v řádku vedle sebe). */
+.publish-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.9fr) minmax(0, 0.9fr) minmax(0, 1fr) minmax(0, 0.9fr);
+  gap: 10px;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.publish-head > :first-child {
+  padding-left: 28px;
+}
+
+.publish-main .item-title {
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.publish-main .item-meta {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* Krok 3: výběr a připravenost odděleně, prázdný stav jen tichým textem. */
+.publish-impact-count strong {
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.publish-impact-state {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.publish-impact-state[data-state="ready"] {
+  color: var(--ok);
+}
+
+.publish-impact-state[data-state="incomplete"] {
+  color: var(--ochre-dark);
+}
+
+.publish-impact[data-empty] {
+  padding: 0;
+  background: none;
+  color: var(--muted);
 }
 
 /* Seznam návrhů vyplní šířku okna (krok jinak zarovnává obsah doleva na šířku obsahu). */
@@ -2855,13 +3466,32 @@ p.cal-status {
   background: var(--ochre-soft);
 }
 
-/* Hromadné doplnění vedoucího: volba, tlačítko a vysvětlení v jednom zalamovaném řádku. */
+/* Nulové počty (a Připraveno bez návrhů) jen tichým textem bez rámečku: informace zůstane, ale nesoupeří
+   s kategoriemi, které vyžadují zásah. */
+.prepare-overview-item:disabled {
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+  opacity: 1;
+}
+
+/* Hromadné doplnění vedoucího: samostatný nástroj (název, volba, tlačítko, výsledek) v bílém rámečku. */
 .prepare-bulk {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
-  gap: 4px 8px;
+  gap: 6px 8px;
   align-self: stretch;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.prepare-tool-title {
+  flex: 1 0 100%;
+  font-size: 14px;
+  font-weight: 650;
 }
 
 .prepare-bulk .field {
@@ -2882,7 +3512,20 @@ p.cal-status {
 /* Téma doporučené systémem, o kterém správce ještě nerozhodl. Po přijetí vypadá jako každé jiné téma. */
 .publish-row .input[data-suggested] {
   border-color: var(--ochre);
-  background: var(--ochre-soft);
+  /* Jen barva: šipka nabídky (background-image comboboxu) zůstane. */
+  background-color: var(--ochre-soft);
+}
+
+/* Garantované téma bez termínu: jen barevný text v řádku, žádný nový panel ani tučné písmo. */
+.topic-unscheduled {
+  color: var(--danger);
+  font-weight: 500;
+}
+
+/* Téma jen v návrhu akce: oranžově jako ostatní návrhy, ne červeně jako chybějící termín. */
+.topic-in-draft {
+  color: var(--ochre-dark);
+  font-weight: 600;
 }
 
 .topic-suggestion {
@@ -2920,8 +3563,6 @@ p.cal-status {
 .invitees,
 .invitees-none {
   margin: 0;
-  font-size: 13px;
-  color: var(--muted);
 }
 
 .invitees-names {
@@ -2952,6 +3593,27 @@ p.cal-status {
   flex: 1;
   min-width: 0;
   overflow-wrap: break-word;
+}
+
+.account-email {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.account-role {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin-top: 6px;
+}
+
+.account-role .badge {
+  background: var(--surface);
+}
+
+.account-role .badge-ochre {
+  background: var(--ochre-soft);
 }
 
 .account-side {
@@ -3104,22 +3766,6 @@ p.cal-status {
 
 .event-actions-note {
   margin-right: 4px;
-}
-
-.confirm-bar {
-  align-items: flex-start;
-  justify-content: flex-end;
-  background: var(--draft);
-}
-
-.confirm-text {
-  flex: 1 1 260px;
-  margin: 0;
-}
-
-.confirm-text p,
-.confirm-text ul {
-  margin: 0 0 4px;
 }
 
 .invitees > summary {
@@ -3289,6 +3935,8 @@ body[data-moving] .quick-actions,
   .plan-filters {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    /* Všechny řádky stejně vysoké: na 320 px se „Vybrat návrhy“ zalomí a krátké štítky souhrnu nad ním by byly nižší. */
+    grid-auto-rows: 1fr;
     align-items: stretch;
     gap: 8px;
   }
@@ -3330,14 +3978,19 @@ body[data-moving] .quick-actions,
     grid-column: 1 / -1;
   }
 
-  .filter-menu-panel {
-    right: auto;
-    left: 0;
+  /* Panel se kotví k celému řádku filtrů, ne k tlačítku: v pravém sloupci mřížky by přetekl okraj okna. */
+  .plan-filters {
+    position: relative;
   }
 
-  .filter-menu:has(+ .filter-button) .filter-menu-panel,
-  .filter-menu[data-wide] .filter-menu-panel {
+  .plan-filters .filter-menu {
+    position: static;
+  }
+
+  .plan-filters .filter-menu-panel {
+    right: 0;
     left: 0;
+    width: auto;
   }
 }
 
@@ -3384,5 +4037,311 @@ body[data-moving] .quick-actions,
 
   .topic-main .item-title .topic-badge {
     order: -1;
+  }
+}
+
+/* Nabídka tématu (`Combobox`): pole vypadá jako výběr, panel je pod ním uvnitř okna. */
+.combobox {
+  position: relative;
+}
+
+.combobox-input {
+  padding-right: 30px;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position:
+    calc(100% - 16px) 50%,
+    calc(100% - 11px) 50%;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+}
+
+.combobox-panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 4px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  box-shadow: 0 8px 24px rgba(35, 35, 35, 0.12);
+}
+
+.combobox-panel[hidden] {
+  display: none;
+}
+
+.combobox-group {
+  padding: 8px 8px 4px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.combobox-option {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 40px;
+  justify-content: center;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.combobox-option[aria-selected="true"] {
+  background: var(--beige);
+  box-shadow: inset 3px 0 0 var(--ochre);
+}
+
+.combobox-option[data-current] .combobox-option-name {
+  color: var(--ochre-dark);
+}
+
+.combobox-option-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.combobox-option-name {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Hlavní výzva stránky (PageCall): účel stránky a jediné hlavní tlačítko, výrazně nad obsahem. */
+.page-call {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 20px;
+  margin: 0 0 20px;
+  padding: 16px 20px;
+  border: 1px solid var(--draft-line);
+  border-left: 4px solid var(--ochre);
+  border-radius: var(--radius);
+  background: var(--ochre-soft);
+}
+
+.page-call-text {
+  margin: 0;
+  flex: 1 1 22ch;
+  font-family: var(--font-serif);
+  font-size: 1.3rem;
+  line-height: 1.3;
+  color: var(--ink);
+}
+
+.page-call-action .btn {
+  min-height: 44px;
+  padding-inline: 20px;
+}
+
+@media (max-width: 560px) {
+  .page-call {
+    padding: 14px 16px;
+  }
+  .page-call-action,
+  .page-call-action .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Návrh změny zveřejněné akce (ChangeBanner): okrový panel, rozbalitelný originál a dvě rozhodnutí. */
+.change-banner {
+  margin: 0 0 16px;
+  padding: 12px 16px;
+  border: 1px solid var(--draft-line);
+  border-left: 4px solid var(--ochre);
+  border-radius: var(--radius);
+  background: var(--draft);
+}
+
+.change-banner-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+
+.change-banner-title {
+  margin: 0;
+  flex: 1 1 28ch;
+}
+
+.change-banner-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.change-original {
+  margin-top: 8px;
+}
+
+.change-original > summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--ochre-dark);
+}
+
+.change-original-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 8px 16px;
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  animation: change-original-in 0.22s ease-out;
+}
+
+.change-original-facts dt {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.change-original-facts dd {
+  margin: 0;
+}
+
+@keyframes change-original-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .change-original-facts {
+    animation: none;
+  }
+}
+
+/* ——— Lehké animace (P4): jen otevření okna, rozbalení nabídek a hover karet; při omezení pohybu žádné ——— */
+@media (prefers-reduced-motion: no-preference) {
+  dialog[open] {
+    animation: dialog-in 150ms ease-out;
+  }
+
+  .filter-menu[open] > .filter-menu-panel,
+  details[open] > .change-original-facts {
+    animation: unfold 140ms ease-out;
+  }
+
+  @media (hover: hover) {
+    /* Jen stín bez posunu: transformace by z karty udělala kotvu pro pevně umístěné menu ⋯ uvnitř. */
+    a.item-card {
+      transition: box-shadow 0.15s ease;
+    }
+
+    a.item-card:hover {
+      box-shadow: 0 4px 12px rgb(0 0 0 / 0.08);
+    }
+  }
+}
+
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@keyframes unfold {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+/* Globální „Pohled“ v horní liště (jen správce): oddělený od účtu, aktivní náhled okrově. */
+.view-switch {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+  padding-right: 12px;
+  border-right: 1px solid var(--line);
+}
+
+.view-switch-form {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.view-switch-label {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.view-switch-active .view-select {
+  border-color: var(--ochre);
+  /* Jen barva: zkratka background by smazala šipku výběru. */
+  background-color: var(--ochre-soft);
+  color: var(--ochre-dark);
+  font-weight: 600;
+}
+
+.preview-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+  padding: 8px 24px;
+  border-bottom: 1px solid var(--draft-line);
+  background: var(--draft);
+  color: var(--ochre-dark);
+  font-size: 14px;
+}
+
+.preview-bar p {
+  margin: 0;
+}
+
+.preview-bar-where {
+  color: var(--ink-soft);
+}
+
+@media (max-width: 640px) {
+  /* Na telefonu má Pohled vlastní řádek pod značkou: celá šířka, bez oddělovače, dlouhý název se zkrátí. */
+  .view-switch {
+    width: 100%;
+    margin-left: 0;
+    padding-right: 0;
+    border-right: 0;
+  }
+
+  .view-switch-form {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .view-select {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: 100%;
+    text-overflow: ellipsis;
+  }
+
+  .view-switch-label,
+  .preview-bar-where {
+    display: none;
+  }
+
+  .preview-bar {
+    padding: 6px 16px;
+    font-size: 13px;
   }
 }

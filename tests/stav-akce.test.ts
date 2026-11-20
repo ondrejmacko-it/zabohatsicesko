@@ -24,6 +24,7 @@ const card = (over: Partial<EventCard> = {}): EventCard => ({
   past: false,
   syncStatus: null,
   movedFrom: null,
+  original: null,
   revision: null,
   handler: false,
   minutesPublished: false,

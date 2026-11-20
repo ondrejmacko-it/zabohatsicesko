@@ -1,3 +1,4 @@
+import { eventTitle } from "@/lib/labels";
 import type { EventSnapshot, EventType, Group } from "@/lib/types";
 import type { events } from "@/server/db/schema";
 
@@ -25,5 +26,5 @@ export function snapshotOf(row: Pick<EventRow,
 
 /** Bezpečný název pro pozvánku: jen typ a schválené téma, nic z interních poznámek. */
 export function calendarSummary(snapshot: Pick<EventSnapshot, "label" | "topicTitle">): string {
-  return snapshot.topicTitle ? `${snapshot.label}: ${snapshot.topicTitle}` : snapshot.label;
+  return eventTitle(snapshot.label, snapshot.topicTitle);
 }

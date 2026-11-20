@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { createContext, startTransition, useActionState, useContext, useEffect, useRef, useState } from "react";
 import { ActionMessage } from "@/components/ActionForm";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { flash } from "@/components/FlashMessage";
 import { Icon } from "@/components/Icon";
 import { Modal } from "@/components/Modal";
@@ -65,7 +66,6 @@ export function SelectionZone({
   const [ask, setAsk] = useState<Ask>(null);
   const [single, setSingle] = useState<MonthDraft | null>(null);
   const bar = useRef<HTMLDivElement>(null);
-  const backTo = useRef<Ask>(null);
 
   const byId = new Map(items.map((i) => [i.id, i]));
   const publishableById = new Map(publishable.map((d) => [d.id, d]));
@@ -90,31 +90,26 @@ export function SelectionZone({
     });
   };
 
-  // Po „Zpět“ vrátí fokus na tlačítko, které se ptalo. Jinak by zůstal na zmizelém tlačítku.
-  useEffect(() => {
-    if (ask || !backTo.current) return;
-    bar.current?.querySelector<HTMLButtonElement>(`button[data-intent="${backTo.current}"]`)?.focus();
-    backTo.current = null;
-  }, [ask]);
-  const back = () => {
-    backTo.current = ask;
-    setAsk(null);
-  };
+  // Potvrzení je samostatné okno (`ConfirmDialog`), po „Zpět“ vrátí fokus na tlačítko, které se ptalo.
+  const back = () => setAsk(null);
 
   // Esc ukončí výběr (když se zrovna na nic neptáme, jinak vrátí z potvrzení).
   useEffect(() => {
     if (!active) return;
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== "Escape" || document.querySelector("dialog[open]")) return;
-      if (ask) back();
-      else stop();
+      stop();
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   });
 
   const finish = (result: ActionResult) => {
-    if (!result.ok) return result;
+    // Chyba se ukáže v liště výběru. Potvrzovací okno se zavře, aby ji nezakrylo.
+    if (!result.ok) {
+      setAsk(null);
+      return result;
+    }
     flash(result.message);
     stop();
     router.refresh();
@@ -173,63 +168,68 @@ export function SelectionZone({
         {active && (
           <div ref={bar} className="select-bar" role="region" aria-label="Hromadný výběr návrhů">
             <ActionMessage state={deleteState ?? publishState} />
-            {ask === "publish" ? (
-              <div key="publish" className="select-bar-row" role="alertdialog" aria-labelledby="potvrdit-zverejneni">
-                <p id="potvrdit-zverejneni" className="select-bar-text">
-                  <strong>Zveřejnit {events(toPublish.length)}?</strong> Kolegové je uvidí a dostanou pozvánky.
+            <ConfirmDialog
+              open={ask === "publish"}
+              title={`Zveřejnit ${events(toPublish.length)}?`}
+              busy={busy}
+              description={
+                <p>
+                  Kolegové je uvidí a dostanou pozvánky.
                   {pastPicked > 0 && ` ${drafts(pastPicked)} v minulosti se nezveřejní.`}
                   {incomplete > 0 && ` ${incomplete} bez tématu nebo vedoucího.`}
                 </p>
-                <button type="button" className="btn" onClick={back}>
-                  Zpět
-                </button>
-                <button type="button" className="btn btn-primary" disabled={busy} autoFocus onClick={() => submit("publish")}>
-                  {publishing ? "Zveřejňuji…" : "Potvrdit zveřejnění"}
-                </button>
-              </div>
-            ) : ask === "delete" ? (
-              <div key="delete" className="select-bar-row" role="alertdialog" aria-labelledby="potvrdit-smazani">
-                <p id="potvrdit-smazani" className="select-bar-text">
-                  <strong>Smazat {drafts(selected.length)}?</strong>
-                  {pastPicked > 0 && ` Z toho ${pastPicked} v minulosti.`} Nic se neodešle a nejde to vrátit.
-                </p>
-                <button type="button" className="btn" onClick={back}>
-                  Zpět
-                </button>
-                <button type="button" className="btn btn-danger" disabled={busy} autoFocus onClick={() => submit("delete")}>
-                  {deleting ? "Mažu…" : "Potvrdit smazání"}
-                </button>
-              </div>
-            ) : (
-              // Klíče řádků: React jinak použije tlačítko znovu a fokus i stav by přeskočily jinam.
-              <div key="choose" className="select-bar-row">
-                <p className="select-bar-text" aria-live="polite">
-                  <strong>Vybráno {selected.length}</strong>
-                  {selected.length < items.length && (
-                    <button type="button" className="link-button" onClick={() => setPicked(new Set(items.map((i) => i.id)))}>
-                      Vybrat všechny návrhy ({items.length})
-                    </button>
-                  )}
-                  {changeDrafts > 0 && <span className="small muted"> Návrhy změn se zveřejňují v okně akce.</span>}
-                </p>
-                <button type="button" className="btn btn-quiet" onClick={stop}>
-                  Zrušit výběr
-                </button>
-                <button type="button" data-intent="delete" className="btn btn-danger" disabled={busy || selected.length === 0} onClick={() => setAsk("delete")}>
-                  Smazat vybrané
-                </button>
-                <button
-                  type="button"
-                  data-intent="publish"
-                  className="btn btn-primary"
-                  disabled={busy || toPublish.length === 0}
-                  title={selected.length > 0 && toPublish.length === 0 ? "Návrhy v minulosti nejde zveřejnit" : undefined}
-                  onClick={() => setAsk("publish")}
-                >
-                  Zveřejnit vybrané
-                </button>
-              </div>
-            )}
+              }
+              onCancel={back}
+            >
+              <button type="button" className="btn" onClick={back} autoFocus>
+                Zpět
+              </button>
+              <button type="button" className="btn btn-primary" disabled={busy} onClick={() => submit("publish")}>
+                {publishing ? "Zveřejňuji…" : "Potvrdit zveřejnění"}
+              </button>
+            </ConfirmDialog>
+            <ConfirmDialog
+              open={ask === "delete"}
+              title={`Smazat ${drafts(selected.length)}?`}
+              urgent
+              busy={busy}
+              description={<p>{pastPicked > 0 && `Z toho ${pastPicked} v minulosti. `}Nic se neodešle a nejde to vrátit.</p>}
+              onCancel={back}
+            >
+              <button type="button" className="btn" onClick={back} autoFocus>
+                Zpět
+              </button>
+              <button type="button" className="btn btn-danger confirm-destructive" disabled={busy} onClick={() => submit("delete")}>
+                {deleting ? "Mažu…" : "Potvrdit smazání"}
+              </button>
+            </ConfirmDialog>
+            <div className="select-bar-row">
+              <p className="select-bar-text" aria-live="polite">
+                <strong>Vybráno {selected.length}</strong>
+                {selected.length < items.length && (
+                  <button type="button" className="link-button" onClick={() => setPicked(new Set(items.map((i) => i.id)))}>
+                    Vybrat všechny návrhy ({items.length})
+                  </button>
+                )}
+                {changeDrafts > 0 && <span className="small muted"> Návrhy změn se zveřejňují v okně akce.</span>}
+              </p>
+              <button type="button" className="btn btn-quiet" onClick={stop}>
+                Zrušit výběr
+              </button>
+              <button type="button" data-intent="delete" className="btn btn-danger" disabled={busy || selected.length === 0} onClick={() => setAsk("delete")}>
+                Smazat vybrané
+              </button>
+              <button
+                type="button"
+                data-intent="publish"
+                className="btn btn-primary"
+                disabled={busy || toPublish.length === 0}
+                title={selected.length > 0 && toPublish.length === 0 ? "Návrhy v minulosti nejde zveřejnit" : undefined}
+                onClick={() => setAsk("publish")}
+              >
+                Zveřejnit vybrané
+              </button>
+            </div>
           </div>
         )}
       </div>

@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { and, asc, eq, gt, gte, inArray, isNull, lt, ne, or, sql } from "drizzle-orm";
 import { EXTRAORDINARY_TYPES } from "@/lib/labels";
 import { addDays, fromPragueLocal, isoWeekday, monthOf, monthRange, toDateKey, toTimeKey } from "@/lib/time";
-import type { EventType, Group, PlanStatus, SyncStatus } from "@/lib/types";
+import type { EventSnapshot, EventType, Group, PlanStatus, SyncStatus } from "@/lib/types";
 import { audit } from "@/server/audit";
 import { targetCalendarId } from "@/server/calendar/target";
 import { config, now, personalDelivery } from "@/server/config";
@@ -45,6 +45,11 @@ export type EventCard = {
   syncStatus: SyncStatus | "unlinked" | "personal" | null;
   /** Jen pro správce: zveřejněný termín, pokud ho rozpracovaný návrh přesouvá jinam. */
   movedFrom: { startsAt: string; endsAt: string; allDay: boolean } | null;
+  /**
+   * Jen pro správce u návrhu změny zveřejněné akce: zveřejněná verze (originál), kterou dál vidí kolegové
+   * i Kalendář, a co návrh mění. Karta návrh kreslí „nad“ originálem.
+   */
+  original: EventOriginal | null;
   /** Jen pro správce: verze akce, kterou přesun tažením posílá serveru jako kontrolu souběhu. */
   revision: number | null;
   /** Divák smí obsluhovat nahrávku a zápis (vedoucí, kontrolor, správce; `canHandleRecording`). */
@@ -52,6 +57,30 @@ export type EventCard = {
   /** Akce má zveřejněný zápis a divák ho smí číst (`canReadPublishedMinutes`). */
   minutesPublished: boolean;
 };
+
+export type EventOriginal = {
+  label: string;
+  topicTitle: string | null;
+  startsAt: string;
+  endsAt: string;
+  allDay: boolean;
+  audience: Group;
+  leadName: string | null;
+  /** Co návrh mění, česky pro kartu: termín, téma, vedoucí, publikum, typ, kontrolor. */
+  changes: string[];
+};
+
+/** Rozdíl pracovní verze proti zveřejněné, v pořadí, jak ho správce čte na kartě. */
+export function changedParts(view: Pick<EventSnapshot, "type" | "label" | "topicTitle" | "startsAt" | "endsAt" | "allDay" | "audience" | "leadId" | "reviewerId">, last: EventSnapshot): string[] {
+  const parts: string[] = [];
+  if (view.startsAt !== last.startsAt || view.endsAt !== last.endsAt || view.allDay !== last.allDay) parts.push("termín");
+  if ((view.topicTitle ?? null) !== (last.topicTitle ?? null)) parts.push("téma");
+  if ((view.leadId ?? null) !== (last.leadId ?? null)) parts.push("vedoucí");
+  if (view.audience !== last.audience) parts.push("publikum");
+  if (view.type !== last.type || view.label !== last.label) parts.push("typ");
+  if ((view.reviewerId ?? null) !== (last.reviewerId ?? null)) parts.push("kontrolor");
+  return parts;
+}
 
 async function userNames(db: Executor): Promise<Map<string, string>> {
   const rows = await db.select({ id: users.id, name: users.name }).from(users).where(eq(users.orgId, config.orgId));
@@ -101,6 +130,19 @@ function toCard(
     past: new Date(view.endsAt) <= now(),
     syncStatus,
     movedFrom: moved ? { startsAt: last.startsAt, endsAt: last.endsAt, allDay: last.allDay } : null,
+    original:
+      organizer && last !== null && row.status !== "cancelled" && row.revision !== row.publishedRevision
+        ? {
+            label: last.label,
+            topicTitle: last.topicTitle,
+            startsAt: last.startsAt,
+            endsAt: last.endsAt,
+            allDay: last.allDay,
+            audience: last.audience,
+            leadName: last.leadId ? (names.get(last.leadId) ?? null) : null,
+            changes: changedParts(view, last),
+          }
+        : null,
     revision: organizer ? row.revision : null,
     handler: canHandleRecording(viewer, row),
     minutesPublished: withMinutes.has(row.id) && canReadPublishedMinutes(viewer, row),

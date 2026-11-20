@@ -26,14 +26,19 @@ export interface TranscriptionProvider {
 }
 
 const line = z.string().trim().min(1).max(500);
-export const minutesSchema = z
+/**
+ * Rozpracovaný návrh: stejné limity jako schválený zápis, jen Shrnutí smí zůstat prázdné, aby šlo
+ * uložit třeba jen Hlavní body. Ke schválení a zveřejnění je nutný `minutesSchema` (Shrnutí povinné).
+ */
+export const minutesDraftSchema = z
   .object({
-    summary: z.string().trim().min(1).max(2000),
+    summary: z.string().trim().max(2000),
     keyPoints: z.array(line).max(20),
     decisions: z.array(line).max(20),
     nextSteps: z.array(line).max(20),
   })
   .strict();
+export const minutesSchema = minutesDraftSchema.extend({ summary: z.string().trim().min(1).max(2000) }).strict();
 
 export function validateMinutes(output: unknown): MinutesContent {
   const parsed = minutesSchema.safeParse(output);

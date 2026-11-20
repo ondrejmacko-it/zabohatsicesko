@@ -3,7 +3,7 @@ import { toDateKey } from "@/lib/time";
 import { getDb } from "@/server/db/client";
 import { defaultAudience } from "@/server/domain/generation";
 import { cancelEvent, createEvent, deleteDraft, generateMonth, listMonth, listMonthDrafts, loadEventRow, publishDrafts, type EventInput } from "@/server/services/events";
-import { organizer, resetDemo } from "./helpers";
+import { lead, organizer, resetDemo } from "./helpers";
 
 // Prosinec 2026: úterý 10:00–12:00 je v šabloně akce, 24. a 25. 12. (čt, pá) jsou svátky.
 const MONTH = "2026-12";
@@ -71,5 +71,50 @@ describe("doplnění měsíce: svátky, výjimky, přesuny a stav akcí", () => 
     expect((await draftOn(TUESDAY))!.clash).toBe("shared");
     await createEvent(organizer, { ...manual, label: "Duplicita" }, "draft");
     expect((await draftOn(TUESDAY))!.clash).toBe("group");
+  });
+});
+
+// Hromadné doplnění vedoucího v okně Připravit měsíc ukládá stejná pole jako ruční volba (P0-3).
+describe("doplnění měsíce: vedoucí návrhů", () => {
+  const save = (viewer: typeof organizer, items: Parameters<typeof publishDrafts>[2]) => publishDrafts(viewer, MONTH, items, 0, { publish: false });
+
+  test("uložený vedoucí přetrvá a nic se nezveřejní", async () => {
+    await generateMonth(organizer, MONTH);
+    const drafts = await templateDrafts();
+    const items = drafts.map((d) => ({ id: d.id, revision: d.revision, topicTitle: d.topicTitle, leadId: "demo-vedouci" }));
+    const { published } = await save(organizer, items);
+    expect(published).toHaveLength(drafts.length);
+    for (const d of await templateDrafts()) expect(d.leadId).toBe("demo-vedouci");
+    for (const d of drafts) expect((await loadEventRow(await getDb(), d.id))!.status).toBe("draft");
+  });
+
+  test("neznámá osoba: chyba a žádný řádek se nezmění", async () => {
+    await generateMonth(organizer, MONTH);
+    const [a, b] = await templateDrafts();
+    await expect(
+      save(organizer, [
+        { id: a!.id, revision: a!.revision, topicTitle: a!.topicTitle, leadId: "demo-vedouci" },
+        { id: b!.id, revision: b!.revision, topicTitle: b!.topicTitle, leadId: "neexistuje" },
+      ]),
+    ).rejects.toThrow("invalid_input");
+    const after = await templateDrafts();
+    expect(after.find((d) => d.id === a!.id)!.leadId).toBeNull();
+    expect(after.find((d) => d.id === a!.id)!.revision).toBe(a!.revision);
+  });
+
+  test("člen týmu vedoucího přiřadit nesmí", async () => {
+    await generateMonth(organizer, MONTH);
+    const [a] = await templateDrafts();
+    await expect(save(lead, [{ id: a!.id, revision: a!.revision, topicTitle: a!.topicTitle, leadId: "demo-vedouci" }])).rejects.toThrow();
+    expect((await templateDrafts())[0]!.leadId).toBeNull();
+  });
+
+  test("souběh: návrh mezitím změněný jiným správcem se přeskočí", async () => {
+    await generateMonth(organizer, MONTH);
+    const [a] = await templateDrafts();
+    await save(organizer, [{ id: a!.id, revision: a!.revision, topicTitle: a!.topicTitle, leadId: "demo-vedouci" }]);
+    const stale = await save(organizer, [{ id: a!.id, revision: a!.revision, topicTitle: a!.topicTitle, leadId: "demo-spravce" }]);
+    expect(stale).toEqual({ published: [], skipped: 1 });
+    expect((await templateDrafts())[0]!.leadId).toBe("demo-vedouci");
   });
 });

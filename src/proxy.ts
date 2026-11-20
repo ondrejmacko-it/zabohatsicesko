@@ -5,6 +5,9 @@ import { NextResponse, type NextRequest } from "next/server";
 export function proxy(request: NextRequest) {
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
   const isDev = process.env.NODE_ENV === "development";
+  // E2E server běží na http://localhost. WebKit a Firefox na rozdíl od Chromia povýší i localhost na https
+  // a stránka se nenačte. Vypíná to jen e2e/server.mjs, produkce a Preview direktivu mají vždy.
+  const upgradeInsecure = !isDev && process.env.CSP_UPGRADE_INSECURE !== "0";
   const csp = [
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ""}`,
@@ -17,7 +20,7 @@ export function proxy(request: NextRequest) {
     "base-uri 'self'",
     "form-action 'self'",
     "frame-ancestors 'none'",
-    ...(isDev ? [] : ["upgrade-insecure-requests"]),
+    ...(upgradeInsecure ? ["upgrade-insecure-requests"] : []),
   ].join("; ");
 
   const requestHeaders = new Headers(request.headers);

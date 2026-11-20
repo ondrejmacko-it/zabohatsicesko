@@ -1,6 +1,13 @@
 // Migrace jsou čisté SQL v kódu, aby běžely stejně lokálně (PGlite) i na hostingu
 // (Neon) bez přístupu k souborovému systému. Nové změny přidávej jako další položku.
-export const migrations: ReadonlyArray<{ id: string; sql: string }> = [
+//
+// `approval: true`: migrace běží při startu aplikace, takže by ji každý push spustil i na sdílené databázi
+// Preview. Taková migrace se na vzdálené databázi (DATABASE_URL) provede, jen když je její ID v proměnné
+// `APPROVED_MIGRATIONS` (seznam oddělený čárkou). Lokální PGlite a testy ji provedou vždy. Dokud povolená
+// není, zastaví se na ní i všechny další, aby pořadí migrací zůstalo stejné všude.
+export type Migration = { id: string; sql: string; approval?: true };
+
+export const migrations: ReadonlyArray<Migration> = [
   {
     id: "0001_init",
     sql: `
@@ -422,6 +429,22 @@ ALTER TABLE minutes ADD COLUMN approved_by text REFERENCES users(id);
 ALTER TABLE minutes ADD COLUMN approved_at timestamptz;
 UPDATE minutes SET approved_version = version, approved_by = published_by, approved_at = published_at
   WHERE status = 'published' AND approved_version IS NULL;
+`,
+  },
+  {
+    id: "0015_topic_priority_unlimited",
+    approval: true,
+    sql: `
+-- Garantovaných témat může být libovolně mnoho (dřív nejvýš 3). Pořadí zůstává 1..n a unikátní v organizaci
+-- (index topics_priority_rank_unique se nemění). Nic se nemaže ani nepřepisuje: jen se uvolní omezení
+-- a smallint se rozšíří na integer. Starší kód s novým schématem funguje dál (pořadí 1–3 jsou platná).
+-- Bezpečné selhání: když očekávané omezení z 0013 chybí nebo vypadá jinak, schéma se liší od předpokladu
+-- a migrace se zastaví celá (transakce), místo aby tiše pokračovala. Blok DO je na jednom řádku, protože
+-- prepareDatabase dělí SQL na příkazy podle středníku na konci řádku.
+DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = 'topics'::regclass AND conname = 'topics_priority_rank_check' AND contype = 'c' AND pg_get_constraintdef(oid) LIKE '%priority_rank <= 3%') THEN RAISE EXCEPTION '0015: chybí očekávané omezení topics_priority_rank_check (1–3), migrace zastavena'; END IF; END $$;
+ALTER TABLE topics DROP CONSTRAINT topics_priority_rank_check;
+ALTER TABLE topics ALTER COLUMN priority_rank TYPE integer;
+ALTER TABLE topics ADD CONSTRAINT topics_priority_rank_positive CHECK (priority_rank >= 1);
 `,
   },
 ];

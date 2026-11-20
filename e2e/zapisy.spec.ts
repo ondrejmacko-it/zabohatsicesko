@@ -11,12 +11,19 @@ test.describe("Zápisy: od nahrávky ke zveřejnění @desktop", () => {
     await settle(page);
     const dialog = page.getByRole("dialog", { name: /Trénink poradců/ });
     await expect(dialog.getByRole("status").filter({ hasText: "Čeká na zápis" })).toBeVisible();
+    // Z-06: ukázková nahrávka není výchozí volba, vedoucí ji vybere sám.
+    await dialog.getByRole("radio", { name: /Nahrávka \(ukázka\)/ }).check();
     // UI předem říká, že přepis je jen ukázka, a nabízí ukázkovou nahrávku přímo u nahrávání.
     await expect(dialog).toContainText("Automatický přepis zatím umí jen jednu ukázkovou nahrávku");
     await expect(dialog.getByRole("link", { name: "Stáhnout ukázkovou nahrávku" })).toBeVisible();
 
+    // C-01: limit souboru rozhoduje, jestli nahrání projde, proto čitelná nápověda (13 px, tmavší text).
+    const fileHint = dialog.locator(".field-hint-key").first();
+    await expect(fileHint).toHaveCSS("font-size", "13px");
+    await expect(fileHint).toHaveCSS("color", "rgb(74, 70, 66)");
     await dialog.getByLabel("Soubor s nahrávkou").setInputFiles("public/demo/testovaci-nahravka.wav");
-    await expect(dialog).toContainText("se přiřadí k akci");
+    await expect(dialog).toContainText("Přiřadí se k akci");
+    await expect(dialog).toContainText("testovaci-nahravka.wav ·");
     await dialog.getByRole("button", { name: "Nahrát nahrávku" }).click();
 
     await expect(dialog.getByRole("status").filter({ hasText: "Čeká na schválení" })).toBeVisible({ timeout: 20_000 });

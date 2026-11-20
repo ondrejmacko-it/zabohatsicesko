@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Icon } from "@/components/Icon";
-import { TYPE_LABELS } from "@/lib/labels";
+import { eventContext, eventTitle } from "@/lib/labels";
 import {
   addDays,
   formatDayMonth,
@@ -14,7 +14,7 @@ import {
   weekdayShort,
 } from "@/lib/time";
 import type { EventCard } from "@/server/services/events";
-import { badgeClass, cardDetails, cardStatus, cardTone, isMovable, isPickable, missingDetails, primaryStatus } from "../status";
+import { badgeClass, cardDetails, cardStatus, cardTone, hiddenMissingDetails, isMovable, isPickable, primaryStatus } from "../status";
 import { CardMenu, type CardMenuItem } from "./CardMenu";
 import { PickBox } from "./PlanSelection";
 import styles from "./schedule.module.css";
@@ -78,7 +78,8 @@ function GhostBlock({ card, hrefFor = pageHref }: { card: EventCard; hrefFor?: C
  */
 function CardMeta({ card, managing }: { card: EventCard; managing: boolean }) {
   const status = cardStatus(card);
-  const missing = missingDetails(card, managing);
+  // Jeden stavový štítek; výstraha jen pro chybějící údaj, který karta jinak neukazuje.
+  const missing = hiddenMissingDetails(card, managing);
   if (!status && !missing.length) return null;
   const missingText = `Chybí ${missing.join(" a ")}`;
   return (
@@ -104,6 +105,7 @@ function CardWrap({
   handle = false,
   menu = [],
   menuClass,
+  stacked = false,
   children,
 }: {
   card: EventCard;
@@ -111,10 +113,12 @@ function CardWrap({
   handle?: boolean;
   menu?: CardMenuItem[];
   menuClass?: string;
+  /** Karta návrhu změny leží na zveřejněné verzi (`OriginalLayer`). */
+  stacked?: boolean;
   children: React.ReactNode;
 }) {
   return (
-    <div className={styles.cardWrap}>
+    <div className={stacked ? `${styles.cardWrap} ${styles.stacked}` : styles.cardWrap}>
       {children}
       {menu.length > 0 && (
         <CardMenu
@@ -162,9 +166,33 @@ function CardDetails({ card, managing }: { card: EventCard; managing: boolean })
 
 const pickAttr = (card: EventCard, managing: boolean) => (managing && isPickable(card) ? { "data-pick-id": card.id } : {});
 
+/** Návrh změny zveřejněné akce se kreslí jako návrh (okrově), i když je akce zveřejněná. */
+const toneOf = (card: EventCard) => (card.original ? "draft" : cardTone(card));
+
+const changesText = (card: EventCard) =>
+  card.original?.changes.length ? `Mění ${card.original.changes.join(", ")}` : "Liší se od zveřejněné verze";
+
+/**
+ * Zveřejněná verze za kartou návrhu změny („stoh“). Vykukuje nad kartou jako pruh; při najetí myší se vysune
+ * dopředu a karta návrhu ustoupí. Klik otevře totéž okno akce, kde je originál i rozhodnutí. Pro čtečky
+ * a klávesnici je skrytá: okno akce i štítek karty říkají totéž slovy.
+ */
+function OriginalLayer({ card, href }: { card: EventCard; href: string }) {
+  const original = card.original!;
+  return (
+    <Link href={href} scroll={false} className={`${styles.event} ${styles.original}`} aria-hidden="true" tabIndex={-1} data-original-of={card.id}>
+      <span className={styles.originalTab}>Zveřejněná verze</span>
+      <span className={styles.title}>{original.label}</span>
+      {original.leadName && <span className={styles.topic}>Kdo: {original.leadName}</span>}
+      {original.topicTitle && original.topicTitle !== original.label && <span className={styles.topic}>Téma: {original.topicTitle}</span>}
+      <span className={styles.line}>{formatEventTime(new Date(original.startsAt), new Date(original.endsAt), original.allDay)}</span>
+    </Link>
+  );
+}
+
 // Karta v mřížce: název, Kdo a Téma, čas a jeden stav. Podrobnosti ukáže okno akce po kliknutí.
 function EventBlock({ card, hrefFor = pageHref, managing = false, movable = false, menuFor }: { card: EventCard; movable?: boolean } & Linking) {
-  const tone = cardTone(card);
+  const tone = toneOf(card);
   const isHoliday = card.type === "holiday";
   const cancelled = card.planStatus === "cancelled";
   // Data pro přesun tažením čte `MoveDropZone`. Odkaz zůstává odkazem: klik i klávesnice otevřou náhled.
@@ -172,13 +200,14 @@ function EventBlock({ card, hrefFor = pageHref, managing = false, movable = fals
     ? { draggable: true, "data-move-id": card.id, "data-move-revision": card.revision ?? 0, "data-move-label": card.label, "data-move-from": dayOf(card) }
     : {};
   return (
-    <CardWrap card={card} managing={managing} menu={menuFor?.(card)} menuClass={styles.menuGrid}>
+    <CardWrap card={card} managing={managing} menu={menuFor?.(card)} menuClass={styles.menuGrid} stacked={card.original !== null}>
       <Link href={hrefFor(card)} scroll={false} className={`${styles.event} ${styles[tone]}`} {...drag} {...pickAttr(card, managing)}>
         <span className={styles.title}>{card.label}</span>
         <CardDetails card={card} managing={managing} />
         {!isHoliday && !cancelled && <span className={styles.line}>{formatEventTime(new Date(card.startsAt), new Date(card.endsAt), card.allDay)}</span>}
         <CardMeta card={card} managing={managing} />
       </Link>
+      {card.original && <OriginalLayer card={card} href={hrefFor(card)} />}
     </CardWrap>
   );
 }
@@ -362,7 +391,7 @@ export function Agenda({
                           <Link
                             href={hrefFor(card)}
                             scroll={false}
-                            className={`${styles.agendaEvent} ${styles[cardTone(card)]}${handle ? ` ${styles.withHandle}` : ""}${menu.length ? ` ${styles.withMenu}` : ""}`}
+                            className={`${styles.agendaEvent} ${styles[toneOf(card)]}${handle ? ` ${styles.withHandle}` : ""}${menu.length ? ` ${styles.withMenu}` : ""}`}
                             {...pickAttr(card, managing)}
                           >
                             <span className={styles.agendaTime}>
@@ -371,6 +400,7 @@ export function Agenda({
                             <span className={styles.agendaMain}>
                               <span className={styles.title}>{card.label}</span>
                               <CardDetails card={card} managing={managing} />
+                              {card.original && <span className={styles.changes}>{changesText(card)}</span>}
                             </span>
                             <CardMeta card={card} managing={managing} />
                           </Link>
@@ -397,12 +427,11 @@ export function Agenda({
 export function NextEventCard({ card }: { card: EventCard | null }) {
   if (!card) return <p className="muted">V nejbližších týdnech vás nečeká žádná zveřejněná akce.</p>;
   const day = dayOf(card);
+  const title = eventTitle(card.label, card.topicTitle);
   return (
     <Link href={pageHref(card)} className="item-card">
-      <p className="eyebrow">
-        {TYPE_LABELS[card.type]} · {weekdayShort(day)} {formatDayMonth(day)}
-      </p>
-      <p className="item-title">{card.topicTitle ? `${card.label}: ${card.topicTitle}` : card.label}</p>
+      <p className="eyebrow">{[...eventContext(title, card.type), `${weekdayShort(day)} ${formatDayMonth(day)}`].join(" · ")}</p>
+      <p className="item-title">{title}</p>
       <p className="item-meta">
         {formatEventTime(new Date(card.startsAt), new Date(card.endsAt), card.allDay)}
         {card.leadName ? ` · Vede: ${card.leadName}` : ""}
@@ -427,7 +456,7 @@ export function NextEventsList({ cards, todayKey, hrefFor = pageHref, emptyText 
               </span>
               <span className="brief-main">
                 <span className="item-title">
-                  {card.topicTitle ? `${card.label}: ${card.topicTitle}` : card.label}
+                  {eventTitle(card.label, card.topicTitle)}
                   {card.planStatus === "draft" && (
                     <span className="badge badge-draft" title="Návrh, do Kalendáře zatím nejde">
                       Návrh

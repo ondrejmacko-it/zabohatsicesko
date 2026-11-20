@@ -62,6 +62,15 @@ export function missingDetails(card: EventCard, managing: boolean): string[] {
   return [!card.topicTitle && "téma", !card.leadName && "vedoucí"].filter((m): m is string => Boolean(m));
 }
 
+/**
+ * Chybějící údaje, které karta neukazuje jako řádek „— doplnit“ (typicky téma u Action time). Jen ty dostanou
+ * ikonu výstrahy, aby karta nehlásila tentýž problém dvakrát (A-04).
+ */
+export function hiddenMissingDetails(card: EventCard, managing: boolean): string[] {
+  const shown = new Set<string>(cardDetails(card, managing).filter((d) => d.missing).map((d) => (d.label === "Kdo" ? "vedoucí" : "téma")));
+  return missingDetails(card, managing).filter((m) => !shown.has(m));
+}
+
 export type CardDetail = { label: "Kdo" | "Téma"; value: string; missing: boolean };
 
 const sameText = (a: string, b: string) => a.trim().toLocaleLowerCase("cs") === b.trim().toLocaleLowerCase("cs");
@@ -163,18 +172,26 @@ export function monthTasks(summary: MonthSummary, monthName: string): MonthTask[
 
 export const PLAN_STATES = ["navrhy", "doplnit"] as const;
 export type PlanState = (typeof PLAN_STATES)[number];
-export type PlanFilter = { type?: EventType; state?: PlanState };
+export type PlanFilter = { types?: EventType[]; states?: PlanState[] };
 
-/** Filtr harmonogramu podle typu akce a stavu. Jen zužuje to, co uživatel už smí vidět. */
+/**
+ * Filtr harmonogramu podle typů akce a stavů. V jedné kategorii stačí shoda s kteroukoli vybranou hodnotou (NEBO),
+ * mezi kategoriemi musí platit obě (A). Jen zužuje to, co uživatel už smí vidět.
+ */
 export function filterCards(cards: EventCard[], monthKey: string, filter: PlanFilter): EventCard[] {
-  if (!filter.type && !filter.state) return cards;
-  const gapIds = filter.state === "doplnit" ? new Set(planGaps(cards, monthKey).map((g) => g.card.id)) : null;
-  return cards.filter(
-    (card) =>
-      (!filter.type || card.type === filter.type) &&
-      (filter.state !== "navrhy" || (card.type !== "holiday" && awaitsPublishing(card))) &&
-      (!gapIds || gapIds.has(card.id)),
-  );
+  const types = filter.types ?? [];
+  const states = filter.states ?? [];
+  if (!types.length && !states.length) return cards;
+  const gapIds = states.includes("doplnit") ? new Set(planGaps(cards, monthKey).map((g) => g.card.id)) : null;
+  const matchesState = (card: EventCard) =>
+    (states.includes("navrhy") && card.type !== "holiday" && awaitsPublishing(card)) || Boolean(gapIds?.has(card.id));
+  return cards.filter((card) => (!types.length || types.includes(card.type)) && (!states.length || matchesState(card)));
+}
+
+/** Hodnoty filtru z adresy: opakovaný parametr (`typ=a&typ=b`) i čárkami oddělený seznam; jen povolené, bez duplicit. */
+export function filterValues<T extends string>(raw: string | string[] | undefined, allowed: readonly T[]): T[] {
+  const parts = (Array.isArray(raw) ? raw : raw ? [raw] : []).flatMap((v) => v.split(","));
+  return allowed.filter((value) => parts.includes(value));
 }
 
 export type PlanGap = { card: EventCard; reasons: string[] };
@@ -237,8 +254,8 @@ export function cardActions(card: EventCard, ctx: CardActionContext): CardAction
   add("details", "Otevřít podrobnosti");
   if (!cancelled && card.past) {
     if (card.minutesPublished) add("minutes", "Zobrazit zápis");
-    // Nahrávku a zápis obsluhuje vedoucí, kontrolor a správce, nikdy v náhledu očima jiného.
-    if (card.handler && !ctx.preview) add("recording", card.minutesPublished ? "Nahrávka a zápis" : "Doplnit zápis");
+    // Zápis (a případnou nahrávku) obsluhuje vedoucí, kontrolor a správce, nikdy v náhledu očima jiného.
+    if (card.handler && !ctx.preview) add("recording", card.minutesPublished ? "Upravit zápis" : "Doplnit zápis");
   }
   if (manage) add("duplicate", "Duplikovat jako novou");
   return manage || actions.length >= 2 ? actions : [];

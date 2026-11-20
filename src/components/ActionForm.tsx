@@ -3,7 +3,7 @@
 import { useActionState, useState } from "react";
 import type { ActionResult } from "@/features/vzdelavani/actions";
 import { Icon, type IconName } from "./Icon";
-import { Modal } from "./Modal";
+import { ConfirmDialog } from "./ConfirmDialog";
 
 type Props = {
   action: (prev: ActionResult | null, formData: FormData) => Promise<ActionResult>;
@@ -26,7 +26,8 @@ export function ActionForm({ action, fields = {}, label, pendingLabel, variant =
   const [confirming, setConfirming] = useState(false);
   const [state, formAction, pending] = useActionState(async (prev: ActionResult | null, formData: FormData) => {
     const result = await action(prev, formData);
-    setConfirming(false);
+    // Chyba zůstane v potvrzovacím okně (spouštěcí tlačítko může být ve skrytém menu), úspěch ho zavře.
+    if (result.ok) setConfirming(false);
     return result;
   }, null);
   const className = `btn${variant === "primary" ? " btn-primary" : variant === "danger" ? " btn-danger" : ""}${small ? " btn-small" : ""}${buttonClassName ? ` ${buttonClassName}` : ""}`;
@@ -42,18 +43,29 @@ export function ActionForm({ action, fields = {}, label, pendingLabel, variant =
             {iconMark}
             {label}
           </button>
-          <Modal open={confirming} title={confirm.title} onRequestClose={() => setConfirming(false)}>
-            <p>{confirm.text}</p>
-            <form action={formAction} className="row">
+          <ConfirmDialog
+            open={confirming}
+            title={confirm.title}
+            description={
+              <>
+                <p>{confirm.text}</p>
+                {state && !state.ok && <ActionMessage state={state} />}
+              </>
+            }
+            onCancel={() => setConfirming(false)}
+            urgent={variant === "danger"}
+            busy={pending}
+          >
+            <button type="button" className="btn" onClick={() => setConfirming(false)} disabled={pending} autoFocus>
+              Zpět
+            </button>
+            <form action={formAction} className={variant === "danger" ? "confirm-destructive" : undefined}>
               {hidden}
               <button type="submit" className={`btn ${variant === "danger" ? "btn-danger" : "btn-primary"}`} disabled={pending}>
                 {pending ? (pendingLabel ?? "Probíhá…") : confirm.confirmLabel}
               </button>
-              <button type="button" className="btn" onClick={() => setConfirming(false)}>
-                Zpět
-              </button>
             </form>
-          </Modal>
+          </ConfirmDialog>
         </>
       ) : (
         <form action={formAction}>
@@ -64,7 +76,7 @@ export function ActionForm({ action, fields = {}, label, pendingLabel, variant =
           </button>
         </form>
       )}
-      <ActionMessage state={state} />
+      {!(confirming && state && !state.ok) && <ActionMessage state={state} />}
     </div>
   );
 }
