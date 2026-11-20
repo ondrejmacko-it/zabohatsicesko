@@ -1,4 +1,5 @@
-import { FEEDBACK_SCREENSHOT_MAX_BYTES, type FeedbackMark, type FeedbackScreenshotMime } from "@/lib/feedback";
+import { FEEDBACK_SCREENSHOT_MAX_BYTES, FEEDBACK_SCREENSHOT_MAX_SIDE, type FeedbackScreenshotMime } from "@/lib/feedback";
+import type { ClientMark } from "./MarkingLayer";
 
 /**
  * Snímek viditelné části stránky pro hlášení (knihovna `modern-screenshot`, vykreslení v prohlížeči, nic se
@@ -28,7 +29,16 @@ export const REDACT_SELECTOR = [
   SENSITIVE_SELECTOR,
 ].join(", ");
 
-const MAX_WIDTH = 1600;
+/** Nejvyšší hustota snímku. Víc než dvojnásobek čtenáři hlášení nepomůže a jen zvětší soubor. */
+const MAX_PIXEL_RATIO = 2;
+/**
+ * Mez plného vykreslení stránky před výřezem. Safari odmítne canvas nad 16 777 216 px plochy a každý prohlížeč
+ * nad 16 384 px na stranu. Dlouhá stránka (harmonogram, Témata) se proto vykreslí v menším měřítku, nespadne.
+ */
+const MAX_RENDER_AREA = 16_000_000;
+const MAX_RENDER_SIDE = 16_000;
+/** Kolikrát se snímek zmenší o čtvrtinu, když se ani v nejnižší kvalitě nevejde do limitu. */
+const MAX_SHRINKS = 3;
 
 function excluded(node: Node): boolean {
   if (!(node instanceof Element)) return false;
@@ -62,7 +72,7 @@ function toBlob(canvas: HTMLCanvasElement, mime: string, quality: number): Promi
 }
 
 /** WebP, kde ho prohlížeč umí zakódovat (Safari ne a vrátí PNG), jinak JPEG. Kvalita klesá, dokud se nevejde do limitu. */
-async function encode(canvas: HTMLCanvasElement): Promise<{ blob: Blob; mime: FeedbackScreenshotMime } | null> {
+async function encodeOnce(canvas: HTMLCanvasElement): Promise<{ blob: Blob; mime: FeedbackScreenshotMime } | null> {
   for (const mime of ["image/webp", "image/jpeg"] as const) {
     for (const quality of [0.8, 0.6, 0.4]) {
       const blob = await toBlob(canvas, mime, quality);
@@ -70,6 +80,32 @@ async function encode(canvas: HTMLCanvasElement): Promise<{ blob: Blob; mime: Fe
       if (blob.size <= FEEDBACK_SCREENSHOT_MAX_BYTES) return { blob, mime };
     }
   }
+  return null;
+}
+
+function release(canvas: HTMLCanvasElement) {
+  canvas.width = 0;
+  canvas.height = 0;
+}
+
+/** Nevejde-li se snímek ani v nejnižší kvalitě, zmenší se o čtvrtinu, nejvýš třikrát. */
+async function encode(canvas: HTMLCanvasElement): Promise<{ blob: Blob; mime: FeedbackScreenshotMime; width: number; height: number } | null> {
+  let current = canvas;
+  for (let shrink = 0; shrink <= MAX_SHRINKS; shrink += 1) {
+    const encoded = await encodeOnce(current);
+    if (encoded) {
+      const result = { ...encoded, width: current.width, height: current.height };
+      if (current !== canvas) release(current);
+      return result;
+    }
+    const smaller = document.createElement("canvas");
+    smaller.width = Math.max(1, Math.round(current.width * 0.75));
+    smaller.height = Math.max(1, Math.round(current.height * 0.75));
+    smaller.getContext("2d")?.drawImage(current, 0, 0, smaller.width, smaller.height);
+    if (current !== canvas) release(current);
+    current = smaller;
+  }
+  if (current !== canvas) release(current);
   return null;
 }
 
@@ -82,29 +118,42 @@ function readDataUrl(blob: Blob): Promise<string> {
   });
 }
 
-/** Snímek nebo `null`, když se nepovede (hlášení se pak pošle bez něj). */
-export async function captureScreenshot(marks: readonly FeedbackMark[]): Promise<CapturedScreenshot | null> {
+/**
+ * Snímek viditelné části okna nebo `null`, když se nepovede (hlášení se pak pošle bez něj).
+ * Hustota podle zařízení (nejvýš 2×, delší strana nejvýš 2000 px), značky se dokreslí na místo, kde prvky
+ * leží teď: posun stránky od označení se odečte.
+ */
+export async function captureScreenshot(marks: readonly ClientMark[]): Promise<CapturedScreenshot | null> {
+  let full: HTMLCanvasElement | null = null;
+  let canvas: HTMLCanvasElement | null = null;
   try {
     const { domToCanvas } = await import("modern-screenshot");
     // Celý <html>, ne <body>: u <body> knihovna v kopii přidá výchozí okraj prohlížeče a snímek se posune.
     const root = document.documentElement;
     const rootRect = root.getBoundingClientRect();
-    const full = await domToCanvas(root, { scale: 1, backgroundColor: "#e8e4df", filter: (node) => !excluded(node), onCloneEachNode: scrubClone });
-
     const width = window.innerWidth;
     const height = window.innerHeight;
-    const scale = Math.min(1, MAX_WIDTH / width);
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.round(width * scale);
-    canvas.height = Math.round(height * scale);
+    const outScale = Math.min(MAX_PIXEL_RATIO, window.devicePixelRatio || 1, FEEDBACK_SCREENSHOT_MAX_SIDE / Math.max(width, height));
+    const docWidth = Math.max(1, rootRect.width);
+    const docHeight = Math.max(1, root.scrollHeight, rootRect.height);
+    const renderScale = Math.min(outScale, Math.sqrt(MAX_RENDER_AREA / (docWidth * docHeight)), MAX_RENDER_SIDE / Math.max(docWidth, docHeight));
+    full = await domToCanvas(root, { scale: renderScale, backgroundColor: "#e8e4df", filter: (node) => !excluded(node), onCloneEachNode: scrubClone });
+
+    // Zvětšovat nad měřítko vykreslení nemá smysl, přidalo by to jen bajty.
+    const scale = Math.min(outScale, renderScale);
+    canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(width * scale));
+    canvas.height = Math.max(1, Math.round(height * scale));
     const ctx = canvas.getContext("2d");
     if (!ctx) return null;
     ctx.scale(scale, scale);
     ctx.fillStyle = "#e8e4df";
     ctx.fillRect(0, 0, width, height);
     // Výřez viditelné části: počátek okna leží v plném snímku na (-rootRect.left, -rootRect.top).
-    const ratio = full.width / Math.max(1, rootRect.width);
+    const ratio = full.width / docWidth;
     ctx.drawImage(full, -rootRect.left * ratio, -rootRect.top * ratio, width * ratio, height * ratio, 0, 0, width, height);
+    release(full);
+    full = null;
 
     ctx.fillStyle = "#4a4642";
     for (const element of document.querySelectorAll(REDACT_SELECTOR)) {
@@ -113,22 +162,28 @@ export async function captureScreenshot(marks: readonly FeedbackMark[]): Promise
       if (rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < height) ctx.fillRect(rect.left, rect.top, rect.width, rect.height);
     }
 
-    // Označená místa, aby čtenář hlášení viděl, co je „1“, „2“…
+    // Označená místa, aby čtenář hlášení viděl, co je „1“, „2“… Číslo nad rámečkem, u horního okraje uvnitř.
     ctx.strokeStyle = "#9d6219";
     ctx.lineWidth = 3;
     ctx.font = "bold 14px system-ui, sans-serif";
     marks.forEach((mark, index) => {
-      ctx.strokeRect(mark.box.x, mark.box.y, mark.box.width, mark.box.height);
+      const x = mark.box.x + (mark.scroll.x - window.scrollX);
+      const y = mark.box.y + (mark.scroll.y - window.scrollY);
+      ctx.strokeRect(x, y, mark.box.width, mark.box.height);
+      const labelY = y < 22 ? y : y - 20;
       ctx.fillStyle = "#9d6219";
-      ctx.fillRect(mark.box.x, mark.box.y - 20, 22, 20);
+      ctx.fillRect(x, labelY, 22, 20);
       ctx.fillStyle = "#ffffff";
-      ctx.fillText(String(index + 1), mark.box.x + 6, mark.box.y - 5);
+      ctx.fillText(String(index + 1), x + 6, labelY + 15);
     });
 
     const encoded = await encode(canvas);
     if (!encoded) return null;
-    return { ...encoded, dataUrl: await readDataUrl(encoded.blob), width: canvas.width, height: canvas.height };
+    return { ...encoded, dataUrl: await readDataUrl(encoded.blob) };
   } catch {
     return null;
+  } finally {
+    if (full) release(full);
+    if (canvas) release(canvas);
   }
 }

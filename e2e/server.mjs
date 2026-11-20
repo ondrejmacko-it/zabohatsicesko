@@ -56,6 +56,8 @@ if (process.env.E2E_SKIP_BUILD !== "1") {
 
 // Falešný webhook Make.com: ověří tajemství, hlášení drží v paměti a vrátí je testu (GET /hlaseni).
 // Text s „SIMULOVAT-CHYBU“ poprvé odmítne stavem 500, aby šlo ověřit chybu doručení a opakování.
+// „SIMULOVAT-POMALU“ hlášení přijme a odpoví po 3 s (dvojklik, zavření okna během odesílání).
+// „SIMULOVAT-TIMEOUT“ hlášení přijme a odpoví až po vypršení času Wiki (10 s): přijato, ale bez potvrzení.
 const reports = [];
 const failedOnce = new Set();
 createHttpServer((req, res) => {
@@ -75,7 +77,9 @@ createHttpServer((req, res) => {
         return void res.writeHead(500).end();
       }
       reports.push(report);
-      res.writeHead(200).end("Accepted");
+      const text = String(report.text);
+      const delay = text.includes("SIMULOVAT-TIMEOUT") ? 11_000 : text.includes("SIMULOVAT-POMALU") ? 3_000 : 0;
+      setTimeout(() => res.writeHead(200).end("Accepted"), delay);
     } catch {
       res.writeHead(400).end();
     }
