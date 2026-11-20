@@ -1,3 +1,18 @@
+# OPRAVA SNÍMKU Z ŽIVÉHO TESTU – RELACE 21 HOTOVO (20. 11. 2026) – začni tímto
+
+* Commit 18671d4: (1) zalamování v kopii – příčina prokázaná: modern-screenshot přenáší do kopie pevné šířky
+  (width/height vždy, viz `getDefaultStyle` ignoredStyles), pilulky Plán/Zápisy/Témata mají nulovou rezervu
+  (inline-block, ws normal), menu `nowrap`. Nepatrně širší písmo v kopii → „Plá|n“ / useknutí. Simulace (+3 %
+  letter-spacing v kopii, 411×807, DPR 2,63) dala přesně vady z telefonu; s opravou čisté. Oprava:
+  `keepSingleLine` ve `scrubClone` (jednořádkový text v kopii `white-space: nowrap`, šířky beze změny),
+  `clonedTextIsSingleLine` + unit test. Proč je písmo na telefonu širší, neověřeno (podezření: měřítko 2 vs.
+  2,63 nebo škálování písma v Androidu/Chromu; v headless Chromiu nejde nasimulovat).
+  (2) duplicitní značky: `sameMark` v `MarkingLayer.tsx` (stejný selektor + stejná poloha v dokumentu), unit + e2e.
+* Ověření: lint, typecheck, unit 442/442, e2e zpětné vazby windows-1280/telefon-390/telefon-320 24 OK / 0 fail.
+* Otevřené: značky 8/9 mimo prvky – čeká se na odpověď uživatele (co označoval, zbytek souhrn.txt 7–9).
+  `pointercancel` vrstva neobsluhuje, ale pointerdown počátek přepíše a `touch-action: none` → bez reprodukce nic
+  neměněno. Bod 4 (číslo značky nad rámečkem překrývá obsah) neřešen. Uživatel má poslat nové hlášení z Preview.
+
 # OPRAVA SNÍMKU Z ŽIVÉHO TESTU – RELACE 20 → 21 (20. 11. 2026) – začni tímto
 
 Uživatel poslal živé hlášení z Preview (Android Chrome 157, okno 411 × 807 CSS px, DPR 2,63, harmonogram,
