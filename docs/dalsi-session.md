@@ -1,3 +1,28 @@
+# NOVÝ ÚKOL – FINÁLNÍ DOKONČENÍ PR #75 (relace 18 →, 20. 11. 2026) – začni tímto
+
+Uživatel zadal „ZBČ – FINÁLNÍ DOKONČENÍ PR #75“ (plné znění v úvodní zprávě navazující relace). Upřesnění uživatele:
+* **Make.com zůstává, jak je** – oddíly 7 (doručování, idempotence, autentizace Make) a 15 (předávka Make) se NEdělají.
+  Scénář 8694292, webhook ani `x-zbc-feedback-secret` neměnit. Serverové limity velikosti (7/5) a autorizaci snímku
+  (5) ale ověřit, to je kód Wiki.
+* **Telefon: brouček i na mobilu podle Novi** (uživatel schválil návrh relace 17), ne jen položka v menu:
+  - zrušit `(min-width: 900px) and (pointer: fine)` (BugButton.tsx:9) a skrytí `.sidebar-feedback` ≤ 900 px;
+  - 48 px, 12 px od okraje, uhýbá `.quick-actions` (≤ 760 px), `.move-panel`, safe-area;
+  - klepnutí = otevřít; podržení 400 ms = přesun (+ `navigator.vibrate?.(15)`); posun > 10 px před tím = švihnutí, nic;
+    `touch-action: none`, `-webkit-touch-callout: none`, `user-select: none`, přichycení k okraji;
+  - MarkingLayer: klepnutí označí prvek, tažení prstem obdélník; panel přes celou šířku dole (přepínač nahoru),
+    Menší / Větší (rodič / potomek), Odebrat, Zrušit vše, Hotovo;
+  - snímek jen viditelný výřez (viewport), škálování podle DPR, snižování kvality a pak rozměru do 500 kB, značky dokreslit;
+  - okno: střed, šířka `calc(100vw - 1.75rem)`, max výška `calc(100dvh - 1.75rem)`, posuvný obsah, pole ≥ 16 px.
+  Vzor: repo `ondrejmacko-it/novi-ai-tutor-app` (jen čtení): `src/components/feedback/{bug-button,marking-layer,
+  feedback-root}.tsx`, `src/feedback/{bug-dock,screenshot,page-context}.ts`, `src/components/shell/novi-modal.tsx`.
+  Nepřebírat průvodce broučkem ani jméno/e-mail.
+* Po dokončení uživatel mergne na main sám. Žádný merge, produkční deploy ani migrace.
+
+Ověřit „připojené správně“: Vercel konektor vidí v týmu maci (team_PtkXmFd9hI7UeUYovGkbwZQG) jen `novi-ai-tutor-app`,
+`zbc-vzdelavani-demo` → 404 i po `authorize_team_access`. Zkusit znovu `get_project`; když 404, napsat uživateli:
+odpojit a znovu připojit Vercel v claude.ai → Settings → Connectors a při souhlasu zvolit tým maci + všechny projekty.
+Pak ověřit `FEEDBACK_WEBHOOK_URL`/`FEEDBACK_WEBHOOK_SECRET` (jen názvy a cíle, nedešifrovat) a Preview deploy PR #75.
+
 # Prompt pro další session
 
 **FÁZE B BROUČEK – RELACE 16 HOTOVO (20. 11. 2026, větev `claude/funkce/zpetna-vazba-broucek`, draft PR #75).**
