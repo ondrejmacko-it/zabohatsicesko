@@ -9,7 +9,7 @@ import {
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
-import type { EventSnapshot, MinutesContent, MinutesSource, Role, SimAttendee, UserOrigin, UserStatus } from "@/lib/types";
+import type { EventSnapshot, ExcuseReason, MinutesContent, MinutesSource, ParticipationKind, Role, SimAttendee, UserOrigin, UserStatus } from "@/lib/types";
 
 // Typy tabulek odpovídají SQL v migrations.ts. Při změně uprav obojí.
 const ts = (name: string) => timestamp(name, { withTimezone: true, mode: "date" });
@@ -383,4 +383,26 @@ export const personalCalendarEntries = pgTable(
     updatedAt: ts("updated_at").notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.userId, t.eventId] })],
+);
+
+/**
+ * Výslovná účast člověka na akci (migrace 0016, čeká na schválení pro vzdálenou DB). Jen dobrovolná
+ * přihláška nebo omluva; žádný řádek = účast podle rolí a publika (`domain/participation.ts`).
+ * Důvod a poznámka omluvy jsou soukromé: nejdou do logů, auditu, Kalendáře ani obecného API.
+ */
+export const eventParticipation = pgTable(
+  "event_participation",
+  {
+    orgId: text("org_id").notNull(),
+    eventId: text("event_id").notNull(),
+    userId: text("user_id").notNull(),
+    kind: text("kind").$type<ParticipationKind>().notNull(),
+    excuseReason: text("excuse_reason").$type<ExcuseReason>(),
+    excuseNote: text("excuse_note"),
+    revision: integer("revision").notNull().default(1),
+    actorId: text("actor_id"),
+    createdAt: ts("created_at").notNull().defaultNow(),
+    updatedAt: ts("updated_at").notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.orgId, t.eventId, t.userId] })],
 );

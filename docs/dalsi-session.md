@@ -1,3 +1,36 @@
+# 18 BODŮ ZADAVATELKY – PR1 HOTOVO (draft PR), DALŠÍ JE PR2 (21. 11. 2026) – začni tímto
+
+Závazné podklady (nejsou v repu, uživatel je má): `ZBC_01_AUDIT_18_BODU_2026-11-21.md`, `ZBC_02_REALIZACNI_PLAN_2026-11-21.md`
+(PR1–PR7, matice rolí, O01–O09). Požádej o ně, pokud je nemáš. Doménový model: `docs/ucast-a-role.md`.
+
+* PR1 (větev `claude/funkce/ucast-role-zaklad`, základ main d9be02e): pracovní role oddělené od technických,
+  čistá pravidla účasti (`server/domain/participation.ts`), služba `changeOwnParticipation` (jen testy), migrace
+  `0016_event_participation` (`approval: true`, na vzdálené DB NEspuštěna), přepínač `EVENT_VISIBILITY=all-published`
+  (výchozí vypnuto, v ostré Wiki ignorován). Chování aplikace, UI a Kalendáře beze změny.
+* Ověření PR1: lint OK, typecheck OK, unit 466/466, build OK, e2e viz popis PR.
+
+| Bod | Stav po PR1 | Kde dál |
+|---|---|---|
+| F01 Pro koho FP/RM/Všichni | PR1 základ (povinnost z publika) | PR3 UI „Pro koho“ v měsíci |
+| F02 všechny akce, Moje/Všechny, štítky | PR1 základ (serverová viditelnost za přepínačem) | PR2 |
+| F03 přihlásit/odhlásit/omluvit | PR1 základ (DB, pravidla, služba) | PR2 UI + akce |
+| F04 pozvánky, decline v Googlu | čeká (smlouva `desiredGuestIds`) | PR2 |
+| F05 více rolí | PR1 hotovo v doméně (sjednocení, deduplikace) | PR2 UI/pozvánky |
+| F06–F09 příprava měsíce | čeká | PR3 |
+| F10–F12 témata | čeká | PR4 |
+| F13–F15 zápisy, citlivá data | čeká | PR5 |
+| F16–F18 náhled, tykání, záhlaví | čeká | PR6 |
+
+**Zadání PR2 (krátce):** nová větev z main po mergi PR1. Uživatelsky dokončit F02/F03/F04/F05: akce formuláře
+Přihlásit se / Odhlásit se / Omluvit se (Nemoc/Dovolená/Jiné + poznámka) / Zrušit omluvu nad `changeOwnParticipation`
+(session, ne náhled; limit četnosti); štítky „Povinné pro tebe“ / „Můžeš se přihlásit“ / „Omluveno“ z
+`effectiveParticipation`; přepínač Moje/Všechny vedle Měsíc/Seznam; zapnout `all-published` (odstranit pojistku
+`isLiveWiki()` až s hotovým UI). Kalendář: `desiredGuestIds` místo výběru podle jedné skupiny v `audienceAttendees`,
+zachovat ruční hosty a RSVP ostatních; nejdřív ověřit (O04), zda jde nastavit `declined` za účastníka, jinak pravdivý
+stav „čeká na Kalendář“. Bez živých pozvánek bez souhlasu. Před tím od uživatele: O02 (kdo je vedoucí týmu v datech),
+O03 (kdo vidí důvod omluvy), O08 (retence), zpětná omluva po začátku akce ano/ne, schválení `0016` v `APPROVED_MIGRATIONS`
+(uživatel; pozor, dokud není schválena i 0015, 0016 se nespustí).
+
 # OPRAVA SNÍMKU Z ŽIVÉHO TESTU – RELACE 21 HOTOVO, MERGNUTO (20. 11. 2026) – začni tímto
 
 * Commit 18671d4: (1) zalamování v kopii – příčina prokázaná: modern-screenshot přenáší do kopie pevné šířky

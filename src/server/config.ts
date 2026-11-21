@@ -63,6 +63,20 @@ export function wikiMode(): WikiMode {
 
 export const isLiveWiki = () => wikiMode() === "production";
 
+export type EventVisibility = "audience" | "all-published";
+
+/**
+ * Kdo vidí zveřejněné akce (F02). Výchozí `audience`: kolega vidí akce své skupiny a akce, které vede
+ * nebo kontroluje (dosavadní chování). `EVENT_VISIBILITY=all-published` ukáže každému přihlášenému všechny
+ * ZVEŘEJNĚNÉ akce, nikdy návrhy, nahrávky, pracovní zápisy ani údaje o účasti jiných. Přepínač zatím
+ * funguje jen v ukázce (lokálně, testy, dohodnuté Preview s fiktivními daty): v ostré Wiki
+ * (`WIKI_MODE=production`) zůstává `audience`, dokud PR2 nedokončí přihlášky a omluvy.
+ */
+export function eventVisibility(): EventVisibility {
+  if (isLiveWiki()) return "audience";
+  return process.env.EVENT_VISIBILITY?.trim() === "all-published" ? "all-published" : "audience";
+}
+
 export type CalendarMode = "simulation" | "google-test";
 
 /**

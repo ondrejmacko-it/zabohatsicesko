@@ -1,0 +1,97 @@
+# Pracovní role, individuální účast a viditelnost akcí (PR1)
+
+Doménový základ pro F01, F02, F03 a F05. PR1 nemění chování aplikace: nové funkce zatím volají jen testy,
+přepínač viditelnosti je ve výchozím stavu vypnutý a Kalendář se nemění.
+
+## Zdroj pravdy
+
+1. **Poslední zveřejněný snímek akce** (`events.published`). Rozpracovaný návrh nikdy.
+2. **Členství člověka** v `users.groups`: pracovní role `fp`, `rm` (a připravená `vedouci-tymu`) a starší skupina `tym-a`.
+3. **Výslovný záznam** v `event_participation`: dobrovolná přihláška, nebo omluva. Žádný řádek = účast podle rolí.
+
+Technická role (`admin | organizer | member`) do účasti nevstupuje. Pracovní role nikdy nedává právo plánovat ani
+spravovat. `tym-a` není „vedoucí týmu“. `vsichni` platí pro každého aktivního, i bez uloženého `vsichni`.
+
+## Kód
+
+| Místo | Co dělá |
+|---|---|
+| `src/lib/types.ts` | `WORK_ROLES`, `ParticipationState`, `ParticipationKind`, `EXCUSE_REASONS`, `EXCUSE_NOTE_MAX` |
+| `src/server/domain/participation.ts` | čistá pravidla: `isRequiredForUser`, `participationState`, `effectiveParticipation`, `participationTransition`, `canVoluntarilyJoin`, `canExcuse`, `parseExcuse`, `desiredGuestIds` |
+| `src/server/services/participation.ts` | `changeOwnParticipation` (jen vlastní účast, zámek akce, idempotence, audit bez důvodu), `ownParticipationRecords` |
+| `src/server/policy.ts` | `visibleEvent` + `publishedEventVisibleToMember` (režim viditelnosti), `canReadExcuseDetails` |
+| `src/server/config.ts` | `eventVisibility()`, proměnná `EVENT_VISIBILITY` |
+| `src/server/db/migrations.ts` | `0016_event_participation` (`approval: true`) |
+| `tests/ucast-role.test.ts`, `tests/migrace-0016.test.ts` | matice rolí, přechody, viditelnost, DB omezení, souběh, migrace |
+
+## Stavy účasti
+
+| Stav | Kdy | Pozvánka (`calendarGuest`) |
+|---|---|---|
+| `required` | publikum = Všichni nebo shoda s členstvím | ano |
+| `optional` | akce je vidět, člověk není přihlášený | ne |
+| `voluntary_enrolled` | výslovná přihláška k nepovinné akci | ano |
+| `excused` | omluva z povinné akce, platí hned, bez schvalování | ne |
+| `cancelled` | zrušená akce | ne |
+| (null) | návrh, svátek, neaktivní účet | ne |
+
+Změny (`enroll`, `withdraw`, `excuse`, `revoke_excuse`) jdou jen před začátkem akce. Opakování téže změny je bez účinku.
+
+**Výchozí interpretace k potvrzení před releasem:**
+- Omluva se uplatní jen u povinné akce. Když povinnost zanikne (změna rolí nebo publika), záznam zůstane, ale neplatí.
+  Po návratu povinnosti začne platit znovu.
+- Dobrovolná přihláška povinnost nemění. U povinné akce je nadbytečná, po zániku povinnosti zase platí.
+- Odvolání omluvy a odhlášení řádek smažou (minimalizace údajů o zdraví). Historie zůstává v `audit_log` jen jako
+  akce `participation.*` bez důvodu a poznámky.
+- Změny jdou do začátku akce. Zpětnou omluvu (např. nemoc v den akce) zatím nepovolujeme. To je otevřená otázka.
+
+## Tři různé věci, které se nesmí zaměnit
+
+1. **Účast ve Wiki**: stav výše. Autoritativní, platí hned.
+2. **Doručení do Kalendáře**: zda Wiki pozvánku poslala nebo odebrala (`calendar_links`, fronta, stav `pending/synced/attention`).
+3. **Odpověď v Googlu (RSVP)**: `needsAction | accepted | declined | tentative`, Wiki ji jen čte (`calendar_responses`).
+   Pozvaný je `needsAction`, ne „přihlášený“. Odebrání omluveného z hostů **není** jeho `declined`.
+
+## Soukromí omluv
+
+Důvod je jen kategorie (Nemoc / Dovolená / Jiné), poznámka je volitelná, nejvýš 280 znaků, bez řídicích znaků.
+Nejde do logů, auditu, Kalendáře, obecného API ani UI kolegů. `canReadExcuseDetails` ji zatím povolí jen omluvenému
+samotnému. Správce ani „vedoucí týmu“ ji automaticky nevidí (O03).
+
+## Viditelnost akcí (F02)
+
+`EVENT_VISIBILITY=all-published` ukáže každému přihlášenému všechny **zveřejněné** akce. Výchozí `audience` = dosavadní
+chování. V ostré Wiki (`WIKI_MODE=production`) se přepínač ignoruje, dokud PR2 nedokončí přihlášky a omluvy. Pro
+Preview s fiktivními daty ho jde nastavit jako nesecretní proměnnou prostředí, ale jen po dohodě (PR1 ho nikde nezapnul).
+
+Nezávisle na přepínači zůstává: nahrávka a pracovní zápis (`canHandleRecording`), zveřejněný zápis
+(`canReadPublishedMinutes`, dál podle publika, X02), témata a zájemci (`canSeeAudience`), stav Kalendáře a formuláře jen
+pro správce. Ověřeno testy pro seznam měsíce, detail, panel nahrávky a nahrání.
+
+Pro aktivaci v ostré Wiki: odstranit pojistku `isLiveWiki()` v `eventVisibility()` až s hotovým PR2, nebo přepnout
+výchozí hodnotu. Do té doby nic.
+
+## Migrace 0016
+
+Jen `CREATE … IF NOT EXISTS`: unikátní indexy `(org_id, id)` na `users` a `events` (umožní cizí klíče v rámci
+organizace, `id` je už primární klíč), tabulka `event_participation` s PK `(org_id, event_id, user_id)` a index podle
+uživatele. `approval: true`: na vzdálené DB neběží bez ID v `APPROVED_MIGRATIONS` (dokud ho nikdo nepřidá, nespustí se
+ani žádná další migrace). PR1 nespustil migraci na žádné vzdálené DB a nezměnil žádnou proměnnou prostředí.
+
+Protože tabulka na vzdálené DB zatím není, nesmí ji číst ani zapisovat žádná běžná cesta aplikace. To platí: služba
+`participation.ts` je volaná jen z testů. Obnova dema (`resetDatabase`) ji neuvádí jmenovitě, vyprázdní ji `TRUNCATE …
+CASCADE` přes cizí klíče.
+
+**Rollback:** tabulka nic nemění na stávajících datech. Vrácení = `DROP TABLE event_participation; DROP INDEX
+users_org_id_id_key, events_org_id_id_key;` a odstranění řádku ze `schema_migrations` (jen po schválení).
+
+## Smlouva pro PR2
+
+- **Výchozí povinnost:** `isRequiredForUser` / `participationState` nad zveřejněným snímkem.
+- **Uložení výjimky:** jen `changeOwnParticipation(viewer = skutečná session, ne náhled)`. Akce formuláře v PR2 ji obalí
+  validací (`parseExcuse`) a limitem četnosti.
+- **Pozvaní bez duplicit:** `desiredGuestIds` (povinní − omluvení + dobrovolní). PR2 jím nahradí výběr v
+  `audienceAttendees` / `planGuests` a zachová ručně přidané hosty a RSVP ostatních.
+- **Změna „Pro koho“:** projeví se až zveřejněním, protože pravidla čtou jen `events.published`.
+- **Selhání Googlu:** omluva ve Wiki platí dál, Kalendář dostane vlastní stav (`pending / attention`), retry přes frontu.
+- **Oprávněný manažer:** doplnit do `canReadExcuseDetails` podle schváleného mapování (O03).

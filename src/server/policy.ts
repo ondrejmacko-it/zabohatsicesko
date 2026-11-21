@@ -1,4 +1,5 @@
 import type { EventSnapshot, Group, Role } from "@/lib/types";
+import { eventVisibility, type EventVisibility } from "@/server/config";
 import type { EventRow } from "@/server/domain/snapshot";
 import { snapshotOf } from "@/server/domain/snapshot";
 
@@ -26,13 +27,21 @@ export function canManageAccount(viewer: Viewer, target: { id: string; role: Rol
 }
 
 /**
- * Co smí uživatel z akce vidět. Správce vidí pracovní verzi, ostatní jen zveřejněný snímek
- * akce pro svou skupinu (nebo akce, kterou vedou či kontrolují). Jinak null.
+ * Co smí uživatel z akce vidět. Správce vidí pracovní verzi, ostatní jen zveřejněný snímek. Výchozí režim
+ * (`audience`) ho ukáže publiku akce a jejímu vedoucímu či kontrolorovi, režim `all-published` každému
+ * přihlášenému (`eventVisibility`). Jinak null. Viditelnost akce nedává přístup k nahrávce, pracovnímu
+ * ani zveřejněnému zápisu: ty mají vlastní pravidla níže.
  */
-export function visibleEvent(viewer: Viewer, row: EventRow): EventSnapshot | null {
+export function visibleEvent(viewer: Viewer, row: EventRow, mode: EventVisibility = eventVisibility()): EventSnapshot | null {
   if (isOrganizer(viewer)) return snapshotOf(row);
+  return publishedEventVisibleToMember(viewer, row, mode);
+}
+
+/** Zveřejněný snímek pro kolegu bez práva plánovat. Návrh (akce bez zveřejněné verze) nikdy. */
+export function publishedEventVisibleToMember(viewer: Viewer, row: EventRow, mode: EventVisibility): EventSnapshot | null {
   const snapshot = row.published;
   if (!snapshot) return null;
+  if (mode === "all-published") return snapshot;
   if (viewer.groups.includes(snapshot.audience)) return snapshot;
   if (isEventHandler(viewer, snapshot)) return snapshot;
   return null;
@@ -64,4 +73,13 @@ export function canReadPublishedMinutes(viewer: Viewer, row: EventRow): boolean 
 
 export function canSeeAudience(viewer: Viewer, audience: string): boolean {
   return isOrganizer(viewer) || viewer.groups.includes(audience as Group);
+}
+
+/**
+ * Důvod a poznámka omluvy jsou soukromé (u nemoci jde o údaj související se zdravím). Zatím je smí číst
+ * jen sám omluvený. Správce ani pracovní role „vedoucí týmu“ je automaticky nevidí: oprávněného manažera
+ * doplní PR2 podle schváleného mapování (O03).
+ */
+export function canReadExcuseDetails(viewer: Viewer, subjectUserId: string): boolean {
+  return viewer.id === subjectUserId;
 }
