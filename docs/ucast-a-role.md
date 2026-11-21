@@ -95,3 +95,34 @@ users_org_id_id_key, events_org_id_id_key;` a odstranění řádku ze `schema_mi
 - **Změna „Pro koho“:** projeví se až zveřejněním, protože pravidla čtou jen `events.published`.
 - **Selhání Googlu:** omluva ve Wiki platí dál, Kalendář dostane vlastní stav (`pending / attention`), retry přes frontu.
 - **Oprávněný manažer:** doplnit do `canReadExcuseDetails` podle schváleného mapování (O03).
+
+## PR2: přihlášky a omluvy v UI (za přepínačem `PARTICIPATION=on`)
+
+Celá funkce je za serverovým přepínačem `participationEnabled()` (`PARTICIPATION=on`), výchozí vypnuto. Vypnuto =
+aplikace se chová jako před PR2 a tabulku `event_participation` nečte (test přejmenuje tabulku a stránky dál fungují).
+V ostré Wiki (`WIKI_MODE=production`) se přepínač ignoruje, dokud uživatel neschválí 0016 a pojistku vědomě neodstraní.
+Zapnutá účast znamená i `EVENT_VISIBILITY=all-published`.
+
+| Místo | Co dělá |
+|---|---|
+| `changeParticipationAction` (`features/vzdelavani/actions.ts`) | Přihlásit se / Odhlásit se / Omluvit se / Zrušit omluvu. Id ze session (`runAction`), `parseExcuse`, limit `PARTICIPATION_LIMIT` (30/h) |
+| `ParticipationPanel.tsx` | panel „Tvoje účast“ v okně akce a v detailu, potvrzení v `ConfirmDialog`, omluva Nemoc/Dovolená/Jiné + poznámka |
+| `withOwnParticipation`, `ownParticipationDetail` | štítky „Povinné pro tebe / Můžeš se přihlásit / Přihlášeno / Omluveno“ na serveru, jen vlastní záznamy; v náhledu jen z rolí, bez akcí |
+| `isMine` + `?ucast=moje` | přepínač Moje / Všechny vedle Měsíc / Seznam (na telefonu zůstává vidět) |
+| `eventAttendees` (`calendar/attendees.ts`) | hosté pozvánky podle `desiredGuestIds`; změna účasti vrátí pozvánku do fronty; ruční hosté a RSVP zůstávají |
+
+**O04 (ověřeno v dokumentaci Google Calendar API, 21. 11. 2026):** `attendees[].responseStatus` je zapisovatelné, ale
+dokumentace nikde neříká, že organizátor smí nastavit `declined` za jiného účastníka. Uvádí, že předvyplněná odpověď se
+může vrátit na `needsAction`, a nastavení RSVP popisuje jen přes kalendář účastníka (s právem zápisu do něj). Wiki proto
+`declined` nenastavuje. Omluvený se jen přestane zvát a Wiki ukazuje pravdivý stav „Omluveno ve Wiki, Kalendář čeká“.
+Živý test v Googlu neproběhl.
+
+**Zvolené výchozí varianty (otevřené otázky, jdou později přepnout):**
+- O02: „vedoucí týmu“ zůstává jen připravená pracovní role, nic neodemyká.
+- O03: důvod a poznámku omluvy vidí jen omluvený sám (`canReadExcuseDetails`).
+- O08: poznámky se automaticky nemažou. Návrh retence: smazat `excuse_note` (a případně `excuse_reason`) 90 dní po konci
+  akce úlohou v obnově, nebo už při zveřejnění zápisu. Čeká na rozhodnutí.
+- Zpětná omluva: jen před začátkem akce (`effectiveParticipation.open`).
+
+**Známé mezery:** okno dopadu změny publika (`impact.ts`) dál počítá hosty podle publika, ne podle omluv. Omluva a přihláška
+do Kalendáře se propíšou až další synchronizací (fronta). Živé pozvánky se v testech neposílají, ověřeno jen fake Googlem.

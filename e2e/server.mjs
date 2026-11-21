@@ -5,7 +5,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync, rmSync } from "node:fs";
 import { createServer as createHttpServer, request as httpRequest } from "node:http";
 import { createServer as createHttpsServer } from "node:https";
-import { DEMO_CODE, DEMO_PORT, DEMO_TLS_PORT, FEEDBACK_HOOK_PORT, FEEDBACK_HOOK_SECRET, LIVE_PORT } from "./constants.mjs";
+import { DEMO_CODE, DEMO_PORT, DEMO_TLS_PORT, FEEDBACK_HOOK_PORT, FEEDBACK_HOOK_SECRET, LIVE_PORT, UCAST_PORT } from "./constants.mjs";
 
 
 const shared = {
@@ -48,6 +48,7 @@ const liveEnv = {
 // Každý běh začíná z čistého seedu, testy pak nezávisí na tom, co zůstalo z minula.
 rmSync(".data/e2e-demo", { recursive: true, force: true });
 rmSync(".data/e2e-live", { recursive: true, force: true });
+rmSync(".data/e2e-ucast", { recursive: true, force: true });
 
 if (process.env.E2E_SKIP_BUILD !== "1") {
   const build = spawnSync("npx", ["next", "build"], { env: shared, stdio: "inherit" });
@@ -96,6 +97,14 @@ for (let i = 0; i < 120; i++) {
   } catch {}
   await new Promise((resolve) => setTimeout(resolve, 500));
 }
+// Ukázka s přihláškami a omluvami (PR2). Stejný seed i tajemství session, jen vlastní databáze.
+const ucast = start({ ...demoEnv, PGLITE_DIR: ".data/e2e-ucast", PARTICIPATION: "on" }, UCAST_PORT);
+for (let i = 0; i < 120; i++) {
+  try {
+    if ((await fetch(`http://localhost:${UCAST_PORT}/soukromi`)).ok) break;
+  } catch {}
+  await new Promise((resolve) => setTimeout(resolve, 500));
+}
 const demo = start(demoEnv, DEMO_PORT);
 
 // WebKit přes http://localhost neposílá cookie Secure (__Host-), Chromium a Firefox localhost berou jako
@@ -122,6 +131,7 @@ if (process.env.E2E_WEBKIT === "1") {
 
 const stop = () => {
   live.kill();
+  ucast.kill();
   demo.kill();
   process.exit(0);
 };

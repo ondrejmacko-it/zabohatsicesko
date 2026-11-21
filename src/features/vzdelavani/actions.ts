@@ -5,11 +5,11 @@ import { z } from "zod";
 import { EVENT_TYPES, GROUPS } from "@/lib/types";
 import { inviteModeOf, inviteOutcome } from "@/lib/invite-mode";
 import { formatDayMonth, isValidDateKey, isValidMonthKey, isValidTime } from "@/lib/time";
-import { audit } from "@/server/audit";
+import { audit, withinRateLimit } from "@/server/audit";
 import { disconnect as disconnectCalendar } from "@/server/calendar/google-auth";
 import { simulateManualEdit } from "@/server/calendar/simulated";
 import { pairWithExisting, requestNewInvite, requestRetry, syncEvent, syncPublished } from "@/server/calendar/sync";
-import { calendarMode, isLiveWiki } from "@/server/config";
+import { calendarMode, isLiveWiki, participationEnabled } from "@/server/config";
 import { getDb } from "@/server/db/client";
 import { loadCalendarStatus } from "@/server/services/calendar-status";
 import { isOrganizer } from "@/server/policy";
@@ -55,6 +55,8 @@ import {
   type TopicPlanOptions,
 } from "@/server/services/topics";
 import { SIMULATION_SWITCHES, writeSwitch } from "@/server/settings";
+import { PARTICIPATION_LIMIT, parseExcuse, type ParticipationChange } from "@/server/domain/participation";
+import { changeOwnParticipation } from "@/server/services/participation";
 
 // Každá akce znovu ověří session a oprávnění na serveru a validuje vstup.
 // Next.js u server actions navíc kontroluje Origin proti Host (ochrana proti CSRF).
@@ -689,5 +691,45 @@ export async function resetDemoAction(): Promise<ActionResult> {
     // Zveřejněné ukázkové akce dostanou pozvánky hned, ne až při další návštěvě Plánu.
     after(() => syncPublished());
     return { ok: true, message: "Ukázková data jsou obnovená do výchozího stavu." };
+  });
+}
+
+
+const PARTICIPATION_MESSAGES: Record<ParticipationChange["kind"], string> = {
+  enroll: "Jsi přihlášený. Pozvánka do Kalendáře dorazí po další synchronizaci.",
+  withdraw: "Jsi odhlášený.",
+  excuse: "Omluva je uložená ve Wiki. Kalendář se srovná po další synchronizaci.",
+  revoke_excuse: "Omluva je zrušená, akce je pro tebe zase povinná.",
+};
+
+/**
+ * Přihlásit se / Odhlásit se / Omluvit se / Zrušit omluvu. Jen vlastní účast: id vždy ze skutečné session
+ * (`runAction`), nikdy z formuláře ani z náhledu. Důvod a poznámka se validují (`parseExcuse`) a nikam
+ * se nelogují. Bez zapnuté účasti (`PARTICIPATION=on`) akce nic nedělá.
+ */
+export async function changeParticipationAction(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
+  return run(async (user) => {
+    if (!participationEnabled()) throw new DomainError("forbidden");
+    const data = z
+      .object({
+        id: z.string().min(1).max(120),
+        change: z.enum(["enroll", "withdraw", "excuse", "revoke_excuse"]),
+        reason: z.string().max(20).optional(),
+        note: z.string().max(2000).optional(),
+      })
+      .parse(formObject(formData));
+    let change: ParticipationChange;
+    if (data.change === "excuse") {
+      const excuse = parseExcuse({ reason: data.reason, note: data.note });
+      if (!excuse) throw new DomainError("invalid_input");
+      change = { kind: "excuse", excuse };
+    } else {
+      change = { kind: data.change };
+    }
+    if (!(await withinRateLimit(await getDb(), `participation:${user.id}`, PARTICIPATION_LIMIT.count, PARTICIPATION_LIMIT.windowSec))) {
+      throw new DomainError("rate_limited");
+    }
+    await changeOwnParticipation(user, data.id, change);
+    return { ok: true, message: PARTICIPATION_MESSAGES[change.kind] };
   });
 }

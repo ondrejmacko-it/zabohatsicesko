@@ -24,7 +24,9 @@ import { formatMonth, isValidDateKey, isValidMonthKey, monthOf, shiftMonth, toDa
 import { EVENT_TYPES } from "@/lib/types";
 import { syncPublished } from "@/server/calendar/sync";
 import { requireUser } from "@/server/auth/session";
-import { now } from "@/server/config";
+import { now, participationEnabled } from "@/server/config";
+import { isMine } from "@/server/domain/participation";
+import { withOwnParticipation } from "@/server/services/participation";
 import { defaultAudience } from "@/server/domain/generation";
 import { isOrganizer } from "@/server/policy";
 import { listMonth, listMonthDrafts, listPeople, loadTemplate, nextEventFor } from "@/server/services/events";
@@ -37,7 +39,7 @@ import { ShotGrant } from "@/components/feedback/ShotGrant";
 
 export const metadata: Metadata = { title: "Plán vzdělávání" };
 
-type SearchParams = Promise<{ mesic?: string; pohled?: string; typ?: string | string[]; stav?: string | string[]; akce?: string; den?: string; kopie?: string; tema?: string }>;
+type SearchParams = Promise<{ mesic?: string; pohled?: string; ucast?: string; typ?: string | string[]; stav?: string | string[]; akce?: string; den?: string; kopie?: string; tema?: string }>;
 
 /** Nejbližší zveřejněná akce: z již načteného aktuálního měsíce, jinak jedním dotazem dopředu. */
 async function nearestEvent(viewer: Parameters<typeof nextEventFor>[0], monthCards: EventCard[]): Promise<EventCard | null> {
@@ -60,7 +62,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   // Celá stránka, tedy i úkoly, se počítá pro stejného diváka jako harmonogram.
   const viewer = preview?.viewer ?? user;
   // Všechna data stránky v jedné vlně: dotazy na sobě nezávisí, takže se čeká jen na nejpomalejší z nich.
-  const [monthCards, template, viewerTasks, people, topics, calendar, monthDrafts, personal] = await Promise.all([
+  const [rawMonthCards, template, viewerTasks, people, topics, calendar, monthDrafts, personal] = await Promise.all([
     listMonth(viewer, monthKey),
     loadTemplate(),
     listTasks(viewer),
@@ -71,6 +73,10 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
     // Vlastní kalendář patří přihlášenému, v náhledu očima kolegy se neukazuje.
     preview ? null : loadPersonalCalendar(user),
   ]);
+  // Vlastní účast (PARTICIPATION=on): štítky a filtr Moje. Bez přepínače karty beze změny a bez dotazu.
+  const participation = participationEnabled();
+  const mineOnly = participation && params.ucast === "moje";
+  const monthCards = await withOwnParticipation(user, preview, rawMonthCards);
   const activeSlots = template.filter((s) => s.active);
   const slotTimes = Object.fromEntries(activeSlots.map((s) => [s.isoWeekday, `${s.startTime}–${s.endTime}`]));
   const inviteMode = calendar ? inviteModeOf(calendar) : "simulation";
@@ -79,15 +85,17 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   // Více hodnot v jedné kategorii (`typ=a&typ=b`) platí NEBO, mezi typem a stavem A. Stavy jsou jen pro správce.
   const selectedTypes = filterValues(params.typ, types);
   const states = managing ? filterValues(params.stav, PLAN_STATES) : [];
-  const cards = filterCards(monthCards, monthKey, { types: selectedTypes, states });
+  const filtered = filterCards(monthCards, monthKey, { types: selectedTypes, states });
+  // Svátky zůstávají i v Moje, jsou jen pro orientaci v měsíci.
+  const cards = mineOnly ? filtered.filter((c) => c.type === "holiday" || isMine(c.participation, c.handler)) : filtered;
   const filtering = selectedTypes.length > 0 || states.length > 0;
   const syncing = monthCards.some((c) => c.syncStatus === "pending");
   // Čekající pozvánky (nový host ve skupině, obnovené propojení) i zveřejněné akce bez vazby se odešlou
   // samy, jakmile správce otevře Plán. Souběh hlídá zámek u každé vazby v `syncPending`.
   if (managing) after(() => syncPublished());
 
-  type Current = { mesic: string; pohled?: string; typ: string[]; stav: string[]; akce?: string; den?: string; kopie?: string };
-  const current: Current = { mesic: monthKey, pohled: listView ? "seznam" : undefined, typ: selectedTypes, stav: states };
+  type Current = { mesic: string; pohled?: string; ucast?: string; typ: string[]; stav: string[]; akce?: string; den?: string; kopie?: string };
+  const current: Current = { mesic: monthKey, pohled: listView ? "seznam" : undefined, ucast: mineOnly ? "moje" : undefined, typ: selectedTypes, stav: states };
   const link = (change: Partial<Current>) => {
     const query = new URLSearchParams();
     for (const [key, value] of Object.entries({ ...current, ...change })) {
@@ -132,7 +140,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
       const href = actionHref[action.kind]?.(card);
       return href ? { ...action, href } : action;
     });
-  const emptyText = filtering ? "Filtru v tomto měsíci neodpovídá žádná akce." : undefined;
+  const emptyText = filtering ? "Filtru v tomto měsíci neodpovídá žádná akce." : mineOnly ? "Tento měsíc pro tebe nemáš žádnou akci." : undefined;
 
   // Co v měsíci čeká na správce: štítky nad harmonogramem, klik plán zúží (znovu klik filtr zruší).
   const summary = managing && monthKey >= monthOf(todayKey) ? monthSummary(monthCards, monthKey) : null;
@@ -203,6 +211,16 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
                   Seznam
                 </Link>
               </span>
+              {participation && (
+                <span className="view-toggle participation-toggle" role="group" aria-label="Akce">
+                  <Link className="pill" href={link({ ucast: "moje" })} aria-current={mineOnly ? "page" : undefined}>
+                    Moje
+                  </Link>
+                  <Link className="pill" href={link({ ucast: undefined })} aria-current={!mineOnly ? "page" : undefined}>
+                    Všechny
+                  </Link>
+                </span>
+              )}
               {monthKey !== thisMonth && (
                 <Link className="btn btn-small btn-quiet" href={link({ mesic: thisMonth })}>
                   Dnes
@@ -271,7 +289,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
         >
           <PlanFilters
             key={preview?.key ?? ""}
-            keep={[["mesic", monthKey], ...(current.pohled ? [["pohled", current.pohled] as [string, string]] : []), ...states.map((s): [string, string] => ["stav", s])]}
+            keep={[["mesic", monthKey], ...(current.pohled ? [["pohled", current.pohled] as [string, string]] : []), ...(current.ucast ? [["ucast", current.ucast] as [string, string]] : []), ...states.map((s): [string, string] => ["stav", s])]}
             types={types}
             selectedTypes={selectedTypes.map((t) => ({ type: t, removeHref: link({ typ: selectedTypes.filter((x) => x !== t) }) }))}
             resetHref={filtering ? link({ typ: [], stav: [] }) : null}

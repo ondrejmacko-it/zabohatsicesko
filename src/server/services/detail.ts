@@ -2,12 +2,12 @@ import { and, eq, isNull } from "drizzle-orm";
 import { TYPE_LABELS } from "@/lib/labels";
 import { addDays, isoWeekday, toDateKey, toTimeKey } from "@/lib/time";
 import type { EventSnapshot, EventType, Group, SimAttendee } from "@/lib/types";
-import { audienceAttendees } from "@/server/calendar/attendees";
+import { audienceAttendees, eventAttendees } from "@/server/calendar/attendees";
 import { CalendarError, type ExternalEvent } from "@/server/calendar/provider";
 import { personalEventDelivery, type PersonalEventDelivery } from "@/server/calendar/personal";
 import { listNotifications } from "@/server/calendar/simulated";
 import { calendarProvider, looksLikeSameInvite, pairingCandidates } from "@/server/calendar/sync";
-import { attendeeSource, calendarMode, config, now, personalDelivery, type AttendeeSource, type CalendarMode } from "@/server/config";
+import { attendeeSource, calendarMode, config, now, participationEnabled, personalDelivery, type AttendeeSource, type CalendarMode } from "@/server/config";
 import { getDb } from "@/server/db/client";
 import { calendarLinks, topics, users, type ManagedFields } from "@/server/db/schema";
 import { calendarSummary, snapshotOf, type EventRow } from "@/server/domain/snapshot";
@@ -199,7 +199,8 @@ async function syncPanel(viewer: Viewer, row: EventRow): Promise<SyncPanel | nul
   const [link] = await db.select().from(calendarLinks).where(eq(calendarLinks.eventId, row.id)).limit(1);
   if (personalDelivery()) return personalSyncPanel(db, row, link?.externalEventId ?? null);
   // Neplatná sestava hostů zastaví až synchronizaci, panel kvůli ní nespadne.
-  const invitees = await audienceAttendees(db, row.audience).catch(() => []);
+  // Zveřejněná akce: stejní hosté, jaké posílá synchronizace (se zapnutou účastí bez omluvených).
+  const invitees = await (participationEnabled() && row.published ? eventAttendees(db, row.id, row.published) : audienceAttendees(db, row.audience)).catch(() => []);
   const mode = calendarMode();
   const panel: SyncPanel = {
     mode,

@@ -1,8 +1,9 @@
 import { and, asc, eq, gt, inArray, sql } from "drizzle-orm";
-import type { SimAttendee } from "@/lib/types";
-import { attendeeSource, config, googleCalendarConfig, now, type AttendeeSource } from "@/server/config";
+import type { EventSnapshot, SimAttendee } from "@/lib/types";
+import { attendeeSource, config, googleCalendarConfig, now, participationEnabled, type AttendeeSource } from "@/server/config";
 import type { Executor } from "@/server/db/client";
-import { calendarLinks, events, userIdentities, users } from "@/server/db/schema";
+import { calendarLinks, eventParticipation, events, userIdentities, users } from "@/server/db/schema";
+import { desiredGuestIds, type ParticipationRecord } from "@/server/domain/participation";
 import { CalendarError } from "./provider";
 
 // Hosté pozvánek. Wiki zve publikum akce a spravuje jen hosty, které sama přidala.
@@ -11,7 +12,7 @@ import { CalendarError } from "./provider";
 /** V simulaci smí pozvánka jít jen na fiktivní adresy. Ověřuje se na serveru před zápisem. */
 const SIMULATION_ATTENDEE_DOMAIN = "@example.invalid";
 
-export type Recipient = { email: string; name: string; groups: string[] };
+export type Recipient = { id: string; email: string; name: string; groups: string[] };
 
 /**
  * Účty, kterým mohou jít pozvánky podle skupin.
@@ -21,7 +22,7 @@ export type Recipient = { email: string; name: string; groups: string[] };
  */
 export async function listRecipients(db: Executor, google: boolean): Promise<Recipient[]> {
   const rows = await db
-    .select({ email: users.email, name: users.name, groups: users.groups, origin: users.origin, googleEmail: userIdentities.email })
+    .select({ id: users.id, email: users.email, name: users.name, groups: users.groups, origin: users.origin, googleEmail: userIdentities.email })
     .from(users)
     .leftJoin(userIdentities, and(eq(userIdentities.userId, users.id), eq(userIdentities.provider, "google")))
     .where(and(eq(users.orgId, config.orgId), eq(users.status, "active")))
@@ -29,7 +30,7 @@ export async function listRecipients(db: Executor, google: boolean): Promise<Rec
   const recipients: Recipient[] = [];
   for (const row of rows) {
     const email = google ? (row.origin === "demo" ? row.googleEmail : row.email) : row.origin === "demo" ? row.email : null;
-    if (email) recipients.push({ email: email.toLowerCase(), name: row.name, groups: row.groups });
+    if (email) recipients.push({ id: row.id, email: email.toLowerCase(), name: row.name, groups: row.groups });
   }
   return recipients;
 }
@@ -49,7 +50,32 @@ export async function audienceAttendees(db: Executor, audience: string, source: 
     .filter((u) => u.groups.includes(audience))
     .map((u) => ({ email: u.email, name: u.name, responseStatus: "needsAction" as const }));
   // Fiktivní adresy jsou nedoručitelné a do skutečných pozvánek nepatří. A naopak.
-  const fictional = (a: SimAttendee) => a.email.endsWith(SIMULATION_ATTENDEE_DOMAIN);
+  if (cfg ? attendees.some(fictional) : !attendees.every(fictional)) throw new CalendarError("attendee_not_allowed", false);
+  return attendees;
+}
+
+const fictional = (a: SimAttendee) => a.email.endsWith(SIMULATION_ATTENDEE_DOMAIN);
+
+/**
+ * Hosté zveřejněné akce podle individuální účasti (jen `PARTICIPATION=on`): povinní podle rolí bez
+ * omluvených plus dobrovolně přihlášení (`desiredGuestIds`). Bez přepínače, u pevného seznamu testovacích
+ * příjemců a bez snímku platí `audienceAttendees` beze změny. Omluvený se jen přestane zvát: Wiki za něj
+ * v Googlu nenastavuje `declined` (O04, API to organizátorovi nezaručuje), jeho RSVP i ruční hosté zůstávají.
+ */
+export async function eventAttendees(db: Executor, eventId: string, snapshot: EventSnapshot, source: AttendeeSource = attendeeSource()): Promise<SimAttendee[]> {
+  const cfg = googleCalendarConfig();
+  if (!participationEnabled() || (cfg && source === "allowlist")) return audienceAttendees(db, snapshot.audience, source);
+  const recipients = await listRecipients(db, cfg !== null);
+  const rows = await db
+    .select({ userId: eventParticipation.userId, kind: eventParticipation.kind, excuseReason: eventParticipation.excuseReason })
+    .from(eventParticipation)
+    .where(and(eq(eventParticipation.orgId, config.orgId), eq(eventParticipation.eventId, eventId)));
+  // Do výpočtu jde jen druh záznamu. Důvod se tu nepoužívá a dál se nepředává.
+  const records = new Map<string, ParticipationRecord>(rows.map((r) => [r.userId, { kind: r.kind, excuseReason: null }]));
+  const wanted = new Set(desiredGuestIds(recipients.map((r) => ({ id: r.id, status: "active" as const, groups: r.groups })), snapshot, records));
+  const attendees = recipients
+    .filter((r) => wanted.has(r.id))
+    .map((r) => ({ email: r.email, name: r.name, responseStatus: "needsAction" as const }));
   if (cfg ? attendees.some(fictional) : !attendees.every(fictional)) throw new CalendarError("attendee_not_allowed", false);
   return attendees;
 }

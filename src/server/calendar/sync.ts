@@ -9,7 +9,7 @@ import { calendarSummary } from "@/server/domain/snapshot";
 import { loadEventRow } from "@/server/services/events";
 import { DomainError } from "@/server/services/errors";
 import { isOrganizer, type Viewer } from "@/server/policy";
-import { audienceAttendees, planGuests, samePlan } from "./attendees";
+import { eventAttendees, planGuests, samePlan } from "./attendees";
 import { GoogleCalendar } from "./google";
 import { connectionStatus, storedAccessToken } from "./google-auth";
 import { markLinksDelivered, syncPersonalCalendars } from "./personal";
@@ -278,7 +278,7 @@ async function pushToCalendar(
   snapshot: EventSnapshot,
   force: boolean,
 ): Promise<Pushed> {
-  const guests = await audienceAttendees(db, snapshot.audience);
+  const guests = await eventAttendees(db, link.eventId, snapshot);
   const previouslyManaged = link.managedAttendees ?? [];
 
   /** Propíše spravovaná pole a hosty do existující pozvánky. Beze změny nic neposílá. */

@@ -80,11 +80,18 @@ function CardMeta({ card, managing }: { card: EventCard; managing: boolean }) {
   const status = cardStatus(card);
   // Jeden stavový štítek; výstraha jen pro chybějící údaj, který karta jinak neukazuje.
   const missing = hiddenMissingDetails(card, managing);
-  if (!status && !missing.length) return null;
+  // Vlastní účast (jen se zapnutou účastí): „Povinné pro tebe“, „Můžeš se přihlásit“, „Přihlášeno“, „Omluveno“.
+  const own = card.past ? null : (card.participation?.label ?? null);
+  if (!status && !missing.length && !own) return null;
   const missingText = `Chybí ${missing.join(" a ")}`;
   return (
     <span className={styles.meta}>
       {status && <span className={badgeClass(status.tone)}>{status.label}</span>}
+      {own && (
+        <span className={badgeClass(card.participation!.state === "required" || card.participation!.state === "voluntary_enrolled" ? "ok" : "outline")} data-ucast={card.participation!.state}>
+          {own}
+        </span>
+      )}
       {missing.length > 0 && (
         <span className={styles.missing} title={missingText}>
           <Icon name="alert" />

@@ -16,6 +16,8 @@ import { isOrganizer } from "@/server/policy";
 import { getEventDetail } from "@/server/services/detail";
 import { currentPreview } from "@/server/services/preview-context";
 import { minutesSectionLabel } from "@/lib/minutes";
+import { ParticipationPanel } from "@/features/vzdelavani/components/ParticipationPanel";
+import { ownParticipationDetail } from "@/server/services/participation";
 
 export const metadata: Metadata = { title: "Detail akce" };
 
@@ -39,6 +41,8 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
   if (!detail) notFound();
 
   const { card } = detail;
+  // Vlastní účast (jen PARTICIPATION=on). Identita vždy ze session; v náhledu jen podle rolí, bez akcí.
+  const participation = card.type === "holiday" ? null : await ownParticipationDetail(user, preview, card.id);
   const organizer = isOrganizer(user) && !preview;
   const start = new Date(card.startsAt);
   const dayKey = toDateKey(start);
@@ -156,6 +160,17 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
         </dl>
         {card.type === "holiday" && <p className="small muted section-actions">Svátek je v plánu jen pro přehled, do Kalendáře se neposílá.</p>}
       </section>
+
+      {participation && (
+        <ParticipationPanel
+          eventId={card.id}
+          state={participation.state}
+          label={participation.label}
+          actions={participation.actions}
+          excuse={participation.excuse}
+          preview={Boolean(preview)}
+        />
+      )}
 
       {detail.sync && <SyncPanelView eventId={card.id} sync={detail.sync} />}
       {handlerPreview ? (

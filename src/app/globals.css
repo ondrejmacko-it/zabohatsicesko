@@ -2952,6 +2952,15 @@ p.cal-status {
     display: none;
   }
 
+  /* Moje / Všechny (PARTICIPATION=on) zůstává i na telefonu: filtruje i seznam. */
+  .view-toggle.participation-toggle {
+    display: flex;
+  }
+
+  .toolbar-start:has(> .participation-toggle) {
+    display: flex;
+  }
+
   .toolbar-end {
     flex-wrap: wrap;
     justify-content: stretch;

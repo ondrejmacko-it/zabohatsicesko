@@ -1,3 +1,26 @@
+# 18 BODŮ ZADAVATELKY – PR2 HOTOVO (draft PR), DALŠÍ JE PR3 (21. 11. 2026) – začni tímto
+
+* PR2: větev `claude/funkce/ucast-prihlasky`, stacked na `claude/funkce/ucast-role-zaklad` (PR #77, nemergnuto).
+  Přihlášky, omluvy, štítky, Moje/Všechny a hosté podle `desiredGuestIds`, vše za `PARTICIPATION=on` (výchozí vypnuto,
+  v ostré Wiki ignorováno). Podrobnosti, O04 a zvolené varianty O02/O03/O08 a zpětné omluvy: `docs/ucast-a-role.md` (oddíl PR2).
+* Ověření: lint, typecheck, unit 481/481, build OK; e2e `e2e/ucast.spec.ts` (vlastní server 3313 s PARTICIPATION=on)
+  windows-1280 + telefon-390 OK; celé e2e viz popis PR.
+
+| Bod | Stav po PR2 |
+|---|---|
+| F01 | základ (povinnost z publika), UI „Pro koho“ PR3 |
+| F02 | hotovo za přepínačem (Moje/Všechny, štítky) |
+| F03 | hotovo za přepínačem (akce + potvrzení) |
+| F04 | základ: hosté podle účasti (fake Google), `declined` se nenastavuje (O04), živě neověřeno |
+| F05 | hotovo za přepínačem (sjednocení rolí, jedna pozvánka) |
+| F06–F18 | čeká (PR3–PR6) |
+
+**Další krok = PR3:** F06–F09 (příprava měsíce) + UI „Pro koho“ (FP/RM/Všichni) v přípravě měsíce. Větev
+`claude/funkce/priprava-mesice-pro-koho` z `claude/funkce/ucast-prihlasky`, draft PR s touto base. Zadání F06–F09 je v
+ZBC_01/ZBC_02 (nejsou v repu, požádej uživatele).
+**Otevřené:** O02, O03, O08, zpětná omluva, schválení 0015+0016 v `APPROVED_MIGRATIONS` (uživatel), aktivace v ostré Wiki
+(odstranit pojistku v `participationEnabled`/`eventVisibility` až po migraci), okno dopadu (`impact.ts`) bez omluv.
+
 # 18 BODŮ ZADAVATELKY – PR1 HOTOVO (draft PR), DALŠÍ JE PR2 (21. 11. 2026) – začni tímto
 
 Závazné podklady (nejsou v repu, uživatel je má): `ZBC_01_AUDIT_18_BODU_2026-11-21.md`, `ZBC_02_REALIZACNI_PLAN_2026-11-21.md`
