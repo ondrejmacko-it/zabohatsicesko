@@ -19,7 +19,8 @@
 | F06–F18 | hotovo |
 
 **Další krok:** zkontrolovat celý stack PR #77–#84 (base, diffy, popisy, výsledky testů) a připravit souhrn pro
-uživatele ke schválení. Nic nemergovat.
+uživatele ke schválení. Nic nemergovat. Relaci spouští uživatel ručně (automatické založení odmítl limit
+zanoření relací 8).
 **Otevřené:** O09 (věta panelu u omluvy ručního hosta spárované pozvánky, viz `docs/pozadavky-f01-f18.md`), O04
 (`declined` za omluveného Wiki nenastavuje), živý test F04 (D06). Starší otevřené otázky viz oddíl PR7 níže.
 
