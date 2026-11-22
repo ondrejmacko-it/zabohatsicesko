@@ -16,6 +16,8 @@ import { canReadExcuseDetails, type Viewer } from "@/server/policy";
 import type { EventCard } from "@/server/services/events";
 import type { PlanPreview } from "@/server/services/preview";
 import type { ExcuseReason } from "@/lib/types";
+import type { OwnCalendar } from "@/lib/calendar-note";
+import { ownCalendarState } from "@/server/calendar/attendees";
 import { DomainError } from "@/server/services/errors";
 
 // Serverová vrstva individuální účasti. Stránky a akce formuláře ji volají jen se zapnutým přepínačem
@@ -147,6 +149,8 @@ export async function withOwnParticipation(session: Viewer, preview: PlanPreview
 export type OwnParticipationDetail = OwnParticipationView & {
   /** Jen vlastní omluva, jen pro omluveného samotného (O03). */
   excuse: { reason: ExcuseReason; note: string | null } | null;
+  /** Vlastní pozvánka v Kalendáři (F04). Null = Wiki stav nezná, nebo jde o náhled. */
+  calendar: OwnCalendar | null;
 };
 
 /** Vlastní účast pro detail akce včetně vlastního důvodu omluvy. Null = přepínač vypnutý nebo účast nevzniká. */
@@ -161,7 +165,7 @@ export async function ownParticipationDetail(session: Viewer, preview: PlanPrevi
   if (!row) return null;
   if (preview) {
     const view = ownParticipationView(effectiveParticipation({ status: "active", groups: preview.viewer.groups }, row.published, null, now()), { readOnly: true });
-    return view && { ...view, excuse: null };
+    return view && { ...view, excuse: null, calendar: null };
   }
   const person = await loadPerson(db, session.id);
   if (!person) return null;
@@ -176,5 +180,5 @@ export async function ownParticipationDetail(session: Viewer, preview: PlanPrevi
     view.state === "excused" && record?.excuseReason && canReadExcuseDetails(session, record.userId)
       ? { reason: record.excuseReason, note: record.excuseNote }
       : null;
-  return { ...view, excuse };
+  return { ...view, excuse, calendar: await ownCalendarState(db, eventId, session.id) };
 }

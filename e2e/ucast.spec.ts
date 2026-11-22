@@ -60,7 +60,7 @@ test.describe("účast v harmonogramu", () => {
     await expectNoHorizontalScroll(page);
     await dialog.getByRole("button", { name: "Omluvit se" }).click();
     const excused = page.locator('[data-ucast-panel="excused"]');
-    await expect(excused).toContainText("Omluveno ve Wiki, Kalendář čeká.");
+    await expect(excused).toContainText("Omluveno ve Wiki, platí hned.");
     await expect(excused).toContainText(`${NOTE}-${info.project.name}`);
 
     // Moje: omluvená akce zůstává, nabídky k přihlášení ne.
@@ -76,7 +76,49 @@ test.describe("účast v harmonogramu", () => {
     await page.getByRole("dialog", { name: "Zrušit omluvu?" }).getByRole("button", { name: "Zrušit omluvu" }).click();
     await expect(page.locator('[data-ucast-panel="required"]')).toBeVisible();
   });
+
+  // F04 v simulaci Kalendáře: povinná akce je pozvánka, omluva ji odmítne, dobrovolná se přidá až po přihlášení.
+  test("F04: pozvánka v Kalendáři podle povinnosti, omluvy a přihlášky", async ({ page }) => {
+    // Návštěva Úvodu spustí frontu Kalendáře: zveřejněné akce dostanou pozvánku.
+    await page.goto(`${BASE}/`);
+    await settle(page);
+
+    await plan(page);
+    let panel = await openCard(page, "required");
+    await expectCalendar(page, "Pozvánku máš v Kalendáři.");
+    await panel.getByRole("button", { name: "Omluvit se" }).click();
+    await page.getByRole("dialog", { name: "Omluvit se z akce?" }).getByRole("button", { name: "Omluvit se" }).click();
+    await expect(page.locator('[data-ucast-panel="excused"]')).toContainText("Omluveno ve Wiki, platí hned.");
+    await expectCalendar(page, "Pozvánku v Kalendáři nemáš, omluva ji odmítla.");
+    await page.locator("[data-ucast-panel]").getByRole("button", { name: "Zrušit omluvu" }).click();
+    await page.getByRole("dialog", { name: "Zrušit omluvu?" }).getByRole("button", { name: "Zrušit omluvu" }).click();
+    await expectCalendar(page, "Pozvánku máš v Kalendáři.");
+
+    await plan(page);
+    panel = await openCard(page, "optional");
+    await expectCalendar(page, "Do Kalendáře se akce přidá, až se přihlásíš.");
+    await panel.getByRole("button", { name: "Přihlásit se" }).click();
+    await page.getByRole("dialog", { name: "Přihlásit se na akci?" }).getByRole("button", { name: "Přihlásit se" }).click();
+    await expectCalendar(page, "Pozvánku máš v Kalendáři.");
+    await page.locator("[data-ucast-panel]").getByRole("button", { name: "Odhlásit se" }).click();
+    await page.getByRole("dialog", { name: "Odhlásit se z akce?" }).getByRole("button", { name: "Odhlásit se" }).click();
+    await expectCalendar(page, "Do Kalendáře se akce přidá, až se přihlásíš.");
+  });
 });
+
+/** Stav vlastní pozvánky v panelu „Tvoje účast“. Kalendář se upravuje hned po odpovědi, proto se čeká na obnovení. */
+async function expectCalendar(page: Page, text: string) {
+  await expect
+    .poll(
+      async () => {
+        await page.reload();
+        await settle(page);
+        return page.locator("[data-ucast-panel] [data-kalendar]").textContent();
+      },
+      { timeout: 20_000, intervals: [300, 600, 1_000] },
+    )
+    .toBe(text);
+}
 
 test.describe("soukromí omluvy", () => {
   test.use({ storageState: authFile("vedouci") });
@@ -126,5 +168,16 @@ test.describe("témata v režimu všech zveřejněných (F10, F11)", () => {
     await expect(page.locator(".topic-handle, .topic-rank")).toHaveCount(0);
     await expect(page.getByRole("button", { name: /^Možnosti tématu/ })).toHaveCount(0);
     await expectNoHorizontalScroll(page);
+  });
+});
+
+test.describe("víc pracovních rolí (F05)", () => {
+  test.use({ storageState: authFile("vedouci") });
+
+  test("F05: vedoucí s rolemi FP i RM má povinné akce obou rolí, nic jen dobrovolného", async ({ page }) => {
+    await plan(page);
+    await expect(page.locator('[data-ucast="required"]').filter({ visible: true }).first()).toBeVisible();
+    expect(await page.locator('[data-ucast="required"]').filter({ visible: true }).count()).toBeGreaterThan(1);
+    await expect(page.locator('[data-ucast="optional"]').filter({ visible: true })).toHaveCount(0);
   });
 });

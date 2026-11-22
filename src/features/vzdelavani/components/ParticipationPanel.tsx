@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import { ActionForm, ActionMessage } from "@/components/ActionForm";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { changeParticipationAction, type ActionResult } from "@/features/vzdelavani/actions";
+import { calendarNote, type OwnCalendar } from "@/lib/calendar-note";
 import { EXCUSE_NOTE_MAX, EXCUSE_REASONS, type ExcuseReason, type ParticipationState } from "@/lib/types";
 
 export const EXCUSE_REASON_LABELS: Record<ExcuseReason, string> = { illness: "Nemoc", vacation: "Dovolená", other: "Jiné" };
@@ -17,27 +18,31 @@ type Props = {
   actions: Action[];
   /** Vlastní omluva, jen pro omluveného samotného. */
   excuse: { reason: ExcuseReason; note: string | null } | null;
+  /** Vlastní pozvánka v Kalendáři (F04). Null = Wiki stav nezná a panel o Kalendáři nic netvrdí. */
+  calendar?: OwnCalendar | null;
   /** Náhled „Zobrazit jako“: jen stav, žádné akce. */
   preview?: boolean;
 };
 
 const STATE_TEXT: Partial<Record<ParticipationState, string>> = {
-  required: "Akce je pro tebe povinná podle tvé role. Pozvánku máš v Kalendáři.",
+  required: "Akce je pro tebe povinná podle tvé role.",
   optional: "Akce pro tebe není povinná. Pokud chceš, můžeš se přihlásit.",
   voluntary_enrolled: "Jsi přihlášený dobrovolně.",
-  excused: "Omluveno ve Wiki, Kalendář čeká.",
+  excused: "Omluveno ve Wiki, platí hned.",
 };
 
 /**
  * Tvoje účast u akce: stav, štítek a akce Přihlásit se / Odhlásit se / Omluvit se / Zrušit omluvu.
  * Každá změna se potvrzuje v samostatném okně. Server znovu ověří session, stav i čas akce.
  */
-export function ParticipationPanel({ eventId, state, label, actions, excuse, preview }: Props) {
+export function ParticipationPanel({ eventId, state, label, actions, excuse, calendar = null, preview }: Props) {
+  const note = preview ? null : calendarNote(state, calendar);
   return (
     <section className="section participation-panel" aria-labelledby="ucast" data-ucast-panel={state}>
       <h2 id="ucast">Tvoje účast</h2>
       {label && <p className="participation-state"><span className={state === "excused" || state === "optional" ? "badge badge-outline" : "badge badge-ok"}>{label}</span></p>}
       <p className="small">{preview ? "V náhledu se účast počítá jen z rolí, přihlášky a omluvy kolegů se neukazují." : STATE_TEXT[state]}</p>
+      {note && <p className="small" data-kalendar={calendar?.inCalendar ? "v-kalendari" : "mimo-kalendar"}>{note}</p>}
       {state === "excused" && (
         <p className="small muted">
           {excuse ? `Důvod: ${EXCUSE_REASON_LABELS[excuse.reason]}${excuse.note ? ` · ${excuse.note}` : ""}. ` : ""}
