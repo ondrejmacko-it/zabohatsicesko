@@ -38,7 +38,7 @@ const STATE_TEXT: Partial<Record<ParticipationState, string>> = {
 export function ParticipationPanel({ eventId, state, label, actions, excuse, calendar = null, preview }: Props) {
   const note = preview ? null : calendarNote(state, calendar);
   return (
-    <section className="section participation-panel" aria-labelledby="ucast" data-ucast-panel={state}>
+    <section className="section participation-panel" aria-labelledby="ucast" data-ucast-panel={state} data-kalendar-stav={calendar ? `${calendar.link}:${calendar.inCalendar}` : "neznamy"}>
       <h2 id="ucast">Tvoje účast</h2>
       {label && <p className="participation-state"><span className={state === "excused" || state === "optional" ? "badge badge-outline" : "badge badge-ok"}>{label}</span></p>}
       <p className="small">{preview ? "V náhledu se účast počítá jen z rolí, přihlášky a omluvy kolegů se neukazují." : STATE_TEXT[state]}</p>

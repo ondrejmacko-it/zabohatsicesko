@@ -1,3 +1,30 @@
+# 18 BODŮ ZADAVATELKY – PR8 F04 V SIMULACI (draft PR), E2E F04 JEŠTĚ NEPROCHÁZÍ (22. 11. 2026) – začni tímto
+
+* **Znění F01–F18 a D01–D07 je v `docs/pozadavky-f01-f18.md`. Na zadání se uživatele už neptej.**
+* PR8: větev `claude/funkce/kalendar-f04`, stacked na `claude/funkce/release-audit` (PR #83), nic nemergnuto.
+  * `src/lib/calendar-note.ts` (`calendarNote`) + `ownCalendarState` v `calendar/attendees.ts`: panel „Tvoje účast“ v
+    detailu akce říká pravdivý stav vlastní pozvánky (`data-kalendar`, `data-kalendar-stav`).
+  * `changeParticipationAction` po odpovědi spouští `after(() => syncEvent(id))` (omluva/přihláška hned v Kalendáři).
+  * Unit `tests/kalendar-f04.test.ts` 15/15 (zveřejnění = pozvánka povinným, omluva odebere a platí hned i při chybě
+    Kalendáře, přihláška přidá, odhlášení odebere). Nově unit F16 (`nahled.test.ts`) a e2e F05 (`ucast.spec.ts`).
+  * Tabulka bod → testy F01–F18 je v `docs/pozadavky-f01-f18.md` (oddíl PR8), včetně toho, co zbývá pro živý test.
+* Ověření: lint, typecheck, unit 532/532, build OK, celé e2e 1325 OK / 213 přeskočeno / **2 chyby: nový e2e F04**
+  (`ucast.spec.ts` › F04, oba projekty). Příčina: na e2e serveru účasti (simulace) dostane panel `calendar = null`
+  (`data-kalendar-stav="neznamy"`), přestože v unit testu stejná cesta funguje. `ownCalendarState` vrací null jen když:
+  osobní kalendáře / allowlist (na tomto serveru ne), vazba `synced` s `managedAttendees = null`, nebo `listRecipients`
+  účet nenajde. **Další krok:** zjistit, která z těch větví platí (např. dočasně zalogovat v `ownCalendarState`, nebo
+  unit testem nad seedem bez `publishRm`: první povinná budoucí FP akce po `syncPublished()`), opravit, pustit
+  `E2E_SKIP_BUILD=1 npx playwright test e2e/ucast.spec.ts --trace off` (po `npx next build`), pak celé e2e.
+
+| Bod | Stav po PR8 |
+|---|---|
+| F01–F03, F05 | hotovo (F02, F03, F05 za přepínačem `PARTICIPATION`) |
+| F04 | základ: simulace + unit hotové, e2e F04 padá (viz výše), živý test čeká na schválení (D06) |
+| F06–F18 | hotovo |
+
+**Otevřené:** `declined` za omluveného Wiki nenastavuje (O04, omluvený se odebere z hostů, Google mu pošle zrušení);
+okno akce v Plánu stav Kalendáře neukazuje (jen detail akce). Starší otevřené otázky viz oddíl PR7 níže.
+
 # 18 BODŮ ZADAVATELKY – PR7 RELEASE AUDIT + F06–F09 (draft PR), DALŠÍ JE PR8 (22. 11. 2026) – začni tímto
 
 * **Znění F01–F18 a rozhodnutí D01–D07 je v `docs/pozadavky-f01-f18.md`. Na zadání se uživatele už neptej.**

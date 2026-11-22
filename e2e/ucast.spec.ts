@@ -113,7 +113,10 @@ async function expectCalendar(page: Page, text: string) {
       async () => {
         await page.reload();
         await settle(page);
-        return page.locator("[data-ucast-panel] [data-kalendar]").textContent();
+        // Stav vazby (data-kalendar-stav) je v hlášce chyby, aby šlo poznat, proč věta chybí.
+        const stav = await page.locator("[data-ucast-panel]").getAttribute("data-kalendar-stav");
+        const note = await page.locator("[data-ucast-panel] [data-kalendar]").textContent({ timeout: 500 }).catch(() => `(bez věty, stav ${stav})`);
+        return note;
       },
       { timeout: 20_000, intervals: [300, 600, 1_000] },
     )
