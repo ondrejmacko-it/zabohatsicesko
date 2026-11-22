@@ -52,7 +52,7 @@ test.describe("U05 Plán na telefonu", () => {
     const page = await context.newPage();
     await page.goto("/vzdelavani/harmonogram");
     await settle(page);
-    const next = page.getByRole("region", { name: "Co tě čeká" });
+    const next = page.getByRole("region", { name: "Nejbližší akce" });
     await expect(next).toBeVisible();
     await expect(next.getByRole("link")).toHaveCount(1);
     await expect(page.getByRole("region", { name: /Čeká na tebe/ })).toHaveCount(0);
