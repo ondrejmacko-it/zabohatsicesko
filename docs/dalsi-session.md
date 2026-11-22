@@ -1,3 +1,26 @@
+# 18 BODŮ ZADAVATELKY – PR3 HOTOVO (draft PR), DALŠÍ JE PR4 (22. 11. 2026) – začni tímto
+
+* PR3: větev `claude/funkce/priprava-mesice-pro-koho`, stacked na `claude/funkce/ucast-prihlasky` (PR #78), nic nemergnuto.
+  Obsah jen F01 UI „Pro koho“ v okně Připravit měsíc (Všichni / FP / RM, `tym-a` jen u návrhu, který ho už má;
+  `audienceOptions` v `features/vzdelavani/prepare-month.ts`). Podrobnosti: `docs/ucast-a-role.md` (oddíl PR3).
+* **F06–F09 NEUDĚLÁNY:** zadání není v repu ani na Disku (ZBC_01/ZBC_02). Uživatel 22. 11. zvolil „Jen Pro koho,
+  F06–F09 později“. Než se do nich pustíš, vyžádej si od uživatele jejich znění.
+* PR2 celé e2e doběhlo: 1261 OK / 183 přeskočeno / 0 chyb, doplněno do popisu PR #78.
+* Ověření PR3: lint, typecheck, unit 483/483, build OK, celé e2e viz popis PR3.
+
+| Bod | Stav po PR3 |
+|---|---|
+| F01 | hotovo v přípravě měsíce (Pro koho), povinnost z publika (PR1) |
+| F02, F03, F05 | hotovo za přepínačem `PARTICIPATION` |
+| F04 | základ (fake Google, O04) |
+| F06–F09 | čeká na zadání od uživatele |
+| F10–F18 | čeká (PR4–PR6) |
+
+**Další krok = PR4:** F10–F12 (témata). Větev `claude/funkce/temata-f10-f12` z `claude/funkce/priprava-mesice-pro-koho`,
+draft PR s touto base. Zadání F10–F12 si vyžádej od uživatele, pokud ho nemáš (v repu ani na Disku není).
+**Otevřené:** F06–F09 (zadání), O02, O03, O08, zpětná omluva, schválení 0015+0016 (uživatel), skrýt `tym-a` i v editoru
+akce a šabloně ano/ne, okno dopadu (`impact.ts`) bez omluv.
+
 # 18 BODŮ ZADAVATELKY – PR2 HOTOVO (draft PR), DALŠÍ JE PR3 (21. 11. 2026) – začni tímto
 
 * PR2: větev `claude/funkce/ucast-prihlasky`, stacked na `claude/funkce/ucast-role-zaklad` (PR #77, nemergnuto).

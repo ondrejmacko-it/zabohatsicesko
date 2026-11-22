@@ -1,3 +1,5 @@
+import type { Group } from "@/lib/types";
+
 /**
  * Pravidla okna Připravit měsíc nad rozepsaným formulářem: co návrhu chybí, souhrnný přehled stavu a
  * hromadné doplnění vedoucího. Čisté funkce bez Reactu, ať jdou ověřit testem.
@@ -64,4 +66,16 @@ export function fillEmptyLeads(
   if (!leadId) return { leads, filled: [] };
   const filled = rowsMissingLead(Object.entries(leads).map(([id, value]) => ({ id, holiday: holidays.has(id), lead: Boolean(value) })));
   return { leads: { ...leads, ...Object.fromEntries(filled.map((id) => [id, leadId])) }, filled };
+}
+
+/** Volby „Pro koho“ pro nové plánování: všichni, nebo jedna pracovní role (F01). */
+export const PLANNED_AUDIENCES = ["vsichni", "fp", "rm"] as const satisfies readonly Group[];
+
+/**
+ * Nabídka „Pro koho“ u řádku návrhu. Starší skupina (např. `tym-a`) zůstane jen u návrhu, který ji už má,
+ * aby se při uložení potichu nezměnila. Nový výběr ji nenabízí.
+ */
+export function audienceOptions(current: Group): Group[] {
+  const planned: readonly Group[] = PLANNED_AUDIENCES;
+  return planned.includes(current) ? [...planned] : [...planned, current];
 }

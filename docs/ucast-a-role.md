@@ -126,3 +126,13 @@ může vrátit na `needsAction`, a nastavení RSVP popisuje jen přes kalendář
 
 **Známé mezery:** okno dopadu změny publika (`impact.ts`) dál počítá hosty podle publika, ne podle omluv. Omluva a přihláška
 do Kalendáře se propíšou až další synchronizací (fronta). Živé pozvánky se v testech neposílají, ověřeno jen fake Googlem.
+
+## PR3: „Pro koho“ v přípravě měsíce (F01)
+
+Sloupec Skupina v okně Připravit měsíc je teď „Pro koho“ a nabízí Všichni / Finanční poradci / Relationship manažeři
+(`PLANNED_AUDIENCES`, `audienceOptions` v `features/vzdelavani/prepare-month.ts`). Starší skupina `tym-a` zůstane v nabídce
+jen u návrhu, který ji už má, aby se při uložení potichu nezměnila. Server (`publishMonthAction`) dál přijímá všechny
+hodnoty `GROUPS`, nic se tím neoslabuje ani nemigruje. Povinnost účasti z publika počítá `isRequiredForUser` (PR1).
+
+Varianta k pozdějšímu přepnutí: úplně skrýt `tym-a` i v editoru akce a v šabloně (typ „akce“ má dnes výchozí `tym-a`,
+`domain/generation.ts`). Bez zadání F01 v plném znění se to neměnilo.

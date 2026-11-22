@@ -8,10 +8,10 @@ import { submitKeepingValues } from "@/features/shared/keep-values";
 import { publishInviteNote, type InviteMode } from "@/lib/invite-mode";
 import { GROUP_LABELS } from "@/lib/labels";
 import { addDays, formatDayMonth, formatEventTime, shiftMonth, toDateKey, weekdayShort } from "@/lib/time";
-import { GROUPS, type Group } from "@/lib/types";
+import type { Group } from "@/lib/types";
 import type { MonthDraft } from "@/server/services/events";
 import { generateMonthAction, publishMonthAction, type ActionResult } from "../actions";
-import { draftGaps, fillEmptyLeads, prepareOverview, rowsMissingLead, type DraftRowState, type OverviewKey } from "../prepare-month";
+import { audienceOptions, draftGaps, fillEmptyLeads, prepareOverview, rowsMissingLead, type DraftRowState, type OverviewKey } from "../prepare-month";
 import { TemplateDialog, type SlotValue } from "./TemplateDialog";
 
 /** Jak se zveřejnění propíše do Kalendáře. Určuje jen text přehledu dopadu. */
@@ -34,7 +34,7 @@ type Props = {
 const plural = (count: number, one: string, few: string, many: string) => `${count} ${count === 1 ? one : count >= 2 && count <= 4 ? few : many}`;
 
 /**
- * Okno Připravit měsíc: doplnění termínů ze šablony, mezery, úprava návrhů (datum, skupina, téma,
+ * Okno Připravit měsíc: doplnění termínů ze šablony, mezery, úprava návrhů (datum, pro koho, téma,
  * vedoucí), stav párování zveřejněných akcí a nakonec uložení nebo zveřejnění. Tlačítko vidí správce
  * vždy, i v měsíci bez návrhů.
  */
@@ -218,11 +218,11 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
             {all ? "Zrušit výběr" : "Vybrat vše"}
           </button>
         </legend>
-        {/* Záhlaví sloupců jen pro oko; každé pole má vlastní přístupný popisek (Datum: …, Skupina: …). */}
+        {/* Záhlaví sloupců jen pro oko; každé pole má vlastní přístupný popisek (Datum: …, Pro koho: …). */}
         <div className="publish-head" aria-hidden="true">
           <span>Návrh</span>
           <span>Datum</span>
-          <span>Skupina</span>
+          <span>Pro koho</span>
           <span>Téma</span>
           <span>Vedoucí</span>
         </div>
@@ -251,8 +251,8 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
                 <input type="hidden" name="row" value={d.id} />
                 <input type="hidden" name={`rev-${d.id}`} value={d.revision} />
                 <input className="input" type="date" name={`date-${d.id}`} defaultValue={dateKey} min={minDate} max={maxDate} aria-label={`Datum: ${name}`} required />
-                <select className="select" name={`aud-${d.id}`} defaultValue={d.audience} aria-label={`Skupina: ${name}`}>
-                  {GROUPS.map((g) => (
+                <select className="select" name={`aud-${d.id}`} defaultValue={d.audience} aria-label={`Pro koho: ${name}`}>
+                  {audienceOptions(d.audience).map((g) => (
                     <option key={g} value={g}>
                       {GROUP_LABELS[g]}
                     </option>
