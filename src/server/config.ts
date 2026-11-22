@@ -90,6 +90,17 @@ export function participationEnabled(): boolean {
   return process.env.PARTICIPATION?.trim() === "on";
 }
 
+/**
+ * Volba „Nahrávka“ u zápisu (F14). Automatický přepis zatím umí jen ukázkovou nahrávku, proto je nahrávání
+ * ve výchozím stavu skryté a server ho odmítne. `RECORDING_DEMO=on` ukázku zapne (lokálně, e2e, dohodnuté
+ * Preview). Už nahrané nahrávky zůstávají vidět a dají se přehrát. V ostré Wiki se přepínač ignoruje,
+ * dokud přepis neumí skutečné schůzky.
+ */
+export function recordingUploadEnabled(): boolean {
+  if (isLiveWiki()) return false;
+  return process.env.RECORDING_DEMO?.trim() === "on";
+}
+
 export type CalendarMode = "simulation" | "google-test";
 
 /**

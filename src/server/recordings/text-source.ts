@@ -23,6 +23,23 @@ export function normalizeText(text: string): string {
     .trim();
 }
 
+const SECTION_LABELS = /^(shrnuti|souhrn|summary|uvod|hlavni body|body|klicove body|poznamky|rozhodnuti|dohody|dalsi kroky|ukoly|kroky|key points|notes|decisions|next steps|action items|todo)$/;
+const SPEAKER_LINE = /^\s*([\p{Lu}][\p{L} .'’-]{0,40}?)\s*:\s+\S/u;
+
+/**
+ * F14: jedno pole pro přepis i poznámky. Druh se jen odhadne pro štítek „Zdroj“: aspoň dva řádky ve tvaru
+ * „Mluvčí: řeč“ (mimo nadpisy oddílů zápisu) = přepis, jinak poznámky. Na návrh zápisu to vliv nemá.
+ */
+export function pastedTextKind(text: string): "transcript" | "notes" {
+  const fold = (value: string) => value.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase().trim();
+  let speakers = 0;
+  for (const line of text.split("\n")) {
+    const label = SPEAKER_LINE.exec(line)?.[1];
+    if (label && !SECTION_LABELS.test(fold(label))) speakers++;
+  }
+  return speakers >= 2 ? "transcript" : "notes";
+}
+
 /** Vložený text: stejné limity jako soubor. */
 export function readPastedText(text: string): string {
   if (new TextEncoder().encode(text).length > TEXT_SOURCE_MAX_BYTES) throw new DomainError("text_too_large");

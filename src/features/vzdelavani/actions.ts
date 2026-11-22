@@ -41,6 +41,7 @@ import {
   uploadRecording,
   withdrawMinutes,
 } from "@/server/services/recordings";
+import { pastedTextKind } from "@/server/recordings/text-source";
 import {
   moveTopic,
   placeTopic,
@@ -500,26 +501,34 @@ export async function createMinutesDraftAction(_prev: ActionResult | null, formD
     const data = z
       .object({
         id: z.string().max(80),
-        source: z.enum(["transcript", "notes", "file", "manual"]),
+        // `pasted` = jedno pole F14: vložený text, nebo nahraný soubor (obojí najednou ne).
+        source: z.enum(["pasted", "transcript", "notes", "file", "manual"]),
         replaceId: z.string().max(80),
         confirmReplace: z.enum(["", "on"]),
       })
       .parse({ id: formData.get("id"), source: formData.get("source"), replaceId: formData.get("replaceId") ?? "", confirmReplace: formData.get("confirmReplace") ?? "" });
     const replaceId = data.replaceId || null;
     const confirmReplace = data.confirmReplace === "on";
-    if (data.source === "file") {
-      const file = formData.get("file");
-      if (!(file instanceof File) || file.size === 0) return { ok: false, error: "Vyberte textový soubor." };
+    const file = formData.get("file");
+    const hasFile = file instanceof File && file.size > 0;
+    const pasted = formData.get("text");
+    const hasText = typeof pasted === "string" && pasted.trim() !== "";
+    if (data.source === "pasted") {
+      if (hasFile && hasText) return { ok: false, error: "Vlož text, nebo nahraj soubor. Obojí najednou nejde." };
+      if (!hasFile && !hasText) return { ok: false, error: "Vlož přepis nebo poznámky, nebo nahraj soubor." };
+    }
+    if (data.source === "file" || (data.source === "pasted" && hasFile)) {
+      if (!(file instanceof File) || file.size === 0) return { ok: false, error: "Vyber textový soubor." };
       const bytes = new Uint8Array(await file.arrayBuffer());
       await createMinutesDraft(user, data.id, { source: "file", fileName: file.name, bytes }, replaceId, confirmReplace);
     } else if (data.source === "manual") {
       await createMinutesDraft(user, data.id, { source: "manual" }, replaceId, confirmReplace);
     } else {
-      const text = formData.get("text");
-      if (typeof text !== "string") throw new DomainError("text_empty");
-      await createMinutesDraft(user, data.id, { source: data.source, text }, replaceId, confirmReplace);
+      if (typeof pasted !== "string") throw new DomainError("text_empty");
+      const source = data.source === "pasted" ? pastedTextKind(pasted) : data.source;
+      await createMinutesDraft(user, data.id, { source, text: pasted }, replaceId, confirmReplace);
     }
-    return { ok: true, message: "Návrh zápisu je připravený. Zkontrolujte ho a uložte." };
+    return { ok: true, message: "Návrh zápisu je připravený. Zkontroluj ho a ulož." };
   });
 }
 

@@ -18,7 +18,10 @@ test.describe("Zápisy: schválení vedoucím @desktop", () => {
 
     // Z-08: prázdná ruční šablona je rozpracovaná, ne „čeká na schválení“. Z-12: bez nahrávky nadpis jen „Zápis“.
     await expect(section.getByRole("heading", { level: 2 })).toHaveText("Zápis");
-    await section.getByRole("radio", { name: /Napsat ručně/ }).check();
+    // F13: sekce říká, kdo zápis schvaluje. F14: jedno pole a soubor místo voleb.
+    await expect(section.getByTestId("schvaluje")).toContainText("Zápis schvaluješ ty jako vedoucí akce");
+    await expect(section.getByRole("radio")).toHaveCount(0);
+    await expect(section.getByTestId("citliva-data")).toContainText("Text se nepoužívá k trénování AI");
     await section.getByRole("button", { name: "Napsat zápis ručně" }).click();
     await expect(section.getByRole("status").filter({ hasText: "Rozpracováno" })).toBeVisible();
     await expect(section.getByTestId("stav-verze")).toContainText("Rozpracováno, verze 1");
@@ -28,17 +31,16 @@ test.describe("Zápisy: schválení vedoucím @desktop", () => {
     await section.getByLabel("Shrnutí", { exact: true }).fill("Rozepsáno");
     await section.getByRole("button", { name: "Změnit zdroj" }).click();
     await expect(section.getByLabel("Shrnutí", { exact: true })).toBeHidden();
-    await expect(section.getByRole("radio", { name: /Vložit text/ })).toBeFocused();
+    await expect(section.getByLabel("Vlož přepis nebo poznámky")).toBeFocused();
     await section.getByRole("button", { name: "Zpět k zápisu" }).click();
     await expect(section.getByLabel("Shrnutí", { exact: true })).toHaveValue("Rozepsáno");
     await section.getByRole("button", { name: "Změnit zdroj" }).click();
 
     // Prázdnou šablonu nový zdroj nahradí bez potvrzovacího okna (nic se neztratí).
-    await section.getByRole("radio", { name: /Vložit text/ }).check();
-    await section.getByLabel("Co vkládáte").selectOption("notes");
     await expectNoSeriousA11y(page);
     await expectNoHorizontalScroll(page);
-    await section.getByLabel("Text přepisu nebo poznámek").fill(NOTES);
+    await expect(section.getByText("nebo nahraj soubor")).toBeVisible();
+    await section.getByLabel("Vlož přepis nebo poznámky").fill(NOTES);
     await section.getByRole("button", { name: "Připravit návrh zápisu" }).click();
 
     await expect(section.getByRole("status").filter({ hasText: "Čeká na schválení" })).toBeVisible();
@@ -66,6 +68,7 @@ test.describe("Zápisy: schválení vedoucím @desktop", () => {
     await settle(admin);
     const adminSection = admin.locator("#nahravka");
     await expect(adminSection.getByRole("button", { name: "Schválit a zveřejnit" })).toHaveCount(0);
+    await expect(adminSection.getByTestId("schvaluje")).toContainText("Zápis schvaluje vedoucí akce:");
     await adminSection.getByText("Upravit zápis", { exact: true }).click();
     await adminSection.getByLabel("Shrnutí").fill("Akce týmu A: opraveno správcem.");
     await adminSection.getByRole("button", { name: "Uložit změny" }).click();

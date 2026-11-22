@@ -3,9 +3,9 @@ import { and, desc, eq, inArray, isNull, lt, ne, or, sql } from "drizzle-orm";
 import { minutesStarted } from "@/lib/minutes";
 import type { MinutesContent, MinutesSource, RecordingState } from "@/lib/types";
 import { audit, logError, withinRateLimit } from "@/server/audit";
-import { config, now } from "@/server/config";
+import { config, now, recordingUploadEnabled } from "@/server/config";
 import { getDb, queryRows, type Executor } from "@/server/db/client";
-import { calendarLinks, minutes, recordingBlobs, recordings, transcriptionJobs } from "@/server/db/schema";
+import { calendarLinks, minutes, recordingBlobs, recordings, transcriptionJobs, users } from "@/server/db/schema";
 import type { EventRow } from "@/server/domain/snapshot";
 import { minutesDrafter } from "@/server/integrations/minutes-drafter";
 import { canApproveMinutes, canHandleRecording, canReadPublishedMinutes, visibleEvent, type Viewer } from "@/server/policy";
@@ -19,11 +19,18 @@ import {
   transcriptionProvider,
   validateMinutes,
 } from "@/server/recordings/transcription";
+import { redactClientData, redactMinutes } from "@/server/recordings/redaction";
 import { readPastedText, readTextFile } from "@/server/recordings/text-source";
 import { DomainError } from "@/server/services/errors";
 import { loadEventRow } from "@/server/services/events";
 
 const JOB_LEASE_SEC = 120;
+
+/** Jména lidí z Wiki: v přepisu jde o kolegy, ne o klienty, proto je vynechání (F15) nechá. */
+async function colleagueNames(db: Executor): Promise<string[]> {
+  const rows = await db.select({ name: users.name }).from(users).where(eq(users.orgId, config.orgId));
+  return rows.map((row) => row.name);
+}
 
 /** Načte akci a ověří, že uživatel smí pracovat s její nahrávkou. Cizí ID vrací not_found. */
 async function requireHandledEvent(db: Executor, viewer: Viewer, eventId: string): Promise<EventRow> {
@@ -36,6 +43,8 @@ async function requireHandledEvent(db: Executor, viewer: Viewer, eventId: string
 export async function uploadRecording(viewer: Viewer, eventId: string, file: File): Promise<string> {
   const db = await getDb();
   requirePastPublished(await requireHandledEvent(db, viewer, eventId));
+  // F14: dokud přepis neumí skutečné schůzky, je nahrávání vypnuté i na serveru, nejen skryté v UI.
+  if (!recordingUploadEnabled()) throw new DomainError("recording_disabled");
   if (!(await withinRateLimit(db, `upload:${viewer.id}`, 10, 3600))) throw new DomainError("rate_limited");
   if (file.size > MAX_UPLOAD_BYTES) throw new DomainError("file_too_large");
 
@@ -115,9 +124,13 @@ export async function processTranscriptionJob(jobId: string): Promise<void> {
     if (!blob) return void (await finish("done"));
 
     const provider = transcriptionProvider();
-    const transcript = await provider.transcribe(blob.data, recording.sha256);
-    const content = validateMinutes(
-      await provider.summarize(transcript, { label: event.published.label, topicTitle: event.published.topicTitle }),
+    const raw = await provider.transcribe(blob.data, recording.sha256);
+    // F15: shrnutí ani uložený pracovní přepis jména a kontakty klientů nedostanou.
+    const colleagues = await colleagueNames(db);
+    const transcript = { ...raw, text: redactClientData(raw.text, colleagues).text };
+    const content = redactMinutes(
+      validateMinutes(await provider.summarize(transcript, { label: event.published.label, topicTitle: event.published.topicTitle })),
+      colleagues,
     );
     const detected = detectTemplate(transcript.text);
 
@@ -235,12 +248,15 @@ export async function createMinutesDraft(
   const snapshot = requirePastPublished(row);
   if (!(await withinRateLimit(db, `minutes-draft:${viewer.id}`, 20, 3600))) throw new DomainError("rate_limited");
 
-  const text =
+  const source =
     input.source === "manual" ? "" : input.source === "file" ? readTextFile(input.fileName, input.bytes) : readPastedText(input.text);
+  // F15: návrh i uložený pracovní text jsou bez jmen a kontaktů klientů. Původní text se neukládá.
+  const colleagues = source ? await colleagueNames(db) : [];
+  const text = source ? redactClientData(source, colleagues).text : "";
   let content = EMPTY_MINUTES;
   if (text) {
     try {
-      content = validateMinutes(await minutesDrafter().draft(text, { label: snapshot.label, topicTitle: snapshot.topicTitle }));
+      content = redactMinutes(validateMinutes(await minutesDrafter().draft(text, { label: snapshot.label, topicTitle: snapshot.topicTitle })), colleagues);
     } catch (error) {
       logError("minutes.draft", error instanceof TranscriptionError ? error.code : "drafter_failed", error);
       throw new DomainError("invalid_input");
@@ -437,6 +453,10 @@ export type RecordingPanel =
       hasLead: boolean;
       /** Uživatel je vedoucí akce a smí aktuální verzi schválit. */
       canApprove: boolean;
+      /** F13: kdo zápis schvaluje (vedoucí akce). Null = akce vedoucího nemá. */
+      approverName: string | null;
+      /** F14: nahrávání nahrávky je zapnuté (`RECORDING_DEMO`). Jinak se volba v UI neukáže. */
+      canUpload: boolean;
       minutes: HandlerMinutes | null;
     };
 
@@ -458,13 +478,16 @@ export async function recordingPanel(viewer: Viewer, row: EventRow): Promise<Rec
     : [];
 
   if (canHandleRecording(viewer, row)) {
-    const [draft, [visible]] = await Promise.all([
+    const [draft, [visible], [approver]] = await Promise.all([
       currentMinutes(db, row.id),
       db
         .select({ id: minutes.id })
         .from(minutes)
         .where(and(eq(minutes.eventId, row.id), eq(minutes.status, "published")))
         .limit(1),
+      snapshot.leadId
+        ? db.select({ name: users.name }).from(users).where(and(eq(users.orgId, config.orgId), eq(users.id, snapshot.leadId))).limit(1)
+        : Promise.resolve([]),
     ]);
     // Nově nahraná nahrávka se zpracovává: dokud z ní nevznikne zápis, platí stav přepisu.
     const jobRunning = job !== undefined && (job.status === "queued" || job.status === "processing");
@@ -480,6 +503,8 @@ export async function recordingPanel(viewer: Viewer, row: EventRow): Promise<Rec
       publicMinutes: visible !== undefined,
       hasLead: snapshot.leadId !== null,
       canApprove: canApproveMinutes(viewer, row),
+      approverName: approver?.name ?? null,
+      canUpload: recordingUploadEnabled(),
       recording: recording
         ? { name: recording.originalName, sizeBytes: recording.sizeBytes, durationSec: recording.durationSec, uploadedAt: recording.createdAt.toISOString() }
         : null,

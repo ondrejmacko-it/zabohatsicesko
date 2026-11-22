@@ -33,7 +33,8 @@ export type DomainErrorCode =
   | "not_lead"
   | "minutes_incomplete"
   | "minutes_invalid"
-  | "replace_unconfirmed";
+  | "replace_unconfirmed"
+  | "recording_disabled";
 
 export const DOMAIN_ERROR_MESSAGES: Record<DomainErrorCode, string> = {
   forbidden: "K této akci nemáte oprávnění.",
@@ -63,4 +64,5 @@ export const DOMAIN_ERROR_MESSAGES: Record<DomainErrorCode, string> = {
   minutes_incomplete: "Ke schválení doplňte Shrnutí. Body mají nejvýš 500 znaků, v každé části nejvýš 20.",
   minutes_invalid: "Zápis je příliš dlouhý. Shrnutí má nejvýš 2000 znaků, body nejvýš 500 znaků, v každé části nejvýš 20.",
   replace_unconfirmed: "Rozepsaný zápis by se nahradil. Potvrďte nahrazení, nebo pokračujte v úpravách.",
+  recording_disabled: "Nahrávání zatím není zapnuté. Vlož přepis nebo poznámky, nebo nahraj textový soubor.",
 };

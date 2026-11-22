@@ -24,6 +24,8 @@ delete shared.DATABASE_URL;
 const demoEnv = {
   ...shared,
   PGLITE_DIR: ".data/e2e-demo",
+  // Ukázka nahrávky (F14) je ve výchozím stavu skrytá. Testy nahrávky ji potřebují, server účasti ne.
+  RECORDING_DEMO: "on",
   FEEDBACK_WEBHOOK_URL: `http://127.0.0.1:${FEEDBACK_HOOK_PORT}/hook`,
   FEEDBACK_WEBHOOK_SECRET: FEEDBACK_HOOK_SECRET,
 };
@@ -98,7 +100,7 @@ for (let i = 0; i < 120; i++) {
   await new Promise((resolve) => setTimeout(resolve, 500));
 }
 // Ukázka s přihláškami a omluvami (PR2). Stejný seed i tajemství session, jen vlastní databáze.
-const ucast = start({ ...demoEnv, PGLITE_DIR: ".data/e2e-ucast", PARTICIPATION: "on" }, UCAST_PORT);
+const ucast = start({ ...demoEnv, PGLITE_DIR: ".data/e2e-ucast", PARTICIPATION: "on", RECORDING_DEMO: "" }, UCAST_PORT);
 for (let i = 0; i < 120; i++) {
   try {
     if ((await fetch(`http://localhost:${UCAST_PORT}/soukromi`)).ok) break;
