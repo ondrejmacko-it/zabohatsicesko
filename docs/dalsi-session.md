@@ -12,7 +12,10 @@
     popis osobního kalendáře) převedeno na tykání; věty s příčestím přeformulované bez rodu.
   * F18: `.account` nezalamuje (jméno a Odhlásit vedle sebe), `.topbar` se zalamuje po celcích, dlouhé jméno
     účtu Google s výpustkou. Ověřeno měřením 641–1279 px, e2e `e2e/zahlavi.spec.ts`.
-* Ověření: viz popis draft PR PR6.
+* Ověření: lint, typecheck, unit 507/507, build OK, celé e2e 1286 OK / 203 přeskočeno / 1 chyba (test Plánu hledal nový
+  nadpis Úvodu, opraveno, znovu 93 OK). `rychle-akce.spec.ts:196` (telefon) občas spadne: 2× z 18 opakování, padalo už
+  v PR5. Menu ⋯ se po druhém ťuknutí zavře, nejspíš handler posunu/resize v `src/components/Menu.tsx:66–97` při
+  posunu, který dělá Playwright `tap`. Prověřit a opravit v PR7.
 
 | Bod | Stav po PR6 |
 |---|---|
