@@ -161,11 +161,11 @@ const ON_WEEKDAY = ["", "V pondělí", "V úterý", "Ve středu", "Ve čtvrtek",
 
 const peopleCount = (n: number) => (n === 1 ? "1 člověka" : `${n} lidí`);
 
-/** Jedna věta o tom, co zveřejnění změní: „Změníte termín akce pro 12 lidí.“ */
+/** Jedna věta o tom, co zveřejnění změní: „Změníš termín akce pro 12 lidí.“ */
 function impactHeadline(impact: ChangeImpact): string {
   const fields = impact.changes.map((c) => c.field);
   const what = fields.includes("Termín") ? "termín" : fields.includes("Publikum") ? "skupinu" : fields.includes("Téma") ? "téma" : "název";
-  return impact.affected ? `Změníte ${what} akce pro ${peopleCount(impact.affected)}.` : `Změníte ${what} zveřejněné akce.`;
+  return impact.affected ? `Změníš ${what} akce pro ${peopleCount(impact.affected)}.` : `Změníš ${what} zveřejněné akce.`;
 }
 
 type Ask = "incomplete" | "impact" | null;
@@ -370,7 +370,7 @@ function EventForm({
           options={topicOptions}
           listLabel="Nabídka témat"
           maxLength={120}
-          placeholder="Napište nebo vyberte téma"
+          placeholder="Napiš nebo vyber téma"
         />
       </div>
       {suggestions.length > 0 && !values.topicTitle.trim() && (
@@ -392,7 +392,7 @@ function EventForm({
       {audienceMismatch && (
         <p className="notice span-2" role="status">
           Téma „{audienceMismatch.name}“ je pro skupinu {GROUP_LABELS[audienceMismatch.audience as keyof typeof GROUP_LABELS] ?? audienceMismatch.audience}, akce je pro{" "}
-          {GROUP_LABELS[values.audience]}. Zkontrolujte skupinu nebo téma.
+          {GROUP_LABELS[values.audience]}. Zkontroluj skupinu nebo téma.
         </p>
       )}
     </>
@@ -401,7 +401,7 @@ function EventForm({
     <label className="field">
       <span className="field-label">Vede {mark("leadId")}</span>
       <select className="select" name="leadId" value={values.leadId} onChange={(e) => set("leadId", e.target.value)}>
-        <option value="">Vyberte vedoucího</option>
+        <option value="">Vyber vedoucího</option>
         {people.map((p) => (
           <option key={p.id} value={p.id}>
             {p.name}
@@ -449,7 +449,7 @@ function EventForm({
         </label>
       </div>
       {termLocked && <p className="field-hint span-2">Akce už proběhla, termín zůstává.</p>}
-      {duplicateOf && <p className="field-hint field-hint-key span-2">Navržené datum, zkontrolujte.</p>}
+      {duplicateOf && <p className="field-hint field-hint-key span-2">Navržené datum, zkontroluj.</p>}
       {unusualDay && !termLocked && (
         <p className="notice notice-danger span-2" role="alert">
           <strong>{ON_WEEKDAY[weekday!]} se vzdělávání běžně nekoná.</strong> V Plánu bude akce jako řádek pod týdnem.
@@ -506,7 +506,7 @@ function EventForm({
     <form ref={formRef} id={formId} onSubmit={submit} onInvalidCapture={onInvalid} className="stack event-form">
       {invalid.length > 0 && (
         <div className="notice notice-danger" role="alert">
-          <strong>Akci zatím nejde uložit.</strong> Doplňte nebo opravte: {invalid.join(", ")}.
+          <strong>Akci zatím nejde uložit.</strong> Doplň nebo oprav: {invalid.join(", ")}.
         </div>
       )}
       {confirmed && <input type="hidden" name="confirmToken" value={confirmed.token} />}
@@ -618,7 +618,7 @@ function EventForm({
       <div className="dialog-actions event-actions">
         {menu && <div className="event-actions-menu">{menu}</div>}
         {unchanged && <span className="small muted event-actions-note">Beze změn</span>}
-        {duplicateOf && <span className="small muted event-actions-note">Kopie se uloží jako návrh, zveřejníte ji po kontrole.</span>}
+        {duplicateOf && <span className="small muted event-actions-note">Kopie se uloží jako návrh, zveřejníš ji po kontrole.</span>}
         <button type="submit" name="intent" value="draft" data-confirm-save="Uložit jako návrh" className={duplicateOf ? "btn btn-primary" : "btn"} disabled={busy || (mode === "edit" && !dirty)}>
           Uložit jako návrh
         </button>

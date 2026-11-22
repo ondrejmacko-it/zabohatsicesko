@@ -154,7 +154,7 @@ function MoveHandle({ card }: { card: EventCard }) {
       data-handle-label={card.label}
       data-handle-from={dayOf(card)}
       aria-label={`Přesunout akci ${card.label} na jiný den`}
-      title="Podržte a přetáhněte na jiný den"
+      title="Podrž a přetáhni na jiný den"
     >
       <Icon name="grip" size={18} />
     </button>
@@ -432,7 +432,7 @@ export function Agenda({
 }
 
 export function NextEventCard({ card }: { card: EventCard | null }) {
-  if (!card) return <p className="muted">V nejbližších týdnech vás nečeká žádná zveřejněná akce.</p>;
+  if (!card) return <p className="muted">V nejbližších týdnech tě nečeká žádná zveřejněná akce.</p>;
   const day = dayOf(card);
   const title = eventTitle(card.label, card.topicTitle);
   return (
@@ -449,7 +449,7 @@ export function NextEventCard({ card }: { card: EventCard | null }) {
 
 /** Několik nejbližších akcí pod sebou: den vlevo, název a čas vpravo. První je nejblíž, proto je zvýrazněná. */
 export function NextEventsList({ cards, todayKey, hrefFor = pageHref, emptyText }: { cards: EventCard[]; todayKey: string; hrefFor?: CardHref; emptyText?: string }) {
-  if (!cards.length) return <p className="muted">{emptyText ?? "V nejbližších týdnech vás nečeká žádná zveřejněná akce."}</p>;
+  if (!cards.length) return <p className="muted">{emptyText ?? "V nejbližších týdnech tě nečeká žádná zveřejněná akce."}</p>;
   return (
     <ul className="brief-list">
       {cards.map((card, index) => {

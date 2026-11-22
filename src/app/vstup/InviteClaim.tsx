@@ -4,9 +4,9 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 const MESSAGES = {
-  invalid: "Odkaz neplatí. Mohl vypršet, být už použitý na jiném zařízení, nebo ho správce zneplatnil. Požádejte o nový.",
-  limit: "Příliš mnoho pokusů. Zkuste to prosím za 15 minut.",
-  failed: "Odkaz se nepodařilo ověřit. Zkuste stránku načíst znovu.",
+  invalid: "Odkaz neplatí. Mohl vypršet, být už použitý na jiném zařízení, nebo ho správce zneplatnil. Požádej o nový.",
+  limit: "Příliš mnoho pokusů. Zkus to prosím za 15 minut.",
+  failed: "Odkaz se nepodařilo ověřit. Zkus stránku načíst znovu.",
 } as const;
 
 /**

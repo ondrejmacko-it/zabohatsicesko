@@ -110,7 +110,7 @@ test.describe("Rychlé akce ⋯ u návrhu @desktop", () => {
     const copy = page.getByRole("dialog", { name: "Duplikovat akci" });
     await expect(copy).toBeVisible();
     await expect(copy.getByLabel("Datum", { exact: true })).toHaveValue("2026-11-25");
-    await expect(copy).toContainText("Navržené datum, zkontrolujte.");
+    await expect(copy).toContainText("Navržené datum, zkontroluj.");
     await expect(copy.getByLabel(/^Téma/)).toHaveValue("Porovnání dvou postupů");
     await expect(copy.getByLabel(/^Vede/)).toHaveValue("demo-vedouci");
     await expect(copy.getByRole("button", { name: /Zveřejnit/ })).toHaveCount(0);

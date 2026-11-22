@@ -1,3 +1,35 @@
+# 18 BODŮ ZADAVATELKY – PR6 F16–F18 (draft PR), DALŠÍ JE PR7 (22. 11. 2026) – začni tímto
+
+* **Znění F01–F18 a rozhodnutí D01–D07 je v `docs/pozadavky-f01-f18.md`. Na zadání se uživatele už neptej.**
+* PR6: větev `claude/funkce/obecne-f16-f18`, stacked na `claude/funkce/zapisy-f13-f15` (PR #81), nic nemergnuto.
+  * F16: Úvod zdraví toho, čí pohled ukazuje: v náhledu kolegy jeho jménem (`PlanPreview.personName`), v náhledu
+    skupiny neutrálně „Ahoj.“; nadpis „Co tě čeká“ je v náhledu „Nejbližší akce“. Navigace v náhledu bere oprávnění
+    z náhledu (`canManageUsers(preview?.viewer ?? user)` v `(wiki)/layout.tsx`), poradce Správu systému nevidí.
+    Stránka `/sprava` dál používá skutečný účet (oprávnění se nemění).
+  * F17 + D02/D03: `src/lib/greeting.ts` = jediné místo pro oslovení (`greeting`, `vocativeName`), slovník ~110
+    běžných jmen v 5. pádě, neznámý tvar → neutrální „Ahoj“, parametr `preferred` pro vlastní podobu. Úvod
+    „Ahoj, Anno.“ + „Co tě čeká“. Vykání v celé aplikaci (UI, chyby, Zápisy, vstup, zpětná vazba, Soukromí,
+    popis osobního kalendáře) převedeno na tykání; věty s příčestím přeformulované bez rodu.
+  * F18: `.account` nezalamuje (jméno a Odhlásit vedle sebe), `.topbar` se zalamuje po celcích, dlouhé jméno
+    účtu Google s výpustkou. Ověřeno měřením 641–1279 px, e2e `e2e/zahlavi.spec.ts`.
+* Ověření: viz popis draft PR PR6.
+
+| Bod | Stav po PR6 |
+|---|---|
+| F01 | hotovo (PR1 + PR3) |
+| F02, F03, F05 | hotovo za přepínačem `PARTICIPATION` |
+| F04 | základ (fake Google, O04) |
+| F06–F09 | čeká: doplnit a ověřit v PR7 |
+| F10–F15 | hotovo (PR4, PR5) |
+| F16–F18 | hotovo (PR6) |
+
+**Další krok = PR7:** release audit vč. doplnění a ověření F06–F09. Větev `claude/funkce/release-audit` z
+`claude/funkce/obecne-f16-f18`, draft PR s touto base.
+**Otevřené (PR6):** vlastní podoba oslovení se zatím nikde neukládá (chce sloupec v `users` = migrace ke schválení;
+funkce ji už umí přijmout); ukázkové role mají jména rolí, proto v ukázce vidíš neutrální „Ahoj.“ (přejmenovat seed na
+fiktivní lidi?); slovník jmen rozšířit podle reálných účtů. Starší: O02, O03, O08, zpětná omluva, schválení 0015+0016,
+`tym-a` v editoru akce, `impact.ts` bez omluv, kontrolor zápisu, seznam jmen v `redaction.ts`.
+
 # 18 BODŮ ZADAVATELKY – PR5 F13–F15 (draft PR), DALŠÍ JE PR6 (22. 11. 2026) – začni tímto
 
 * **Znění F01–F18 a rozhodnutí D01–D07 je v `docs/pozadavky-f01-f18.md`. Na zadání se uživatele už neptej.**

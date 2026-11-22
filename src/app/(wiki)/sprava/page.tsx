@@ -164,7 +164,7 @@ export default async function AdminPage() {
               small
               confirm={{
                 title: "Uklidit staré pozvánky",
-                text: `Wiki ověří ${legacyInvites} událostí přímo u Googlu a smaže ty, které sama založila. Hosté nedostanou e-mail. Události, které založil někdo jiný a jen jste je spárovali, zůstanou beze změny. Akce zůstanou v osobních kalendářích.`,
+                text: `Wiki ověří ${legacyInvites} událostí přímo u Googlu a smaže ty, které sama založila. Hosté nedostanou e-mail. Události, které založil někdo jiný a Wiki je jen spárovala, zůstanou beze změny. Akce zůstanou v osobních kalendářích.`,
                 confirmLabel: "Smazat staré pozvánky",
               }}
             />
@@ -195,7 +195,7 @@ function accessLines(a: Account): string[] {
   const lines = devices.map((d) => `${d.label} · naposledy ${formatDayMonth(toDateKey(d.lastSeenAt))}`);
   if (invite.kind === "waiting") lines.push(`Odkaz pro přihlášení čeká do ${formatDayMonth(toDateKey(invite.expiresAt))}`);
   if (invite.kind === "expired") lines.push("Odkaz pro přihlášení vypršel");
-  return lines.length ? lines : ["Bez zařízení. Pošlete nový odkaz."];
+  return lines.length ? lines : ["Bez zařízení. Pošli nový odkaz."];
 }
 
 function AccountHead({
@@ -218,7 +218,7 @@ function AccountHead({
           {a.primary ? (
             <span className="small muted"> · hlavní správce</span>
           ) : (
-            !a.editable && a.status === "active" && <span className="small muted"> · váš účet</span>
+            !a.editable && a.status === "active" && <span className="small muted"> · tvůj účet</span>
           )}
         </p>
         <p className="item-meta account-email">{a.email}</p>

@@ -50,12 +50,12 @@ function TaskItem({ task, readOnly }: { task: TaskRow; readOnly: boolean }) {
 }
 
 /**
- * Karta „Čeká na vás“ pro Plán i Úvod. Prázdná karta nic neříká, proto se bez úkolů nevykreslí.
+ * Karta „Čeká na tebe“ pro Plán i Úvod. Prázdná karta nic neříká, proto se bez úkolů nevykreslí.
  * Výjimkou je filtr Plánu, který úkoly schoval: karta zůstane s odkazem na zrušení filtru.
  */
 export function TasksCard({
   tasks,
-  title = "Čeká na vás",
+  title = "Čeká na tebe",
   readOnly = false,
   hidden,
   className = "section tasks-card",

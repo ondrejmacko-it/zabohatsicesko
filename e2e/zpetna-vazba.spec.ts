@@ -166,7 +166,7 @@ test.describe("brouček na počítači", () => {
     await expect(bug(page)).toBeVisible();
     // Zahozené hlášení začne znovu od výběru typu.
     await bug(page).click();
-    await expect(dialog(page).getByText("Co chcete nahlásit?")).toBeVisible();
+    await expect(dialog(page).getByText("Co chceš nahlásit?")).toBeVisible();
   });
 
   test("označení místa: prvek, odebrání, Esc vrátí do okna s rozepsaným textem", async ({ page }) => {

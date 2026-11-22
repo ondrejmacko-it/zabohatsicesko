@@ -184,7 +184,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
       {tasks.length > 0 && (
         <details className="plan-tasks">
           <summary>
-            {preview ? "Úkoly v náhledu" : "Čeká na vás"}
+            {preview ? "Úkoly v náhledu" : "Čeká na tebe"}
             <span className="count-badge">{tasks.length}</span>
           </summary>
           <TasksCard tasks={tasks} title={preview ? "Úkoly v náhledu" : undefined} readOnly={Boolean(preview)} className="tasks-card" />

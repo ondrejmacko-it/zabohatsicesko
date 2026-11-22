@@ -192,7 +192,7 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
     const who = people.find((p) => p.id === bulkLead)?.name ?? "";
     setBulkNote(
       filled.length
-        ? `Vedoucí ${who} doplněn do ${plural(filled.length, "řádku", "řádků", "řádků")}. Zatím neuloženo, uložte změny.`
+        ? `Vedoucí ${who} doplněn do ${plural(filled.length, "řádku", "řádků", "řádků")}. Zatím neuloženo, ulož změny.`
         : "Všechny řádky už vedoucího mají, nic se nezměnilo.",
     );
   };
@@ -337,7 +337,7 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
             <span className="field-label">Vedoucí do prázdných polí</span>
             {/* Pomocná volba bez jména: neodesílá se a sama o sobě není rozepsaná změna (Modal). */}
             <select className="select" value={bulkLead} onChange={(e) => setBulkLead(e.target.value)} data-unsaved-ignore aria-describedby="prepare-bulk-hint">
-              <option value="">Vyberte vedoucího</option>
+              <option value="">Vyber vedoucího</option>
               {people.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}

@@ -52,10 +52,10 @@ test.describe("U05 Plán na telefonu", () => {
     const page = await context.newPage();
     await page.goto("/vzdelavani/harmonogram");
     await settle(page);
-    const next = page.getByRole("region", { name: "Nejbližší akce" });
+    const next = page.getByRole("region", { name: "Co tě čeká" });
     await expect(next).toBeVisible();
     await expect(next.getByRole("link")).toHaveCount(1);
-    await expect(page.getByRole("region", { name: /Čeká na vás/ })).toHaveCount(0);
+    await expect(page.getByRole("region", { name: /Čeká na tebe/ })).toHaveCount(0);
     const nextTop = await next.evaluate((node) => node.getBoundingClientRect().top);
     expect(nextTop, "nejbližší akce bez posunu").toBeLessThan(760);
     await expectNoHorizontalScroll(page);

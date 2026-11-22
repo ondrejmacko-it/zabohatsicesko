@@ -135,11 +135,14 @@ textarea {
   }
 }
 
+/* Lišta se na užším okně zalomí po celcích (značka, Pohled, účet), nikdy uvnitř účtu: jméno a Odhlásit zůstanou
+   vedle sebe (F18). */
 .topbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 8px 16px;
   min-height: 52px;
   /* max() s env(): na iPhonu s výřezem a na šířku obsah nezaleze pod výřez ani zaoblené rohy. */
   padding: max(6px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) 6px max(20px, env(safe-area-inset-left));
@@ -167,12 +170,26 @@ textarea {
 
 .account {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: flex-end;
+  margin-left: auto;
   gap: 8px 12px;
   font-size: 13px;
   color: var(--ink-soft);
+}
+
+.account > *,
+.account-name {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* Dlouhé jméno účtu Google lištu neroztáhne, celé je v title. */
+.account-name {
+  max-width: 40ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .demo-badge {

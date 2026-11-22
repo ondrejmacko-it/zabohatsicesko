@@ -76,19 +76,19 @@ export const TEMPLATE_LABELS: Record<string, string> = {
 /** Čitelné důvody chyb. Neobsahují obsah nahrávky ani technické detaily. */
 export const ERROR_LABELS: Record<string, string> = {
   calendar_unavailable: "Google Kalendář je dočasně nedostupný. Změna je ve Wiki uložená, Wiki ji odešle sama.",
-  calendar_revoked: "Přístup ke Kalendáři byl odvolán. Připojte integraci znovu.",
-  calendar_forbidden: "Google tuto změnu odmítl, přístup ke Kalendáři ale platí. Wiki to zkusí znovu, při opakování zkontrolujte účet organizátora.",
+  calendar_revoked: "Přístup ke Kalendáři byl odvolán. Připoj integraci znovu.",
+  calendar_forbidden: "Google tuto změnu odmítl, přístup ke Kalendáři ale platí. Wiki to zkusí znovu, při opakování zkontroluj účet organizátora.",
   calendar_no_access: "Připojený účet Google nemá přístup ke kalendáři, do kterého Wiki zapisuje. Nic se neodeslalo.",
-  external_change: "Pozvánku někdo upravil přímo v Google Kalendáři. Zkontrolujte rozdíl a rozhodněte, co platí.",
+  external_change: "Pozvánku někdo upravil přímo v Google Kalendáři. Zkontroluj rozdíl a rozhodni, co platí.",
   calendar_missing: "Propojená pozvánka v Kalendáři už neexistuje. Vazbu je potřeba opravit.",
   attendee_not_allowed: "Pozvánka by šla na adresu mimo povolené testovací příjemce. Nic se neodeslalo.",
   calendar_not_allowed: "Kalendář není na seznamu povolených. Nic se nezapsalo.",
-  calendar_series_master: "Vazba míří na celou opakovanou sérii. Wiki mění jen jeden výskyt, spárujte konkrétní termín.",
-  calendar_not_organizer: "Originál pozvánky vlastní jiný účet. Připojte účet, který pozvánku založil, nebo založte novou pozvánku.",
+  calendar_series_master: "Vazba míří na celou opakovanou sérii. Wiki mění jen jeden výskyt, spáruj konkrétní termín.",
+  calendar_not_organizer: "Originál pozvánky vlastní jiný účet. Připoj účet, který pozvánku založil, nebo založ novou pozvánku.",
   calendar_not_configured: "Testovací režim Google Kalendáře nemá úplnou konfiguraci na serveru.",
   unsupported_fixture: "Přepis je zatím jen ukázka a umí jen ukázkovou nahrávku. Tento soubor nepřepíše.",
-  transcription_unavailable: "Služba přepisu je dočasně nedostupná. Zkuste přepis znovu.",
-  invalid_output: "Návrh zápisu neprošel kontrolou formátu. Zkuste přepis znovu.",
+  transcription_unavailable: "Služba přepisu je dočasně nedostupná. Zkus přepis znovu.",
+  invalid_output: "Návrh zápisu neprošel kontrolou formátu. Zkus přepis znovu.",
 };
 
 /**

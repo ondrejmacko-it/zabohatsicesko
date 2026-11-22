@@ -130,7 +130,7 @@ export async function changeImpact(viewer: Viewer, eventId: string, input: Event
     impact.notes.push(
       link
         ? "Pozvánka v Kalendáři zatím nevznikla. Vytvoří se rovnou pro nové publikum."
-        : "Akce nemá vazbu na pozvánku v Kalendáři. Změna se projeví jen ve Wiki, dokud pozvánku nezaložíte nebo nespárujete.",
+        : "Akce nemá vazbu na pozvánku v Kalendáři. Změna se projeví jen ve Wiki, dokud pozvánku nezaložíš nebo nespáruješ.",
     );
     if (!link) impact.guests.add = [];
     return impact;

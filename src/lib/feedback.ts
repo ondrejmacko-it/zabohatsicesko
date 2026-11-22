@@ -106,12 +106,12 @@ export type FeedbackFailure = "invalid" | "unauthorized" | "rate_limited" | "dup
 export type FeedbackResult = { ok: true } | { ok: false; reason: FeedbackFailure };
 
 export const FEEDBACK_ERROR_MESSAGE: Record<FeedbackFailure, string> = {
-  invalid: "Hlášení se nepodařilo zpracovat. Zkontrolujte text a zkuste to znovu.",
-  unauthorized: "Přihlášení vypršelo. Načtěte stránku a vstupte znovu, rozepsaný text zůstane v okně.",
-  rate_limited: `Za poslední hodinu jste odeslali ${FEEDBACK_REPORTS_PER_HOUR} hlášení. Zkuste to prosím později.`,
+  invalid: "Hlášení se nepodařilo zpracovat. Zkontroluj text a zkus to znovu.",
+  unauthorized: "Přihlášení vypršelo. Načti stránku a vstup znovu, rozepsaný text zůstane v okně.",
+  rate_limited: `Za poslední hodinu odešlo z tvého účtu ${FEEDBACK_REPORTS_PER_HOUR} hlášení. Zkus to prosím později.`,
   duplicate: "Toto hlášení už bylo odesláno.",
   not_configured: "Odesílání zpětné vazby není na tomto serveru nastavené. Nic se neodeslalo.",
-  failed: "Hlášení se nepodařilo odeslat. Zůstalo v okně, zkuste to za chvíli znovu.",
+  failed: "Hlášení se nepodařilo odeslat. Zůstalo v okně, zkus to za chvíli znovu.",
   uncertain: "Odpověď se nepodařilo ověřit, hlášení nejspíš dorazilo. Znovu ho neposíláme, text zůstává v okně.",
 };
 
