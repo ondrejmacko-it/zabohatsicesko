@@ -213,13 +213,21 @@ test.describe("Rychlé akce ⋯ na telefonu", () => {
     expect(placed.y + placed.height).toBeLessThanOrEqual(viewport.height);
     await expectNoHorizontalScroll(page);
 
-    // Ťuknutí mimo menu ho zavře.
-    await page.locator("#mesic").tap();
+    // Ťuknutí mimo menu ho zavře. Ťuká se do levého okraje stránky vedle seznamu, bez posunu: dřív test ťukal
+    // na nadpis měsíce, Playwright k němu nejdřív posunul stránku a ťuknutí občas dopadlo na položku menu,
+    // které se zavíralo až po posunu (otevřelo Duplikovat). To byla nestabilita scénáře 11 na telefonech.
+    expect(placed.x).toBeGreaterThan(8);
+    await page.touchscreen.tap(2, placed.y + placed.height / 2);
     await expect(list).toBeHidden();
     await expect(page).not.toHaveURL(/akce=/);
 
-    // Přesunout termín z menu i úchyt otevřou stejný výběr dne.
+    // Přesunout termín z menu i úchyt otevřou stejný výběr dne. Ťuknutí na nadpis posunulo stránku nahoru:
+    // den se vrátí do středu okna synchronně ještě před ťuknutím. Jinak by k tlačítku posouval až Playwright
+    // `tap` a dobíhající posun by otevřené menu hned zavřel (menu se při posunu tlačítka zavírá záměrně).
+    await page.evaluate(() => document.querySelector('[data-agenda-day="2026-11-18"]')!.scrollIntoView({ block: "center" }));
+    await expect(button).toBeInViewport({ ratio: 1 });
     await button.tap();
+    await expect(list).toBeVisible();
     await page.getByRole("button", { name: "Přesunout termín…" }).tap();
     const picker = page.getByRole("dialog", { name: "Přesunout akci" });
     await expect(picker.getByRole("group", { name: "Nový den akce" })).toBeVisible();

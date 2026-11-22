@@ -1,3 +1,43 @@
+# 18 BODŮ ZADAVATELKY – PR7 RELEASE AUDIT + F06–F09 (draft PR), DALŠÍ JE PR8 (22. 11. 2026) – začni tímto
+
+* **Znění F01–F18 a rozhodnutí D01–D07 je v `docs/pozadavky-f01-f18.md`. Na zadání se uživatele už neptej.**
+* PR7: větev `claude/funkce/release-audit`, stacked na `claude/funkce/obecne-f16-f18` (PR #82), nic nemergnuto.
+  * F06: prázdný měsíc (správce, aktuální a další měsíce) = jediné hlavní tlačítko „Připravit měsíc“ v liště
+    (`primary`), „Přidat akci“ je tam vedlejší (`EventDialog quiet`), druhé tlačítko „Přidat chybějící termíny jako
+    návrhy“ zmizelo, prázdný stav jen v oznámení (`Agenda emptyText={null}`). Okno zůstává na jednom místě ve stromu
+    (přesun do oznámení po doplnění termínů okno zavřel, proto ne).
+  * F07: bez návrhů okno ukáže kroky 1–3 (2 a 3 tlumeně, `data-upcoming`), dole už žádné druhé „Zavřít“;
+    „Doplnit chybějící termíny“ je tam hlavní tlačítko.
+  * F08: „Hromadně doplnit téma a vedoucího“ (`fillEmptyTopics`, jen prázdná pole, svátek ne); štítky přehledu jsou
+    přepínače (`aria-pressed`) a filtrují řádky (`matchesOverview`, skryté řádky zůstávají ve formuláři), druhý klik
+    nebo „Zobrazit všechny řádky“ filtr zruší.
+  * F09: `publishBlockedReason` = věta u šedého Zveřejnit („Doplň téma a vedoucího u 18 akcí, nebo potvrď
+    zveřejnění neúplných termínů.“, varianty jen téma / jen vedoucí / obojí / bez výběru), `aria-describedby`.
+  * Nestabilní `rychle-akce.spec.ts:196`: příčina v testu. Ťuknutí „mimo menu“ na nadpis měsíce: Playwright k němu
+    posunul stránku a ťuknutí občas dopadlo na položku otevřeného menu (Duplikovat → okno Přidat akci), menu se
+    zavíralo až po posunu. Test teď ťuká do levého okraje vedle seznamu bez posunu. Pokus menu při posunu jen
+    přikládat k tlačítku (místo zavření) test rozbil jinak, vráceno, `Menu.tsx` beze změny. 42/42 na telefonech.
+* Ověření: lint, typecheck, unit 516/516, build OK, celé e2e 1329 OK / 203 přeskočeno / 0 chyb; nové testy F06–F09
+  `--repeat-each 6` 276/276.
+
+| Bod | Stav po PR7 |
+|---|---|
+| F01 | hotovo (PR1 + PR3) |
+| F02, F03, F05 | hotovo za přepínačem `PARTICIPATION` |
+| F04 | základ (fake Google, O04): živé pozvánky vyžadují schválení (D06) |
+| F06–F09 | hotovo (PR7, unit `tests/priprava-mesice-f06-f09.test.ts`, e2e `e2e/priprava-mesice-f06-f09.spec.ts`) |
+| F10–F15 | hotovo (PR4, PR5) |
+| F16–F18 | hotovo (PR6) |
+
+**Další krok = PR8:** F04 dotáhnout v simulaci (fake Google): povinná akce = pozvánka po zveřejnění, omluva ji
+odmítne (D01), dobrovolná se přidá až po přihlášení a odhlášení ji odebere; doložit unit + e2e testem, popsat, co
+zbývá pro živý test (schválení uživatele, D06). Plus tabulka bod → konkrétní test pro F01–F18 do
+`docs/pozadavky-f01-f18.md` (audit v PR7 opřený o celé e2e, mapování po jednotlivých testech ještě chybí).
+Větev `claude/funkce/kalendar-f04` z `claude/funkce/release-audit`, draft PR s touto base.
+**Otevřené (PR7):** prázdný měsíc v minulosti nemá oznámení ani hlavní tlačítko (beze změny, plánuje se dopředu);
+filtr štítkem „Vybráno“ skryje řádek hned po odškrtnutí (záměrně jednoduché). Starší: oslovení bez uložení
+(migrace), seed s jmény rolí, O02, O03, O08, zpětná omluva, schválení 0015+0016, `tym-a`, `impact.ts`, `redaction.ts`.
+
 # 18 BODŮ ZADAVATELKY – PR6 F16–F18 (draft PR), DALŠÍ JE PR7 (22. 11. 2026) – začni tímto
 
 * **Znění F01–F18 a rozhodnutí D01–D07 je v `docs/pozadavky-f01-f18.md`. Na zadání se uživatele už neptej.**
