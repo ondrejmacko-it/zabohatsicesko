@@ -1,29 +1,27 @@
-# 18 BODŮ ZADAVATELKY – PR8 F04 V SIMULACI (draft PR), E2E F04 JEŠTĚ NEPROCHÁZÍ (22. 11. 2026) – začni tímto
+# 18 BODŮ ZADAVATELKY – PR8 F04 HOTOVO V SIMULACI, VŠECH 18 BODŮ OVĚŘENO (22. 11. 2026) – začni tímto
 
 * **Znění F01–F18 a D01–D07 je v `docs/pozadavky-f01-f18.md`. Na zadání se uživatele už neptej.**
-* PR8: větev `claude/funkce/kalendar-f04`, stacked na `claude/funkce/release-audit` (PR #83), nic nemergnuto.
-  * `src/lib/calendar-note.ts` (`calendarNote`) + `ownCalendarState` v `calendar/attendees.ts`: panel „Tvoje účast“ v
-    detailu akce říká pravdivý stav vlastní pozvánky (`data-kalendar`, `data-kalendar-stav`).
-  * `changeParticipationAction` po odpovědi spouští `after(() => syncEvent(id))` (omluva/přihláška hned v Kalendáři).
-  * Unit `tests/kalendar-f04.test.ts` 15/15 (zveřejnění = pozvánka povinným, omluva odebere a platí hned i při chybě
-    Kalendáře, přihláška přidá, odhlášení odebere). Nově unit F16 (`nahled.test.ts`) a e2e F05 (`ucast.spec.ts`).
-  * Tabulka bod → testy F01–F18 je v `docs/pozadavky-f01-f18.md` (oddíl PR8), včetně toho, co zbývá pro živý test.
-* Ověření: lint, typecheck, unit 532/532, build OK, celé e2e 1325 OK / 213 přeskočeno / **2 chyby: nový e2e F04**
-  (`ucast.spec.ts` › F04, oba projekty). Příčina: na e2e serveru účasti (simulace) dostane panel `calendar = null`
-  (`data-kalendar-stav="neznamy"`), přestože v unit testu stejná cesta funguje. `ownCalendarState` vrací null jen když:
-  osobní kalendáře / allowlist (na tomto serveru ne), vazba `synced` s `managedAttendees = null`, nebo `listRecipients`
-  účet nenajde. **Další krok:** zjistit, která z těch větví platí (např. dočasně zalogovat v `ownCalendarState`, nebo
-  unit testem nad seedem bez `publishRm`: první povinná budoucí FP akce po `syncPublished()`), opravit, pustit
-  `E2E_SKIP_BUILD=1 npx playwright test e2e/ucast.spec.ts --trace off` (po `npx next build`), pak celé e2e.
+* PR8: větev `claude/funkce/kalendar-f04` (draft PR #84), stacked na `claude/funkce/release-audit` (PR #83), nic nemergnuto.
+* Oprava padajícího e2e F04, dvě příčiny:
+  1. Okno akce v Plánu (`EventPeek`, `?akce=`) stav vlastní pozvánky spočítalo, ale `ParticipationPanel` nedostal
+     `calendar` (detail akce ano). Přidán jeden prop; okno teď stav Kalendáře ukazuje (dřívější otevřený bod uzavřen).
+  2. Test otevíral první kartu, pro RM to byla ukázková `tr-rm-1112` se spárovanou pozvánkou (ruční hosté, managed
+     null), o které panel záměrně nic netvrdí. Test ji přeskakuje (`PAIRED_INVITE`). Seed se neměnil: `plan.test.ts`
+     a `publishing.test.ts` počítají s tím, že host spárované pozvánky je ruční.
+  * Nové unit testy v `tests/kalendar-f04.test.ts` (18/18): okno předá panelu stav, spárovaná pozvánka = neznámý stav,
+    pozvánka založená frontou nad seedem (`ev-11-26`) zná stav při povinné akci, omluvě a přihlášce.
+* Ověření: lint, typecheck, unit 535/535, build OK, celé e2e 1333 OK / 213 přeskočeno / 0 chyb.
 
 | Bod | Stav po PR8 |
 |---|---|
 | F01–F03, F05 | hotovo (F02, F03, F05 za přepínačem `PARTICIPATION`) |
-| F04 | základ: simulace + unit hotové, e2e F04 padá (viz výše), živý test čeká na schválení (D06) |
+| F04 | hotovo v simulaci (unit + e2e); živý test s Googlem čeká na schválení (D06) |
 | F06–F18 | hotovo |
 
-**Otevřené:** `declined` za omluveného Wiki nenastavuje (O04, omluvený se odebere z hostů, Google mu pošle zrušení);
-okno akce v Plánu stav Kalendáře neukazuje (jen detail akce). Starší otevřené otázky viz oddíl PR7 níže.
+**Další krok:** zkontrolovat celý stack PR #77–#84 (base, diffy, popisy, výsledky testů) a připravit souhrn pro
+uživatele ke schválení. Nic nemergovat.
+**Otevřené:** O09 (věta panelu u omluvy ručního hosta spárované pozvánky, viz `docs/pozadavky-f01-f18.md`), O04
+(`declined` za omluveného Wiki nenastavuje), živý test F04 (D06). Starší otevřené otázky viz oddíl PR7 níže.
 
 # 18 BODŮ ZADAVATELKY – PR7 RELEASE AUDIT + F06–F09 (draft PR), DALŠÍ JE PR8 (22. 11. 2026) – začni tímto
 
