@@ -1,3 +1,32 @@
+# 18 BODŮ ZADAVATELKY – PR4 F10–F12 (draft PR), DALŠÍ JE PR5 (22. 11. 2026) – začni tímto
+
+* **Znění F01–F18 a rozhodnutí D01–D07 je v `docs/pozadavky-f01-f18.md`. Na zadání se uživatele už neptej.**
+* PR4: větev `claude/funkce/temata-f10-f12`, stacked na `claude/funkce/priprava-mesice-pro-koho` (PR #79), nic nemergnuto.
+  * F10: pod „Garantovaná témata“ jedna věta vysvětlení; filtr „Pro mou roli / Všechna“ (`?filtr=role|vse`,
+    `filterTopics`/`isTopicForRoles` v `server/domain/topics.ts`, víc rolí = sjednocení jako u povinnosti akce).
+    Výchozí: kolega Pro mou roli, správce Všechna. Kolega vidí cizí témata jen v režimu `all-published`
+    (`canSeeTopic` v `server/policy.ts`, stejný přepínač jako akce, v ostré Wiki ignorován); jinak filtr nevidí.
+    Navrhnout téma jde dál jen pro vlastní skupinu, jména zájemců jen správce. Počet garantovaných beze změny.
+  * F11: úchyt, čísla pořadí, poznámka „Pořadí upravil správce“ a Seřadit podle zájmu jen správci; ve filtru
+    Pro mou roli úchyty ani Posunout výš/níž nejsou (posun by přeskočil skrytá témata). Server už dřív odmítal.
+  * F12: pryč „zatím neproběhlo“ (řádek tématu i důvod doporučení), „v návrhu na…“ → „termín se potvrzuje“
+    (datum v `title`), zpráva po přidání do návrhu zkrácená, texty modulu Témata v tykání.
+* Ověření: lint, typecheck, unit 493/493 (nové `tests/temata-f10-f12.test.ts`), build a e2e viz popis PR4.
+
+| Bod | Stav po PR4 |
+|---|---|
+| F01 | hotovo v přípravě měsíce (PR3), povinnost z publika (PR1) |
+| F02, F03, F05 | hotovo za přepínačem `PARTICIPATION` |
+| F04 | základ (fake Google, O04) |
+| F06–F09 | čeká: uživatel je řadí k PR3 (#79), ale PR3 obsahuje jen F01; doplnit a ověřit v PR7 |
+| F10–F12 | hotovo (F10 filtr pro kolegy za přepínačem `all-published`) |
+| F13–F18 | čeká (PR5, PR6) |
+
+**Další krok = PR5:** F13–F15 (zápisy, citlivá data). Větev `claude/funkce/zapisy-f13-f15` z `claude/funkce/temata-f10-f12`,
+draft PR s touto base. Znění v `docs/pozadavky-f01-f18.md`. Pak PR6 = F16–F18, PR7 = release audit (vč. F06–F09).
+**Otevřené:** O02, O03, O08, zpětná omluva, schválení 0015+0016 (uživatel), cizí témata pro kolegy i v ostré Wiki
+(až s aktivací `all-published`), `tym-a` v editoru akce, okno dopadu (`impact.ts`) bez omluv.
+
 # 18 BODŮ ZADAVATELKY – PR3 HOTOVO (draft PR), DALŠÍ JE PR4 (22. 11. 2026) – začni tímto
 
 * PR3: větev `claude/funkce/priprava-mesice-pro-koho`, stacked na `claude/funkce/ucast-prihlasky` (PR #78), nic nemergnuto.

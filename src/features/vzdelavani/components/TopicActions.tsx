@@ -150,7 +150,7 @@ export function TopicManage({ topic, groups, canMoveUp, canMoveDown }: TopicMana
           buttonClassName="menu-danger"
           confirm={{
             title: "Archivovat téma",
-            text: `Téma „${topic.name}“ zmizí z nabídky a z doporučení${guaranteed ? " a přestane být garantované" : ""}. Akce, které ho už měly, si vazbu nechají a téma můžete kdykoli obnovit.`,
+            text: `Téma „${topic.name}“ zmizí z nabídky a z doporučení${guaranteed ? " a přestane být garantované" : ""}. Akce, které ho už měly, si vazbu nechají a téma můžeš kdykoli obnovit.`,
             confirmLabel: "Archivovat téma",
           }}
         />

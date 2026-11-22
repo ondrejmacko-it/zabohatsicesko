@@ -548,7 +548,7 @@ export async function proposeTopicAction(_prev: ActionResult | null, formData: F
       .object({ name: z.string().trim().min(3).max(120), audience: z.enum(GROUPS) })
       .parse(formObject(formData));
     await proposeTopic(user, data.name, data.audience);
-    return { ok: true, message: "Téma je přidané a máte u něj označený zájem." };
+    return { ok: true, message: "Téma je přidané a máš u něj označený zájem." };
   });
 }
 
@@ -638,7 +638,7 @@ export async function assignTopicAction(_prev: ActionResult | null, formData: Fo
     return {
       ok: true,
       id: data.eventId,
-      message: `Téma „${topicName}“ je v návrhu na ${formatDayMonth(dateKey)} Kolegové ho zatím nevidí, nic se neodeslalo.`,
+      message: `Téma „${topicName}“ je v návrhu akce ${formatDayMonth(dateKey)} Termín se potvrzuje, kolegové ho uvidí po zveřejnění.`,
     };
   });
 }

@@ -76,6 +76,15 @@ export function canSeeAudience(viewer: Viewer, audience: string): boolean {
 }
 
 /**
+ * Téma v seznamu Témat (F10). Stejné pravidlo jako u akcí: v režimu `all-published` vidí každý přihlášený všechna
+ * nearchivovaná témata (filtr „Všechna“), jinak jen témata svých skupin. Jména zájemců dál vidí jen správce
+ * a navrhnout téma jde jen pro vlastní skupinu (`canSeeAudience`).
+ */
+export function canSeeTopic(viewer: Viewer, audience: string, mode: EventVisibility = eventVisibility()): boolean {
+  return mode === "all-published" || canSeeAudience(viewer, audience);
+}
+
+/**
  * Důvod a poznámka omluvy jsou soukromé (u nemoci jde o údaj související se zdravím). Zatím je smí číst
  * jen sám omluvený. Správce ani pracovní role „vedoucí týmu“ je automaticky nevidí: oprávněného manažera
  * doplní PR2 podle schváleného mapování (O03).

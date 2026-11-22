@@ -2594,6 +2594,19 @@ a.brief-link:hover {
   margin: 0;
 }
 
+/* Filtr Pro mou roli / Všechna (F10): stejné pilulky jako Moje / Všechny v Plánu. */
+.topic-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 16px;
+}
+
+.topic-filter-note {
+  margin: 12px 0 0;
+}
+
 /* Okno Naplánovat téma: kompaktní řádky akcí s vysvětlením a jedním tlačítkem. */
 .plan-topic-list {
   margin: 0;
