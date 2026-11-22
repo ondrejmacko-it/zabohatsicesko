@@ -11,7 +11,7 @@
     Pro mou roli úchyty ani Posunout výš/níž nejsou (posun by přeskočil skrytá témata). Server už dřív odmítal.
   * F12: pryč „zatím neproběhlo“ (řádek tématu i důvod doporučení), „v návrhu na…“ → „termín se potvrzuje“
     (datum v `title`), zpráva po přidání do návrhu zkrácená, texty modulu Témata v tykání.
-* Ověření: lint, typecheck, unit 493/493 (nové `tests/temata-f10-f12.test.ts`), build a e2e viz popis PR4.
+* Draft PR #80. Ověření: lint, typecheck, unit 493/493, build OK, e2e 1277 OK / 188 přeskočeno / 0 chyb.
 
 | Bod | Stav po PR4 |
 |---|---|
