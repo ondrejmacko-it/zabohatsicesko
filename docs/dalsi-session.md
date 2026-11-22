@@ -1,3 +1,35 @@
+# 18 BODŮ ZADAVATELKY – PR5 F13–F15 (draft PR), DALŠÍ JE PR6 (22. 11. 2026) – začni tímto
+
+* **Znění F01–F18 a rozhodnutí D01–D07 je v `docs/pozadavky-f01-f18.md`. Na zadání se uživatele už neptej.**
+* PR5: větev `claude/funkce/zapisy-f13-f15`, stacked na `claude/funkce/temata-f10-f12` (PR #80), nic nemergnuto.
+  * F13: věta „Zápis schvaluje…“ nahoře v sekci zápisu (`ApproverNote` v `RecordingSection.tsx`, `approverName`
+    v panelu). Úkol napsat zápis: `minutesTaskRole` v `server/policy.ts` = vedoucí, u akce bez vedoucího správce
+    (`canPlan`); kontrolor (v ukázce účet účastníka) jen „Zkontrolovat zápis“ u hotového návrhu. Oprávnění se nemění.
+  * F14: `MinutesSourceForm` = jedno pole „Vlož přepis nebo poznámky“ + „nebo nahraj soubor“ (`FilePicker optional`),
+    „Napsat zápis ručně“ vedlejší tlačítko. Server: `source=pasted`, druh přepis/poznámky odhadne `pastedTextKind`.
+    Nahrávka jen s `RECORDING_DEMO=on` (`recordingUploadEnabled`, ostrá Wiki vždy vypnuto), jinak skrytá a
+    `uploadRecording` vrací `recording_disabled`. Vitest a e2e ukázka (3310) mají `on`, server účasti (3313) vypnuto.
+  * F15: `server/recordings/redaction.ts` vynechá e-mail, telefon, RČ, číslo účtu, jméno za „klient/pan/paní…“ a celé
+    jméno s běžným křestním (kolegové z Wiki zůstávají). Uplatní se před drafterem i na jeho výstup, uložený pracovní
+    text je už bez jmen. `integrations/ai-data-use.ts`: služba musí mít `dataUse.training: "never"` (typ i běh).
+* Ověření: lint, typecheck, unit 504/504; build + e2e viz popis draft PR PR5.
+
+| Bod | Stav po PR5 |
+|---|---|
+| F01 | hotovo (PR1 + PR3) |
+| F02, F03, F05 | hotovo za přepínačem `PARTICIPATION` |
+| F04 | základ (fake Google, O04) |
+| F06–F09 | čeká: doplnit a ověřit v PR7 |
+| F10–F12 | hotovo (F10 filtr pro kolegy za `all-published`) |
+| F13–F15 | hotovo (F14 nahrávka za `RECORDING_DEMO`, F15 pravidla jsou pojistka, ne záruka) |
+| F16–F18 | čeká (PR6) |
+
+**Další krok = PR6:** F16–F18 (náhled za jiného, tykání, záhlaví na úzkém okně). Větev `claude/funkce/obecne-f16-f18`
+z `claude/funkce/zapisy-f13-f15`, draft PR s touto base. Pak PR7 = release audit vč. F06–F09.
+**Otevřené (PR5):** má kontrolor dostávat úkol kontroly, nebo nic? (zvoleno: jen kontrola hotového návrhu);
+seznam křestních jmen v `redaction.ts` rozšířit podle reálných dat?; zbylé vykání v modulu Zápisy řeší F17 (PR6).
+Starší otevřené: O02, O03, O08, zpětná omluva, schválení 0015+0016, `tym-a` v editoru akce, `impact.ts` bez omluv.
+
 # 18 BODŮ ZADAVATELKY – PR4 F10–F12 (draft PR), DALŠÍ JE PR5 (22. 11. 2026) – začni tímto
 
 * **Znění F01–F18 a rozhodnutí D01–D07 je v `docs/pozadavky-f01-f18.md`. Na zadání se uživatele už neptej.**
