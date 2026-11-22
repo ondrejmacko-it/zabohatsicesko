@@ -1,7 +1,8 @@
 import { eq } from "drizzle-orm";
+import { isValidElement } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { calendarNote, type OwnCalendar } from "@/lib/calendar-note";
-import { syncEvent } from "@/server/calendar/sync";
+import { syncEvent, syncPublished } from "@/server/calendar/sync";
 import { getDb } from "@/server/db/client";
 import { calendarLinks, eventParticipation, simCalendarEvents, simCalendarNotifications } from "@/server/db/schema";
 import { snapshotOf } from "@/server/domain/snapshot";
@@ -25,9 +26,13 @@ vi.mock("next/server", async (original) => ({
 }));
 vi.mock("@/server/auth/session", () => ({ getCurrentUser: async () => ({ ...sessionUser, name: "Test", email: "t@example.invalid", signedInWith: "demo" }) }));
 const { changeParticipationAction } = await import("@/features/vzdelavani/actions");
+const { EventPeek } = await import("@/features/vzdelavani/components/EventPeek");
+const { ParticipationPanel } = await import("@/features/vzdelavani/components/ParticipationPanel");
 
 const NOTE = "f04-soukroma-poznamka";
 const email = (id: string) => `${id}@example.invalid`;
+/** Budoucí zveřejněná akce RM ze seedu bez ukázkové pozvánky (pozvánku založí fronta). */
+const SEED_RM = "ev-11-26";
 
 /** Úlohy po odpovědi (`after`) v pořadí, v jakém je Next spustí. */
 async function runAfter() {
@@ -146,6 +151,65 @@ describe("F04: dobrovolná akce se přidá až po přihlášení", () => {
     await runAfter();
     expect((await guests(id)).emails).not.toContain(email(participant.id));
     expect(await noteFor(participant, id)).toBe("Do Kalendáře se akce přidá, až se přihlásíš.");
+  });
+});
+
+// Příčina padajícího e2e F04: test otevíral první kartu v seznamu, a to byla ukázková tr-rm-1112 (první budoucí
+// akce ukázky). Ta má spárovanou existující pozvánku bez hostů spravovaných Wiki, panel o ní proto nic netvrdí.
+// Akce ze seedu, kterým pozvánku založí až fronta (`syncPublished`, jako při návštěvě Úvodu), stav znají.
+describe("F04 nad ukázkovými daty: spárovaná pozvánka vs. pozvánka založená Wiki", () => {
+  test("spárovaná ukázková pozvánka: hosté nejsou spravovaní Wiki, panel stav nezná a nic netvrdí", async () => {
+    await syncPublished();
+    expect((await guests(PUBLISHED_RM)).link.managedAttendees).toBeNull();
+    expect((await ownParticipationDetail(outsider, null, PUBLISHED_RM))?.calendar).toBeNull();
+    expect(await noteFor(outsider, PUBLISHED_RM)).toBeNull();
+  });
+
+  test("pozvánka, kterou fronta založí nad ukázkovou akcí, zná stav: povinná, omluva, přihláška", async () => {
+    await syncPublished();
+    expect((await guests(SEED_RM)).link.syncStatus).toBe("synced");
+    expect(await noteFor(outsider, SEED_RM)).toBe("Pozvánku máš v Kalendáři.");
+    expect(await noteFor(participant, SEED_RM)).toBe("Do Kalendáře se akce přidá, až se přihlásíš.");
+
+    expect(await act(outsider, { id: SEED_RM, change: "excuse", reason: "illness", note: "" })).toMatchObject({ ok: true });
+    await runAfter();
+    expect((await guests(SEED_RM)).emails).not.toContain(email(outsider.id));
+    expect(await noteFor(outsider, SEED_RM)).toBe("Pozvánku v Kalendáři nemáš, omluva ji odmítla.");
+
+    expect(await act(participant, { id: SEED_RM, change: "enroll" })).toMatchObject({ ok: true });
+    await runAfter();
+    expect((await guests(SEED_RM)).emails).toContain(email(participant.id));
+    expect(await noteFor(participant, SEED_RM)).toBe("Pozvánku máš v Kalendáři.");
+  });
+});
+
+// Druhá příčina padajícího e2e F04: okno akce v Plánu (`?akce=`) stav spočítalo, ale panelu ho nepředalo.
+describe("F04: okno akce v Plánu ukazuje stav vlastní pozvánky", () => {
+  /** Najde ve stromu React elementů (bez renderu) první element dané komponenty. */
+  function findElement(node: unknown, type: unknown): { props: Record<string, unknown> } | null {
+    if (Array.isArray(node)) {
+      for (const child of node) {
+        const found = findElement(child, type);
+        if (found) return found;
+      }
+      return null;
+    }
+    if (!isValidElement(node)) return null;
+    const element = node as { type: unknown; props: Record<string, unknown> };
+    if (element.type === type) return element;
+    for (const value of Object.values(element.props)) {
+      const found = findElement(value, type);
+      if (found) return found;
+    }
+    return null;
+  }
+
+  test("panel v okně dostane stejný stav Kalendáře jako detail akce", async () => {
+    await syncPublished();
+    const window = await EventPeek({ user: outsider, eventId: SEED_RM, preview: null, closeHref: "/vzdelavani/harmonogram" });
+    const panel = findElement(window, ParticipationPanel);
+    expect(panel?.props.calendar).toEqual({ link: "synced", inCalendar: true });
+    expect(panel?.props.calendar).toEqual((await ownParticipationDetail(outsider, null, SEED_RM))!.calendar);
   });
 });
 

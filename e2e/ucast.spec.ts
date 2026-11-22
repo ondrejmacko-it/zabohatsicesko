@@ -10,6 +10,8 @@ test.describe.configure({ mode: "serial" });
 const BASE = `http://localhost:${UCAST_PORT}`;
 const PROJECTS = ["windows-1280", "telefon-390"];
 const NOTE = "e2e-soukroma-poznamka";
+/** Ukázková akce se spárovanou existující pozvánkou (seed `calendarFixture`). */
+const PAIRED_INVITE = "tr-rm-1112";
 
 test.beforeEach(({}, info) => test.skip(!PROJECTS.includes(info.project.name), "jen windows-1280 a telefon-390"));
 
@@ -18,8 +20,10 @@ async function plan(page: Page, query = "") {
   await settle(page);
 }
 
-async function openCard(page: Page, state: string) {
-  const card = page.locator(`a:has([data-ucast="${state}"])`).filter({ visible: true }).first();
+/** `except`: ID akce, jejíž kartu přeskočit. */
+async function openCard(page: Page, state: string, except?: string) {
+  const skip = except ? `:not([href*="${except}"])` : "";
+  const card = page.locator(`a:has([data-ucast="${state}"])${skip}`).filter({ visible: true }).first();
   await expect(card).toBeVisible();
   await page.goto(`${BASE}${await card.getAttribute("href")}`);
   await settle(page);
@@ -78,13 +82,15 @@ test.describe("účast v harmonogramu", () => {
   });
 
   // F04 v simulaci Kalendáře: povinná akce je pozvánka, omluva ji odmítne, dobrovolná se přidá až po přihlášení.
+  // Akce, jejíž pozvánku založila Wiki. Ukázková tr-rm-1112 je spárovaná existující pozvánka: její hosté jsou
+  // ruční (ne spravovaní Wiki), panel o nich proto nic netvrdí (`data-kalendar-stav="neznamy"`).
   test("F04: pozvánka v Kalendáři podle povinnosti, omluvy a přihlášky", async ({ page }) => {
     // Návštěva Úvodu spustí frontu Kalendáře: zveřejněné akce dostanou pozvánku.
     await page.goto(`${BASE}/`);
     await settle(page);
 
     await plan(page);
-    let panel = await openCard(page, "required");
+    let panel = await openCard(page, "required", PAIRED_INVITE);
     await expectCalendar(page, "Pozvánku máš v Kalendáři.");
     await panel.getByRole("button", { name: "Omluvit se" }).click();
     await page.getByRole("dialog", { name: "Omluvit se z akce?" }).getByRole("button", { name: "Omluvit se" }).click();
@@ -95,7 +101,7 @@ test.describe("účast v harmonogramu", () => {
     await expectCalendar(page, "Pozvánku máš v Kalendáři.");
 
     await plan(page);
-    panel = await openCard(page, "optional");
+    panel = await openCard(page, "optional", PAIRED_INVITE);
     await expectCalendar(page, "Do Kalendáře se akce přidá, až se přihlásíš.");
     await panel.getByRole("button", { name: "Přihlásit se" }).click();
     await page.getByRole("dialog", { name: "Přihlásit se na akci?" }).getByRole("button", { name: "Přihlásit se" }).click();
