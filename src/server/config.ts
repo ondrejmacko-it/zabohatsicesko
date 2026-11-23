@@ -66,17 +66,12 @@ export const isLiveWiki = () => wikiMode() === "production";
 export type EventVisibility = "audience" | "all-published";
 
 /**
- * Kdo vidí zveřejněné akce (F02). Výchozí `audience`: kolega vidí akce své skupiny a akce, které vede
- * nebo kontroluje (dosavadní chování). `EVENT_VISIBILITY=all-published` ukáže každému přihlášenému všechny
- * ZVEŘEJNĚNÉ akce, nikdy návrhy, nahrávky, pracovní zápisy ani údaje o účasti jiných. Přepínač zatím
- * funguje jen v ukázce (lokálně, testy, dohodnuté Preview s fiktivními daty): v ostré Wiki
- * (`WIKI_MODE=production`) zůstává `audience`, dokud PR2 nedokončí přihlášky a omluvy.
+ * Zveřejněný firemní plán je společný všem přihlášeným. Viditelnost akce není oprávnění
+ * ke změně účasti, nahrávkám, zápisům ani návrhům (ty kontroluje server samostatně).
+ * Starší filtr podle publika je dostupný pouze jako výslovný nouzový rollback.
  */
 export function eventVisibility(): EventVisibility {
-  if (isLiveWiki()) return "audience";
-  // Přihlášky (PR2) dávají smysl jen nad všemi zveřejněnými akcemi: zapnutá účast znamená i `all-published`.
-  if (participationEnabled()) return "all-published";
-  return process.env.EVENT_VISIBILITY?.trim() === "all-published" ? "all-published" : "audience";
+  return process.env.EVENT_VISIBILITY?.trim() === "audience" ? "audience" : "all-published";
 }
 
 /**
