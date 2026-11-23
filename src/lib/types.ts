@@ -83,10 +83,10 @@ export type WorkRole = (typeof WORK_ROLES)[number];
  * – `excused`: omluva z povinné akce, platí hned bez schvalování,
  * – `cancelled`: akce je zrušená, žádná aktivní účast.
  */
-export type ParticipationState = "required" | "optional" | "voluntary_enrolled" | "excused" | "cancelled";
+export type ParticipationState = "required" | "optional" | "voluntary_enrolled" | "excused" | "withdrawn" | "cancelled";
 
 /** Výslovný záznam člověka u akce. Povinnost se neukládá, odvozuje se. */
-export type ParticipationKind = "voluntary_enrolled" | "excused";
+export type ParticipationKind = "voluntary_enrolled" | "excused" | "withdrawn";
 
 /** Důvod omluvy. Záměrně jen kategorie: „Nemoc“ není žádost o diagnózu. */
 export const EXCUSE_REASONS = ["illness", "vacation", "other"] as const;
