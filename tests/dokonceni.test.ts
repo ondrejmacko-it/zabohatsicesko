@@ -60,7 +60,7 @@ describe("stažení zveřejněného zápisu", () => {
     expect(await code(withdrawMinutes(lead, PAST_FP))).toBe("invalid_state");
     await publish();
     expect(await code(withdrawMinutes(participant, PAST_FP))).toBe("forbidden");
-    expect(await code(withdrawMinutes(outsider, PAST_FP))).toBe("not_found");
+    expect(await code(withdrawMinutes(outsider, PAST_FP))).toBe("forbidden");
     expect(await recordingPanel(participant, await row(PAST_FP))).toMatchObject({ access: "reader", state: "available" });
   });
 });
