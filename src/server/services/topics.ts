@@ -300,7 +300,7 @@ export async function moveTopic(viewer: Viewer, topicId: string, target: "up" | 
     const next = moveInOrder(ids, topicId, target);
     if (!next) return;
     if (guaranteed) {
-      // Pořadí 1–3 zůstávají stejná čísla, jen se přeskupí. Nejdřív všechna na prázdnou hodnotu: unikátní
+      // Pořadí 1..n zůstávají stejná čísla, jen se přeskupí. Nejdřív všechna na prázdnou hodnotu: unikátní
       // index nepovolí ani na okamžik dvě stejná pořadí.
       const ranks = order.map((t) => t.priorityRank!).sort((a, b) => a - b);
       await tx.update(topics).set({ priorityRank: null }).where(inArray(topics.id, ids));

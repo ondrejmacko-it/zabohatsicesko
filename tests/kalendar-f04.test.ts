@@ -152,6 +152,28 @@ describe("F04: dobrovolná akce se přidá až po přihlášení", () => {
     expect((await guests(id)).emails).not.toContain(email(participant.id));
     expect(await noteFor(participant, id)).toBe("Wiki tě na tuto akci do Kalendáře nezve.");
   });
+
+  // Audit P1-K1: stav Odhlášeno (withdrawn) z PR #86. Opětovná přihláška vrátí hosta právě jednou a souběžné
+  // synchronizace téže akce nezaloží druhou pozvánku ani druhý řádek vazby.
+  test("odhlášení a nová přihláška: host jednou, souběžný sync bez duplicitní pozvánky", async () => {
+    const id = await publishRm();
+    for (const change of ["enroll", "withdraw", "enroll"]) {
+      expect(await act(participant, { id, change })).toMatchObject({ ok: true });
+      await runAfter();
+    }
+    const first = await guests(id);
+    expect(first.emails.filter((e) => e === email(participant.id))).toHaveLength(1);
+    expect(await noteFor(participant, id)).toBe("Pozvánku máš v Kalendáři.");
+
+    const db = await getDb();
+    const before = (await db.select().from(simCalendarEvents)).length;
+    await Promise.all([syncEvent(id), syncEvent(id), syncEvent(id)]);
+    expect(await db.select().from(calendarLinks).where(eq(calendarLinks.eventId, id))).toHaveLength(1);
+    expect((await db.select().from(simCalendarEvents)).length).toBe(before);
+    const after = await guests(id);
+    expect(after.invite.id).toBe(first.invite.id);
+    expect(after.emails).toEqual(first.emails);
+  });
 });
 
 // Příčina padajícího e2e F04: test otevíral první kartu v seznamu, a to byla ukázková tr-rm-1112 (první budoucí

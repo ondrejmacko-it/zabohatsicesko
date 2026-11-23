@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import { ActionMessage } from "@/components/ActionForm";
+import { useMarkModalSaved } from "@/components/Modal";
 import { submitKeepingValues } from "@/features/shared/keep-values";
 import type { MinutesContent } from "@/lib/types";
 import { saveMinutesAction } from "../actions";
@@ -29,6 +30,11 @@ export function MinutesEditor({
   published?: boolean;
 }) {
   const [state, action, pending] = useActionState(saveMinutesAction, null);
+  // V okně zápisu (Zápisy → ?zapis=) je uložený text nový výchozí stav: zavření okna se pak na nic neptá.
+  const markSaved = useMarkModalSaved();
+  useEffect(() => {
+    if (state?.ok) markSaved?.();
+  }, [state, markSaved]);
   // Nízká pole, která rostou s obsahem (`field-sizing`, jinde aspoň počet řádků podle textu).
   const area = (name: keyof MinutesContent, label: string, value: string, hint?: string) => (
     <label className="field">

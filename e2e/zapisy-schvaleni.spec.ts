@@ -22,6 +22,9 @@ test.describe("Zápisy: schválení vedoucím @desktop", () => {
     await expect(section.getByTestId("schvaluje")).toContainText("Zápis schvaluješ ty jako vedoucí akce");
     await expect(section.getByRole("radio")).toHaveCount(0);
     await expect(section.getByTestId("citliva-data")).toContainText("Text se nepoužívá k trénování AI");
+    // Audit P1-Z1: vynechání jmen je heuristika a návrh skládá lokální šablona, text nesmí slibovat víc.
+    await expect(section.getByTestId("citliva-data")).toContainText("nepoznají každé jméno");
+    await expect(section.getByTestId("citliva-data")).toContainText("text se nikam neposílá");
     await section.getByRole("button", { name: "Napsat zápis ručně" }).click();
     await expect(section.getByRole("status").filter({ hasText: "Rozpracováno" })).toBeVisible();
     await expect(section.getByTestId("stav-verze")).toContainText("Rozpracováno, verze 1");

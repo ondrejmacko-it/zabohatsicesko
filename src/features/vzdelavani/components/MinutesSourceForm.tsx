@@ -128,7 +128,7 @@ export function MinutesSourceForm({ eventId, eventLabel, hasRecording, canUpload
         {both && <p className="notice">Vlož text, nebo nahraj soubor. Obojí najednou nejde, jedno z toho odeber.</p>}
         {/* F15: pravidla pro citlivá data říká formulář dřív, než vedoucí text vloží. */}
         <p className="small muted" data-testid="citliva-data">
-          Jména a kontakty klientů se z návrhu i z uloženého textu vynechají. Text se nepoužívá k trénování AI.
+          Jména a kontakty klientů Wiki z návrhu i z uloženého textu vynechá podle pravidel, která nepoznají každé jméno, proto návrh vždy zkontroluj. Návrh skládá šablona přímo ve Wiki, text se nikam neposílá. Text se nepoužívá k trénování AI.
         </p>
       </DraftForm>
       <div className="row">
