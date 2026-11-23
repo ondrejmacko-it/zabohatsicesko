@@ -41,7 +41,7 @@ export function ParticipationPanel({ eventId, state, label, actions, excuse, cal
     <section className="section participation-panel" aria-labelledby="ucast" data-ucast-panel={state} data-kalendar-stav={calendar ? `${calendar.link}:${calendar.inCalendar}` : "neznamy"}>
       <h2 id="ucast">Tvoje účast</h2>
       {label && <p className="participation-state"><span className={state === "excused" || state === "optional" ? "badge badge-outline" : "badge badge-ok"}>{label}</span></p>}
-      <p className="small">{preview ? "V náhledu se účast počítá jen z rolí, přihlášky a omluvy kolegů se neukazují." : STATE_TEXT[state]}</p>
+      <p className="small">{preview ? "Takhle vypadá účast ve vybraném pohledu. Náhled je jen ke čtení." : STATE_TEXT[state]}</p>
       {note && <p className="small" data-kalendar={calendar?.inCalendar ? "v-kalendari" : "mimo-kalendar"}>{note}</p>}
       {state === "excused" && (
         <p className="small muted">
