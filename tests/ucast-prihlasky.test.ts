@@ -53,7 +53,10 @@ describe("akce formuláře: přechody", () => {
     expect(await act({ id: rm, change: "enroll" })).toMatchObject({ ok: true });
     expect(await records()).toHaveLength(1);
     expect(await act({ id: rm, change: "withdraw" })).toMatchObject({ ok: true });
-    expect(await records()).toHaveLength(0);
+    expect(await records()).toMatchObject([{ kind: "withdrawn", excuseReason: null }]);
+    expect((await ownParticipationDetail(participant, null, rm))?.state).toBe("withdrawn");
+    expect(await act({ id: rm, change: "enroll" })).toMatchObject({ ok: true });
+    expect(await records()).toMatchObject([{ kind: "voluntary_enrolled" }]);
   });
 
   test("omluva s důvodem a poznámkou, zrušení omluvy; nedovolené přechody", async () => {
@@ -145,11 +148,13 @@ describe("soukromí a souběh", () => {
 
 describe("štítky a filtr Moje", () => {
   test("pohled účasti a filtr", () => {
-    const p = (state: "required" | "optional" | "voluntary_enrolled" | "excused", open = true) => ({ state, required: false, calendarGuest: false, open });
+    const p = (state: "required" | "optional" | "voluntary_enrolled" | "excused" | "withdrawn", open = true) => ({ state, required: false, calendarGuest: false, open });
     expect(ownParticipationView(p("required"), { readOnly: false })).toEqual({ state: "required", label: "Povinné pro tebe", actions: ["excuse"] });
     expect(ownParticipationView(p("optional"), { readOnly: false })?.label).toBe("Můžeš se přihlásit");
     expect(ownParticipationView(p("voluntary_enrolled"), { readOnly: false })).toMatchObject({ label: "Přihlášeno", actions: ["withdraw"] });
     expect(ownParticipationView(p("required", false), { readOnly: false })?.actions).toEqual([]);
+    expect(ownParticipationView(p("withdrawn"), { readOnly: false })).toMatchObject({ label: "Odhlášeno", actions: ["enroll"] });
+    expect(isMine(ownParticipationView(p("withdrawn"), { readOnly: false }), false)).toBe(false);
     expect(isMine(ownParticipationView(p("optional"), { readOnly: false }), false)).toBe(false);
     expect(isMine(ownParticipationView(p("optional"), { readOnly: false }), true)).toBe(true);
     expect(isMine(ownParticipationView(p("excused"), { readOnly: false }), false)).toBe(true);
