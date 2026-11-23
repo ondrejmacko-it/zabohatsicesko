@@ -78,6 +78,8 @@ test.describe("Témata: garantovaná a ostatní", () => {
     await expect(guaranteed.locator(".topic-row .item-title > span[id]")).toHaveText(["Otevřené otázky na schůzce", "Návaznost po konzultaci"]);
     await expect(page.getByRole("heading", { name: "Ostatní témata" })).toBeVisible();
     await expect(rowOf(guaranteed, "Otevřené otázky na schůzce").getByText("Nejžádanější")).toBeVisible();
+    // Rozhodnutí vlastníka (audit P1): Nejžádanější (zájem kolegů) a garance (priorita správce) jsou oddělené.
+    await expect(page.getByTestId("nejzadanejsi-vysvetleni")).toContainText("S garancí nesouvisí");
     // Bez počítadla „ze 3“. Garantované téma ze seedu nemá budoucí termín ani návrh (zápisy běží až po čtení).
     await expect(guaranteed.getByText(/ze 3/)).toHaveCount(0);
     const first = rowOf(guaranteed, "Otevřené otázky na schůzce");

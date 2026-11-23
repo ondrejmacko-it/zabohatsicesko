@@ -44,6 +44,13 @@ describe("pořadí seznamu Témat a štítek Nejžádanější", () => {
     expect([...ids]).toEqual(["a", "b", "c"]);
   });
 
+  // Rozhodnutí vlastníka (audit P1): Nejžádanější je jen zájem kolegů, garance (priorita správce) ho nemění.
+  test("Nejžádanější nezávisí na garanci: garantované se zájmem ho má, garantované bez zájmu ne", () => {
+    const g = (id: string, interest: number, priorityRank: number | null) => ({ ...t(id, id, interest), priorityRank });
+    const ids = mostWantedIds([g("gar-zajem", 5, 1), g("gar-bez", 0, 2), g("b", 3, null), g("c", 2, null), g("d", 1, null)]);
+    expect([...ids]).toEqual(["gar-zajem", "b", "c"]);
+  });
+
   test("zájem jen u dvou témat označí jen dvě, nulový zájem nikdy", () => {
     expect([...mostWantedIds([t("a", "A", 1), t("b", "B", 2), t("c", "C", 0), t("d", "D", 0)])]).toEqual(["b", "a"]);
     expect(mostWantedIds([t("a", "A", 0), t("b", "B", 0)]).size).toBe(0);

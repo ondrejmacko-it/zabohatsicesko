@@ -36,15 +36,26 @@ Stav: **potvrzená** (reprodukovaná testem), **pravděpodobná**, **riziko**, *
 * §12: snímky 320 / 768 / 1920 px (Úvod správce i FP, Témata správce i FP, Zápisy, Integrace, Správa, Plán): bez
   vodorovného posuvu; jediný přesah obsahu = U-1.
 
-## Otázky pro vlastníka
+## Otázky pro vlastníka → rozhodnuto (23. 11. 2026, předáno hlavní relací)
 
-1. **Nejžádanější:** má štítek dostat i garantované téma (dnes ano, pořadí počítá z celého seznamu), a zůstat na
-   třech tématech? Pokud má být „Nejžádanější“ samostatná sekce mezi Garantovanými a Ostatními, jde o větší změnu UI
-   a navrhnu ji zvlášť.
-2. **Úkol „Nahraj nahrávku z dnešní akce“** (jen s `RECORDING_DEMO`) říká „Zápis se z nahrávky připraví sám“; ukázka
-   ale přepíše jen ukázkovou nahrávku. Zúžit text na „ukázkovou nahrávku“, nebo úkol v ukázce vůbec nenabízet?
-3. **Ruční zápis na stránce detailu akce** (mimo okno) nemá varování při odchodu ze stránky (`beforeunload` má jen
-   okno akce). Přidat? (riziko P3, neopraveno.)
+1. **Nejžádanější** zůstává samostatný štítek podle zájmu kolegů (nejvýš tři témata s nenulovým zájmem), nezávislý
+   na garanci; garantované téma ho mít smí, žádná nová sekce. Hotovo: věta pod seznamem Témat
+   (`nejzadanejsi-vysvetleni`), `title` štítku, nadpis garantovaných „Vybírá je správce“. Testy:
+   `temata-doporuceni.test.ts` (garantované bez zájmu štítek nemá, se zájmem ano), e2e `temata-planovani.spec.ts`.
+2. **Úkol nahrávky v ukázce** mluví pravdu: „Nahraj ukázkovou nahrávku z dnešní akce … Ukázka přepíše jen ukázkovou
+   nahrávku z Wiki, jiný soubor nezpracuje.“ (`todayRecordingTask`). Dostane ho jen ten, kdo zápis píše
+   (`minutesTaskRole` = write), kontrolor ne. Test: `tests/audit-p1-rozhodnuti.test.ts`.
+3. **Ruční zápis na detailu akce** se při odchodu s neuloženými změnami ohlásí: `beforeunload` (zavření, obnovení
+   karty) a klik na odkaz ve Wiki (potvrzení prohlížeče). Po uložení se nehlásí (uložený text = nový výchozí stav).
+   Test: e2e `zapisy-bez-nahravky.spec.ts` › detail akce… Zbývající riziko: tlačítko Zpět v prohlížeči
+   (Next klientská navigace) se nehlídá.
+
+## Předchozí chyba testu (není z této větve)
+
+* e2e `temata-planovani.spec.ts` › „Témata očima účastníka › F10–F12 …“ padá na řádku s „Pro mou roli“
+  (očekává 0 odkazů, protože „bez režimu všech zveřejněných“). Ukázka po PR #86 běží v režimu všech zveřejněných,
+  filtr se proto ukazuje. Logiky filtru se tato větev netýká. Očekávání jsem neměnil (pravidlo neoslabovat testy),
+  musí ho srovnat ten, kdo vlastní změnu viditelnosti.
 
 ## Ověření
 

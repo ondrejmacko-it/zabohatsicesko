@@ -55,4 +55,38 @@ test.describe("Zápis bez nahrávky a bez jmen klientů @desktop", () => {
     await expect(confirm).toHaveCount(0);
     await expect(page).toHaveURL(/\/vzdelavani\/zapisy$/);
   });
+  // Rozhodnutí vlastníka (audit P1): rozepsaný zápis na stránce detailu se při odchodu odkazem ohlásí, uložený ne.
+  test("detail akce: odchod od rozepsaného zápisu se ohlásí, po uložení ne", async ({ page }, info) => {
+    test.skip(info.project.name !== "windows-1280", "zápis jen jednou");
+    await page.goto(`${BASE}/vzdelavani/akce/${EVENT}#nahravka`);
+    await settle(page);
+    const section = page.locator("#nahravka");
+    const summary = section.getByRole("textbox", { name: "Shrnutí", exact: true });
+    const manual = section.getByRole("button", { name: "Napsat zápis ručně" });
+    await expect(summary.or(manual)).toBeVisible({ timeout: 20_000 });
+    if (await manual.isVisible()) await manual.click();
+    await summary.fill("Rozepsáno na detailu akce");
+    const away = page.getByRole("link", { name: "Zápisy", exact: true }).first();
+
+    const asked: string[] = [];
+    page.once("dialog", (dialog) => {
+      asked.push(dialog.message());
+      void dialog.dismiss();
+    });
+    await away.click();
+    await expect.poll(() => asked.length).toBe(1);
+    expect(asked[0]).toContain("neuložené změny");
+    await expect(page).toHaveURL(new RegExp(`/vzdelavani/akce/${EVENT}`));
+    await expect(summary).toHaveValue("Rozepsáno na detailu akce");
+
+    await section.getByRole("button", { name: "Uložit návrh zápisu" }).click();
+    await expect(section.getByRole("status").filter({ hasText: /uložen/i })).toBeVisible();
+    page.on("dialog", (dialog) => {
+      asked.push(dialog.message());
+      void dialog.dismiss();
+    });
+    await away.click();
+    await expect(page).toHaveURL(/\/vzdelavani\/zapisy/);
+    expect(asked).toHaveLength(1);
+  });
 });
