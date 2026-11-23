@@ -316,7 +316,7 @@ function PublishOneDialog({ draft, monthKey, invite, onClose }: { draft: MonthDr
         {missing.length > 0 && (
           <>
             <p className="notice notice-danger">
-              <strong>Chybí {missing.join(" a ")}.</strong> Doplňte ho v okně akce, nebo zveřejněte bez něj.
+              <strong>Chybí {missing.join(" a ")}.</strong> Doplň ho v okně akce, nebo zveřejni bez něj.
             </p>
             <label className="check">
               <input type="checkbox" checked={allowIncomplete} onChange={(e) => setAllowIncomplete(e.target.checked)} />

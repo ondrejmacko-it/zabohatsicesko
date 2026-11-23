@@ -45,10 +45,10 @@ const extra = (date: string): EventInput => ({
   topicTitle: null, topicId: null, audience: "vsichni", leadId: null, reviewerId: null,
 });
 
-// Rozpočet hlídá, aby počet dotazů nerostl s počtem akcí (N+1). Při změně stránky ho upravte vědomě.
+// Rozpočet hlídá, aby počet dotazů nerostl s počtem akcí (N+1). Při změně stránky ho uprav vědomě.
 describe("počet dotazů na Plánu a Úvodu", () => {
   test("Plán správce a účastníka a Úvod se vejdou do rozpočtu", async () => {
-    // 17: úkol správce „Nastavte garantovaná témata“ je jeden konstantní dotaz navíc (F2).
+    // 17: úkol správce „Nastav garantovaná témata“ je jeden konstantní dotaz navíc (F2).
     expect(await countQueries(() => planData(organizer, true))).toBeLessThanOrEqual(17);
     expect(await countQueries(() => planData(participant, false))).toBeLessThanOrEqual(8);
     expect(await countQueries(() => nextEventsFor(participant, 3))).toBeLessThanOrEqual(5);

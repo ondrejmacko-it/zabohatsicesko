@@ -20,7 +20,7 @@ export const ACTION_LIMIT = { count: 120, windowSec: 60 };
  */
 export async function runAction(task: (user: CurrentUser) => Promise<ActionResult>): Promise<ActionResult> {
   const user = await getCurrentUser();
-  if (!user) return { ok: false, error: "Přihlášení vypršelo. Načtěte stránku a vstupte znovu." };
+  if (!user) return { ok: false, error: "Přihlášení vypršelo. Načti stránku a vstup znovu." };
   try {
     if (!(await withinRateLimit(await getDb(), `action:${user.id}`, ACTION_LIMIT.count, ACTION_LIMIT.windowSec))) {
       return { ok: false, error: DOMAIN_ERROR_MESSAGES.rate_limited };
@@ -32,6 +32,6 @@ export async function runAction(task: (user: CurrentUser) => Promise<ActionResul
     if (error instanceof DomainError) return { ok: false, error: DOMAIN_ERROR_MESSAGES[error.code] };
     if (error instanceof z.ZodError) return { ok: false, error: DOMAIN_ERROR_MESSAGES.invalid_input };
     logError("action", "unexpected", error);
-    return { ok: false, error: "Akci se nepodařilo dokončit. Zkuste to prosím znovu." };
+    return { ok: false, error: "Akci se nepodařilo dokončit. Zkus to prosím znovu." };
   }
 }

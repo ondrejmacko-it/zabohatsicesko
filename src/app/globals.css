@@ -135,11 +135,14 @@ textarea {
   }
 }
 
+/* Lišta se na užším okně zalomí po celcích (značka, Pohled, účet), nikdy uvnitř účtu: jméno a Odhlásit zůstanou
+   vedle sebe (F18). */
 .topbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 8px 16px;
   min-height: 52px;
   /* max() s env(): na iPhonu s výřezem a na šířku obsah nezaleze pod výřez ani zaoblené rohy. */
   padding: max(6px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) 6px max(20px, env(safe-area-inset-left));
@@ -167,12 +170,26 @@ textarea {
 
 .account {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: flex-end;
+  margin-left: auto;
   gap: 8px 12px;
   font-size: 13px;
   color: var(--ink-soft);
+}
+
+.account > *,
+.account-name {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* Dlouhé jméno účtu Google lištu neroztáhne, celé je v title. */
+.account-name {
+  max-width: 40ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .demo-badge {
@@ -3337,6 +3354,11 @@ p.cal-status {
   border-bottom: 1px solid var(--line);
 }
 
+/* Řádek mimo filtr přehledu (F08) zůstává ve formuláři, jen není vidět. */
+.publish-row[hidden] {
+  display: none;
+}
+
 .publish-row[data-picked="false"] .publish-main {
   opacity: 0.6;
 }
@@ -3548,6 +3570,20 @@ p.cal-status {
 
 .prepare-bulk-note:empty {
   display: none;
+}
+
+/* Kroky průvodce, ke kterým se správce teprve dostane (F07): stejné záhlaví, tlumeně. */
+.prepare-step[data-upcoming] h3 {
+  color: var(--muted);
+}
+
+.prepare-filter-note,
+.prepare-publish-why {
+  margin: 0;
+}
+
+.prepare-publish-why {
+  flex: 1 0 100%;
 }
 
 /* Téma doporučené systémem, o kterém správce ještě nerozhodl. Po přijetí vypadá jako každé jiné téma. */

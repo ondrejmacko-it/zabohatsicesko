@@ -265,7 +265,7 @@ export function planCandidates(
       draft: e.status === "draft",
       // Krátce, jeden řádek: podrobnosti dopadu ukáže až potvrzení zveřejnění v okně akce.
       reason: [
-        e.status === "draft" ? "návrh" : "zveřejněno, změnu potvrdíte",
+        e.status === "draft" ? "návrh" : "zveřejněno, změnu potvrdíš",
         e.audience === topic.audience ? null : "téma je pro všechny",
       ]
         .filter(Boolean)

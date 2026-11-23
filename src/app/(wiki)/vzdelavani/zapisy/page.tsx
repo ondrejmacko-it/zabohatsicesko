@@ -57,7 +57,7 @@ export default async function MinutesPage({ searchParams }: { searchParams: Sear
     )}
     <section className="section" aria-labelledby="zapisy">
       {canAdd && (
-        <PageCall text="Dokončete zápisy z proběhlých akcí.">
+        <PageCall text="Dokonči zápisy z proběhlých akcí.">
           <Link className="btn btn-primary" href={link({ pridat: "1" })} scroll={false} aria-label={`${missingTitle}: ${missing.items.length}`}>
             K dokončení
             {missing.items.length > 0 && <span className="count-badge">{missing.items.length}</span>}
@@ -122,10 +122,10 @@ export default async function MinutesPage({ searchParams }: { searchParams: Sear
           <p className="item-title">{filtering ? "Tomuto hledání neodpovídá žádný zápis." : "Zatím tu není žádný zveřejněný zápis."}</p>
           <p className="item-meta">
             {filtering
-              ? "Zkuste jiné slovo nebo zrušte filtr."
+              ? "Zkus jiné slovo nebo zruš filtr."
               : canAdd && missing.items.length > 0
-                ? "Po skončení akce otevřete K dokončení, doplňte zápis a nechte ho schválit. Účastníci ho pak najdou tady."
-                : "Zápis se objeví, jakmile ho vedoucí po skončení akce zveřejní. Uvidíte zápisy z akcí pro své skupiny."}
+                ? "Po skončení akce otevři K dokončení, doplň zápis a nech ho schválit. Účastníci ho pak najdou tady."
+                : "Zápis se objeví, jakmile ho vedoucí po skončení akce zveřejní. Uvidíš zápisy z akcí pro své skupiny."}
           </p>
         </div>
       ) : (

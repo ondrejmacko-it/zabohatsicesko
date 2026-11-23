@@ -70,7 +70,7 @@ export function CalendarStatusLine({ status, now, detailed }: { status: Calendar
         {connection.expiresAt && (
           <span className="cal-status-rest">
             {expiring ? <strong>Souhlas u Googlu vyprší {formatDayMonth(toDateKey(new Date(connection.expiresAt)))}.</strong> : `Souhlas platí do ${formatDayMonth(toDateKey(new Date(connection.expiresAt)))}`}{" "}
-            (aplikace je u Googlu v režimu Testing, 7 dní). Obnovíte ho jedním potvrzením.
+            (aplikace je u Googlu v režimu Testing, 7 dní). Obnovíš ho jedním potvrzením.
           </span>
         )}
       </span>
@@ -122,7 +122,7 @@ export function CalendarAlert({ status, now }: { status: CalendarStatus; now: Da
     <div className="cal-status cal-status-warn" role="status">
       <span className="cal-status-main">
         <strong>Propojení Kalendáře vyprší {formatDayMonth(toDateKey(new Date(connection.expiresAt!)))}.</strong>
-        <span className="cal-status-rest">Obnovíte ho jedním potvrzením u Googlu.</span>
+        <span className="cal-status-rest">Obnovíš ho jedním potvrzením u Googlu.</span>
       </span>
       <a className="btn btn-primary btn-small" href={CONNECT_HREF}>
         Obnovit propojení

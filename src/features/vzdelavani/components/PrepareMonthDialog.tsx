@@ -11,7 +11,19 @@ import { addDays, formatDayMonth, formatEventTime, shiftMonth, toDateKey, weekda
 import type { Group } from "@/lib/types";
 import type { MonthDraft } from "@/server/services/events";
 import { generateMonthAction, publishMonthAction, type ActionResult } from "../actions";
-import { audienceOptions, draftGaps, fillEmptyLeads, prepareOverview, rowsMissingLead, type DraftRowState, type OverviewKey } from "../prepare-month";
+import {
+  audienceOptions,
+  draftGaps,
+  fillEmptyLeads,
+  fillEmptyTopics,
+  matchesOverview,
+  prepareOverview,
+  publishBlockedReason,
+  rowsMissingLead,
+  rowsMissingTopic,
+  type DraftRowState,
+  type OverviewKey,
+} from "../prepare-month";
 import { TemplateDialog, type SlotValue } from "./TemplateDialog";
 
 /** Jak se zveřejnění propíše do Kalendáře. Určuje jen text přehledu dopadu. */
@@ -29,6 +41,8 @@ type Props = {
   inviteMode: InviteMode;
   /** Pravidelný rozvrh, ze kterého se termíny doplňují. Upravuje se odsud. */
   template: SlotValue[];
+  /** Prázdný měsíc: tlačítko je jediná hlavní akce stránky (F06). */
+  primary?: boolean;
 };
 
 const plural = (count: number, one: string, few: string, many: string) => `${count} ${count === 1 ? one : count >= 2 && count <= 4 ? few : many}`;
@@ -51,7 +65,7 @@ export function PrepareMonthDialog(props: Props) {
 
   return (
     <>
-      <button type="button" className="btn" onClick={() => setOpen(true)}>
+      <button type="button" className={props.primary ? "btn btn-primary" : "btn"} onClick={() => setOpen(true)}>
         Připravit měsíc
         {props.drafts.length > 0 && (
           <span className="count-badge" aria-label={plural(props.drafts.length, "návrh", "návrhy", "návrhů")}>
@@ -68,7 +82,8 @@ export function PrepareMonthDialog(props: Props) {
             </h3>
             <p className="hint">Doplní návrhy podle pravidelného rozvrhu, nic nezveřejní.</p>
             <div className="row prepare-fill">
-              <ActionForm action={generateMonthAction} fields={{ month: props.monthKey }} label="Doplnit chybějící termíny" pendingLabel="Doplňuji…" />
+              {/* Bez návrhů je doplnění termínů jediný možný krok, a proto hlavní tlačítko okna. */}
+              <ActionForm action={generateMonthAction} fields={{ month: props.monthKey }} label="Doplnit chybějící termíny" pendingLabel="Doplňuji…" variant={props.drafts.length ? undefined : "primary"} />
               <TemplateDialog slots={props.template} />
             </div>
           </section>
@@ -160,6 +175,19 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
   const rows = [...templateDrafts, ...extraDrafts].map(rowState);
   const overview = prepareOverview(rows);
   const formRef = useRef<HTMLFormElement>(null);
+  // Klik na štítek přehledu zúží řádky na danou kategorii (F08), druhý klik filtr zruší. Skryté řádky zůstávají
+  // ve formuláři, takže se jejich úpravy uloží i odešlou stejně jako dřív.
+  const [rowFilter, setRowFilter] = useState<OverviewKey | null>(null);
+  const shown = (d: MonthDraft) => !rowFilter || matchesOverview(rowFilter, rowState(d));
+  const pickFilter = (key: OverviewKey, id: string) => {
+    if (rowFilter === key) {
+      setRowFilter(null);
+      return;
+    }
+    setRowFilter(key);
+    // Fokus až po překreslení: řádek, na který se skáče, musí být vidět.
+    requestAnimationFrame(() => jump(key, id));
+  };
   const jump = (key: OverviewKey, id: string) => {
     const form = formRef.current;
     if (!form) return;
@@ -192,11 +220,33 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
     const who = people.find((p) => p.id === bulkLead)?.name ?? "";
     setBulkNote(
       filled.length
-        ? `Vedoucí ${who} doplněn do ${plural(filled.length, "řádku", "řádků", "řádků")}. Zatím neuloženo, uložte změny.`
+        ? `Vedoucí ${who} doplněn do ${plural(filled.length, "řádku", "řádků", "řádků")}. Zatím neuloženo, ulož změny.`
         : "Všechny řádky už vedoucího mají, nic se nezměnilo.",
     );
   };
+  // Hromadné doplnění tématu (F08): stejné pravidlo jako u vedoucího, jen do prázdných polí.
+  const [bulkTopic, setBulkTopic] = useState("");
+  const topicTargets = rowsMissingTopic(rows).length;
+  const fillTopics = () => {
+    const form = formRef.current;
+    if (!form || !bulkTopic) return;
+    const field = (id: string) => form.elements.namedItem(`topic-${id}`);
+    const values = Object.fromEntries(drafts.map((d) => [d.id, (field(d.id) as HTMLInputElement | null)?.value ?? ""]));
+    const holidays = new Set(drafts.filter((d) => d.type === "holiday").map((d) => d.id));
+    const { filled } = fillEmptyTopics(values, bulkTopic, holidays);
+    for (const id of filled) {
+      const input = field(id);
+      if (input instanceof HTMLInputElement) input.value = bulkTopic;
+    }
+    readFilled(form);
+    setBulkNote(
+      filled.length
+        ? `Téma ${bulkTopic} doplněno do ${plural(filled.length, "řádku", "řádků", "řádků")}. Zatím neuloženo, ulož změny.`
+        : "Všechny řádky už téma mají, nic se nezměnilo.",
+    );
+  };
   const [allowIncomplete, setAllowIncomplete] = useState(false);
+  const blockedReason = publishBlockedReason(rows, allowIncomplete);
   const audiences = [...new Set(chosen.map((d) => current(d).audience))];
 
   // Ruční datum zůstává v připravovaném měsíci a ne v minulosti (server to hlídá znovu).
@@ -205,14 +255,16 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
   const maxDate = addDays(`${shiftMonth(monthKey, 1)}-01`, -1);
 
   const group = (title: string, list: MonthDraft[]) => {
-    if (!list.length) return null;
-    const ids = list.map((d) => d.id);
+    const visible = list.filter(shown);
+    if (!visible.length) return null;
+    // Vybrat vše platí pro řádky, které správce právě vidí (i ve filtru přehledu).
+    const ids = visible.map((d) => d.id);
     const all = ids.every((id) => picked.has(id));
     return (
       <fieldset className="publish-group">
         <legend className="publish-group-head">
           <span className="item-title">
-            {title} <span className="muted">({list.length})</span>
+            {title} <span className="muted">({visible.length < list.length ? `${visible.length} z ${list.length}` : list.length})</span>
           </span>
           <button type="button" className="btn btn-small" onClick={() => setGroup(ids, !all)}>
             {all ? "Zrušit výběr" : "Vybrat vše"}
@@ -232,7 +284,7 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
             const dateKey = toDateKey(start);
             const name = `${d.label} ${formatDayMonth(dateKey)}`;
             return (
-              <li key={d.id} className="publish-row" data-picked={picked.has(d.id)} data-draft={d.id}>
+              <li key={d.id} className="publish-row" data-picked={picked.has(d.id)} data-draft={d.id} hidden={!shown(d)}>
                 <label className="publish-pick">
                   <input type="checkbox" name="pick" value={d.id} checked={picked.has(d.id)} onChange={(e) => toggle(d.id, e.target.checked)} />
                   <span className="publish-main">
@@ -306,17 +358,24 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
     );
   };
 
+  // Bez návrhů průvodce ukáže i další kroky dopředu (F07), zatím jako náhled. Zavírá se jen tlačítkem v záhlaví.
   if (!drafts.length) {
     return (
       <>
-        <p className="muted">V tomto měsíci nejsou žádné návrhy.</p>
-        {changeDrafts > 0 && <ChangeDraftsNote count={changeDrafts} />}
+        <section className="prepare-step" aria-labelledby="prepare-gaps" data-upcoming>
+          <h3 id="prepare-gaps">
+            <span className="step-no">2</span> Zkontrolovat
+          </h3>
+          <p className="hint">Po doplnění termínů tu u každého návrhu nastavíš pro koho, téma a vedoucího, i hromadně.</p>
+          {changeDrafts > 0 && <ChangeDraftsNote count={changeDrafts} />}
+        </section>
+        <section className="prepare-step" aria-labelledby="prepare-publish" data-upcoming>
+          <h3 id="prepare-publish">
+            <span className="step-no">3</span> Zveřejnit
+          </h3>
+          <p className="hint">Vybrané návrhy zveřejníš najednou. Kolegové je uvidí až potom.</p>
+        </section>
         {state && <ActionMessage state={state} />}
-        <div className="dialog-actions">
-          <button type="button" className="btn" onClick={onCancel}>
-            Zavřít
-          </button>
-        </div>
       </>
     );
   }
@@ -328,16 +387,39 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
         <h3 id="prepare-gaps">
           <span className="step-no">2</span> Zkontrolovat
         </h3>
-        <PrepareOverview items={overview} onJump={jump} />
+        <PrepareOverview items={overview} active={rowFilter} onPick={pickFilter} />
+        {rowFilter && (
+          <p className="small prepare-filter-note" role="status">
+            Zobrazeny jen řádky: {OVERVIEW_LABELS[rowFilter]}.{" "}
+            <button type="button" className="link-button" onClick={() => setRowFilter(null)}>
+              Zobrazit všechny řádky
+            </button>
+          </p>
+        )}
         <div className="prepare-bulk" role="group" aria-labelledby="prepare-bulk-title">
           <span className="prepare-tool-title" id="prepare-bulk-title">
-            Hromadně doplnit vedoucího
+            Hromadně doplnit téma a vedoucího
           </span>
+          <label className="field">
+            <span className="field-label">Téma do prázdných polí</span>
+            {/* Stejně jako volba vedoucího: neodesílá se a sama o sobě není rozepsaná změna. */}
+            <select className="select" value={bulkTopic} onChange={(e) => setBulkTopic(e.target.value)} data-unsaved-ignore aria-describedby="prepare-bulk-hint">
+              <option value="">Vyber téma</option>
+              {topics.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button type="button" className="btn" onClick={fillTopics} disabled={!bulkTopic || topicTargets === 0}>
+            {topicTargets ? `Doplnit téma do ${plural(topicTargets, "řádku", "řádků", "řádků")}` : "Doplnit téma"}
+          </button>
           <label className="field">
             <span className="field-label">Vedoucí do prázdných polí</span>
             {/* Pomocná volba bez jména: neodesílá se a sama o sobě není rozepsaná změna (Modal). */}
             <select className="select" value={bulkLead} onChange={(e) => setBulkLead(e.target.value)} data-unsaved-ignore aria-describedby="prepare-bulk-hint">
-              <option value="">Vyberte vedoucího</option>
+              <option value="">Vyber vedoucího</option>
               {people.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
@@ -351,7 +433,8 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
           <p className="field-hint field-hint-key" id="prepare-bulk-hint">
             {leadTargets
               ? `Doplní se jen ${plural(leadTargets, "řádek", "řádky", "řádků")} bez vedoucího, vyplněné vedoucí se nepřepíšou.`
-              : "Všechny návrhy už vedoucího mají."}
+              : "Všechny návrhy už vedoucího mají."}{" "}
+            {topicTargets ? `Téma se doplní jen do ${plural(topicTargets, "prázdného pole", "prázdných polí", "prázdných polí")}.` : "Všechny návrhy už téma mají."}
           </p>
           <p className="small prepare-bulk-note" role="status">
             {bulkNote}
@@ -393,7 +476,20 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
       </section>
       {state && <ActionMessage state={state} />}
       <div className="dialog-actions">
-        <button type="submit" name="intent" value="publish" className="btn btn-primary" disabled={pending || chosen.length === 0 || (incomplete > 0 && !allowIncomplete)}>
+        {/* Šedé Zveřejnit vždy říká proč (F09), přímo nad tlačítky, ať je to vidět i v posunutém okně. */}
+        {blockedReason && (
+          <p className="field-hint prepare-publish-why" id="prepare-publish-why">
+            {blockedReason}
+          </p>
+        )}
+        <button
+          type="submit"
+          name="intent"
+          value="publish"
+          className="btn btn-primary"
+          disabled={pending || blockedReason !== null}
+          aria-describedby={blockedReason ? "prepare-publish-why" : undefined}
+        >
           {chosen.length ? `Zveřejnit ${plural(chosen.length, "akci", "akce", "akcí")}` : "Zveřejnit"}
         </button>
         <button type="submit" name="intent" value="save" className="btn" disabled={pending}>
@@ -422,10 +518,18 @@ const OVERVIEW_LABELS: Record<OverviewKey, string> = {
 };
 
 /**
- * Přehled stavu návrhů nad řádky. Každá kategorie s aspoň jedním řádkem je tlačítko, které posune okno na
- * první dotčený řádek a dá fokus na pole, které je potřeba doplnit.
+ * Přehled stavu návrhů nad řádky. Každá kategorie s aspoň jedním řádkem je přepínač: zúží řádky na tuto
+ * kategorii a dá fokus na pole prvního z nich, které je potřeba doplnit. Druhý klik filtr zruší.
  */
-function PrepareOverview({ items, onJump }: { items: Array<{ key: OverviewKey; count: number; firstId: string | null }>; onJump: (key: OverviewKey, id: string) => void }) {
+function PrepareOverview({
+  items,
+  active,
+  onPick,
+}: {
+  items: Array<{ key: OverviewKey; count: number; firstId: string | null }>;
+  active: OverviewKey | null;
+  onPick: (key: OverviewKey, id: string) => void;
+}) {
   return (
     <ul className="prepare-overview" aria-label="Stav návrhů">
       {items.map((item) => (
@@ -434,9 +538,11 @@ function PrepareOverview({ items, onJump }: { items: Array<{ key: OverviewKey; c
             type="button"
             className="btn btn-small prepare-overview-item"
             data-kind={item.key}
-            disabled={!item.firstId}
-            onClick={() => item.firstId && onJump(item.key, item.firstId)}
-            aria-label={`${OVERVIEW_LABELS[item.key]}: ${item.count}${item.firstId ? ", přejít na první řádek" : ""}`}
+            // Aktivní filtr jde zrušit i ve chvíli, kdy v kategorii už nic nezbylo (třeba po doplnění).
+            disabled={!item.firstId && active !== item.key}
+            aria-pressed={active === item.key}
+            onClick={() => onPick(item.key, item.firstId ?? "")}
+            aria-label={`${OVERVIEW_LABELS[item.key]}: ${item.count}${item.firstId ? ", zobrazit jen tyto řádky" : ""}`}
           >
             {OVERVIEW_LABELS[item.key]} <strong>{item.count}</strong>
           </button>

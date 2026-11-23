@@ -71,7 +71,7 @@ export function PreviewBar({ label }: { label: string }) {
           </>
         ) : (
           <>
-            Náhled <strong>{label}</strong> tu neplatí, stránka používá váš účet
+            Náhled <strong>{label}</strong> tu neplatí, stránka používá tvůj účet
           </>
         )}
         <span className="preview-bar-where"> · Domů, Plán, Témata, Zápisy a detail akce</span>

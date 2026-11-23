@@ -236,7 +236,7 @@ export async function listTasks(viewer: Viewer): Promise<JourneyTask[]> {
   }
 
   if (await needsCalendarConnection(db, isOrganizer(viewer))) {
-    tasks.unshift({ key: "kalendar-propojeni", title: "Propojte Kalendář Google", detail: "Bez propojení se pozvánky neposílají. Stačí jednou potvrdit souhlas u Googlu.", href: "/api/google/kalendar/pripojit?auto=1", action: "Propojit Kalendář", external: true });
+    tasks.unshift({ key: "kalendar-propojeni", title: "Propoj Kalendář Google", detail: "Bez propojení se pozvánky neposílají. Stačí jednou potvrdit souhlas u Googlu.", href: "/api/google/kalendar/pripojit?auto=1", action: "Propojit Kalendář", external: true });
   }
   if (isOrganizer(viewer)) {
     const stuck = await db
@@ -245,7 +245,7 @@ export async function listTasks(viewer: Viewer): Promise<JourneyTask[]> {
       .innerJoin(events, eq(events.id, calendarLinks.eventId))
       .where(and(eq(events.orgId, config.orgId), eq(calendarLinks.syncStatus, "attention")));
     for (const { event } of stuck) {
-      tasks.push({ key: `kalendar-${event.id}`, title: event.published?.label ?? "Akce", detail: "Pozvánka v Kalendáři neodpovídá Wiki a čeká na váš zásah.", href: `/vzdelavani/akce/${event.id}?odkud=prehled#kalendar`, action: "Vyřešit pozvánku", eventType: event.published?.type });
+      tasks.push({ key: `kalendar-${event.id}`, title: event.published?.label ?? "Akce", detail: "Pozvánka v Kalendáři neodpovídá Wiki a čeká na tvůj zásah.", href: `/vzdelavani/akce/${event.id}?odkud=prehled#kalendar`, action: "Vyřešit pozvánku", eventType: event.published?.type });
     }
     // Bez garantovaných témat doporučení i doplnění měsíce vychází jen ze zájmu. Úkol zmizí po nastavení prvního.
     const [topicState] = await db
@@ -253,7 +253,7 @@ export async function listTasks(viewer: Viewer): Promise<JourneyTask[]> {
       .from(topics)
       .where(and(eq(topics.orgId, config.orgId), isNull(topics.archivedAt)));
     if (topicState && Number(topicState.active) > 0 && Number(topicState.guaranteed) === 0) {
-      tasks.push({ key: "garantovana-temata", title: "Nastavte garantovaná témata", detail: "Vyberte až tři témata, která se mají probrat přednostně. Doporučení u akcí je pak nabídne jako první.", href: "/vzdelavani/temata", action: "Vybrat témata" });
+      tasks.push({ key: "garantovana-temata", title: "Nastav garantovaná témata", detail: "Vyber až tři témata, která se mají probrat přednostně. Doporučení u akcí je pak nabídne jako první.", href: "/vzdelavani/temata", action: "Vybrat témata" });
     }
   }
   if (canManageUsers(viewer)) {

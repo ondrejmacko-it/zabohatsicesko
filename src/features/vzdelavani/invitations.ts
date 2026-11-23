@@ -3,7 +3,7 @@ import { gmailSearchHref, type InvitationsView } from "@/server/calendar/rsvp";
 import type { TaskRow } from "./components/TasksCard";
 
 /**
- * Pozvánky bez odpovědi jako jeden úkol v „Čeká na vás“. Odpovídá se v e-mailu nebo v Google Kalendáři,
+ * Pozvánky bez odpovědi jako jeden úkol v „Čeká na tebe“. Odpovídá se v e-mailu nebo v Google Kalendáři,
  * Wiki odpověď jen čte. Vyřízené pozvánky ani neověřený stav úkol nejsou, nic po uživateli nechtějí.
  */
 export function invitationTask(view: InvitationsView | null): TaskRow | null {
@@ -14,8 +14,8 @@ export function invitationTask(view: InvitationsView | null): TaskRow | null {
   const nearest = `${first.title}, ${formatDayMonth(toDateKey(date))} v ${toTimeKey(date)}`;
   return {
     key: "pozvanky",
-    title: open.length === 1 ? "Odpovězte na pozvánku" : `Odpovězte na pozvánky (${open.length})`,
-    detail: `${open.length === 1 ? "" : "Nejbližší: "}${nearest}. Odpovězte v e-mailu s pozvánkou nebo v Google Kalendáři.`,
+    title: open.length === 1 ? "Odpověz na pozvánku" : `Odpověz na pozvánky (${open.length})`,
+    detail: `${open.length === 1 ? "" : "Nejbližší: "}${nearest}. Odpověz v e-mailu s pozvánkou nebo v Google Kalendáři.`,
     // Vyhledávání podle odesílatele včetně Spamu. Odkaz na konkrétní zprávu Wiki nezná. V simulaci odkaz není.
     ...(view.organizerEmail ? { href: gmailSearchHref(view.organizerEmail), action: "Otevřít Gmail", external: true, newTab: true } : {}),
     urgent: open.some((item) => item.urgent),

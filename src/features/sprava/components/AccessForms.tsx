@@ -40,7 +40,7 @@ function AccessFields({ roles, role: initialRole, groups: initialGroups }: { rol
             </button>
           ))}
         </div>
-        <span className="field-hint">Vyplní roli a skupiny níže. Potom je můžete ručně upravit.</span>
+        <span className="field-hint">Vyplní roli a skupiny níže. Potom je můžeš ručně upravit.</span>
       </div>
       <label className="field">
         <span className="field-label">Role (co smí dělat)</span>
@@ -125,7 +125,7 @@ export function InviteLink({ link }: { link: string }) {
           {copied ? "Zkopírováno" : "Kopírovat"}
         </button>
       </div>
-      <p className="field-hint field-hint-key">Odkaz funguje jednou a jen na zařízení, kde ho kolega otevře. Pošlete ho jen jemu.</p>
+      <p className="field-hint field-hint-key">Odkaz funguje jednou a jen na zařízení, kde ho kolega otevře. Pošli ho jen jemu.</p>
     </div>
   );
 }
