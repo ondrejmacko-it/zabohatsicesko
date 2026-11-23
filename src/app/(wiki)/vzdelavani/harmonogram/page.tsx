@@ -73,7 +73,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   ]);
   // Vlastní účast (PARTICIPATION=on): štítky a filtr Moje. Bez přepínače karty beze změny a bez dotazu.
   const participation = participationEnabled();
-  const participationFilters = participation || Boolean(preview);
+  const participationFilters = true; // Přehled povinných/dobrovolných je dostupný i bez aktivace zápisu účasti.
   const attendanceFilter = participationFilters && ["moje", "povinne", "dobrovolne"].includes(params.ucast ?? "")
     ? params.ucast
     : undefined;
