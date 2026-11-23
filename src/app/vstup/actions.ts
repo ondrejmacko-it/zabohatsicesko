@@ -23,19 +23,19 @@ const gateSchema = z.object({
 export async function enterDemo(_prev: GateState, formData: FormData): Promise<GateState> {
   const parsed = gateSchema.safeParse({ code: formData.get("code") ?? undefined, persona: formData.get("persona") });
   // Ostrá Wiki pouští dovnitř jen účty Google. Kontrola je tady, ne jen ve skrytém formuláři.
-  if (isLiveWiki()) return { error: "Do Wiki se přihlaste účtem Google." };
-  if (!parsed.success) return { error: "Vyberte roli, se kterou chcete ukázku projít." };
+  if (isLiveWiki()) return { error: "Do Wiki se přihlas účtem Google." };
+  if (!parsed.success) return { error: "Vyber roli, se kterou chceš ukázku projít." };
 
   const db = await getDb();
   const expected = config.accessCode;
   if (expected !== null && !(await hasGatePass())) {
     const check = await checkAccessCode(db, parsed.data.code ?? "", expected);
-    if (check === "limited") return { error: "Příliš mnoho pokusů. Zkuste to prosím za 15 minut." };
+    if (check === "limited") return { error: "Příliš mnoho pokusů. Zkus to prosím za 15 minut." };
     if (check === "wrong") return { error: "Přístupový kód nesouhlasí." };
     await grantGatePass(expected);
   }
   const personas = await listPersonas();
-  if (!personas.some((p) => p.id === parsed.data.persona)) return { error: "Vyberte roli ze seznamu." };
+  if (!personas.some((p) => p.id === parsed.data.persona)) return { error: "Vyber roli ze seznamu." };
 
   await startSession(parsed.data.persona);
   await audit(db, parsed.data.persona, "session.start", "user", parsed.data.persona);

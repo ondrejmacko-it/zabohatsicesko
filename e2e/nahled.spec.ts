@@ -24,7 +24,12 @@ test.describe("správce: pohled skupiny", () => {
     await page.goto("/");
     await expect(bar(page)).toContainText("jen ke čtení");
     await expect(page.getByRole("heading", { name: "Nejbližší akce" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Čeká na vás" })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "Čeká na tebe" })).toHaveCount(0);
+    // F16: pozdrav nepatří správci a navigace odpovídá pohledu poradce (bez Správy systému).
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Ahoj.");
+    const nav = page.getByRole("complementary", { name: "Hlavní navigace" });
+    await expect(nav.getByRole("link", { name: "Domů" })).toBeVisible();
+    await expect(nav.getByRole("link", { name: /Správa/ })).toHaveCount(0);
 
     await page.goto("/vzdelavani/temata");
     await expect(bar(page)).toContainText("jen ke čtení");
@@ -51,6 +56,20 @@ test.describe("správce: pohled skupiny", () => {
     await expect(bar(page)).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Přidat akci" }).first()).toBeVisible();
     await expect(page.getByLabel("Pohled")).toHaveValue("");
+    await expect(page.getByRole("complementary", { name: "Hlavní navigace" }).getByRole("link", { name: /Správa/ })).toBeVisible();
+  });
+
+  test("pohled kolegy: úvod nezdraví správce a Správa systému v navigaci chybí (F16)", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Ahoj.");
+    await expect(page.getByRole("heading", { name: "Co tě čeká" })).toBeVisible();
+    await page.getByLabel("Pohled").selectOption("kolega-demo-ucastnik");
+    await expect(bar(page)).toContainText("Účastník – finanční poradce");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Ahoj.");
+    await expect(page.getByRole("heading", { level: 1 })).not.toContainText("Správce");
+    await expect(page.getByRole("complementary", { name: "Hlavní navigace" }).getByRole("link", { name: /Správa/ })).toHaveCount(0);
+    await bar(page).getByRole("button", { name: "Ukončit pohled" }).click();
+    await expect(page.getByRole("complementary", { name: "Hlavní navigace" }).getByRole("link", { name: /Správa/ })).toBeVisible();
   });
 
   test("cookie jiného účtu nebo neplatný klíč náhled nezapne", async ({ page, context }) => {

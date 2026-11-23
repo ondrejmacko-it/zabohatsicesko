@@ -105,7 +105,7 @@ export async function retireWikiCalendars(
   if (!options.approvedFingerprint) return { mode: "dry-run", inventory, wouldRemove: inventory.personalCalendars.total };
   if (personalDelivery()) throw new Error("Úklid odmítnut: běží osobní režim (CALENDAR_DELIVERY=personal). Nejdřív přepnout na organizátora.");
   if (options.approvedFingerprint !== inventory.fingerprint) {
-    throw new Error("Úklid odmítnut: otisk nesouhlasí se současnou inventurou. Spusťte inventuru znovu a nechte ji schválit.");
+    throw new Error("Úklid odmítnut: otisk nesouhlasí se současnou inventurou. Spusť inventuru znovu a nech ji schválit.");
   }
   const rows = await db.select({ userId: personalCalendars.userId }).from(personalCalendars).where(eq(personalCalendars.orgId, config.orgId));
   let removed = 0;

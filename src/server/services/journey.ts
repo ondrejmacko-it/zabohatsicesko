@@ -4,10 +4,10 @@ import { minutesStarted } from "@/lib/minutes";
 import { formatDayMonth, toDateKey } from "@/lib/time";
 import type { EventType, Group } from "@/lib/types";
 import { needsCalendarConnection } from "@/server/calendar/google-auth";
-import { config, now } from "@/server/config";
+import { config, now, recordingUploadEnabled } from "@/server/config";
 import { getDb } from "@/server/db/client";
 import { calendarLinks, events, minutes, recordings, topics, transcriptionJobs, users } from "@/server/db/schema";
-import { canHandleRecording, canManageUsers, canReadPublishedMinutes, isEventHandler, isOrganizer, type Viewer } from "@/server/policy";
+import { canHandleRecording, canManageUsers, canReadPublishedMinutes, isOrganizer, minutesTaskRole, type Viewer } from "@/server/policy";
 import { pendingRequestCount } from "@/server/services/users";
 
 // Čtecí pohledy pro stránky Plán a Zápisy. Přístup rozhoduje policy.ts u každého řádku.
@@ -161,23 +161,30 @@ const MAX_MINUTES_TASKS = 4;
 
 /** Úkol podle stavu nahrávky. Text i tlačítko odpovídají tomu, co ukazuje detail akce. */
 const MINUTES_TASKS: Record<Exclude<RecordingProgress, "published">, { detail: string; action: string }> = {
-  none: { detail: "Proběhla a nemá zápis. Připravte ho z nahrávky, přepisu nebo poznámek.", action: "Dokončit zápis" },
+  none: { detail: "Proběhla a nemá zápis. Vlož přepis nebo poznámky, nebo nahraj soubor.", action: "Dokončit zápis" },
   processing: { detail: "Nahrávka se přepisuje. Návrh zápisu bude za chvíli ke kontrole.", action: "Zobrazit stav" },
-  failed: { detail: "Přepis nahrávky se nepovedl. Zkuste ho znovu.", action: "Zkusit přepis znovu" },
+  failed: { detail: "Přepis nahrávky se nepovedl. Zkus ho znovu.", action: "Zkusit přepis znovu" },
   unsupported: { detail: "Ukázkový přepis tento soubor nepřepíše, umí jen ukázkovou nahrávku.", action: "Vybrat jinou nahrávku" },
-  started: { detail: "Zápis je založený, ale zatím prázdný. Doplňte ho a uložte.", action: "Dokončit zápis" },
+  started: { detail: "Zápis je založený, ale zatím prázdný. Doplň ho a ulož.", action: "Dokončit zápis" },
   draft: { detail: "Návrh zápisu čeká na kontrolu. Zveřejní ho vedoucí akce.", action: "Zkontrolovat zápis" },
 };
 
+/** S ukázkou nahrávky (F14) úkol nahrávku zmíní, bez ní ne. */
+const NONE_WITH_RECORDING = { detail: "Proběhla a nemá zápis. Připrav ho z nahrávky, přepisu nebo poznámek.", action: "Dokončit zápis" };
+
 /** Vedoucí akce zápis schvaluje, proto má vlastní úkol „Dokončit zápis“ místo kontroly. */
-const LEAD_DRAFT_TASK = { detail: "Návrh zápisu čeká na vaše schválení. Zveřejní se až po schválení.", action: "Dokončit zápis" };
+const LEAD_DRAFT_TASK = { detail: "Návrh zápisu čeká na tvoje schválení. Zveřejní se až po schválení.", action: "Dokončit zápis" };
+
+/** Správce u akce bez vedoucího: návrh nemá kdo schválit (F13). */
+const NO_LEAD_DRAFT_TASK = { detail: "Návrh zápisu je hotový, ale akce nemá vedoucího, který ho schválí. Doplň vedoucího.", action: "Doplnit vedoucího" };
 
 /** `external`: odkaz vede mimo stránky Wiki (přesměrování na Google), proto běžná navigace prohlížeče. */
 /** `eventType`: úkol patří ke konkrétní akci, filtr Typ akce na Plánu ho podle něj schová nebo nechá. */
 export type JourneyTask = { key: string; title: string; detail: string; href: string; action: string; external?: boolean; eventType?: EventType };
 
 /**
- * Co na uživatele čeká: zápisy k dokončení u akcí, které vede nebo kontroluje, a úkoly správce.
+ * Co na uživatele čeká: zápisy k dokončení u akcí, které vede (správce u akcí bez vedoucího), kontrola návrhů
+ * u akcí, které kontroluje, a úkoly správce.
  * Správce smí zápis řešit u každé akce, mezi úkoly ale dostává jen ty své. Ostatní má v „Přidat zápis“.
  */
 export async function listTasks(viewer: Viewer): Promise<JourneyTask[]> {
@@ -190,30 +197,46 @@ export async function listTasks(viewer: Viewer): Promise<JourneyTask[]> {
     .from(events)
     .where(and(eq(events.orgId, config.orgId), sql`(${events.published}->>'endsAt')::timestamptz < ${reference.toISOString()}::timestamptz`))
     .orderBy(desc(events.startsAt));
-  const handled = past.filter((row) => row.published?.status === "published" && row.published.type !== "holiday" && isEventHandler(viewer, row.published));
+  // F13: úkol k zápisu má vedoucí (u akce bez vedoucího správce), kontrolor jen kontrolu hotového návrhu.
+  const handled = past.flatMap((row) => {
+    const snapshot = row.published;
+    if (snapshot?.status !== "published" || snapshot.type === "holiday") return [];
+    const role = minutesTaskRole(viewer, snapshot);
+    return role ? [{ row, snapshot, role }] : [];
+  });
   if (handled.length) {
     const byEvent = await recordingProgressByEvent(db);
-    for (const row of handled) {
+    const canUpload = recordingUploadEnabled();
+    for (const { row, snapshot, role } of handled) {
       const state = byEvent.get(row.id) ?? "none";
       if (state === "published") continue;
-      const snapshot = row.published!;
+      if (role === "review" && state !== "draft") continue;
       // Datum v názvu: stejně pojmenované akce se opakují každý týden.
       const title = `${eventTitle(snapshot.label, snapshot.topicTitle)} · ${formatDayMonth(toDateKey(new Date(snapshot.startsAt)))}`;
       if (tasks.length >= MAX_MINUTES_TASKS) break;
       const today = toDateKey(new Date(snapshot.endsAt)) === toDateKey(reference);
       const href = `/vzdelavani/akce/${row.id}?odkud=prehled#nahravka`;
       const base = { href, eventType: snapshot.type };
-      if (today && state === "none") {
-        tasks.push({ ...base, key: `nahravka-${row.id}`, title: "Nahrajte nahrávku z dnešní akce", detail: `${title}. Zápis se z nahrávky připraví sám, vy ho jen zkontrolujete.`, action: "Nahrát nahrávku" });
+      if (today && state === "none" && canUpload) {
+        tasks.push({ ...base, key: `nahravka-${row.id}`, title: "Nahraj nahrávku z dnešní akce", detail: `${title}. Zápis se z nahrávky připraví sám, ty ho jen zkontroluješ.`, action: "Nahrát nahrávku" });
         continue;
       }
-      const task = state === "draft" && snapshot.leadId === viewer.id ? LEAD_DRAFT_TASK : MINUTES_TASKS[state];
+      const task =
+        state === "draft"
+          ? snapshot.leadId === viewer.id
+            ? LEAD_DRAFT_TASK
+            : snapshot.leadId === null
+              ? NO_LEAD_DRAFT_TASK
+              : MINUTES_TASKS.draft
+          : state === "none" && canUpload
+            ? NONE_WITH_RECORDING
+            : MINUTES_TASKS[state];
       tasks.push({ ...base, ...task, key: `${state === "draft" || state === "started" ? "zapis" : "nahravka"}-${row.id}`, title });
     }
   }
 
   if (await needsCalendarConnection(db, isOrganizer(viewer))) {
-    tasks.unshift({ key: "kalendar-propojeni", title: "Propojte Kalendář Google", detail: "Bez propojení se pozvánky neposílají. Stačí jednou potvrdit souhlas u Googlu.", href: "/api/google/kalendar/pripojit?auto=1", action: "Propojit Kalendář", external: true });
+    tasks.unshift({ key: "kalendar-propojeni", title: "Propoj Kalendář Google", detail: "Bez propojení se pozvánky neposílají. Stačí jednou potvrdit souhlas u Googlu.", href: "/api/google/kalendar/pripojit?auto=1", action: "Propojit Kalendář", external: true });
   }
   if (isOrganizer(viewer)) {
     const stuck = await db
@@ -222,7 +245,7 @@ export async function listTasks(viewer: Viewer): Promise<JourneyTask[]> {
       .innerJoin(events, eq(events.id, calendarLinks.eventId))
       .where(and(eq(events.orgId, config.orgId), eq(calendarLinks.syncStatus, "attention")));
     for (const { event } of stuck) {
-      tasks.push({ key: `kalendar-${event.id}`, title: event.published?.label ?? "Akce", detail: "Pozvánka v Kalendáři neodpovídá Wiki a čeká na váš zásah.", href: `/vzdelavani/akce/${event.id}?odkud=prehled#kalendar`, action: "Vyřešit pozvánku", eventType: event.published?.type });
+      tasks.push({ key: `kalendar-${event.id}`, title: event.published?.label ?? "Akce", detail: "Pozvánka v Kalendáři neodpovídá Wiki a čeká na tvůj zásah.", href: `/vzdelavani/akce/${event.id}?odkud=prehled#kalendar`, action: "Vyřešit pozvánku", eventType: event.published?.type });
     }
     // Bez garantovaných témat doporučení i doplnění měsíce vychází jen ze zájmu. Úkol zmizí po nastavení prvního.
     const [topicState] = await db
@@ -230,7 +253,7 @@ export async function listTasks(viewer: Viewer): Promise<JourneyTask[]> {
       .from(topics)
       .where(and(eq(topics.orgId, config.orgId), isNull(topics.archivedAt)));
     if (topicState && Number(topicState.active) > 0 && Number(topicState.guaranteed) === 0) {
-      tasks.push({ key: "garantovana-temata", title: "Nastavte garantovaná témata", detail: "Vyberte až tři témata, která se mají probrat přednostně. Doporučení u akcí je pak nabídne jako první.", href: "/vzdelavani/temata", action: "Vybrat témata" });
+      tasks.push({ key: "garantovana-temata", title: "Nastav garantovaná témata", detail: "Vyber až tři témata, která se mají probrat přednostně. Doporučení u akcí je pak nabídne jako první.", href: "/vzdelavani/temata", action: "Vybrat témata" });
     }
   }
   if (canManageUsers(viewer)) {

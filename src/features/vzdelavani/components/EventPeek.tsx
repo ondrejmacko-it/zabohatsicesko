@@ -16,6 +16,8 @@ import { ChangeBanner } from "./ChangeBanner";
 import { EventWindow } from "./EventDialog";
 import { EventMenu } from "./EventMenu";
 import { minutesSectionLabel } from "@/lib/minutes";
+import { ownParticipationDetail } from "@/server/services/participation";
+import { ParticipationPanel } from "./ParticipationPanel";
 
 type Props = {
   user: Viewer;
@@ -126,6 +128,8 @@ export async function EventPeek({ user, eventId, preview, closeHref, presetTopic
     // Zrušení do Kalendáře nedošlo: správce dostane opravu. Jinak se technický stav v okně neukazuje.
     ...(managing && !holiday && card.syncStatus === "attention" ? [{ href: `${fullHref}#kalendar`, label: "Opravit v Kalendáři" }] : []),
   ];
+  // Vlastní účast (jen PARTICIPATION=on): stav a akce přímo v okně, potvrzení v samostatném okně.
+  const participation = holiday ? null : await ownParticipationDetail(user, preview, card.id);
   // Technické informace jsou pro správce jen tichý odkaz, nikdy hlavní tlačítko okna.
   const technical = managing && !holiday && links.length === 0;
 
@@ -157,6 +161,17 @@ export async function EventPeek({ user, eventId, preview, closeHref, presetTopic
         </div>
       </dl>
       {holiday && <p className="hint">Jen pro přehled, do Kalendáře se neposílá.</p>}
+      {participation && (
+        <ParticipationPanel
+          eventId={card.id}
+          state={participation.state}
+          label={participation.label}
+          actions={participation.actions}
+          excuse={participation.excuse}
+          calendar={participation.calendar}
+          preview={Boolean(preview)}
+        />
+      )}
       {technical && (
         <p className="small peek-tech">
           <Link href={fullHref}>Technické informace</Link>

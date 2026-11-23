@@ -1,3 +1,4 @@
+import type { OwnParticipationView } from "@/server/domain/participation";
 import { randomUUID } from "node:crypto";
 import { and, asc, eq, gt, gte, inArray, isNull, lt, ne, or, sql } from "drizzle-orm";
 import { EXTRAORDINARY_TYPES } from "@/lib/labels";
@@ -56,6 +57,8 @@ export type EventCard = {
   handler: boolean;
   /** Akce má zveřejněný zápis a divák ho smí číst (`canReadPublishedMinutes`). */
   minutesPublished: boolean;
+  /** Vlastní účast (štítek, akce). Jen se zapnutou účastí, doplňuje `withOwnParticipation`. */
+  participation?: OwnParticipationView | null;
 };
 
 export type EventOriginal = {

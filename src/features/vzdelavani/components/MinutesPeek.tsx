@@ -91,7 +91,7 @@ export function AddMinutesPicker({
         </div>
       ) : (
         <>
-          <p className="hint">Vyberte akci a dokončete její zápis.</p>
+          <p className="hint">Vyber akci a dokonči její zápis.</p>
           <ul className="brief-list picker-list">
             {items.map((item) => {
               const body = (

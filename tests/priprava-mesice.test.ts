@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { draftGaps, fillEmptyLeads, prepareOverview, rowsMissingLead, type DraftRowState } from "@/features/vzdelavani/prepare-month";
+import { audienceOptions, draftGaps, fillEmptyLeads, prepareOverview, rowsMissingLead, type DraftRowState } from "@/features/vzdelavani/prepare-month";
 
 const row = (id: string, over: Partial<DraftRowState> = {}): DraftRowState => ({
   id,
@@ -59,5 +59,17 @@ describe("hromadné doplnění vedoucího", () => {
     const rows = [row("a", { lead: false }), row("b"), row("s", { holiday: true, lead: false })];
     expect(rowsMissingLead(rows)).toEqual(["a"]);
     expect(fillEmptyLeads({ a: "", b: "u-jana", s: "" }, "u-petr", new Set(["s"])).filled).toEqual(rowsMissingLead(rows));
+  });
+});
+
+describe("Pro koho v přípravě měsíce (F01)", () => {
+  test("nové plánování nabízí jen Všichni, FP a RM", () => {
+    expect(audienceOptions("vsichni")).toEqual(["vsichni", "fp", "rm"]);
+    expect(audienceOptions("fp")).toEqual(["vsichni", "fp", "rm"]);
+    expect(audienceOptions("rm")).toEqual(["vsichni", "fp", "rm"]);
+  });
+
+  test("starší skupina zůstane jen u návrhu, který ji už má", () => {
+    expect(audienceOptions("tym-a")).toEqual(["vsichni", "fp", "rm", "tym-a"]);
   });
 });

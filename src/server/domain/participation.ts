@@ -182,3 +182,46 @@ export function desiredGuestIds(
   }
   return [...ids].sort();
 }
+
+/** Akce, kterou smí člověk se svou účastí udělat. Stejné názvy jako `ParticipationChange.kind`. */
+export type ParticipationAction = ParticipationChange["kind"];
+
+export const PARTICIPATION_LABELS = {
+  required: "Povinné pro tebe",
+  optional: "Můžeš se přihlásit",
+  voluntary_enrolled: "Přihlášeno",
+  excused: "Omluveno",
+} as const satisfies Partial<Record<ParticipationState, string>>;
+
+/**
+ * Vlastní účast pro kartu a detail: jen stav, štítek a dovolené akce. Bez důvodu a poznámky omluvy a bez
+ * jakýchkoli údajů o ostatních. `actions` je prázdné u proběhlé či zrušené akce a v náhledu.
+ */
+export type OwnParticipationView = {
+  state: ParticipationState;
+  label: string | null;
+  actions: ParticipationAction[];
+};
+
+export function ownParticipationView(participation: Participation | null, { readOnly }: { readOnly: boolean }): OwnParticipationView | null {
+  if (!participation) return null;
+  const { state } = participation;
+  const label = state === "cancelled" ? null : PARTICIPATION_LABELS[state];
+  const actions: ParticipationAction[] = [];
+  if (!readOnly) {
+    if (canVoluntarilyJoin(participation)) actions.push("enroll");
+    if (canWithdraw(participation)) actions.push("withdraw");
+    if (canExcuse(participation) && state === "required") actions.push("excuse");
+    if (canRevokeExcuse(participation)) actions.push("revoke_excuse");
+  }
+  return { state, label, actions };
+}
+
+/** Filtr „Moje“: povinné (i omluvené), dobrovolně přihlášené a akce, které člověk vede nebo kontroluje. */
+export function isMine(view: OwnParticipationView | null | undefined, handler: boolean): boolean {
+  if (handler) return true;
+  return view?.state === "required" || view?.state === "excused" || view?.state === "voluntary_enrolled";
+}
+
+/** Strop změn vlastní účasti na člověka a hodinu (akce formuláře). Přihlášky a omluvy nikdo nemění častěji. */
+export const PARTICIPATION_LIMIT = { count: 30, windowSec: 3600 };

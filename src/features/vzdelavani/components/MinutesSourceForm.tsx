@@ -9,28 +9,19 @@ import { UploadForm } from "./UploadForm";
 
 const MAX_TEXT_BYTES = 1024 * 1024;
 
-type Choice = "recording" | "text" | "file" | "manual";
-
-// Jedna věta u každé volby, formát a limit se ukážou až u zvolené. Ukázková nahrávka je poslední a není
-// výchozí: dokud přepis neumí skutečné schůzky, nemá se tvářit jako hlavní cesta.
-const CHOICES: Array<{ id: Choice; title: string; detail: string }> = [
-  { id: "text", title: "Vložit text", detail: "Přepis nebo poznámky." },
-  { id: "file", title: "Textový soubor", detail: "Přepis nebo titulky ze souboru." },
-  { id: "manual", title: "Napsat ručně", detail: "Prázdná šablona zápisu." },
-  { id: "recording", title: "Nahrávka (ukázka)", detail: "Přepis umí jen ukázkovou nahrávku." },
-];
-
 /** Formulář, ze kterého vznikne návrh zápisu bez nahrávky. Server zdroj znovu ověří (přípona, velikost, UTF-8). */
-function DraftForm({ eventId, source, replaceId, replacingDraft, children, submitLabel, disabled }: {
+function DraftForm({ eventId, source, replaceId, replacingDraft, children, submitLabel, disabled, secondary }: {
   eventId: string;
-  /** Bez hodnoty vybírá zdroj pole formuláře (přepis / poznámky). */
-  source?: "file" | "manual";
+  /** `pasted` = vložený text, nebo soubor (server rozhodne podle toho, co přišlo). */
+  source: "pasted" | "manual";
   replaceId: string | null;
   /** Aktuální rozepsaný návrh má obsah: nahrazení se potvrdí v samostatném okně (server ho bez potvrzení odmítne). */
   replacingDraft?: boolean;
   children?: ReactNode;
   submitLabel: string;
   disabled?: boolean;
+  /** Vedlejší cesta (ruční zápis): tlačítko bez zvýraznění. */
+  secondary?: boolean;
 }) {
   const [state, action, pending] = useActionState(createMinutesDraftAction, null);
   const [asking, setAsking] = useState(false);
@@ -52,11 +43,11 @@ function DraftForm({ eventId, source, replaceId, replacingDraft, children, submi
       <input type="hidden" name="id" value={eventId} />
       <input type="hidden" name="replaceId" value={replaceId ?? ""} />
       <input type="hidden" name="confirmReplace" value={replacingDraft ? "on" : ""} />
-      {source && <input type="hidden" name="source" value={source} />}
+      <input type="hidden" name="source" value={source} />
       {children}
       <ActionMessage state={state} />
       <div className="row">
-        <button type="submit" className="btn btn-primary" disabled={pending || disabled}>
+        <button type="submit" className={secondary ? "btn" : "btn btn-primary"} disabled={pending || disabled}>
           {pending ? "Připravuji…" : submitLabel}
         </button>
       </div>
@@ -64,7 +55,7 @@ function DraftForm({ eventId, source, replaceId, replacingDraft, children, submi
         open={asking}
         title="Nahradit rozepsaný zápis?"
         urgent
-        description={<p>Nový návrh nahradí rozepsaný zápis. Starší verze zůstane uložená v historii, v okně už ji neuvidíte.</p>}
+        description={<p>Nový návrh nahradí rozepsaný zápis. Starší verze zůstane uložená v historii, v okně už ji neuvidíš.</p>}
         onCancel={() => setAsking(false)}
       >
         <button type="button" className="btn btn-primary" onClick={() => setAsking(false)} autoFocus>
@@ -87,77 +78,68 @@ function DraftForm({ eventId, source, replaceId, replacingDraft, children, submi
 }
 
 /**
- * Volba zdroje zápisu: nahrávka (stávající tok), vložený text, textový soubor nebo ruční zápis.
+ * Zdroj zápisu (F14): jedno pole pro přepis nebo poznámky a vedle něj nahrání textového souboru. Ruční zápis
+ * je vedlejší tlačítko. Nahrávka se nabídne, jen když je ukázka přepisu zapnutá (`canUpload`, rozhoduje server).
  * Z každého zdroje vznikne upravitelný návrh. `replaceId` = aktuální zápis, který nový návrh nahradí.
  */
-export function MinutesSourceForm({ eventId, eventLabel, hasRecording, replaceId, replacingDraft }: {
+export function MinutesSourceForm({ eventId, eventLabel, hasRecording, canUpload, replaceId, replacingDraft }: {
   eventId: string;
   eventLabel: string;
   hasRecording: boolean;
+  /** Nahrávání nahrávky je zapnuté (`RECORDING_DEMO`). Jinak se volba vůbec neukáže. */
+  canUpload: boolean;
   replaceId: string | null;
   /** Aktuální zápis je rozpracovaný návrh s obsahem: nahrazení se potvrdí (prázdnou šablonu ne, nic se neztratí). */
   replacingDraft: boolean;
 }) {
-  const [choice, setChoice] = useState<Choice>("text");
   const [text, setText] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
   const textTooLarge = new Blob([text]).size > MAX_TEXT_BYTES;
   const fileTooLarge = file !== null && file.size > MAX_TEXT_BYTES;
+  const both = file !== null && text.trim() !== "";
 
   return (
     <div className="stack">
-      <fieldset className="persona-list source-list">
-        <legend className="field-label">Z čeho zápis připravit</legend>
-        {CHOICES.map((c) => (
-          <label key={c.id} className="persona">
-            <input type="radio" name="minutes-source" value={c.id} checked={choice === c.id} onChange={() => setChoice(c.id)} />
-            <span>
-              <span className="item-title">{c.title}</span>
-              <span className="item-meta">{c.detail}</span>
-            </span>
-          </label>
-        ))}
-      </fieldset>
-
-      {choice === "recording" && <UploadForm eventId={eventId} eventLabel={eventLabel} replacing={hasRecording} />}
-
-      {choice === "text" && (
-        <DraftForm eventId={eventId} replaceId={replaceId} replacingDraft={replacingDraft} submitLabel="Připravit návrh zápisu" disabled={!text.trim() || textTooLarge}>
-          <label className="field">
-            <span className="field-label">Co vkládáte</span>
-            <select className="select" name="source" defaultValue="transcript">
-              <option value="transcript">Přepis schůzky</option>
-              <option value="notes">Poznámky</option>
-            </select>
-          </label>
-          <label className="field">
-            <span className="field-label">Text přepisu nebo poznámek</span>
-            <textarea className="textarea" name="text" rows={6} value={text} onChange={(e) => setText(e.target.value)} />
-            <span className="field-hint">Nadpisy Shrnutí, Hlavní body, Rozhodnutí a Další kroky se převezmou. Nejvýš 1 MB.</span>
-          </label>
-          {textTooLarge && <p className="notice notice-danger">Text je větší než 1 MB. Zkraťte ho prosím.</p>}
-        </DraftForm>
-      )}
-
-      {choice === "file" && (
-        <DraftForm eventId={eventId} source="file" replaceId={replaceId} replacingDraft={replacingDraft} submitLabel="Připravit návrh ze souboru" disabled={!file || fileTooLarge}>
-          <FilePicker
-            name="file"
-            label="Textový soubor"
-            accept=".txt,.md,.vtt,.srt,text/plain,text/markdown,text/vtt"
-            hint="TXT, MD, VTT nebo SRT v UTF-8, nejvýš 1 MB. Časy z titulků se odstraní. Text z PDF nebo Wordu vložte ručně."
-            maxBytes={MAX_TEXT_BYTES}
-            tooLargeText="Soubor je větší než 1 MB. Vyberte prosím menší."
-            onChange={setFile}
-          />
-        </DraftForm>
-      )}
-
-      {choice === "manual" && (
-        <DraftForm eventId={eventId} source="manual" replaceId={replaceId} replacingDraft={replacingDraft} submitLabel="Napsat zápis ručně">
-          <p className="small muted">Oddíly Shrnutí, Hlavní body, Rozhodnutí a Další kroky.</p>
-        </DraftForm>
-      )}
+      <DraftForm
+        eventId={eventId}
+        source="pasted"
+        replaceId={replaceId}
+        replacingDraft={replacingDraft}
+        submitLabel="Připravit návrh zápisu"
+        disabled={(!text.trim() && !file) || textTooLarge || fileTooLarge || both}
+      >
+        <label className="field">
+          <span className="field-label">Vlož přepis nebo poznámky</span>
+          <textarea className="textarea" name="text" rows={6} value={text} onChange={(e) => setText(e.target.value)} />
+          <span className="field-hint">Nadpisy Shrnutí, Hlavní body, Rozhodnutí a Další kroky se převezmou. Nejvýš 1 MB.</span>
+        </label>
+        {textTooLarge && <p className="notice notice-danger">Text je větší než 1 MB. Zkrať ho prosím.</p>}
+        <FilePicker
+          name="file"
+          label="nebo nahraj soubor"
+          accept=".txt,.md,.vtt,.srt,text/plain,text/markdown,text/vtt"
+          hint="TXT, MD, VTT nebo SRT v UTF-8, nejvýš 1 MB. Časy z titulků se odstraní. Text z PDF nebo Wordu vlož do pole."
+          maxBytes={MAX_TEXT_BYTES}
+          tooLargeText="Soubor je větší než 1 MB. Vyber prosím menší."
+          onChange={setFile}
+          optional
+        />
+        {both && <p className="notice">Vlož text, nebo nahraj soubor. Obojí najednou nejde, jedno z toho odeber.</p>}
+        {/* F15: pravidla pro citlivá data říká formulář dřív, než vedoucí text vloží. */}
+        <p className="small muted" data-testid="citliva-data">
+          Jména a kontakty klientů se z návrhu i z uloženého textu vynechají. Text se nepoužívá k trénování AI.
+        </p>
+      </DraftForm>
+      <div className="row">
+        <DraftForm eventId={eventId} source="manual" replaceId={replaceId} replacingDraft={replacingDraft} submitLabel="Napsat zápis ručně" secondary />
+        {canUpload && (
+          <button type="button" className="btn" aria-expanded={uploading} onClick={() => setUploading((value) => !value)}>
+            Nahrávka (ukázka)
+          </button>
+        )}
+      </div>
+      {canUpload && uploading && <UploadForm eventId={eventId} eventLabel={eventLabel} replacing={hasRecording} />}
     </div>
   );
 }

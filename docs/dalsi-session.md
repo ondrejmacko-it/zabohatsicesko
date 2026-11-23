@@ -1,3 +1,225 @@
+# 18 BODŮ ZADAVATELKY – FINÁLNÍ INTEGRAČNÍ OPRAVY (23. 11. 2026) – začni tímto
+
+* Větev `claude/funkce/finalni-integracni-opravy` nad `claude/funkce/kalendar-f04` (PR #84), draft PR do ní.
+  Nic nemergnuto, žádná produkční operace.
+* Opraveno s regresními testy, které před opravou selhaly: A (přepočet pozvánek po změně účtu i pro přihlášky,
+  „Všichni“ a spravované adresy), C (náhled dopadu změny = stejný výpočet hostů jako synchronizace, pravdivá věta
+  o publiku), D/O09 (věty panelu o Kalendáři bez nepravdivých tvrzení). B: manažerská struktura neexistuje,
+  oprávnění beze změny, doplněné testy.
+* Výsledky, otevřená rozhodnutí R1–R7 a checklist: `docs/report-finalni-integracni-opravy.md`.
+* Postup merge pro uživatele: `docs/navod-merge-f01-f18.md` (odshora dolů, merge commit, jen #77 do `main`).
+  Každý merge do `main` nasazuje produkci (ostrá Wiki se skutečným Google Kalendářem).
+
+**Další krok:** uživatel slučuje podle návodu, nebo rozhodne R1–R7. Nic nemergovat za něj.
+
+# 18 BODŮ ZADAVATELKY – PR8 F04 HOTOVO V SIMULACI, VŠECH 18 BODŮ OVĚŘENO (22. 11. 2026) – začni tímto
+
+* **Znění F01–F18 a D01–D07 je v `docs/pozadavky-f01-f18.md`. Na zadání se uživatele už neptej.**
+* PR8: větev `claude/funkce/kalendar-f04` (draft PR #84), stacked na `claude/funkce/release-audit` (PR #83), nic nemergnuto.
+* Oprava padajícího e2e F04, dvě příčiny:
+  1. Okno akce v Plánu (`EventPeek`, `?akce=`) stav vlastní pozvánky spočítalo, ale `ParticipationPanel` nedostal
+     `calendar` (detail akce ano). Přidán jeden prop; okno teď stav Kalendáře ukazuje (dřívější otevřený bod uzavřen).
+  2. Test otevíral první kartu, pro RM to byla ukázková `tr-rm-1112` se spárovanou pozvánkou (ruční hosté, managed
+     null), o které panel záměrně nic netvrdí. Test ji přeskakuje (`PAIRED_INVITE`). Seed se neměnil: `plan.test.ts`
+     a `publishing.test.ts` počítají s tím, že host spárované pozvánky je ruční.
+  * Nové unit testy v `tests/kalendar-f04.test.ts` (18/18): okno předá panelu stav, spárovaná pozvánka = neznámý stav,
+    pozvánka založená frontou nad seedem (`ev-11-26`) zná stav při povinné akci, omluvě a přihlášce.
+* Ověření: lint, typecheck, unit 535/535, build OK, celé e2e 1333 OK / 213 přeskočeno / 0 chyb.
+
+| Bod | Stav po PR8 |
+|---|---|
+| F01–F03, F05 | hotovo (F02, F03, F05 za přepínačem `PARTICIPATION`) |
+| F04 | hotovo v simulaci (unit + e2e); živý test s Googlem čeká na schválení (D06) |
+| F06–F18 | hotovo |
+
+**Další krok:** zkontrolovat celý stack PR #77–#84 (base, diffy, popisy, výsledky testů) a připravit souhrn pro
+uživatele ke schválení. Nic nemergovat. Relaci spouští uživatel ručně (automatické založení odmítl limit
+zanoření relací 8).
+**Otevřené:** O09 (věta panelu u omluvy ručního hosta spárované pozvánky, viz `docs/pozadavky-f01-f18.md`), O04
+(`declined` za omluveného Wiki nenastavuje), živý test F04 (D06). Starší otevřené otázky viz oddíl PR7 níže.
+
+# 18 BODŮ ZADAVATELKY – PR7 RELEASE AUDIT + F06–F09 (draft PR), DALŠÍ JE PR8 (22. 11. 2026) – začni tímto
+
+* **Znění F01–F18 a rozhodnutí D01–D07 je v `docs/pozadavky-f01-f18.md`. Na zadání se uživatele už neptej.**
+* PR7: větev `claude/funkce/release-audit`, stacked na `claude/funkce/obecne-f16-f18` (PR #82), nic nemergnuto.
+  * F06: prázdný měsíc (správce, aktuální a další měsíce) = jediné hlavní tlačítko „Připravit měsíc“ v liště
+    (`primary`), „Přidat akci“ je tam vedlejší (`EventDialog quiet`), druhé tlačítko „Přidat chybějící termíny jako
+    návrhy“ zmizelo, prázdný stav jen v oznámení (`Agenda emptyText={null}`). Okno zůstává na jednom místě ve stromu
+    (přesun do oznámení po doplnění termínů okno zavřel, proto ne).
+  * F07: bez návrhů okno ukáže kroky 1–3 (2 a 3 tlumeně, `data-upcoming`), dole už žádné druhé „Zavřít“;
+    „Doplnit chybějící termíny“ je tam hlavní tlačítko.
+  * F08: „Hromadně doplnit téma a vedoucího“ (`fillEmptyTopics`, jen prázdná pole, svátek ne); štítky přehledu jsou
+    přepínače (`aria-pressed`) a filtrují řádky (`matchesOverview`, skryté řádky zůstávají ve formuláři), druhý klik
+    nebo „Zobrazit všechny řádky“ filtr zruší.
+  * F09: `publishBlockedReason` = věta u šedého Zveřejnit („Doplň téma a vedoucího u 18 akcí, nebo potvrď
+    zveřejnění neúplných termínů.“, varianty jen téma / jen vedoucí / obojí / bez výběru), `aria-describedby`.
+  * Nestabilní `rychle-akce.spec.ts:196`: příčina v testu. Ťuknutí „mimo menu“ na nadpis měsíce: Playwright k němu
+    posunul stránku a ťuknutí občas dopadlo na položku otevřeného menu (Duplikovat → okno Přidat akci), menu se
+    zavíralo až po posunu. Test teď ťuká do levého okraje vedle seznamu bez posunu. Pokus menu při posunu jen
+    přikládat k tlačítku (místo zavření) test rozbil jinak, vráceno, `Menu.tsx` beze změny. 42/42 na telefonech.
+* Ověření: lint, typecheck, unit 516/516, build OK, celé e2e 1329 OK / 203 přeskočeno / 0 chyb; nové testy F06–F09
+  `--repeat-each 6` 276/276.
+
+| Bod | Stav po PR7 |
+|---|---|
+| F01 | hotovo (PR1 + PR3) |
+| F02, F03, F05 | hotovo za přepínačem `PARTICIPATION` |
+| F04 | základ (fake Google, O04): živé pozvánky vyžadují schválení (D06) |
+| F06–F09 | hotovo (PR7, unit `tests/priprava-mesice-f06-f09.test.ts`, e2e `e2e/priprava-mesice-f06-f09.spec.ts`) |
+| F10–F15 | hotovo (PR4, PR5) |
+| F16–F18 | hotovo (PR6) |
+
+**Další krok = PR8:** F04 dotáhnout v simulaci (fake Google): povinná akce = pozvánka po zveřejnění, omluva ji
+odmítne (D01), dobrovolná se přidá až po přihlášení a odhlášení ji odebere; doložit unit + e2e testem, popsat, co
+zbývá pro živý test (schválení uživatele, D06). Plus tabulka bod → konkrétní test pro F01–F18 do
+`docs/pozadavky-f01-f18.md` (audit v PR7 opřený o celé e2e, mapování po jednotlivých testech ještě chybí).
+Větev `claude/funkce/kalendar-f04` z `claude/funkce/release-audit`, draft PR s touto base.
+**Otevřené (PR7):** prázdný měsíc v minulosti nemá oznámení ani hlavní tlačítko (beze změny, plánuje se dopředu);
+filtr štítkem „Vybráno“ skryje řádek hned po odškrtnutí (záměrně jednoduché). Starší: oslovení bez uložení
+(migrace), seed s jmény rolí, O02, O03, O08, zpětná omluva, schválení 0015+0016, `tym-a`, `impact.ts`, `redaction.ts`.
+
+# 18 BODŮ ZADAVATELKY – PR6 F16–F18 (draft PR), DALŠÍ JE PR7 (22. 11. 2026) – začni tímto
+
+* **Znění F01–F18 a rozhodnutí D01–D07 je v `docs/pozadavky-f01-f18.md`. Na zadání se uživatele už neptej.**
+* PR6: větev `claude/funkce/obecne-f16-f18`, stacked na `claude/funkce/zapisy-f13-f15` (PR #81), nic nemergnuto.
+  * F16: Úvod zdraví toho, čí pohled ukazuje: v náhledu kolegy jeho jménem (`PlanPreview.personName`), v náhledu
+    skupiny neutrálně „Ahoj.“; nadpis „Co tě čeká“ je v náhledu „Nejbližší akce“. Navigace v náhledu bere oprávnění
+    z náhledu (`canManageUsers(preview?.viewer ?? user)` v `(wiki)/layout.tsx`), poradce Správu systému nevidí.
+    Stránka `/sprava` dál používá skutečný účet (oprávnění se nemění).
+  * F17 + D02/D03: `src/lib/greeting.ts` = jediné místo pro oslovení (`greeting`, `vocativeName`), slovník ~110
+    běžných jmen v 5. pádě, neznámý tvar → neutrální „Ahoj“, parametr `preferred` pro vlastní podobu. Úvod
+    „Ahoj, Anno.“ + „Co tě čeká“. Vykání v celé aplikaci (UI, chyby, Zápisy, vstup, zpětná vazba, Soukromí,
+    popis osobního kalendáře) převedeno na tykání; věty s příčestím přeformulované bez rodu.
+  * F18: `.account` nezalamuje (jméno a Odhlásit vedle sebe), `.topbar` se zalamuje po celcích, dlouhé jméno
+    účtu Google s výpustkou. Ověřeno měřením 641–1279 px, e2e `e2e/zahlavi.spec.ts`.
+* Ověření: lint, typecheck, unit 507/507, build OK, celé e2e 1286 OK / 203 přeskočeno / 1 chyba (test Plánu hledal nový
+  nadpis Úvodu, opraveno, znovu 93 OK). `rychle-akce.spec.ts:196` (telefon) občas spadne: 2× z 18 opakování, padalo už
+  v PR5. Menu ⋯ se po druhém ťuknutí zavře, nejspíš handler posunu/resize v `src/components/Menu.tsx:66–97` při
+  posunu, který dělá Playwright `tap`. Prověřit a opravit v PR7.
+
+| Bod | Stav po PR6 |
+|---|---|
+| F01 | hotovo (PR1 + PR3) |
+| F02, F03, F05 | hotovo za přepínačem `PARTICIPATION` |
+| F04 | základ (fake Google, O04) |
+| F06–F09 | čeká: doplnit a ověřit v PR7 |
+| F10–F15 | hotovo (PR4, PR5) |
+| F16–F18 | hotovo (PR6) |
+
+**Další krok = PR7:** release audit vč. doplnění a ověření F06–F09. Větev `claude/funkce/release-audit` z
+`claude/funkce/obecne-f16-f18`, draft PR s touto base.
+**Otevřené (PR6):** vlastní podoba oslovení se zatím nikde neukládá (chce sloupec v `users` = migrace ke schválení;
+funkce ji už umí přijmout); ukázkové role mají jména rolí, proto v ukázce vidíš neutrální „Ahoj.“ (přejmenovat seed na
+fiktivní lidi?); slovník jmen rozšířit podle reálných účtů. Starší: O02, O03, O08, zpětná omluva, schválení 0015+0016,
+`tym-a` v editoru akce, `impact.ts` bez omluv, kontrolor zápisu, seznam jmen v `redaction.ts`.
+
+# 18 BODŮ ZADAVATELKY – PR5 F13–F15 (draft PR), DALŠÍ JE PR6 (22. 11. 2026) – začni tímto
+
+* **Znění F01–F18 a rozhodnutí D01–D07 je v `docs/pozadavky-f01-f18.md`. Na zadání se uživatele už neptej.**
+* PR5: větev `claude/funkce/zapisy-f13-f15`, stacked na `claude/funkce/temata-f10-f12` (PR #80), nic nemergnuto.
+  * F13: věta „Zápis schvaluje…“ nahoře v sekci zápisu (`ApproverNote` v `RecordingSection.tsx`, `approverName`
+    v panelu). Úkol napsat zápis: `minutesTaskRole` v `server/policy.ts` = vedoucí, u akce bez vedoucího správce
+    (`canPlan`); kontrolor (v ukázce účet účastníka) jen „Zkontrolovat zápis“ u hotového návrhu. Oprávnění se nemění.
+  * F14: `MinutesSourceForm` = jedno pole „Vlož přepis nebo poznámky“ + „nebo nahraj soubor“ (`FilePicker optional`),
+    „Napsat zápis ručně“ vedlejší tlačítko. Server: `source=pasted`, druh přepis/poznámky odhadne `pastedTextKind`.
+    Nahrávka jen s `RECORDING_DEMO=on` (`recordingUploadEnabled`, ostrá Wiki vždy vypnuto), jinak skrytá a
+    `uploadRecording` vrací `recording_disabled`. Vitest a e2e ukázka (3310) mají `on`, server účasti (3313) vypnuto.
+  * F15: `server/recordings/redaction.ts` vynechá e-mail, telefon, RČ, číslo účtu, jméno za „klient/pan/paní…“ a celé
+    jméno s běžným křestním (kolegové z Wiki zůstávají). Uplatní se před drafterem i na jeho výstup, uložený pracovní
+    text je už bez jmen. `integrations/ai-data-use.ts`: služba musí mít `dataUse.training: "never"` (typ i běh).
+* Ověření: lint, typecheck, unit 504/504; build + e2e viz popis draft PR PR5.
+
+| Bod | Stav po PR5 |
+|---|---|
+| F01 | hotovo (PR1 + PR3) |
+| F02, F03, F05 | hotovo za přepínačem `PARTICIPATION` |
+| F04 | základ (fake Google, O04) |
+| F06–F09 | čeká: doplnit a ověřit v PR7 |
+| F10–F12 | hotovo (F10 filtr pro kolegy za `all-published`) |
+| F13–F15 | hotovo (F14 nahrávka za `RECORDING_DEMO`, F15 pravidla jsou pojistka, ne záruka) |
+| F16–F18 | čeká (PR6) |
+
+**Další krok = PR6:** F16–F18 (náhled za jiného, tykání, záhlaví na úzkém okně). Větev `claude/funkce/obecne-f16-f18`
+z `claude/funkce/zapisy-f13-f15`, draft PR s touto base. Pak PR7 = release audit vč. F06–F09.
+**Otevřené (PR5):** má kontrolor dostávat úkol kontroly, nebo nic? (zvoleno: jen kontrola hotového návrhu);
+seznam křestních jmen v `redaction.ts` rozšířit podle reálných dat?; zbylé vykání v modulu Zápisy řeší F17 (PR6).
+Starší otevřené: O02, O03, O08, zpětná omluva, schválení 0015+0016, `tym-a` v editoru akce, `impact.ts` bez omluv.
+
+# 18 BODŮ ZADAVATELKY – PR4 F10–F12 (draft PR), DALŠÍ JE PR5 (22. 11. 2026) – začni tímto
+
+* **Znění F01–F18 a rozhodnutí D01–D07 je v `docs/pozadavky-f01-f18.md`. Na zadání se uživatele už neptej.**
+* PR4: větev `claude/funkce/temata-f10-f12`, stacked na `claude/funkce/priprava-mesice-pro-koho` (PR #79), nic nemergnuto.
+  * F10: pod „Garantovaná témata“ jedna věta vysvětlení; filtr „Pro mou roli / Všechna“ (`?filtr=role|vse`,
+    `filterTopics`/`isTopicForRoles` v `server/domain/topics.ts`, víc rolí = sjednocení jako u povinnosti akce).
+    Výchozí: kolega Pro mou roli, správce Všechna. Kolega vidí cizí témata jen v režimu `all-published`
+    (`canSeeTopic` v `server/policy.ts`, stejný přepínač jako akce, v ostré Wiki ignorován); jinak filtr nevidí.
+    Navrhnout téma jde dál jen pro vlastní skupinu, jména zájemců jen správce. Počet garantovaných beze změny.
+  * F11: úchyt, čísla pořadí, poznámka „Pořadí upravil správce“ a Seřadit podle zájmu jen správci; ve filtru
+    Pro mou roli úchyty ani Posunout výš/níž nejsou (posun by přeskočil skrytá témata). Server už dřív odmítal.
+  * F12: pryč „zatím neproběhlo“ (řádek tématu i důvod doporučení), „v návrhu na…“ → „termín se potvrzuje“
+    (datum v `title`), zpráva po přidání do návrhu zkrácená, texty modulu Témata v tykání.
+* Draft PR #80. Ověření: lint, typecheck, unit 493/493, build OK, e2e 1277 OK / 188 přeskočeno / 0 chyb.
+
+| Bod | Stav po PR4 |
+|---|---|
+| F01 | hotovo v přípravě měsíce (PR3), povinnost z publika (PR1) |
+| F02, F03, F05 | hotovo za přepínačem `PARTICIPATION` |
+| F04 | základ (fake Google, O04) |
+| F06–F09 | čeká: uživatel je řadí k PR3 (#79), ale PR3 obsahuje jen F01; doplnit a ověřit v PR7 |
+| F10–F12 | hotovo (F10 filtr pro kolegy za přepínačem `all-published`) |
+| F13–F18 | čeká (PR5, PR6) |
+
+**Další krok = PR5:** F13–F15 (zápisy, citlivá data). Větev `claude/funkce/zapisy-f13-f15` z `claude/funkce/temata-f10-f12`,
+draft PR s touto base. Znění v `docs/pozadavky-f01-f18.md`. Pak PR6 = F16–F18, PR7 = release audit (vč. F06–F09).
+**Otevřené:** O02, O03, O08, zpětná omluva, schválení 0015+0016 (uživatel), cizí témata pro kolegy i v ostré Wiki
+(až s aktivací `all-published`), `tym-a` v editoru akce, okno dopadu (`impact.ts`) bez omluv.
+
+# 18 BODŮ ZADAVATELKY – PR3 HOTOVO (draft PR), DALŠÍ JE PR4 (22. 11. 2026) – začni tímto
+
+* PR3: větev `claude/funkce/priprava-mesice-pro-koho`, stacked na `claude/funkce/ucast-prihlasky` (PR #78), nic nemergnuto.
+  Obsah jen F01 UI „Pro koho“ v okně Připravit měsíc (Všichni / FP / RM, `tym-a` jen u návrhu, který ho už má;
+  `audienceOptions` v `features/vzdelavani/prepare-month.ts`). Podrobnosti: `docs/ucast-a-role.md` (oddíl PR3).
+* **F06–F09 NEUDĚLÁNY:** zadání není v repu ani na Disku (ZBC_01/ZBC_02). Uživatel 22. 11. zvolil „Jen Pro koho,
+  F06–F09 později“. Než se do nich pustíš, vyžádej si od uživatele jejich znění.
+* PR2 celé e2e doběhlo: 1261 OK / 183 přeskočeno / 0 chyb, doplněno do popisu PR #78.
+* Ověření PR3: lint, typecheck, unit 483/483, build OK, celé e2e viz popis PR3.
+
+| Bod | Stav po PR3 |
+|---|---|
+| F01 | hotovo v přípravě měsíce (Pro koho), povinnost z publika (PR1) |
+| F02, F03, F05 | hotovo za přepínačem `PARTICIPATION` |
+| F04 | základ (fake Google, O04) |
+| F06–F09 | čeká na zadání od uživatele |
+| F10–F18 | čeká (PR4–PR6) |
+
+**Další krok = PR4:** F10–F12 (témata). Větev `claude/funkce/temata-f10-f12` z `claude/funkce/priprava-mesice-pro-koho`,
+draft PR s touto base. Zadání F10–F12 si vyžádej od uživatele, pokud ho nemáš (v repu ani na Disku není).
+**Otevřené:** F06–F09 (zadání), O02, O03, O08, zpětná omluva, schválení 0015+0016 (uživatel), skrýt `tym-a` i v editoru
+akce a šabloně ano/ne, okno dopadu (`impact.ts`) bez omluv.
+
+# 18 BODŮ ZADAVATELKY – PR2 HOTOVO (draft PR), DALŠÍ JE PR3 (21. 11. 2026) – začni tímto
+
+* PR2: větev `claude/funkce/ucast-prihlasky`, stacked na `claude/funkce/ucast-role-zaklad` (PR #77, nemergnuto).
+  Přihlášky, omluvy, štítky, Moje/Všechny a hosté podle `desiredGuestIds`, vše za `PARTICIPATION=on` (výchozí vypnuto,
+  v ostré Wiki ignorováno). Podrobnosti, O04 a zvolené varianty O02/O03/O08 a zpětné omluvy: `docs/ucast-a-role.md` (oddíl PR2).
+* Ověření: lint, typecheck, unit 481/481, build OK; e2e `e2e/ucast.spec.ts` (vlastní server 3313 s PARTICIPATION=on)
+  windows-1280 + telefon-390 OK; celé e2e viz popis PR.
+
+| Bod | Stav po PR2 |
+|---|---|
+| F01 | základ (povinnost z publika), UI „Pro koho“ PR3 |
+| F02 | hotovo za přepínačem (Moje/Všechny, štítky) |
+| F03 | hotovo za přepínačem (akce + potvrzení) |
+| F04 | základ: hosté podle účasti (fake Google), `declined` se nenastavuje (O04), živě neověřeno |
+| F05 | hotovo za přepínačem (sjednocení rolí, jedna pozvánka) |
+| F06–F18 | čeká (PR3–PR6) |
+
+**Další krok = PR3:** F06–F09 (příprava měsíce) + UI „Pro koho“ (FP/RM/Všichni) v přípravě měsíce. Větev
+`claude/funkce/priprava-mesice-pro-koho` z `claude/funkce/ucast-prihlasky`, draft PR s touto base. Zadání F06–F09 je v
+ZBC_01/ZBC_02 (nejsou v repu, požádej uživatele).
+**Otevřené:** O02, O03, O08, zpětná omluva, schválení 0015+0016 v `APPROVED_MIGRATIONS` (uživatel), aktivace v ostré Wiki
+(odstranit pojistku v `participationEnabled`/`eventVisibility` až po migraci), okno dopadu (`impact.ts`) bez omluv.
+
 # 18 BODŮ ZADAVATELKY – PR1 HOTOVO (draft PR), DALŠÍ JE PR2 (21. 11. 2026) – začni tímto
 
 Závazné podklady (nejsou v repu, uživatel je má): `ZBC_01_AUDIT_18_BODU_2026-11-21.md`, `ZBC_02_REALIZACNI_PLAN_2026-11-21.md`

@@ -74,7 +74,31 @@ export type EventVisibility = "audience" | "all-published";
  */
 export function eventVisibility(): EventVisibility {
   if (isLiveWiki()) return "audience";
+  // Přihlášky (PR2) dávají smysl jen nad všemi zveřejněnými akcemi: zapnutá účast znamená i `all-published`.
+  if (participationEnabled()) return "all-published";
   return process.env.EVENT_VISIBILITY?.trim() === "all-published" ? "all-published" : "audience";
+}
+
+/**
+ * Individuální účast v UI (PR2, F02–F05): štítky, přihlášky, omluvy, Moje/Všechny a hosté pozvánky podle
+ * `desiredGuestIds`. Výchozí vypnuto: aplikace se chová jako dřív a tabulku `event_participation` nečte
+ * (na vzdálené DB zatím není, migrace 0016 čeká na schválení). `PARTICIPATION=on` zapne ukázku. V ostré
+ * Wiki se přepínač ignoruje, dokud uživatel neschválí 0016 a tuto pojistku vědomě neodstraní.
+ */
+export function participationEnabled(): boolean {
+  if (isLiveWiki()) return false;
+  return process.env.PARTICIPATION?.trim() === "on";
+}
+
+/**
+ * Volba „Nahrávka“ u zápisu (F14). Automatický přepis zatím umí jen ukázkovou nahrávku, proto je nahrávání
+ * ve výchozím stavu skryté a server ho odmítne. `RECORDING_DEMO=on` ukázku zapne (lokálně, e2e, dohodnuté
+ * Preview). Už nahrané nahrávky zůstávají vidět a dají se přehrát. V ostré Wiki se přepínač ignoruje,
+ * dokud přepis neumí skutečné schůzky.
+ */
+export function recordingUploadEnabled(): boolean {
+  if (isLiveWiki()) return false;
+  return process.env.RECORDING_DEMO?.trim() === "on";
 }
 
 export type CalendarMode = "simulation" | "google-test";
