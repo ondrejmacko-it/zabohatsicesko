@@ -141,22 +141,23 @@ describe("viditelnost zveřejněných akcí (F02, přepínač)", () => {
   beforeEach(resetDemo);
   afterEach(() => vi.unstubAllEnvs());
 
-  test("výchozí stav: přepínač vypnutý, chování beze změny", async () => {
-    expect(eventVisibility()).toBe("audience");
+  test("výchozí stav: všechny zveřejněné akce vidí každá aktivní role", async () => {
+    expect(eventVisibility()).toBe("all-published");
     const ids = (await listMonth(participant, "2026-11")).map((c) => c.id);
     expect(ids).toContain(PAST_FP);
-    expect(ids).not.toContain(PUBLISHED_RM);
-    expect(await getEventDetail(outsider, PAST_FP)).toBeNull();
+    expect(ids).toContain(PUBLISHED_RM);
+    expect(await getEventDetail(outsider, PAST_FP)).not.toBeNull();
   });
 
-  test("ostrá Wiki přepínač ignoruje", () => {
-    vi.stubEnv("EVENT_VISIBILITY", "all-published");
+  test("ostrá Wiki sdílí zveřejněné akce, explicitní rollback audience je možný", () => {
     vi.stubEnv("WIKI_MODE", "production");
+    expect(eventVisibility()).toBe("all-published");
+    vi.stubEnv("EVENT_VISIBILITY", "audience");
     expect(eventVisibility()).toBe("audience");
     vi.stubEnv("WIKI_MODE", "demo");
-    expect(eventVisibility()).toBe("all-published");
-    vi.stubEnv("EVENT_VISIBILITY", "all");
     expect(eventVisibility()).toBe("audience");
+    vi.stubEnv("EVENT_VISIBILITY", "all-published");
+    expect(eventVisibility()).toBe("all-published");
   });
 
   test("zapnuto: FP vidí cizí zveřejněnou RM akci, ne návrh ani zápis či nahrávku", async () => {
