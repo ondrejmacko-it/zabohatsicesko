@@ -202,6 +202,47 @@
   border-color: var(--line-strong);
 }
 
+/* Účast odlišujeme zároveň textovým štítkem i barvou a boční linkou; v náhledu stejně.
+   Stav návrhu, svátku a zrušené akce má přednost před dekoračním zvýrazněním účasti. */
+:is(.event, .agendaEvent)[data-ucast="required"] {
+  border-left: 4px solid #a3651b;
+}
+:is(.event, .agendaEvent)[data-ucast="optional"] {
+  border-left: 4px solid #7b8990;
+}
+:is(.event, .agendaEvent)[data-ucast="voluntary_enrolled"] {
+  border-left: 4px solid #267c64;
+}
+:is(.event, .agendaEvent)[data-ucast="excused"] {
+  border-left: 4px solid #8761a5;
+}
+:is(.event, .agendaEvent)[data-ucast="withdrawn"] {
+  border-left: 4px solid #9b8d84;
+}
+.meta [data-ucast="required"] {
+  background: #f7e8d3;
+  color: #75400a;
+}
+.meta [data-ucast="optional"] {
+  background: #edf2f3;
+  color: #334f60;
+  border-color: #bfced4;
+}
+.meta [data-ucast="voluntary_enrolled"] {
+  background: #e1f1e8;
+  color: #195a46;
+}
+.meta [data-ucast="excused"] {
+  background: #eee6f5;
+  color: #603f7f;
+  border-color: #d4c3e4;
+}
+.meta [data-ucast="withdrawn"] {
+  background: #f0ece9;
+  color: #55443d;
+  border-color: #d0c4bb;
+}
+
 /* Stav karty: jeden štítek a vedle něj decentní indikátor chybějících údajů. */
 .meta {
   display: flex;
