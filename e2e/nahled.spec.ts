@@ -94,8 +94,18 @@ test.describe("účastník: podvržená cookie náhledu", () => {
       await expect(bar(page)).toHaveCount(0);
       await expect(page.getByLabel("Pohled")).toHaveCount(0);
     }
+    // Zveřejněná RM akce je od PR #86 vidět všem (`all-published`), ale cookie z ní neudělá pohled RM:
+    // bez pruhu náhledu a bez panelu účasti, který by v pohledu RM hlásil povinnost.
     await page.goto("/vzdelavani/harmonogram?akce=tr-rm-1112");
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await expect(page.getByRole("dialog", { name: "Akce není dostupná" })).toHaveCount(0);
+    await expect(bar(page)).toHaveCount(0);
+    await expect(page.locator("[data-ucast-panel]")).toHaveCount(0);
+    // Nezveřejněný návrh pro RM neodhalí ani přímý odkaz, ani stránka akce.
+    await page.goto("/vzdelavani/harmonogram?akce=ev-11-19");
     await expect(page.getByRole("dialog", { name: "Akce není dostupná" })).toBeVisible();
+    const detail = await page.request.get("/vzdelavani/akce/ev-11-19");
+    expect(detail.status()).toBe(404);
   });
 });
 

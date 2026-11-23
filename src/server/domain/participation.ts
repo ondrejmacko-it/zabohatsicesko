@@ -204,12 +204,12 @@ export type OwnParticipationView = {
   actions: ParticipationAction[];
 };
 
-/** Štítek nepovinné akce, když přihlášky ve Wiki nejsou zapnuté: nic nenabízí, jen popisuje. */
+/** Štítek nepovinné akce, ke které se přihlásit nejde (přihlášky vypnuté, akce už začala): jen popisuje. */
 export const OPTIONAL_READ_ONLY_LABEL = "Dobrovolné";
 
 /**
- * `enrollment: false` = přihlášky ve Wiki nejsou zapnuté (`PARTICIPATION`): nepovinná akce pak nesmí
- * slibovat „Můžeš se přihlásit“ ani v měsíci, ani v detailu, ani v náhledu.
+ * `enrollment: false` = přihlášky ve Wiki nejsou zapnuté (`PARTICIPATION`). Nepovinná akce pak, stejně jako
+ * proběhlá nepovinná akce, nesmí slibovat „Můžeš se přihlásit“ ani v měsíci, ani v detailu, ani v náhledu.
  */
 export function ownParticipationView(
   participation: Participation | null,
@@ -217,7 +217,7 @@ export function ownParticipationView(
 ): OwnParticipationView | null {
   if (!participation) return null;
   const { state } = participation;
-  const label = state === "cancelled" ? null : state === "optional" && !enrollment ? OPTIONAL_READ_ONLY_LABEL : PARTICIPATION_LABELS[state];
+  const label = state === "cancelled" ? null : state === "optional" && (!enrollment || !participation.open) ? OPTIONAL_READ_ONLY_LABEL : PARTICIPATION_LABELS[state];
   const actions: ParticipationAction[] = [];
   if (!readOnly) {
     if (canVoluntarilyJoin(participation)) actions.push("enroll");

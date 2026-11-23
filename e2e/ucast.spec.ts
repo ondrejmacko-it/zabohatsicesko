@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { UCAST_PORT } from "./constants.mjs";
-import { authFile, expect, expectNoHorizontalScroll, settle, test } from "./support";
+import { authFile, expect, expectNoHorizontalScroll, expectNoSeriousA11y, settle, test } from "./support";
 
 // PR2: přihlášky a omluvy v ukázce se zapnutou účastí (PARTICIPATION=on, vlastní server a databáze).
 // Desktop píše jako účastník FP, telefon jako účastník RM, aby se zápisy projektů nepotkaly.
@@ -20,10 +20,13 @@ async function plan(page: Page, query = "") {
   await settle(page);
 }
 
-/** `except`: ID akce, jejíž kartu přeskočit. */
+/**
+ * `except`: ID akce, jejíž kartu přeskočit. Bere poslední kartu měsíce: od sdílení všech zveřejněných akcí
+ * (PR #86) jsou první karty listopadu už proběhlé a účast u nich nejde měnit.
+ */
 async function openCard(page: Page, state: string, except?: string) {
   const skip = except ? `:not([href*="${except}"])` : "";
-  const card = page.locator(`a:has([data-ucast="${state}"])${skip}`).filter({ visible: true }).first();
+  const card = page.locator(`a:has([data-ucast="${state}"])${skip}`).filter({ visible: true }).last();
   await expect(card).toBeVisible();
   await page.goto(`${BASE}${await card.getAttribute("href")}`);
   await settle(page);
@@ -50,7 +53,10 @@ test.describe("účast v harmonogramu", () => {
     await expect(page.locator('[data-ucast-panel="voluntary_enrolled"]')).toContainText("Přihlášeno");
     await page.locator("[data-ucast-panel]").getByRole("button", { name: "Odhlásit se" }).click();
     await page.getByRole("dialog", { name: "Odhlásit se z akce?" }).getByRole("button", { name: "Odhlásit se" }).click();
-    await expect(page.locator('[data-ucast-panel="optional"]')).toBeVisible();
+    // Odhlášeno (0017) je jiný stav než „nikdy nepřihlášeno“ a jde se znovu přihlásit.
+    const withdrawn = page.locator('[data-ucast-panel="withdrawn"]');
+    await expect(withdrawn).toContainText("Odhlášeno");
+    await expect(withdrawn.getByRole("button", { name: "Přihlásit se" })).toBeVisible();
 
     // Omluva z povinné akce s důvodem a poznámkou, pravdivý stav Kalendáře.
     await plan(page);
@@ -108,7 +114,9 @@ test.describe("účast v harmonogramu", () => {
     await expectCalendar(page, "Pozvánku máš v Kalendáři.");
     await page.locator("[data-ucast-panel]").getByRole("button", { name: "Odhlásit se" }).click();
     await page.getByRole("dialog", { name: "Odhlásit se z akce?" }).getByRole("button", { name: "Odhlásit se" }).click();
-    await expectCalendar(page, "Do Kalendáře se akce přidá, až se přihlásíš.");
+    // Odhlášeno (0017) má vlastní větu, odlišnou od „nikdy nepřihlášeno“ (viz `calendarNote`).
+    await expect(page.locator('[data-ucast-panel="withdrawn"]')).toBeVisible();
+    await expectCalendar(page, "Wiki tě na tuto akci do Kalendáře nezve.");
   });
 });
 
@@ -184,6 +192,25 @@ test.describe("náhled kolegy s omluvou (audit 23. 11.)", () => {
     await expect(panel).not.toContainText(note);
     await expect(panel.getByRole("button")).toHaveCount(0);
     expect(await page.content()).not.toContain(note);
+    await page.screenshot({ path: info.outputPath("nahled-kolegy-omluva.png") });
+  });
+});
+
+test.describe("stavy účasti: kontrast a čitelnost (audit 23. 11.)", () => {
+  // eslint-disable-next-line react-hooks/rules-of-hooks -- `use` je fixture Playwrightu, ne hook Reactu.
+  test.use({ storageState: ({}, use, info) => use(authFile(info.project.name === "windows-1280" ? "ucastnikFp" : "ucastnikRm")) });
+
+  test("měsíc, seznam a Úvod se štítky účasti projdou axe", async ({ page }, info) => {
+    for (const [name, path] of [["mesic", "/vzdelavani/harmonogram?mesic=2026-11"], ["seznam", "/vzdelavani/harmonogram?mesic=2026-11&pohled=seznam"], ["uvod", "/"]]) {
+      await page.goto(`${BASE}${path}`);
+      await settle(page);
+      await expectNoSeriousA11y(page);
+      await page.screenshot({ path: info.outputPath(`ucast-${name}.png`), fullPage: true });
+    }
+    // Štítky nesou stav i textem, ne jen barvou.
+    await page.goto(`${BASE}/vzdelavani/harmonogram?mesic=2026-11&pohled=seznam`);
+    await settle(page);
+    for (const badge of await page.locator("[data-ucast]:not(a)").filter({ visible: true }).all()) expect((await badge.textContent())?.trim()).toBeTruthy();
   });
 });
 

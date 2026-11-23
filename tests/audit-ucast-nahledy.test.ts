@@ -86,6 +86,11 @@ describe("štítky bez zapnutých přihlášek (PARTICIPATION vypnuté, i ostrá
     expect(ownParticipationView(optional, { readOnly: false })).toMatchObject({ label: "Můžeš se přihlásit", actions: ["enroll"] });
   });
 
+  test("proběhlá nepovinná akce nenabízí přihlášení ani štítkem", () => {
+    expect(ownParticipationView({ ...optional, open: false }, { readOnly: false })).toMatchObject({ label: "Dobrovolné", actions: [] });
+    expect(ownParticipationView({ ...optional, state: "withdrawn", open: false }, { readOnly: false })).toMatchObject({ label: "Odhlášeno", actions: [] });
+  });
+
   for (const mode of ["demo", "production"] as const) {
     test(`náhled skupiny (${mode}): detail i karta mají stejný štítek „Dobrovolné“`, async () => {
       // Ostrá Wiki přepínač ignoruje i při PARTICIPATION=on, ukázka ho má vypnutý.

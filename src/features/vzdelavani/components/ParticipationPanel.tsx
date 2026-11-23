@@ -34,18 +34,26 @@ const STATE_TEXT: Partial<Record<ParticipationState, string>> = {
   cancelled: "Akce je zrušená, účast se u ní neeviduje.",
 };
 
+/** Akce už začala: žádné nabídky ani sliby o Kalendáři, jen jak to s účastí bylo. */
+const CLOSED_TEXT: Partial<Record<ParticipationState, string>> = {
+  optional: "Akce pro tebe nebyla povinná.",
+  withdrawn: "Z dobrovolné akce ses odhlásil.",
+};
+
 /**
  * Tvoje účast u akce: stav, štítek a akce Přihlásit se / Odhlásit se / Omluvit se / Zrušit omluvu.
  * Každá změna se potvrzuje v samostatném okně. Server znovu ověří session, stav i čas akce.
  */
 export function ParticipationPanel({ eventId, state, label, actions, excuse, calendar = null, preview }: Props) {
-  const note = preview ? null : calendarNote(state, calendar);
+  // Mimo náhled jsou akce prázdné jen u akce, která už začala (vypnuté přihlášky panel vůbec nevykreslí).
+  const closed = !preview && actions.length === 0 && state !== "cancelled";
+  const note = preview || closed ? null : calendarNote(state, calendar);
   return (
     <section className="section participation-panel" aria-labelledby="ucast" data-ucast-panel={state} data-kalendar-stav={calendar ? `${calendar.link}:${calendar.inCalendar}` : "neznamy"}>
       {/* V náhledu nejde o účast přihlášeného, proto ani „Tvoje“, ani vysvětlení vlastní omluvy. */}
       <h2 id="ucast">{preview ? "Účast v náhledu" : "Tvoje účast"}</h2>
       {label && <p className="participation-state"><span className={badgeClass(participationTone(state))}>{label}</span></p>}
-      <p className="small">{preview ? "Takhle vypadá účast ve vybraném pohledu. Náhled je jen ke čtení." : STATE_TEXT[state]}</p>
+      <p className="small">{preview ? "Takhle vypadá účast ve vybraném pohledu. Náhled je jen ke čtení." : ((closed && CLOSED_TEXT[state]) || STATE_TEXT[state])}</p>
       {note && <p className="small" data-kalendar={calendar?.inCalendar ? "v-kalendari" : "mimo-kalendar"}>{note}</p>}
       {state === "excused" && !preview && (
         <p className="small muted">
@@ -53,7 +61,7 @@ export function ParticipationPanel({ eventId, state, label, actions, excuse, cal
           Důvod vidíš jen ty. Wiki tě z pozvánky odebere, odpověď v Google Kalendáři za tebe ale nemění.
         </p>
       )}
-      {!preview && actions.length === 0 && state !== "cancelled" && <p className="small muted">Akce už začala, účast teď nejde změnit.</p>}
+      {closed && <p className="small muted">Akce už začala, účast teď nejde změnit.</p>}
       {!preview && actions.length > 0 && (
         <div className="row participation-actions">
           {actions.includes("enroll") && (
