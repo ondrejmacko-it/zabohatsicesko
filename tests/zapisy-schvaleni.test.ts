@@ -155,7 +155,7 @@ describe("zápis bez nahrávky", () => {
   test("zápis jen k proběhlé zveřejněné akci a jen pro vedoucího, kontrolora a správce", async () => {
     expect(await code(createMinutesDraft(lead, PUBLISHED_RM, { source: "manual" }, null))).toBe("not_past");
     expect(await code(createMinutesDraft(participant, PAST_FP, { source: "manual" }, null))).toBe("forbidden");
-    expect(await code(createMinutesDraft(outsider, PAST_FP, { source: "manual" }, null))).toBe("not_found");
+    expect(await code(createMinutesDraft(outsider, PAST_FP, { source: "manual" }, null))).toBe("forbidden");
     await setPublished(PAST_FP, { reviewerId: reviewer.id });
     expect(await code(createMinutesDraft(reviewer, PAST_FP, { source: "manual" }, null))).toBe("ok");
   });
@@ -184,8 +184,8 @@ describe("schválení a zveřejnění", () => {
 
     expect(await code(approveMinutes(reviewer, PAST_FP, row.id, 1))).toBe("not_lead");
     expect(await code(approveMinutes(admin, PAST_FP, row.id, 1))).toBe("not_lead");
-    expect(await code(approveMinutes(outsider, PAST_FP, row.id, 1))).toBe("not_found");
-    expect(await code(updateMinutes(outsider, PAST_FP, row.id, 1, row.content))).toBe("not_found");
+    expect(await code(approveMinutes(outsider, PAST_FP, row.id, 1))).toBe("forbidden");
+    expect(await code(updateMinutes(outsider, PAST_FP, row.id, 1, row.content))).toBe("forbidden");
 
     // Kontrolor i správce návrh upraví, každá změna je nová verze.
     const byReviewer = await updateMinutes(reviewer, PAST_FP, row.id, 1, { ...row.content, summary: "Upravil kontrolor" });
