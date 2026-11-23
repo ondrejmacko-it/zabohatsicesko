@@ -213,7 +213,7 @@ function PlanTopicDialog({ topic, onClose }: { topic: { id: string; name: string
         {options && (
           <h3 className="plan-topic-heading">{scheduled ? "Další termín" : "Vhodné akce"}</h3>
         )}
-        {options && candidates.length === 0 && <p className="small">Žádná budoucí akce bez tématu se pro skupinu tématu nehodí. Vytvořte novou.</p>}
+        {options && candidates.length === 0 && <p className="small">Žádná budoucí akce bez tématu se pro skupinu tématu nehodí. Vytvoř novou.</p>}
         {candidates.length > 0 && (
           <ul className="plan-topic-list" aria-label="Vhodné akce">
             {shown.map((c) => (

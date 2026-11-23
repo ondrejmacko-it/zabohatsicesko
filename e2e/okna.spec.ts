@@ -218,7 +218,7 @@ test.describe("okna správce", () => {
     await expect(publish).toHaveClass(/btn-primary/);
     await publish.click();
     const ask = page.getByRole("dialog", { name: "Zveřejnit změny?" });
-    await expect(ask).toContainText("Změníte termín");
+    await expect(ask).toContainText("Změníš termín");
     await expect(ask.getByRole("button", { name: "Potvrdit zveřejnění" })).toBeVisible();
     await ask.getByRole("button", { name: "Zpět k úpravám" }).click();
     await expect(ask).toHaveCount(0);

@@ -88,7 +88,7 @@ export async function inviteUser(
     if (!inserted.length) throw new DomainError("email_taken");
     await audit(tx, viewer.id, "user.invited", "user", id);
     // Pozvaný patří do publika hned: budoucí pozvánky jeho skupin ho přiberou.
-    await requeueAttendeeSync(tx, input.groups);
+    await requeueAttendeeSync(tx, { id, groups: input.groups });
     // Ostrá Wiki pustí dovnitř jen přes odkaz. Ukázka ho nepotřebuje (přihlášení řeší její brána).
     const link = inviteOnlyLogin() ? await createInvite(tx, viewer.id, id) : null;
     return { id, link };
@@ -187,8 +187,9 @@ export async function updateAccess(
       await revokeUserDevices(tx, userId);
       await revokeInvites(tx, viewer.id, userId);
     }
-    // Publikum se mohlo změnit ve starých i nových skupinách. Budoucí pozvánky se podle toho upraví.
-    await requeueAttendeeSync(tx, [...new Set([...target.groups, ...input.groups])]);
+    // Publikum se mohlo změnit ve starých i nových skupinách, u akcí pro všechny i u přihlášek a omluv.
+    // Budoucí spravované pozvánky člověka se podle toho přepočítají (i po deaktivaci).
+    await requeueAttendeeSync(tx, { id: userId, groups: [...new Set([...target.groups, ...input.groups])] });
   });
 }
 

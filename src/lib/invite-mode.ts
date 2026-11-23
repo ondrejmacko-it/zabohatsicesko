@@ -22,9 +22,9 @@ export function inviteOutcome(mode: InviteMode, many = false): string {
     case "disconnected":
       return `${invites} zatím neodešl${many ? "y" : "a"}, čeká${many ? "jí" : ""} na propojení Kalendáře.`;
     case "allowlist":
-      return `${invites} se odesílá${many ? "jí" : ""} jen na testovací adresy. Stav uvidíte u akce.`;
+      return `${invites} se odesílá${many ? "jí" : ""} jen na testovací adresy. Stav uvidíš u akce.`;
     case "audience":
-      return `${invites} se odesílá${many ? "jí" : ""} přes Google Kalendář. Stav uvidíte u akce.`;
+      return `${invites} se odesílá${many ? "jí" : ""} přes Google Kalendář. Stav uvidíš u akce.`;
   }
 }
 

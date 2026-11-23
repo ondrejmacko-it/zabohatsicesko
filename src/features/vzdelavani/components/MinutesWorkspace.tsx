@@ -15,7 +15,7 @@ export function MinutesWorkspace({ header, sourceForm, children }: { header: Rea
 
   useEffect(() => {
     if (!moved.current) return;
-    if (changing) sourceRef.current?.querySelector<HTMLInputElement>("input[type=radio]:checked")?.focus();
+    if (changing) sourceRef.current?.querySelector<HTMLTextAreaElement>("textarea")?.focus();
     else toggleRef.current?.focus();
   }, [changing]);
 

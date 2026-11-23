@@ -154,7 +154,7 @@ function MoveHandle({ card }: { card: EventCard }) {
       data-handle-label={card.label}
       data-handle-from={dayOf(card)}
       aria-label={`Přesunout akci ${card.label} na jiný den`}
-      title="Podržte a přetáhněte na jiný den"
+      title="Podrž a přetáhni na jiný den"
     >
       <Icon name="grip" size={18} />
     </button>
@@ -339,7 +339,13 @@ export function Agenda({
   addHref,
   movableFrom,
   menuFor,
-}: { monthKey: string; cards: EventCard[]; todayKey: string; emptyText?: string } & Linking & Planning) {
+}: {
+  monthKey: string;
+  cards: EventCard[];
+  todayKey: string;
+  /** Text prázdného měsíce. Null: prázdný stav už ukazuje stránka sama (Plán správce, F06). */
+  emptyText?: string | null;
+} & Linking & Planning) {
   const days = byDay(cards.filter((c) => monthOf(dayOf(c)) === monthKey));
   const ghosts = ghostsByDay(cards);
   const weeks = monthWeeks(monthKey)
@@ -349,7 +355,7 @@ export function Agenda({
       current: week.includes(todayKey),
     }))
     .filter((w) => w.days.length);
-  if (!weeks.length) return <p className="muted">{emptyText ?? "V tomto měsíci zatím nejsou žádné akce."}</p>;
+  if (!weeks.length) return emptyText === null ? null : <p className="muted">{emptyText ?? "V tomto měsíci zatím nejsou žádné akce."}</p>;
   return (
     <div className={styles.agenda}>
       {weeks.map((week) => (
@@ -432,7 +438,7 @@ export function Agenda({
 }
 
 export function NextEventCard({ card }: { card: EventCard | null }) {
-  if (!card) return <p className="muted">V nejbližších týdnech vás nečeká žádná zveřejněná akce.</p>;
+  if (!card) return <p className="muted">V nejbližších týdnech tě nečeká žádná zveřejněná akce.</p>;
   const day = dayOf(card);
   const title = eventTitle(card.label, card.topicTitle);
   return (
@@ -449,7 +455,7 @@ export function NextEventCard({ card }: { card: EventCard | null }) {
 
 /** Několik nejbližších akcí pod sebou: den vlevo, název a čas vpravo. První je nejblíž, proto je zvýrazněná. */
 export function NextEventsList({ cards, todayKey, hrefFor = pageHref, emptyText }: { cards: EventCard[]; todayKey: string; hrefFor?: CardHref; emptyText?: string }) {
-  if (!cards.length) return <p className="muted">{emptyText ?? "V nejbližších týdnech vás nečeká žádná zveřejněná akce."}</p>;
+  if (!cards.length) return <p className="muted">{emptyText ?? "V nejbližších týdnech tě nečeká žádná zveřejněná akce."}</p>;
   return (
     <ul className="brief-list">
       {cards.map((card, index) => {

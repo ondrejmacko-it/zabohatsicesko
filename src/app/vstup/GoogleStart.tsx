@@ -33,13 +33,13 @@ export function GoogleStart({ href, children }: { href: string; children: ReactN
           });
           const data = (await response.json().catch(() => null)) as { url?: unknown } | null;
           if (!response.ok || typeof data?.url !== "string") {
-            setFailed(response.status === 429 ? "Příliš mnoho pokusů. Zkuste to za pár minut." : "Přihlášení se teď nepodařilo zahájit. Zkuste to znovu.");
+            setFailed(response.status === 429 ? "Příliš mnoho pokusů. Zkus to za pár minut." : "Přihlášení se teď nepodařilo zahájit. Zkus to znovu.");
             setBusy(false);
             return;
           }
           window.location.assign(data.url);
         } catch {
-          setFailed("Přihlášení se teď nepodařilo zahájit. Zkontrolujte připojení a zkuste to znovu.");
+          setFailed("Přihlášení se teď nepodařilo zahájit. Zkontroluj připojení a zkus to znovu.");
           setBusy(false);
         }
       }}

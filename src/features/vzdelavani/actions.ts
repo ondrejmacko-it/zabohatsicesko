@@ -41,6 +41,7 @@ import {
   uploadRecording,
   withdrawMinutes,
 } from "@/server/services/recordings";
+import { pastedTextKind } from "@/server/recordings/text-source";
 import {
   moveTopic,
   placeTopic,
@@ -129,7 +130,7 @@ async function parseEvent(formData: FormData) {
 class IncompleteError extends Error {}
 
 const incompleteMessage = (missing: string) =>
-  `Nezveřejněno, chybí ${missing}. Doplňte údaj, nebo dole zaškrtněte zveřejnění bez něj. Vyplněné hodnoty zůstaly beze změny.`;
+  `Nezveřejněno, chybí ${missing}. Doplň údaj, nebo dole zaškrtni zveřejnění bez něj. Vyplněné hodnoty zůstaly beze změny.`;
 
 /** Dopad změny zveřejněné akce na pozvané. Dialog ho ukáže před potvrzením. */
 export async function previewImpactAction(formData: FormData): Promise<ActionResult & { impact?: ChangeImpact | null }> {
@@ -151,7 +152,7 @@ async function inviteNote(user: Parameters<typeof loadCalendarStatus>[0], many =
   try {
     return inviteOutcome(inviteModeOf(await loadCalendarStatus(user)), many);
   } catch {
-    return "Stav pozvánek uvidíte u akce.";
+    return "Stav pozvánek uvidíš u akce.";
   }
 }
 
@@ -169,7 +170,7 @@ export async function saveEventAction(_prev: ActionResult | null, formData: Form
     // Kopie akce (Duplikovat) vzniká vždy jako návrh. Správce ji zkontroluje a zveřejní běžně v okně akce.
     const duplicateOf = z.string().max(80).optional().parse(formData.get("duplicateOf") || undefined);
     if (duplicateOf && (id || intent === "publish")) {
-      return { ok: false, error: "Kopie akce se ukládá jen jako návrh. Zveřejnit ji můžete po kontrole v okně akce. Nic se neuložilo." };
+      return { ok: false, error: "Kopie akce se ukládá jen jako návrh. Zveřejnit ji můžeš po kontrole v okně akce. Nic se neuložilo." };
     }
     if (!id) {
       const created = await createEvent(user, input, intent);
@@ -189,8 +190,8 @@ export async function saveEventAction(_prev: ActionResult | null, formData: Form
         return {
           ok: false,
           error: error.stale
-            ? "Dopad se od kontroly změnil, například se změnily skupiny pozvaných. Zkontrolujte ho znovu a potvrďte. Nic se nezveřejnilo."
-            : "Změna zasáhne pozvané. Zkontrolujte a potvrďte její dopad, potom ji zveřejněte.",
+            ? "Dopad se od kontroly změnil, například se změnily skupiny pozvaných. Zkontroluj ho znovu a potvrď. Nic se nezveřejnilo."
+            : "Změna zasáhne pozvané. Zkontroluj a potvrď její dopad, potom ji zveřejni.",
         };
       }
     }
@@ -232,7 +233,7 @@ export async function moveEventAction(_prev: ActionResult | null, formData: Form
         await assertImpactConfirmed(data.id, plan.input, data.confirmToken ?? null);
       } catch (error) {
         if (!(error instanceof ImpactNotConfirmed)) throw error;
-        return { ok: false, error: "Dopad přesunu se od kontroly změnil. Otevřete přesun znovu a potvrďte ho. Nic se nezměnilo." };
+        return { ok: false, error: "Dopad přesunu se od kontroly změnil. Otevři přesun znovu a potvrď ho. Nic se nezměnilo." };
       }
     }
     await updateEvent(user, data.id, data.revision, plan.input, plan.mode);
@@ -254,12 +255,12 @@ export async function cancelEventAction(_prev: ActionResult | null, formData: Fo
     // Dopad se ověří znovu na serveru. Bez ověřených příjemců jde zrušit jen vědomě (audit A06).
     const impact = await cancelImpact(user, data.id);
     if (!impact.verified && !data.cancelUnverified) {
-      return { ok: false, error: "Komu přijde zpráva o zrušení, teď nejde ověřit. Zkuste to znovu, nebo potvrďte zrušení bez ověření. Nic se nezměnilo." };
+      return { ok: false, error: "Komu přijde zpráva o zrušení, teď nejde ověřit. Zkus to znovu, nebo potvrď zrušení bez ověření. Nic se nezměnilo." };
     }
     await cancelEvent(user, data.id, data.revision, data.reason);
     if (!impact.hasInvite) return { ok: true, message: "Akce je zrušená. Pozvánku v Kalendáři neměla, žádná zpráva neodejde." };
     after(() => syncEvent(data.id));
-    return { ok: true, message: "Akce je zrušená ve Wiki. Storno pozvánky se propisuje do Kalendáře, stav uvidíte v detailu akce." };
+    return { ok: true, message: "Akce je zrušená ve Wiki. Storno pozvánky se propisuje do Kalendáře, stav uvidíš v detailu akce." };
   });
 }
 
@@ -294,10 +295,10 @@ export async function generateMonthAction(_prev: ActionResult | null, formData: 
     if (!created) return { ok: true, message: `Nic nového k doplnění.${skippedNote || " Všechny pravidelné termíny už v plánu jsou."}` };
     const places = `${created} ${created === 1 ? "termín" : created < 5 ? "termíny" : "termínů"}`;
     const topicNote = withTopic
-      ? ` U ${withTopic} ${withTopic === 1 ? "termínu" : "termínů"} je předvyplněné doporučené téma (✦), přijměte, změňte nebo odmítněte ho.`
+      ? ` U ${withTopic} ${withTopic === 1 ? "termínu" : "termínů"} je předvyplněné doporučené téma (✦), přijmi, změň nebo odmítni ho.`
       : "";
     const reviewNote = review.length
-      ? ` Zkontrolujte ${review.map((d) => formatDayMonth(d)).join(", ")}: ve stejný den nebo čas už mají stejní lidé jinou akci.`
+      ? ` Zkontroluj ${review.map((d) => formatDayMonth(d)).join(", ")}: ve stejný den nebo čas už mají stejní lidé jinou akci.`
       : "";
     return { ok: true, message: `Doplněno ${places} jako návrh, nic se nezveřejnilo.${skippedNote}${topicNote}${reviewNote}` };
   });
@@ -317,7 +318,7 @@ export async function publishMonthAction(_prev: ActionResult | null, formData: F
     const decided = match ? { kind: match[1] as "accept" | "reject", id: match[2] as string } : null;
     const publish = !decided && formData.get("intent") !== "save";
     const ids = z.array(z.string().min(1).max(80)).min(1).max(100).safeParse(formData.getAll(publish ? "pick" : "row"));
-    if (!ids.success) return { ok: false, error: publish ? "Vyberte aspoň jeden návrh." : "V měsíci nejsou žádné návrhy k uložení." };
+    if (!ids.success) return { ok: false, error: publish ? "Vyber aspoň jeden návrh." : "V měsíci nejsou žádné návrhy k uložení." };
     const items = ids.data.map((id) => ({
       id,
       revision: z.coerce.number().int().positive().parse(formData.get(`rev-${id}`)),
@@ -329,12 +330,12 @@ export async function publishMonthAction(_prev: ActionResult | null, formData: F
     }));
     const skippedNote = (skipped: number) =>
       skipped
-        ? ` ${skipped} ${skipped === 1 ? "návrh mezitím někdo změnil a zůstal" : "návrhy mezitím někdo změnil a zůstaly"} beze změny, zkontrolujte je.`
+        ? ` ${skipped} ${skipped === 1 ? "návrh mezitím někdo změnil a zůstal" : "návrhy mezitím někdo změnil a zůstaly"} beze změny, zkontroluj je.`
         : "";
     if (!publish) {
       const { published: saved, skipped } = await publishDrafts(user, month, items, 0, { publish: false });
       if (decided) {
-        if (!saved.includes(decided.id)) return { ok: false, error: `Rozhodnutí se neuložilo, doporučení už neplatí. Zkontrolujte téma.${skippedNote(skipped)}` };
+        if (!saved.includes(decided.id)) return { ok: false, error: `Rozhodnutí se neuložilo, doporučení už neplatí. Zkontroluj téma.${skippedNote(skipped)}` };
         const others = saved.length - 1;
         const note = others ? ` Uloženy i úpravy dalších návrhů (${others}).` : "";
         const done = decided.kind === "accept" ? "Doporučené téma přijato." : "Doporučení odmítnuto, téma zůstává prázdné.";
@@ -351,7 +352,7 @@ export async function publishMonthAction(_prev: ActionResult | null, formData: F
     } catch (error) {
       if (!(error instanceof IncompleteNotConfirmed)) throw error;
       const terms = `${error.count} ${error.count === 1 ? "termín nemá" : error.count < 5 ? "termíny nemají" : "termínů nemá"}`;
-      return { ok: false, error: `Nic se nezveřejnilo. ${terms} téma nebo vedoucího. Doplňte je, nebo dole potvrďte zveřejnění bez nich.` };
+      return { ok: false, error: `Nic se nezveřejnilo. ${terms} téma nebo vedoucího. Doplň je, nebo dole potvrď zveřejnění bez nich.` };
     }
     const { published, skipped } = result;
     if (published.length) after(() => syncPublished());
@@ -365,7 +366,7 @@ export async function publishMonthAction(_prev: ActionResult | null, formData: F
 export async function deleteDraftsAction(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
   return run(async (user) => {
     const ids = z.array(z.string().min(1).max(80)).min(1).max(100).safeParse(formData.getAll("pick"));
-    if (!ids.success) return { ok: false, error: "Vyberte aspoň jeden návrh." };
+    if (!ids.success) return { ok: false, error: "Vyber aspoň jeden návrh." };
     const items = ids.data.map((id) => ({ id, revision: z.coerce.number().int().positive().parse(formData.get(`rev-${id}`)) }));
     const { deleted, skipped } = await deleteDrafts(user, items);
     const note = skipped ? ` ${skipped} ${skipped === 1 ? "návrh mezitím někdo změnil, zůstal" : "návrhy mezitím někdo změnil, zůstaly"}.` : "";
@@ -441,7 +442,7 @@ export async function uploadRecordingAction(_prev: ActionResult | null, formData
   return run(async (user) => {
     const { id } = eventIdSchema.parse({ id: formData.get("id") });
     const file = formData.get("file");
-    if (!(file instanceof File) || file.size === 0) return { ok: false, error: "Vyberte soubor s nahrávkou." };
+    if (!(file instanceof File) || file.size === 0) return { ok: false, error: "Vyber soubor s nahrávkou." };
     const jobId = await uploadRecording(user, id, file);
     after(() => processTranscriptionJob(jobId));
     return { ok: true, message: "Nahrávka je uložená a zpracovává se." };
@@ -500,26 +501,34 @@ export async function createMinutesDraftAction(_prev: ActionResult | null, formD
     const data = z
       .object({
         id: z.string().max(80),
-        source: z.enum(["transcript", "notes", "file", "manual"]),
+        // `pasted` = jedno pole F14: vložený text, nebo nahraný soubor (obojí najednou ne).
+        source: z.enum(["pasted", "transcript", "notes", "file", "manual"]),
         replaceId: z.string().max(80),
         confirmReplace: z.enum(["", "on"]),
       })
       .parse({ id: formData.get("id"), source: formData.get("source"), replaceId: formData.get("replaceId") ?? "", confirmReplace: formData.get("confirmReplace") ?? "" });
     const replaceId = data.replaceId || null;
     const confirmReplace = data.confirmReplace === "on";
-    if (data.source === "file") {
-      const file = formData.get("file");
-      if (!(file instanceof File) || file.size === 0) return { ok: false, error: "Vyberte textový soubor." };
+    const file = formData.get("file");
+    const hasFile = file instanceof File && file.size > 0;
+    const pasted = formData.get("text");
+    const hasText = typeof pasted === "string" && pasted.trim() !== "";
+    if (data.source === "pasted") {
+      if (hasFile && hasText) return { ok: false, error: "Vlož text, nebo nahraj soubor. Obojí najednou nejde." };
+      if (!hasFile && !hasText) return { ok: false, error: "Vlož přepis nebo poznámky, nebo nahraj soubor." };
+    }
+    if (data.source === "file" || (data.source === "pasted" && hasFile)) {
+      if (!(file instanceof File) || file.size === 0) return { ok: false, error: "Vyber textový soubor." };
       const bytes = new Uint8Array(await file.arrayBuffer());
       await createMinutesDraft(user, data.id, { source: "file", fileName: file.name, bytes }, replaceId, confirmReplace);
     } else if (data.source === "manual") {
       await createMinutesDraft(user, data.id, { source: "manual" }, replaceId, confirmReplace);
     } else {
-      const text = formData.get("text");
-      if (typeof text !== "string") throw new DomainError("text_empty");
-      await createMinutesDraft(user, data.id, { source: data.source, text }, replaceId, confirmReplace);
+      if (typeof pasted !== "string") throw new DomainError("text_empty");
+      const source = data.source === "pasted" ? pastedTextKind(pasted) : data.source;
+      await createMinutesDraft(user, data.id, { source, text: pasted }, replaceId, confirmReplace);
     }
-    return { ok: true, message: "Návrh zápisu je připravený. Zkontrolujte ho a uložte." };
+    return { ok: true, message: "Návrh zápisu je připravený. Zkontroluj ho a ulož." };
   });
 }
 
@@ -730,6 +739,8 @@ export async function changeParticipationAction(_prev: ActionResult | null, form
       throw new DomainError("rate_limited");
     }
     await changeOwnParticipation(user, data.id, change);
+    // F04 + D01: omluva i přihláška platí ve Wiki hned, pozvánka v Kalendáři se upraví hned po odpovědi.
+    after(() => syncEvent(data.id));
     return { ok: true, message: PARTICIPATION_MESSAGES[change.kind] };
   });
 }

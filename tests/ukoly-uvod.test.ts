@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 import { invitationTask } from "@/features/vzdelavani/invitations";
 import type { Invitation } from "@/server/calendar/rsvp";
 
-// Pozvánky bez odpovědi na Úvodu jako jeden úkol „Čeká na vás“.
+// Pozvánky bez odpovědi na Úvodu jako jeden úkol „Čeká na tebe“.
 const item = (over: Partial<Invitation>): Invitation => ({
   eventId: "ev-1",
   title: "Trénink RM",
@@ -26,7 +26,7 @@ describe("úkol z pozvánek", () => {
       organizerEmail: "organizator@example.invalid",
       verified: true,
     })!;
-    expect(task.title).toBe("Odpovězte na pozvánky (2)");
+    expect(task.title).toBe("Odpověz na pozvánky (2)");
     expect(task.detail).toContain("Nejbližší: Trénink RM, 18. 11. v 08:30");
     expect(task).toMatchObject({ action: "Otevřít Gmail", external: true, newTab: true, urgent: true });
     expect(task.href).toContain("mail.google.com");
@@ -34,7 +34,7 @@ describe("úkol z pozvánek", () => {
 
   test("simulace bez adresy organizátora: úkol bez tlačítka", () => {
     const task = invitationTask({ items: [item({})], organizerEmail: null, verified: true })!;
-    expect(task.title).toBe("Odpovězte na pozvánku");
+    expect(task.title).toBe("Odpověz na pozvánku");
     expect(task.href).toBeUndefined();
     expect(task.urgent).toBe(false);
   });

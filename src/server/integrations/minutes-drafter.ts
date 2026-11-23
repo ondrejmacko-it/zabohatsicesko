@@ -1,5 +1,6 @@
 import { eventTitle } from "@/lib/labels";
 import type { MinutesContent } from "@/lib/types";
+import { assertNoTraining, type AiDataUse } from "@/server/integrations/ai-data-use";
 
 /**
  * Integrační hranice: z textu (přepis, poznámky, obsah souboru) vznikne návrh zápisu ve šabloně
@@ -9,8 +10,11 @@ import type { MinutesContent } from "@/lib/types";
  * režimu, stejně jako `TranscriptionProvider` u přepisu) implementuje totéž rozhraní a vybere se v
  * `minutesDrafter()` podle konfigurace serveru. Její výstup je nedůvěryhodný: volající ho vždy validuje
  * přes `minutesSchema`, text se posílá jen se souhlasem organizace a do logu se nikdy nezapisuje.
+ * F15: služba dostane text až po `redactClientData` (bez jmen a kontaktů klientů) a musí mít `dataUse` se
+ * zákazem trénování, jinak ji `minutesDrafter()` nevybere.
  */
 export interface MinutesDrafter {
+  readonly dataUse: AiDataUse;
   draft(text: string, context: { label: string; topicTitle: string | null }): Promise<MinutesContent>;
 }
 
@@ -97,11 +101,13 @@ export function draftFromText(text: string, context: { label: string; topicTitle
 }
 
 export class LocalTemplateDrafter implements MinutesDrafter {
+  // Lokální šablona: text neopustí server.
+  readonly dataUse: AiDataUse = { training: "never", retention: "none" };
   async draft(text: string, context: { label: string; topicTitle: string | null }): Promise<MinutesContent> {
     return draftFromText(text, context);
   }
 }
 
 export function minutesDrafter(): MinutesDrafter {
-  return new LocalTemplateDrafter();
+  return assertNoTraining("návrh zápisu", new LocalTemplateDrafter());
 }

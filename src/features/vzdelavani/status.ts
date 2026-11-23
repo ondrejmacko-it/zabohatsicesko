@@ -11,7 +11,7 @@ export function primaryStatus(card: EventCard): { label: string; tone: Tone } | 
   if (card.type === "holiday") return { label: "Svátek", tone: "neutral" };
   if (card.planStatus === "draft") return { label: "Návrh", tone: "draft" };
   if (card.syncStatus === "attention") return { label: "Kalendář čeká na opravu", tone: "danger" };
-  if (card.unpublishedChanges) return { label: "Zveřejněno · máte návrh změny", tone: "ochre" };
+  if (card.unpublishedChanges) return { label: "Zveřejněno · máš návrh změny", tone: "ochre" };
   if (card.syncStatus === "pending") return { label: "Kalendář se synchronizuje", tone: "ochre" };
   if (card.extraordinary) return { label: "Mimořádná akce", tone: "neutral" };
   return null;
@@ -98,7 +98,7 @@ export function cardDetails(card: EventCard, managing: boolean): CardDetail[] {
  */
 export function statusAdvice(card: EventCard): string | null {
   if (card.planStatus === "cancelled" || card.type === "holiday") return null;
-  // Chybějící téma a vedoucího ukazují samotná pole („Doplňte téma“), rada je neopakuje.
+  // Chybějící téma a vedoucího ukazují samotná pole („Doplň téma“), rada je neopakuje.
   if (card.planStatus === "draft") return "Kolegové návrh zatím nevidí.";
   if (card.syncStatus === "attention") return "Kalendář neodpovídá Wiki, je potřeba oprava.";
   // Rozpracovaný návrh změny má v detailu vlastní upozornění s tlačítky.
@@ -146,7 +146,7 @@ const plural = (count: number, one: string, few: string, many: string) => `${cou
 export type MonthTask = { state: PlanState; title: string; detail: string; action: string };
 
 /**
- * Stav měsíce převedený na úkoly správce v bloku „Čeká na vás“. Každý úkol vede na harmonogram
+ * Stav měsíce převedený na úkoly správce v bloku „Čeká na tebe“. Každý úkol vede na harmonogram
  * zúžený na příslušné termíny (stejný filtr jako výběr Stav).
  */
 export function monthTasks(summary: MonthSummary, monthName: string): MonthTask[] {

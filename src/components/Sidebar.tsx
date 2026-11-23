@@ -40,7 +40,7 @@ export function Sidebar({ badge, canManageUsers, pendingRequests, live }: Props)
                   {item.labelTail && <span className="nav-label-tail">{item.labelTail}</span>}
                 </span>
                 {count > 0 && (
-                  <span className="nav-badge" aria-label={`${count} čeká na vás`}>
+                  <span className="nav-badge" aria-label={`${count} čeká na tebe`}>
                     {count}
                   </span>
                 )}
