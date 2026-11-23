@@ -479,4 +479,15 @@ CREATE TABLE IF NOT EXISTS event_participation (
 CREATE INDEX IF NOT EXISTS event_participation_user_idx ON event_participation (org_id, user_id);
 `,
   },
+  {
+    id: "0017_participation_withdrawn",
+    approval: true,
+    sql: `
+-- Dobrovolné odhlášení musí být odlišitelné od stavu, kdy se kolega nikdy nepřihlásil.
+-- Jen rozšíření povolených hodnot; dosavadní účasti a omluvy zůstávají.
+ALTER TABLE event_participation DROP CONSTRAINT IF EXISTS event_participation_kind_check;
+ALTER TABLE event_participation ADD CONSTRAINT event_participation_kind_check
+  CHECK (kind IN ('voluntary_enrolled', 'excused', 'withdrawn'));
+`,
+  },
 ];
