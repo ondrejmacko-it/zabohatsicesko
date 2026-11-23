@@ -129,7 +129,7 @@ async function loadPerson(db: Executor, userId: string) {
  */
 export async function withOwnParticipation(session: Viewer, preview: PlanPreview | null, cards: EventCard[]): Promise<EventCard[]> {
   // Náhled může bezpečně zobrazit povinnost podle role i při vypnuté možnosti měnit účast.
-  if ((!participationEnabled() && !preview) || !cards.length) return cards;
+  if (!cards.length) return cards;
   const db = await getDb();
   const ids = [...new Set(cards.map((c) => c.id))];
   const rows = await db
@@ -149,7 +149,10 @@ export async function withOwnParticipation(session: Viewer, preview: PlanPreview
   return cards.map((card) => {
     const snapshot = published.get(card.id) ?? null;
     const participation = person ? effectiveParticipation(person, snapshot, records.get(card.id) ?? null, at) : null;
-    return { ...card, participation: ownParticipationView(participation, { readOnly: Boolean(preview) }) };
+    const view = ownParticipationView(participation, { readOnly: Boolean(preview) || !participationEnabled() });
+    return { ...card, participation: view && !participationEnabled() && view.state === "optional"
+      ? { ...view, label: "Dobrovolné" }
+      : view };
   });
 }
 
