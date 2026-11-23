@@ -19,8 +19,8 @@ describe("migrace 0016 (individuální účast)", () => {
     for (const m of migrations.slice(0, index + 1)) await run(pg, m.sql);
     await pg.exec(`INSERT INTO users (id, org_id, name, email, role, groups)
       VALUES ('u1', 'o1', 'A', 'a@example.invalid', 'member', '{fp}')`);
-    await pg.exec(`INSERT INTO events (id, org_id, type, label, starts_at, ends_at, audience, status, revision, updated_by, calendar_intent, origin)
-      VALUES ('e1', 'o1', 'training-fp', 'Test', now(), now() + interval '1 hour', 'fp', 'published', 1, 'u1', 'none', 'manual')`);
+    await pg.exec(`INSERT INTO events (id, org_id, type, label, starts_at, ends_at, all_day, audience, status, revision, updated_by, calendar_intent, origin)
+      VALUES ('e1', 'o1', 'training-fp', 'Test', now(), now() + interval '1 hour', false, 'fp', 'published', 1, 'u1', 'none', 'manual')`);
     const next = migrations[index + 1]!;
     expect(next.approval).toBe(true);
     await run(pg, next.sql);
