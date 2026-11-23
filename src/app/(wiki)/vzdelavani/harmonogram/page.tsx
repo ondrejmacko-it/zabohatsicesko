@@ -22,7 +22,7 @@ import { formatMonth, isValidDateKey, isValidMonthKey, monthOf, shiftMonth, toDa
 import { EVENT_TYPES } from "@/lib/types";
 import { syncPublished } from "@/server/calendar/sync";
 import { requireUser } from "@/server/auth/session";
-import { now, participationEnabled } from "@/server/config";
+import { now } from "@/server/config";
 import { isMine } from "@/server/domain/participation";
 import { withOwnParticipation } from "@/server/services/participation";
 import { defaultAudience } from "@/server/domain/generation";
@@ -71,10 +71,8 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
     // Vlastní kalendář patří přihlášenému, v náhledu očima kolegy se neukazuje.
     preview ? null : loadPersonalCalendar(user),
   ]);
-  // Vlastní účast (PARTICIPATION=on): štítky a filtr Moje. Bez přepínače karty beze změny a bez dotazu.
-  const participation = participationEnabled();
-  const participationFilters = true; // Přehled povinných/dobrovolných je dostupný i bez aktivace zápisu účasti.
-  const attendanceFilter = participationFilters && ["moje", "povinne", "dobrovolne"].includes(params.ucast ?? "")
+  // Filtr účasti (Všechny / Povinné / Dobrovolné / Moje) funguje i bez zapnutých přihlášek (PARTICIPATION).
+  const attendanceFilter = ["moje", "povinne", "dobrovolne"].includes(params.ucast ?? "")
     ? params.ucast
     : undefined;
   const monthCards = await withOwnParticipation(user, preview, rawMonthCards);
@@ -237,25 +235,6 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
                   Seznam
                 </Link>
               </span>
-              {participationFilters && (
-                <span className="view-toggle participation-toggle" role="group" aria-label="Účast v harmonogramu">
-                  {([
-                    ["", "Všechny"],
-                    ["povinne", "Povinné"],
-                    ["dobrovolne", "Dobrovolné"],
-                    ["moje", "Moje"],
-                  ] as const).map(([value, label]) => (
-                    <Link
-                      key={value}
-                      className="pill"
-                      href={link({ ucast: value || undefined })}
-                      aria-current={(attendanceFilter ?? "") === value ? "page" : undefined}
-                    >
-                      {label}
-                    </Link>
-                  ))}
-                </span>
-              )}
               {monthKey !== thisMonth && (
                 <Link className="btn btn-small btn-quiet" href={link({ mesic: thisMonth })}>
                   Dnes
@@ -302,6 +281,24 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
               )}
             </div>
           </div>
+          {/* Filtr účasti má vlastní řádek: ve sdíleném sloupci lišty přetékal přes název měsíce. */}
+          <nav className="participation-filter" aria-label="Účast v harmonogramu">
+            {([
+              ["", "Všechny"],
+              ["povinne", "Povinné"],
+              ["dobrovolne", "Dobrovolné"],
+              ["moje", "Moje"],
+            ] as const).map(([value, label]) => (
+              <Link
+                key={value}
+                className="pill"
+                href={link({ ucast: value || undefined })}
+                aria-current={(attendanceFilter ?? "") === value ? "page" : undefined}
+              >
+                {label}
+              </Link>
+            ))}
+          </nav>
         </div>
         <SelectionZone
           monthKey={monthKey}

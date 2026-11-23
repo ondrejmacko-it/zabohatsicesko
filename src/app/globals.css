@@ -2922,9 +2922,35 @@ p.cal-status {
   grid-area: start;
 }
 
+/* Zóny lišty se zalamují uvnitř svého sloupce; obsah nikdy nepřeteče do sousední zóny. */
+.toolbar-start,
+.toolbar-end {
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
 .toolbar-end {
   grid-area: end;
   justify-content: flex-end;
+}
+
+.participation-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 14px;
+}
+
+.schedule-toolbar .pill,
+.participation-filter .pill {
+  white-space: nowrap;
+}
+
+.participation-filter .pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
 }
 
 .schedule-toolbar .pill {
@@ -2980,15 +3006,6 @@ p.cal-status {
 
   .toolbar-start:not(:has(> :not(.view-toggle))) {
     display: none;
-  }
-
-  /* Moje / Všechny (PARTICIPATION=on) zůstává i na telefonu: filtruje i seznam. */
-  .view-toggle.participation-toggle {
-    display: flex;
-  }
-
-  .toolbar-start:has(> .participation-toggle) {
-    display: flex;
   }
 
   .toolbar-end {
