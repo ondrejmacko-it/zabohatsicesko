@@ -273,4 +273,13 @@ describe("individuální účast v databázi", () => {
     expect(canReadExcuseDetails(participant, participant.id)).toBe(true);
     expect(canReadExcuseDetails(organizer, participant.id)).toBe(false);
   });
+
+  // Oprava B (finální integrační kolo): manažerská struktura ve Wiki zatím není (O03). Dokud ji firma nedodá,
+  // nesmí důvod omluvy odemknout technická role ani pracovní role „vedoucí týmu“.
+  test("hlavní správce, vedoucí týmu ani kolega ze stejné skupiny důvod omluvy nevidí", () => {
+    const admin = { id: "demo-spravce", role: "admin" as const, groups: ["vsichni", "fp", "rm", "tym-a"] };
+    const teamLead = { id: "vedouci-tymu-1", role: "member" as const, groups: ["vsichni", "fp", "vedouci-tymu"] };
+    const colleague = { id: "kolega-fp", role: "member" as const, groups: ["vsichni", "fp"] };
+    for (const viewer of [admin, teamLead, colleague]) expect(canReadExcuseDetails(viewer, participant.id)).toBe(false);
+  });
 });

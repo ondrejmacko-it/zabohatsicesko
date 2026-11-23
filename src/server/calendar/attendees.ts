@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, or, sql } from "drizzle-orm";
 import type { OwnCalendar } from "@/lib/calendar-note";
 import type { EventSnapshot, SimAttendee } from "@/lib/types";
 import { attendeeSource, config, googleCalendarConfig, now, participationEnabled, personalDelivery, type AttendeeSource } from "@/server/config";
@@ -124,20 +124,42 @@ export function planGuests(desired: SimAttendee[], current: SimAttendee[], manag
 
 export const samePlan = (plan: GuestPlan) => plan.add.length === 0 && plan.remove.length === 0;
 
+/** Člověk, jehož účet se změnil: jeho ID a skupiny před změnou i po ní. */
+export type ChangedPerson = { id: string; groups: readonly string[] };
+
 /**
- * Po změně skupin, role nebo stavu účtu vrátí do fronty budoucí zveřejněné akce dotčeného publika.
+ * Po změně skupin, role nebo stavu účtu vrátí do fronty budoucí akce, kterých se změna může týkat:
+ * publikum ze starých či nových skupin, akce pro všechny, akce s jeho přihláškou nebo omluvou a každá
+ * pozvánka, kde je mezi hosty spravovanými Wiki (třeba po deaktivaci). Samotná synchronizace pak
+ * hosty spočítá znovu a beze změny nic neposílá, takže širší výběr je bezpečný.
  * Proběhlé akce se nemění. Při pevném seznamu testovacích příjemců se hosté podle účtů neřídí.
  */
-export async function requeueAttendeeSync(db: Executor, groups: readonly string[]): Promise<void> {
-  if (!groups.length || (googleCalendarConfig() && attendeeSource() === "allowlist")) return;
+export async function requeueAttendeeSync(db: Executor, person: ChangedPerson): Promise<void> {
+  if (googleCalendarConfig() && attendeeSource() === "allowlist") return;
+  const audiences = [...new Set([...person.groups, "vsichni"])];
+  // Všechny adresy účtu (Správa i svázaný účet Google), pod kterými ho Wiki mohla pozvat.
+  const addresses = await db
+    .select({ email: users.email, googleEmail: userIdentities.email })
+    .from(users)
+    .leftJoin(userIdentities, and(eq(userIdentities.userId, users.id), eq(userIdentities.provider, "google")))
+    .where(and(eq(users.orgId, config.orgId), eq(users.id, person.id)));
+  const emails = [...new Set(addresses.flatMap((a) => [a.email, a.googleEmail]).filter((e): e is string => !!e).map((e) => e.toLowerCase()))];
+  const ownRecords = db
+    .select({ id: eventParticipation.eventId })
+    .from(eventParticipation)
+    .where(and(eq(eventParticipation.orgId, config.orgId), eq(eventParticipation.userId, person.id)));
+  const managedByWiki = emails.length
+    ? sql`${calendarLinks.managedAttendees} && array[${sql.join(emails.map((e) => sql`${e}`), sql`, `)}]::text[]`
+    : sql`false`;
   const affected = db
     .select({ id: events.id })
     .from(events)
+    .leftJoin(calendarLinks, eq(calendarLinks.eventId, events.id))
     .where(
       and(
         eq(events.orgId, config.orgId),
         gt(events.startsAt, now()),
-        inArray(sql<string>`${events.published}->>'audience'`, [...groups]),
+        or(inArray(sql<string>`${events.published}->>'audience'`, audiences), inArray(events.id, ownRecords), managedByWiki),
       ),
     );
   await db

@@ -1,3 +1,17 @@
+# 18 BODŮ ZADAVATELKY – FINÁLNÍ INTEGRAČNÍ OPRAVY (23. 11. 2026) – začni tímto
+
+* Větev `claude/funkce/finalni-integracni-opravy` nad `claude/funkce/kalendar-f04` (PR #84), draft PR do ní.
+  Nic nemergnuto, žádná produkční operace.
+* Opraveno s regresními testy, které před opravou selhaly: A (přepočet pozvánek po změně účtu i pro přihlášky,
+  „Všichni“ a spravované adresy), C (náhled dopadu změny = stejný výpočet hostů jako synchronizace, pravdivá věta
+  o publiku), D/O09 (věty panelu o Kalendáři bez nepravdivých tvrzení). B: manažerská struktura neexistuje,
+  oprávnění beze změny, doplněné testy.
+* Výsledky, otevřená rozhodnutí R1–R7 a checklist: `docs/report-finalni-integracni-opravy.md`.
+* Postup merge pro uživatele: `docs/navod-merge-f01-f18.md` (odshora dolů, merge commit, jen #77 do `main`).
+  Každý merge do `main` nasazuje produkci (ostrá Wiki se skutečným Google Kalendářem).
+
+**Další krok:** uživatel slučuje podle návodu, nebo rozhodne R1–R7. Nic nemergovat za něj.
+
 # 18 BODŮ ZADAVATELKY – PR8 F04 HOTOVO V SIMULACI, VŠECH 18 BODŮ OVĚŘENO (22. 11. 2026) – začni tímto
 
 * **Znění F01–F18 a D01–D07 je v `docs/pozadavky-f01-f18.md`. Na zadání se uživatele už neptej.**

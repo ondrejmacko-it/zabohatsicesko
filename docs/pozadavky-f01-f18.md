@@ -133,17 +133,17 @@ Každý bod má aspoň jeden cílený test. Unit = `tests/` (Vitest), e2e = `e2e
 ve Wiki hned (D01) a hned po odpovědi (`after(() => syncEvent)` v `changeParticipationAction`) Wiki omluveného z hostů
 odebere, Google mu pošle zrušení. `declined` za něj Wiki nenastavuje (O04). Panel „Tvoje účast“ v detailu akce i v okně akce v Plánu říká
 pravdivý stav vlastní pozvánky (`calendarNote`, `ownCalendarState`): „Pozvánku máš v Kalendáři.“, „…čeká na odeslání.“,
-„Omluveno ve Wiki, Kalendář čeká.“, „Pozvánku v Kalendáři nemáš, omluva ji odmítla.“, „Do Kalendáře se akce přidá, až
+„Odebrání z pozvánky v Kalendáři čeká na odeslání.“, „Wiki tě na tuto akci do Kalendáře nezve.“, „Wiki tvoji pozvánku
+nespravuje. Její stav ověř v Kalendáři.“, „Do Kalendáře se akce přidá, až
 se přihlásíš.“, chyba Kalendáře. Kde stav Wiki nezná (osobní kalendáře, pevný seznam testovacích příjemců, starší
 pozvánka bez spravovaných hostů, například spárovaná ukázková `tr-rm-1112`), panel o Kalendáři nic netvrdí.
 
 **Stav F04: hotovo v simulaci** (unit `kalendar-f04.test.ts` 18/18, e2e `ucast.spec.ts` › F04 na windows-1280 i
 telefon-390, celé e2e 1333 OK / 213 přeskočeno / 0 chyb). Živý test s Googlem dál čeká na schválení (D06).
 
-**Otevřené (O09):** u spárované pozvánky, kde byl omluvený už předtím ručním hostem, ho Wiki z pozvánky neodebere
-(ruční hosty nemění), ale panel řekne „Pozvánku v Kalendáři nemáš, omluva ji odmítla.“ (`inCalendar` se počítá jen ze
-spravovaných hostů). Varianty: větu u omluvy formulovat bez tvrzení o odmítnutí, nebo u hosta mimo spravované vracet
-neznámý stav. Rozhodne uživatel.
+**O09 vyřešeno (finální integrační kolo, 23. 11. 2026):** věty panelu netvrdí nic, co Wiki neví. U hosta mimo
+spravované hosty (ruční host spárované pozvánky) panel neříká, že pozvánku nemá ani že ji omluva „odmítla“. Test
+`kalendar-f04.test.ts` › O09. Podrobnosti v `docs/report-finalni-integracni-opravy.md`.
 
 **Zbývá pro živý test (vyžaduje schválení uživatele, D06):** účet organizátora v Google, `CALENDAR_MODE=google-test`,
 `CALENDAR_DELIVERY=organizer`, `CALENDAR_ATTENDEES=audience`, `PARTICIPATION=on` na preview; ověřit, že pozvaný dostane

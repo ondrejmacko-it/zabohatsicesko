@@ -7,7 +7,7 @@ import { getDb } from "@/server/db/client";
 import { calendarLinks, eventParticipation, simCalendarEvents, simCalendarNotifications } from "@/server/db/schema";
 import { snapshotOf } from "@/server/domain/snapshot";
 import { formValuesOf } from "@/server/services/detail";
-import { createEvent, loadEventRow } from "@/server/services/events";
+import { createEvent, loadEventRow, updateEvent } from "@/server/services/events";
 import { ownParticipationDetail } from "@/server/services/participation";
 import { writeSwitch } from "@/server/settings";
 import type { Viewer } from "@/server/policy";
@@ -104,7 +104,7 @@ describe("F04 + D01: omluva pozvánku odmítne a platí ihned", () => {
     // Ve Wiki platí hned, ještě před úlohou po odpovědi. Kalendář čeká.
     const [record] = await (await getDb()).select().from(eventParticipation).where(eq(eventParticipation.eventId, id));
     expect(record).toMatchObject({ userId: outsider.id, kind: "excused" });
-    expect(await noteFor(outsider, id)).toBe("Omluveno ve Wiki, Kalendář čeká.");
+    expect(await noteFor(outsider, id)).toBe("Odebrání z pozvánky v Kalendáři čeká na odeslání.");
     expect(queued).toHaveLength(1);
 
     await runAfter();
@@ -116,7 +116,7 @@ describe("F04 + D01: omluva pozvánku odmítne a platí ihned", () => {
     expect(JSON.stringify(after.invite)).not.toContain("illness");
     // `declined` Wiki za omluveného nenastavuje (O04): z hostů zmizí, Google mu pošle zrušení.
     expect(after.invite.attendees.some((a) => a.responseStatus === "declined")).toBe(false);
-    expect(await noteFor(outsider, id)).toBe("Pozvánku v Kalendáři nemáš, omluva ji odmítla.");
+    expect(await noteFor(outsider, id)).toBe("Wiki tě na tuto akci do Kalendáře nezve.");
 
     // Zrušení omluvy vrátí pozvánku.
     expect(await act(outsider, { id, change: "revoke_excuse" })).toMatchObject({ ok: true });
@@ -174,7 +174,7 @@ describe("F04 nad ukázkovými daty: spárovaná pozvánka vs. pozvánka založe
     expect(await act(outsider, { id: SEED_RM, change: "excuse", reason: "illness", note: "" })).toMatchObject({ ok: true });
     await runAfter();
     expect((await guests(SEED_RM)).emails).not.toContain(email(outsider.id));
-    expect(await noteFor(outsider, SEED_RM)).toBe("Pozvánku v Kalendáři nemáš, omluva ji odmítla.");
+    expect(await noteFor(outsider, SEED_RM)).toBe("Wiki tě na tuto akci do Kalendáře nezve.");
 
     expect(await act(participant, { id: SEED_RM, change: "enroll" })).toMatchObject({ ok: true });
     await runAfter();
@@ -213,6 +213,35 @@ describe("F04: okno akce v Plánu ukazuje stav vlastní pozvánky", () => {
   });
 });
 
+describe("O09: ruční host spárované pozvánky (finální integrační kolo)", () => {
+  // Spárovaná pozvánka po první změně: Wiki doplní chybějící hosty jako spravované, ruční host (RM účastník)
+  // zůstává ručním. Panel o něm nesmí tvrdit, že pozvánku nemá nebo že na ni čeká.
+  test("panel neříká nepravdu o pozvánce, kterou Wiki nespravuje, a omluva ručního hosta z pozvánky neodebere", async () => {
+    const row = (await loadEventRow(await getDb(), PUBLISHED_RM))!;
+    const v = formValuesOf(snapshotOf(row));
+    await updateEvent(
+      organizer,
+      PUBLISHED_RM,
+      row.revision,
+      { type: v.type, label: v.label, date: v.date, endDate: v.endDate, startTime: v.startTime, endTime: v.endTime, topicTitle: "Jiné téma", topicId: null, audience: v.audience, leadId: v.leadId || null, reviewerId: v.reviewerId || null },
+      "publish",
+    );
+    await syncEvent(PUBLISHED_RM);
+    const paired = await guests(PUBLISHED_RM);
+    expect(paired.link.managedAttendees).not.toBeNull();
+    expect(paired.link.managedAttendees).not.toContain(email(outsider.id));
+    expect(paired.emails).toContain(email(outsider.id)); // ruční host
+
+    expect(await noteFor(outsider, PUBLISHED_RM)).toBe("Wiki tvoji pozvánku nespravuje. Její stav ověř v Kalendáři.");
+    expect(await act(outsider, { id: PUBLISHED_RM, change: "excuse", reason: "illness", note: "" })).toMatchObject({ ok: true });
+    await runAfter();
+    expect((await guests(PUBLISHED_RM)).emails).toContain(email(outsider.id)); // ruční hosty Wiki nemění
+    const note = await noteFor(outsider, PUBLISHED_RM);
+    expect(note).toBe("Wiki tě na tuto akci do Kalendáře nezve.");
+    expect(note).not.toMatch(/nemáš|odmítla/);
+  });
+});
+
 describe("calendarNote: věta panelu podle stavu", () => {
   const cal = (link: OwnCalendar["link"], inCalendar: boolean): OwnCalendar => ({ link, inCalendar });
   test.each([
@@ -220,11 +249,12 @@ describe("calendarNote: věta panelu podle stavu", () => {
     ["required", cal("none", false), "Pozvánka do Kalendáře čeká na odeslání."],
     ["required", cal("pending", true), "Pozvánka do Kalendáře čeká na odeslání."],
     ["voluntary_enrolled", cal("synced", true), "Pozvánku máš v Kalendáři."],
-    ["excused", cal("pending", true), "Omluveno ve Wiki, Kalendář čeká."],
-    ["excused", cal("synced", false), "Pozvánku v Kalendáři nemáš, omluva ji odmítla."],
-    ["excused", cal("none", false), "Pozvánku v Kalendáři nemáš, omluva ji odmítla."],
+    ["excused", cal("pending", true), "Odebrání z pozvánky v Kalendáři čeká na odeslání."],
+    ["excused", cal("synced", false), "Wiki tě na tuto akci do Kalendáře nezve."],
+    ["excused", cal("none", false), "Wiki tě na tuto akci do Kalendáře nezve."],
     ["optional", cal("synced", false), "Do Kalendáře se akce přidá, až se přihlásíš."],
     ["optional", cal("pending", true), "Wiki akci z tvého Kalendáře právě odebírá."],
+    ["required", cal("synced", false), "Wiki tvoji pozvánku nespravuje. Její stav ověř v Kalendáři."],
     ["required", cal("attention", true), "Kalendář se teď nepodařilo upravit, Wiki to zkusí znovu."],
   ] as const)("%s + %j", (state, calendar, text) => expect(calendarNote(state, calendar)).toBe(text));
 

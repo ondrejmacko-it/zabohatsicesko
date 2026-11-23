@@ -95,7 +95,7 @@ test.describe("účast v harmonogramu", () => {
     await panel.getByRole("button", { name: "Omluvit se" }).click();
     await page.getByRole("dialog", { name: "Omluvit se z akce?" }).getByRole("button", { name: "Omluvit se" }).click();
     await expect(page.locator('[data-ucast-panel="excused"]')).toContainText("Omluveno ve Wiki, platí hned.");
-    await expectCalendar(page, "Pozvánku v Kalendáři nemáš, omluva ji odmítla.");
+    await expectCalendar(page, "Wiki tě na tuto akci do Kalendáře nezve.");
     await page.locator("[data-ucast-panel]").getByRole("button", { name: "Zrušit omluvu" }).click();
     await page.getByRole("dialog", { name: "Zrušit omluvu?" }).getByRole("button", { name: "Zrušit omluvu" }).click();
     await expectCalendar(page, "Pozvánku máš v Kalendáři.");
