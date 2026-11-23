@@ -162,18 +162,20 @@ describe("štítky a filtr Moje", () => {
 });
 
 describe("vypnutý přepínač (výchozí stav)", () => {
-  test("akce nic nezapíše, karty beze změny, tabulka se nečte", async () => {
+  test("vypnutý zápis účasti: role se zobrazí jen ke čtení a tabulka se nečte", async () => {
     vi.stubEnv("PARTICIPATION", "");
     const rm = await futurePublished("rm");
     expect(await act({ id: rm, change: "enroll" })).toMatchObject({ ok: false });
     expect(await records()).toHaveLength(0);
     const cards = await listMonth(participant, "2026-11");
-    expect(await withOwnParticipation(participant, null, cards)).toBe(cards);
+    const readOnly = await withOwnParticipation(participant, null, cards);
+    expect(readOnly).toHaveLength(cards.length);
+    expect(readOnly.filter((card) => card.participation).every((card) => card.participation?.actions.length === 0)).toBe(true);
     expect(await ownParticipationDetail(participant, null, rm)).toBeNull();
     // Ani bez tabulky nic nespadne: přepínač vypnutý = žádný dotaz na event_participation.
     await (await getDb()).execute(sql`ALTER TABLE event_participation RENAME TO event_participation_off`);
     try {
-      expect(await withOwnParticipation(participant, null, cards)).toBe(cards);
+      expect((await withOwnParticipation(participant, null, cards)).length).toBe(cards.length);
       expect(await ownParticipationDetail(participant, null, rm)).toBeNull();
     } finally {
       await (await getDb()).execute(sql`ALTER TABLE event_participation_off RENAME TO event_participation`);
