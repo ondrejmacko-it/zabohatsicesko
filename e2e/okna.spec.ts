@@ -50,7 +50,12 @@ test.describe("okna správce", () => {
     expect(value).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(await date.getAttribute("min")).toBeTruthy();
     expect((await date.getAttribute("max"))?.slice(0, 7)).toBe(value.slice(0, 7));
-    await expect(prepare.getByLabel(/^Skupina: /).first()).toBeVisible();
+    // F01: Pro koho nabízí Všichni / FP / RM, starší skupinu jen u návrhu, který ji už má.
+    const audience = prepare.getByLabel(/^Pro koho: /).first();
+    await expect(audience).toBeVisible();
+    const planned = ["Všichni", "Finanční poradci", "Relationship manažeři"];
+    const legacy = (await audience.inputValue()) === "tym-a";
+    await expect(audience.locator("option")).toHaveText(legacy ? [...planned, "Tým A"] : planned);
 
     // Mezery se počítají živě z rozepsaného formuláře.
     const id = (await date.getAttribute("name"))!.replace("date-", "");
@@ -213,7 +218,7 @@ test.describe("okna správce", () => {
     await expect(publish).toHaveClass(/btn-primary/);
     await publish.click();
     const ask = page.getByRole("dialog", { name: "Zveřejnit změny?" });
-    await expect(ask).toContainText("Změníte termín");
+    await expect(ask).toContainText("Změníš termín");
     await expect(ask.getByRole("button", { name: "Potvrdit zveřejnění" })).toBeVisible();
     await ask.getByRole("button", { name: "Zpět k úpravám" }).click();
     await expect(ask).toHaveCount(0);

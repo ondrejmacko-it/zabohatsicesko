@@ -2,10 +2,8 @@ import type { Metadata } from "next";
 import type { EventCard } from "@/server/services/events";
 import Link from "next/link";
 import { after } from "next/server";
-import { ActionForm } from "@/components/ActionForm";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { Icon } from "@/components/Icon";
-import { generateMonthAction } from "@/features/vzdelavani/actions";
 import { CalendarAlert } from "@/features/vzdelavani/components/CalendarStatusLine";
 import { EventDialog } from "@/features/vzdelavani/components/EventDialog";
 import { PersonalCalendarStatus } from "@/features/vzdelavani/components/PersonalCalendarStatus";
@@ -154,6 +152,10 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
         // kotva na kartu by na telefonu mířila na skrytou mřížku).
         .map((chip) => ({ ...chip, href: `${link({ stav: toggled(states, chip.state) })}#mesic` }))
     : [];
+  // Prázdný měsíc (F06): jediné hlavní tlačítko je „Připravit měsíc“ (Přidat akci je vedlejší) a prázdný stav
+  // se ukáže jen jednou. Okno zůstává na stejném místě v liště, aby po doplnění termínů nepřišlo o stav.
+  const emptyMonth = Boolean(summary && !summary.planned && monthDrafts && calendar);
+  const scheduleEmpty = emptyMonth && !filtering && !mineOnly ? null : emptyText;
   // Vlastní úkoly diváka (záznam, zápis…) jsou v Plánu sbalené do jednoho řádku. Celé jsou na Úvodu.
   const tasks = viewerTasks;
   // Kdo nemá úkoly ani neplánuje, uvidí na telefonu nejdřív nejbližší akci (měsíční seznam začíná prvním dnem).
@@ -162,17 +164,33 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   // Přesun (mřížka myší, agenda úchytem na telefonu) i „+“ u dne jen pro správce, od dneška dál.
   const planning = managing ? { addHref, movableFrom: todayKey } : {};
   const schedule = listView ? (
-    <Agenda monthKey={monthKey} cards={cards} todayKey={todayKey} emptyText={emptyText} hrefFor={peekHref} managing={managing} menuFor={menuFor} {...planning} />
+    <Agenda monthKey={monthKey} cards={cards} todayKey={todayKey} emptyText={scheduleEmpty} hrefFor={peekHref} managing={managing} menuFor={menuFor} {...planning} />
   ) : (
     <>
       <div className={styles.desktopOnly}>
         <ScheduleGrid monthKey={monthKey} cards={cards} todayKey={todayKey} slotTimes={slotTimes} hrefFor={peekHref} managing={managing} menuFor={menuFor} {...planning} />
       </div>
       <div className={styles.mobileOnly}>
-        <Agenda monthKey={monthKey} cards={cards} todayKey={todayKey} emptyText={emptyText} hrefFor={peekHref} managing={managing} menuFor={menuFor} {...planning} />
+        <Agenda monthKey={monthKey} cards={cards} todayKey={todayKey} emptyText={scheduleEmpty} hrefFor={peekHref} managing={managing} menuFor={menuFor} {...planning} />
       </div>
     </>
   );
+  const prepareMonth =
+    monthDrafts && calendar ? (
+      <PrepareMonthDialog
+        monthKey={monthKey}
+        monthName={formatMonth(monthKey)}
+        todayKey={todayKey}
+        drafts={monthDrafts.drafts}
+        changeDrafts={monthDrafts.changeDrafts}
+        people={people}
+        topics={topics.map((t) => t.name)}
+        recipients={calendar.recipients}
+        inviteMode={inviteMode}
+        template={template}
+        primary={emptyMonth}
+      />
+    ) : null;
   return (
     <>
       <ShotGrant page="/vzdelavani/harmonogram" />
@@ -184,7 +202,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
       {tasks.length > 0 && (
         <details className="plan-tasks">
           <summary>
-            {preview ? "Úkoly v náhledu" : "Čeká na vás"}
+            {preview ? "Úkoly v náhledu" : "Čeká na tebe"}
             <span className="count-badge">{tasks.length}</span>
           </summary>
           <TasksCard tasks={tasks} title={preview ? "Úkoly v náhledu" : undefined} readOnly={Boolean(preview)} className="tasks-card" />
@@ -239,20 +257,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
               </Link>
             </div>
             <div className="toolbar-end">
-              {monthDrafts && calendar && (
-                <PrepareMonthDialog
-                  monthKey={monthKey}
-                  monthName={formatMonth(monthKey)}
-                  todayKey={todayKey}
-                  drafts={monthDrafts.drafts}
-                  changeDrafts={monthDrafts.changeDrafts}
-                  people={people}
-                  topics={topics.map((t) => t.name)}
-                  recipients={calendar.recipients}
-                  inviteMode={inviteMode}
-                  template={template}
-                />
-              )}
+              {prepareMonth}
               {managing && (
                 <EventDialog
                   key={copyValues ? `kopie-${copyId}` : topicValues ? `tema-${topicParam}` : (addDay ?? "nova")}
@@ -275,6 +280,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
                   topics={topics}
                   invite={calendar}
                   planDays={activeSlots.map((s) => s.isoWeekday)}
+                  quiet={emptyMonth}
                 />
               )}
             </div>
@@ -298,10 +304,9 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
             quick={{ monthKey, todayKey, planHref: link({}), addDate: managing ? (monthOf(todayKey) === monthKey ? todayKey : `${monthKey}-01`) : null }}
           />
 
-          {summary && !summary.planned && (
+          {emptyMonth && (
             <div className="notice month-summary-empty">
-              <p>V tomto měsíci zatím nejsou žádné akce.</p>
-              {managing && <ActionForm action={generateMonthAction} fields={{ month: monthKey }} label="Přidat chybějící termíny jako návrhy" pendingLabel="Přidávám…" variant="primary" />}
+              <p>V tomto měsíci zatím nejsou žádné akce. Začni tlačítkem Připravit měsíc, doplní termíny podle rozvrhu.</p>
             </div>
           )}
 

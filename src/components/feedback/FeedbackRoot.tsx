@@ -25,7 +25,7 @@ export const FEEDBACK_OPEN_EVENT = "zbc:zpetna-vazba";
 const TYPE_HINT: Record<FeedbackType, string> = {
   bug: "Něco nefunguje, jak má.",
   ui: "Špatně se to čte, hledá nebo ovládá.",
-  idea: "Co by vám práci usnadnilo.",
+  idea: "Co by ti práci usnadnilo.",
   other: "Cokoli dalšího.",
 };
 
@@ -181,7 +181,7 @@ export function FeedbackRoot() {
         {step === "type" && (
           <div className="stack feedback-step">
             <fieldset className="feedback-types">
-              <legend>Co chcete nahlásit?</legend>
+              <legend>Co chceš nahlásit?</legend>
               {FEEDBACK_TYPES.map((value) => (
                 <label key={value} className="feedback-type">
                   <input type="radio" name="feedback-type" value={value} checked={type === value} onChange={() => update({ type: value })} />
@@ -242,10 +242,10 @@ export function FeedbackRoot() {
                 Označit místo
               </button>
               <span className="small muted" aria-live="polite">
-                {draft.marks.length === 0 ? "Nepovinné: ukažte, kde na stránce to je." : `Označeno míst: ${draft.marks.length}`}
+                {draft.marks.length === 0 ? "Nepovinné: ukaž, kde na stránce to je." : `Označeno míst: ${draft.marks.length}`}
               </span>
             </div>
-            <p className="small muted">Nepište sem osobní údaje klientů ani hesla.</p>
+            <p className="small muted">Nepiš sem osobní údaje klientů ani hesla.</p>
             <div className="spread feedback-actions">
               <button type="button" className="btn" onClick={() => setStep("type")}>
                 Zpět
@@ -275,7 +275,7 @@ export function FeedbackRoot() {
               <dt>Označená místa</dt>
               <dd>{draft.marks.length === 0 ? "žádná" : draft.marks.map((mark, index) => `${index + 1}. ${mark.description}`).join("; ")}</dd>
             </dl>
-            <p className="small muted">Přidáme i technické údaje: velikost okna, prohlížeč, verzi Wiki a vaši roli. Jméno ani e-mail se neposílají.</p>
+            <p className="small muted">Přidáme i technické údaje: velikost okna, prohlížeč, verzi Wiki a tvoji roli. Jméno ani e-mail se neposílají.</p>
 
             <section className="feedback-shot" aria-label="Snímek obrazovky">
               {draft.screenshot ? (
@@ -290,13 +290,13 @@ export function FeedbackRoot() {
                 <p className="small muted">Na této stránce se snímek obrazovky nepořizuje.</p>
               ) : (
                 <>
-                  <p className="small muted">Snímek je nepovinný. Zachytí viditelnou část stránky, pole formulářů, zápisy a údaje účtu začerníme. Před odesláním ho uvidíte.</p>
+                  <p className="small muted">Snímek je nepovinný. Zachytí viditelnou část stránky, pole formulářů, zápisy a údaje účtu začerníme. Před odesláním ho uvidíš.</p>
                   <button type="button" className="btn btn-small" onClick={takeScreenshot} disabled={capturing}>
                     {capturing ? "Pořizuji snímek…" : "Pořídit snímek"}
                   </button>
                   {captureFailed && (
                     <p className="small" role="status">
-                      Snímek se nepodařilo pořídit. Hlášení můžete odeslat i bez něj.
+                      Snímek se nepodařilo pořídit. Hlášení můžeš odeslat i bez něj.
                     </p>
                   )}
                 </>

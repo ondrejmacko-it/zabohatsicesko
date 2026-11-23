@@ -23,7 +23,7 @@ export default function PrivacyPage() {
           <ul>
             <li>Z účtu Google jméno, e-mailovou adresu a identifikátor účtu. Slouží jen k přihlášení.</li>
             <li>Roli a skupiny, které přidělí správce, a záznam důležitých kroků (kdo co zveřejnil nebo změnil).</li>
-            <li>Obsah, který do Wiki vložíte: akce, témata, zájem o témata, nahrávky a zápisy.</li>
+            <li>Obsah, který do Wiki vložíš: akce, témata, zájem o témata, nahrávky a zápisy.</li>
             <li>Nezbytné cookies pro přihlášení. Wiki nepoužívá analytické ani reklamní cookies.</li>
           </ul>
           <h2>Google Kalendář</h2>
@@ -42,9 +42,9 @@ export default function PrivacyPage() {
             Aplikace běží na Vercelu, databáze u Neonu v Evropské unii (Frankfurt). Údaje se uchovávají po dobu
             používání Wiki.
           </p>
-          <h2>Vaše možnosti</h2>
+          <h2>Tvoje možnosti</h2>
           <p>
-            O opravu nebo smazání údajů a zrušení přístupu požádejte správce Wiki. Oprávnění pro Wiki můžete
+            O opravu nebo smazání údajů a zrušení přístupu požádej správce Wiki. Oprávnění pro Wiki můžeš
             kdykoli odebrat také v nastavení svého účtu Google (Zabezpečení, Aplikace třetích stran).
           </p>
           <p>

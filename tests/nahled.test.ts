@@ -1,4 +1,9 @@
+import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, test } from "vitest";
+import { greeting } from "@/lib/greeting";
+import { getDb } from "@/server/db/client";
+import { users } from "@/server/db/schema";
+import { canManageUsers } from "@/server/policy";
 import { monthSummary, monthTasks } from "@/features/vzdelavani/status";
 import { getEventDetail } from "@/server/services/detail";
 import { listMonth, nextEventsFor } from "@/server/services/events";
@@ -6,7 +11,7 @@ import { listPublishedMinutes } from "@/server/services/journey";
 import { listPreviewOptions, resolvePreview } from "@/server/services/preview";
 import { encodePreviewCookie, previewKeyFor } from "@/server/services/preview-context";
 import { listTopics } from "@/server/services/topics";
-import { lead, organizer, outsider, participant, resetDemo } from "./helpers";
+import { admin, lead, organizer, outsider, participant, resetDemo } from "./helpers";
 
 beforeEach(resetDemo);
 
@@ -30,6 +35,18 @@ describe("náhled harmonogramu očima někoho jiného", () => {
     const preview = (await resolvePreview(organizer, "kolega-demo-vedouci"))!;
     expect(preview.viewer).toEqual(lead);
     expect(await ids(preview.viewer)).toEqual(await ids(lead));
+  });
+
+  test("F16: náhled kolegy nese jeho jméno a oprávnění kolegy (Správa systému skrytá), náhled skupiny jméno nemá", async () => {
+    const colleague = (await resolvePreview(organizer, "kolega-demo-vedouci"))!;
+    const [row] = await (await getDb()).select({ name: users.name }).from(users).where(eq(users.id, lead.id));
+    expect(colleague.personName).toBe(row!.name);
+    expect(greeting(colleague.personName)).not.toContain("Správce");
+    expect(canManageUsers(colleague.viewer)).toBe(false);
+    expect(canManageUsers(admin)).toBe(true);
+    const group = (await resolvePreview(organizer, "skupina-rm"))!;
+    expect(group.personName).toBeUndefined();
+    expect(greeting(group.personName)).toBe("Ahoj");
   });
 
   test("náhled smí zapnout jen organizátor a jen pro známý klíč", async () => {

@@ -63,8 +63,35 @@ function draftHint(minutes: HandlerMinutes): string {
   if (minutes.source === "recording") {
     return `Návrh z ukázkového přepisu (šablona ${TEMPLATE_LABELS[minutes.detectedTemplate]}). Jde o ukázku, ne o přepis skutečné schůzky.`;
   }
-  if (!minutesStarted(minutes.content)) return "Vyplňte aspoň Shrnutí. Ke schválení je zápis až s obsahem.";
-  return "Návrh vznikl z vloženého textu, nic se nedomýšlí.";
+  if (!minutesStarted(minutes.content)) return "Vyplň aspoň Shrnutí. Ke schválení je zápis až s obsahem.";
+  return "Návrh vznikl z vloženého textu, nic se nedomýšlí. Jména a kontakty klientů jsou vynechané.";
+}
+
+/**
+ * F13: kdo zápis schvaluje, vždy nahoře v sekci (i před prvním návrhem). Schvaluje jen vedoucí akce, kontrolor
+ * a správce návrh upravují. Akci bez vedoucího připomene editor, bez editoru tato věta.
+ */
+function ApproverNote({ panel, hasEditor }: { panel: Extract<RecordingPanel, { access: "handler" }>; hasEditor: boolean }) {
+  if (panel.canApprove) {
+    return (
+      <p className="small muted" data-testid="schvaluje">
+        Zápis schvaluješ ty jako vedoucí akce. Kontrolor a správce ho můžou upravit, schválit ne.
+      </p>
+    );
+  }
+  if (panel.approverName) {
+    return (
+      <p className="small muted" data-testid="schvaluje">
+        Zápis schvaluje vedoucí akce: {panel.approverName}.
+      </p>
+    );
+  }
+  if (hasEditor) return null;
+  return (
+    <p className="small muted" data-testid="schvaluje">
+      Zápis schvaluje vedoucí akce. Akce zatím vedoucího nemá, doplň ho v úpravě akce.
+    </p>
+  );
 }
 
 const formatSize = (bytes: number) => `${(bytes / 1024 / 1024).toLocaleString("cs-CZ", { maximumFractionDigits: 1 })} MB`;
@@ -96,7 +123,7 @@ export function RecordingSection({ eventId, eventLabel, panel }: { eventId: stri
       buttonClassName="menu-danger"
       confirm={{
         title: "Vrátit zápis do návrhu",
-        text: "Kolegové zápis přestanou vidět a z pozvánky v Kalendáři zmizí odkaz na něj. Zápis zůstane u vás jako návrh, který můžete opravit a zveřejnit znovu.",
+        text: "Kolegové zápis přestanou vidět a z pozvánky v Kalendáři zmizí odkaz na něj. Zápis zůstane u tebe jako návrh, který můžeš opravit a zveřejnit znovu.",
         confirmLabel: "Vrátit do návrhu",
       }}
     />
@@ -112,6 +139,7 @@ export function RecordingSection({ eventId, eventLabel, panel }: { eventId: stri
         eventId={eventId}
         eventLabel={eventLabel}
         hasRecording={recording !== null}
+        canUpload={panel.canUpload}
         replaceId={minutes?.id ?? null}
         replacingDraft={minutes?.status === "draft" && minutesStarted(minutes.content)}
       />
@@ -134,6 +162,7 @@ export function RecordingSection({ eventId, eventLabel, panel }: { eventId: stri
           )}
         </span>
       </div>
+      <ApproverNote panel={panel} hasEditor={minutes !== null} />
       {recording && (
         <div className="stack recording">
           <p className="small">
@@ -150,7 +179,7 @@ export function RecordingSection({ eventId, eventLabel, panel }: { eventId: stri
           <p className="notice notice-danger">{ERROR_LABELS[errorCode ?? ""] ?? "Přepis se nepovedl."}</p>
           {/* Špatný soubor nový pokus nespraví, pomůže jen jiná nahrávka nebo jiný zdroj (formulář níže). */}
           {wrongFile ? (
-            <p className="small">Vyberte jinou nahrávku nebo jiný zdroj zápisu níže.</p>
+            <p className="small">Vyber jinou nahrávku, nebo níže vlož přepis či poznámky.</p>
           ) : (
             <ActionForm action={retryTranscriptionAction} fields={{ id: eventId }} label="Zkusit přepis znovu" variant="primary" />
           )}
@@ -173,7 +202,7 @@ export function RecordingSection({ eventId, eventLabel, panel }: { eventId: stri
           {minutes.templateMismatch && (
             <p className="notice">
               Podle obsahu {fromRecording ? "nahrávky" : "textu"} to vypadá na typ „{TEMPLATE_LABELS[minutes.detectedTemplate]}“, což nesedí s typem
-              akce. Zkontrolujte, že je zápis u správného termínu. Nic se automaticky nepřesouvá.
+              akce. Zkontroluj, že je zápis u správného termínu. Nic se automaticky nepřesouvá.
             </p>
           )}
           {minutes.status === "draft" ? (

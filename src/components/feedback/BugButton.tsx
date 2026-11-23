@@ -167,7 +167,7 @@ export function BugButton({ dock, onDockChange, onOpen, busy }: Props) {
         data-testid="broucek"
         aria-label="Nahlásit chybu nebo nápad"
         aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight"
-        title={touch ? "Zpětná vazba (podržením přesunete)" : "Zpětná vazba (šipkami přesunete)"}
+        title={touch ? "Zpětná vazba (podržením přesuneš)" : "Zpětná vazba (šipkami přesuneš)"}
         onPointerDown={(event) => {
           if (event.button !== 0) return;
           const point = { x: event.clientX, y: event.clientY };

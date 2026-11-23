@@ -18,7 +18,7 @@ export function UploadForm({ eventId, eventLabel, replacing }: { eventId: string
       <input type="hidden" name="id" value={eventId} />
       {/* Přepis je v této verzi ukázka: umí jen jednu známou nahrávku. UI to musí říct dřív, než vedoucí něco nahraje. */}
       <p className="notice">
-        Automatický přepis zatím umí jen jednu ukázkovou nahrávku. Z nahrávky skutečné schůzky zápis nevznikne, nenahrávejte ji.{" "}
+        Automatický přepis zatím umí jen jednu ukázkovou nahrávku. Z nahrávky skutečné schůzky zápis nevznikne, nenahrávej ji.{" "}
         <a href="/demo/testovaci-nahravka.wav" download>
           Stáhnout ukázkovou nahrávku
         </a>
@@ -29,7 +29,7 @@ export function UploadForm({ eventId, eventLabel, replacing }: { eventId: string
         accept=".wav,.mp3,.m4a,audio/wav,audio/mpeg,audio/mp4"
         hint="WAV, MP3 nebo M4A, nejvýš 4 MB a 15 minut. Soubor se uloží soukromě."
         maxBytes={MAX_BYTES}
-        tooLargeText="Soubor je větší než 4 MB. Vyberte prosím menší nahrávku."
+        tooLargeText="Soubor je větší než 4 MB. Vyber prosím menší nahrávku."
         onChange={setFile}
       />
       {file && !tooLarge && (

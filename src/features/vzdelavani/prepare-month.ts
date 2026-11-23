@@ -1,3 +1,5 @@
+import type { Group } from "@/lib/types";
+
 /**
  * Pravidla okna Připravit měsíc nad rozepsaným formulářem: co návrhu chybí, souhrnný přehled stavu a
  * hromadné doplnění vedoucího. Čisté funkce bez Reactu, ať jdou ověřit testem.
@@ -64,4 +66,66 @@ export function fillEmptyLeads(
   if (!leadId) return { leads, filled: [] };
   const filled = rowsMissingLead(Object.entries(leads).map(([id, value]) => ({ id, holiday: holidays.has(id), lead: Boolean(value) })));
   return { leads: { ...leads, ...Object.fromEntries(filled.map((id) => [id, leadId])) }, filled };
+}
+
+/** Volby „Pro koho“ pro nové plánování: všichni, nebo jedna pracovní role (F01). */
+export const PLANNED_AUDIENCES = ["vsichni", "fp", "rm"] as const satisfies readonly Group[];
+
+/**
+ * Nabídka „Pro koho“ u řádku návrhu. Starší skupina (např. `tym-a`) zůstane jen u návrhu, který ji už má,
+ * aby se při uložení potichu nezměnila. Nový výběr ji nenabízí.
+ */
+export function audienceOptions(current: Group): Group[] {
+  const planned: readonly Group[] = PLANNED_AUDIENCES;
+  return planned.includes(current) ? [...planned] : [...planned, current];
+}
+
+/** Řádky, do kterých hromadné doplnění tématu zapíše: jen prázdné pole tématu, svátek se přeskočí (F08). */
+export function rowsMissingTopic(rows: Array<Pick<DraftRowState, "id" | "holiday" | "topic">>): string[] {
+  return rows.filter((row) => !row.holiday && !row.topic).map((row) => row.id);
+}
+
+/**
+ * Hromadné doplnění tématu nad hodnotami polí (id řádku → text tématu). Stejné pravidlo jako u vedoucího:
+ * vyplněné téma se nepřepíše, prázdný text nic nezmění.
+ */
+export function fillEmptyTopics(
+  topics: Record<string, string>,
+  topic: string,
+  holidays: ReadonlySet<string> = new Set(),
+): { topics: Record<string, string>; filled: string[] } {
+  const value = topic.trim();
+  if (!value) return { topics, filled: [] };
+  const filled = rowsMissingTopic(Object.entries(topics).map(([id, text]) => ({ id, holiday: holidays.has(id), topic: Boolean(text.trim()) })));
+  return { topics: { ...topics, ...Object.fromEntries(filled.map((id) => [id, value])) }, filled };
+}
+
+/** Patří řádek do kategorie přehledu? Klik na štítek přehledu podle toho filtruje řádky (F08). */
+export function matchesOverview(key: OverviewKey, row: DraftRowState): boolean {
+  return matches[key](row);
+}
+
+const events = (count: number) => `${count} ${count === 1 ? "akce" : "akcí"}`;
+
+/**
+ * Proč je „Zveřejnit“ šedé (F09). Null, když zveřejnit jde. Počítá jen vybrané řádky, svátek nic nepotřebuje.
+ * Neúplné termíny brání zveřejnění, dokud je správce výslovně nepotvrdí (`allowIncomplete`).
+ */
+export function publishBlockedReason(rows: DraftRowState[], allowIncomplete: boolean): string | null {
+  const chosen = rows.filter((row) => row.picked);
+  if (!chosen.length) return "Vyber aspoň jeden návrh ke zveřejnění.";
+  if (allowIncomplete) return null;
+  const incomplete = chosen.filter((row) => draftGaps(row).length > 0);
+  if (!incomplete.length) return null;
+  const topic = incomplete.filter((row) => !row.topic).length;
+  const lead = incomplete.filter((row) => !row.lead).length;
+  const what =
+    topic === incomplete.length && lead === incomplete.length
+      ? `téma a vedoucího u ${events(incomplete.length)}`
+      : lead === 0
+        ? `téma u ${events(topic)}`
+        : topic === 0
+          ? `vedoucího u ${events(lead)}`
+          : `téma u ${events(topic)} a vedoucího u ${events(lead)}`;
+  return `Doplň ${what}, nebo potvrď zveřejnění neúplných termínů.`;
 }

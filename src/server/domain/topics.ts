@@ -1,5 +1,6 @@
 import { formatDayMonth } from "@/lib/time";
-import type { EventType } from "@/lib/types";
+import type { EventType, Group } from "@/lib/types";
+import { isRequiredForUser } from "@/server/domain/participation";
 
 export type TopicStat = {
   id: string;
@@ -51,7 +52,8 @@ export function rankTopics(stats: TopicStat[]): RankedTopic[] {
       ...topic,
       reason: [
         interestedLabel(topic.interestCount),
-        topic.lastHeld ? `naposledy ${formatDayMonth(topic.lastHeld)}` : "zatím neproběhlo",
+        // Téma bez konání nic nepřidává: „zatím neproběhlo“ se opakovalo skoro všude (F12).
+        topic.lastHeld ? `naposledy ${formatDayMonth(topic.lastHeld)}` : null,
         topic.nextPlanned ? `naplánováno na ${formatDayMonth(topic.nextPlanned)}` : null,
       ]
         .filter(Boolean)
@@ -94,6 +96,39 @@ export function isRecommendable(topic: { interestCount: number; nextPlanned?: st
 /** Téma se hodí k akci stejného publika, téma pro všechny ke každé akci. */
 export function topicFitsAudience(topicAudience: string, eventAudience: string): boolean {
   return topicAudience === eventAudience || topicAudience === "vsichni";
+}
+
+// ——— Filtr Pro mou roli / Všechna (F10) ———
+
+export type TopicFilter = "role" | "all";
+
+/**
+ * Téma pro mou roli: pro všechny, nebo pro některou z mých pracovních rolí či skupin. Víc rolí = témata všech
+ * (stejné pravidlo jako povinnost akce, `isRequiredForUser`). Technická role (správce) se nepočítá.
+ */
+export function isTopicForRoles(audience: string, groups: readonly string[]): boolean {
+  return isRequiredForUser(groups, audience as Group);
+}
+
+/** Filtr zachová pořadí vstupu, jen vynechá témata mimo role. */
+export function filterTopics<T extends { audience: string }>(topics: readonly T[], groups: readonly string[], filter: TopicFilter): T[] {
+  return filter === "all" ? [...topics] : topics.filter((t) => isTopicForRoles(t.audience, groups));
+}
+
+/**
+ * Výchozí filtr: běžný kolega dřív viděl jen témata svých skupin, proto „Pro mou roli“. Správce plánuje pro
+ * všechny a pořadí mění jen nad celým seznamem, proto „Všechna“.
+ */
+export function defaultTopicFilter(organizer: boolean): TopicFilter {
+  return organizer ? "all" : "role";
+}
+
+/** Hodnota z adresy (`?filtr=role|vse`). Neznámá nebo chybějící = výchozí filtr. */
+export function parseTopicFilter(value: string | string[] | undefined, organizer: boolean): TopicFilter {
+  const raw = Array.isArray(value) ? value[0] : value;
+  if (raw === "role") return "role";
+  if (raw === "vse") return "all";
+  return defaultTopicFilter(organizer);
 }
 
 // ——— Garantovaná témata a ruční pořadí ———
@@ -230,7 +265,7 @@ export function planCandidates(
       draft: e.status === "draft",
       // Krátce, jeden řádek: podrobnosti dopadu ukáže až potvrzení zveřejnění v okně akce.
       reason: [
-        e.status === "draft" ? "návrh" : "zveřejněno, změnu potvrdíte",
+        e.status === "draft" ? "návrh" : "zveřejněno, změnu potvrdíš",
         e.audience === topic.audience ? null : "téma je pro všechny",
       ]
         .filter(Boolean)

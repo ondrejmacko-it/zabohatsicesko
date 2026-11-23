@@ -65,6 +65,18 @@ export function canApproveMinutes(viewer: Viewer, row: EventRow): boolean {
   return row.published !== null && row.published.leadId !== null && row.published.leadId === viewer.id;
 }
 
+/**
+ * F13: kdo má úkol k zápisu. Napsat (doplnit) zápis má vedoucí akce, u akce bez vedoucího správce. Kontrolor
+ * dostane jen úkol zkontrolovat hotový návrh. Účastník úkol nemá nikdy. Oprávnění upravovat (`canHandleRecording`)
+ * se tím nemění.
+ */
+export function minutesTaskRole(viewer: Viewer, snapshot: EventSnapshot): "write" | "review" | null {
+  if (snapshot.leadId === viewer.id) return "write";
+  if (snapshot.leadId === null && canPlan(viewer)) return "write";
+  if (snapshot.reviewerId === viewer.id) return "review";
+  return null;
+}
+
 /** Zveřejněný zápis: publikum akce, její vedoucí či kontrolor a správce. */
 export function canReadPublishedMinutes(viewer: Viewer, row: EventRow): boolean {
   const snapshot = row.published;
@@ -73,6 +85,15 @@ export function canReadPublishedMinutes(viewer: Viewer, row: EventRow): boolean 
 
 export function canSeeAudience(viewer: Viewer, audience: string): boolean {
   return isOrganizer(viewer) || viewer.groups.includes(audience as Group);
+}
+
+/**
+ * Téma v seznamu Témat (F10). Stejné pravidlo jako u akcí: v režimu `all-published` vidí každý přihlášený všechna
+ * nearchivovaná témata (filtr „Všechna“), jinak jen témata svých skupin. Jména zájemců dál vidí jen správce
+ * a navrhnout téma jde jen pro vlastní skupinu (`canSeeAudience`).
+ */
+export function canSeeTopic(viewer: Viewer, audience: string, mode: EventVisibility = eventVisibility()): boolean {
+  return mode === "all-published" || canSeeAudience(viewer, audience);
 }
 
 /**

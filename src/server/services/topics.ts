@@ -21,7 +21,7 @@ import {
   type RankedTopic,
   type TopicStat,
 } from "@/server/domain/topics";
-import { canSeeAudience, isOrganizer, type Viewer } from "@/server/policy";
+import { canSeeAudience, canSeeTopic, isOrganizer, type Viewer } from "@/server/policy";
 import { DomainError } from "@/server/services/errors";
 
 /** Nearchivovaná témata viditelná uživateli se zájmem a historií konání (jen zveřejněné, nezrušené akce). */
@@ -71,7 +71,7 @@ export async function listTopics(viewer: Viewer): Promise<RankedTopic[]> {
         FROM topics t WHERE t.org_id = ${config.orgId} AND t.archived_at IS NULL`,
   );
   const stats: TopicStat[] = rows
-    .filter((r) => canSeeAudience(viewer, r.audience))
+    .filter((r) => canSeeTopic(viewer, r.audience))
     .map((r) => ({
       id: r.id,
       name: r.name,
@@ -114,7 +114,7 @@ async function requireVisibleTopic(db: Executor, viewer: Viewer, topicId: string
     .from(topics)
     .where(and(eq(topics.id, topicId), eq(topics.orgId, config.orgId)))
     .limit(1);
-  if (!topic || topic.archivedAt || !canSeeAudience(viewer, topic.audience)) throw new DomainError("not_found");
+  if (!topic || topic.archivedAt || !canSeeTopic(viewer, topic.audience)) throw new DomainError("not_found");
   return topic;
 }
 

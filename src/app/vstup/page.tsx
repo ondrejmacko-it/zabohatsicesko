@@ -15,28 +15,28 @@ import { GateShell } from "@/components/GateShell";
 export const metadata: Metadata = { title: "Vstup" };
 
 const GOOGLE_RESULTS: Record<string, string> = {
-  "ucet-neni-povoleny": "Tento účet Google nemá do Wiki přístup. Zkuste jiný účet, nebo se obraťte na správce.",
+  "ucet-neni-povoleny": "Tento účet Google nemá do Wiki přístup. Zkus jiný účet, nebo se obrať na správce.",
   "ceka-na-schvaleni":
-    "Žádost o přístup je odeslaná. Jakmile vám správce přidělí roli a skupiny, přihlaste se znovu stejným účtem.",
-  "neplatny-stav": "Přihlášení vypršelo nebo začalo v jiném okně. Zkuste to prosím znovu.",
+    "Žádost o přístup je odeslaná. Jakmile ti správce přidělí roli a skupiny, přihlas se znovu stejným účtem.",
+  "neplatny-stav": "Přihlášení vypršelo nebo začalo v jiném okně. Zkus to prosím znovu.",
   zruseno: "Přihlášení účtem Google bylo zrušeno.",
-  "zruseno-kalendar": "Přihlášení se souhlasem ke Kalendáři bylo zrušeno. Můžete to zkusit znovu, nebo se přihlásit bez Kalendáře a propojit ho později z Plánu.",
-  "nepodarilo-se": "Přihlášení účtem Google se nepodařilo dokončit. Zkuste to prosím znovu.",
-  "jiny-ucet": "Tento účet k pozvánce nepatří. Zkontrolujte adresu a zkuste to znovu.",
+  "zruseno-kalendar": "Přihlášení se souhlasem ke Kalendáři bylo zrušeno. Můžeš to zkusit znovu, nebo se přihlásit bez Kalendáře a propojit ho později z Plánu.",
+  "nepodarilo-se": "Přihlášení účtem Google se nepodařilo dokončit. Zkus to prosím znovu.",
+  "jiny-ucet": "Tento účet k pozvánce nepatří. Zkontroluj adresu a zkus to znovu.",
 };
 
 /** Hlášky pro stránku bez platné pozvánky, kde tlačítko Google chybí. Ostatní platí beze změny. */
 const NO_INVITE_RESULTS: Record<string, string> = {
   "ucet-neni-povoleny":
-    "Tento účet Google nemá do Wiki přístup. Otevřete znovu odkaz z pozvánky a přihlaste se účtem, na který přišla, nebo se obraťte na správce.",
-  "neplatny-stav": "Přihlášení vypršelo. Otevřete znovu odkaz z pozvánky.",
-  "nepodarilo-se": "Přihlášení se nepodařilo dokončit. Otevřete znovu odkaz z pozvánky.",
-  "jiny-ucet": "Tento účet Google k pozvánce nepatří. Otevřete znovu odkaz z pozvánky a přihlaste se účtem, na který přišla.",
+    "Tento účet Google nemá do Wiki přístup. Otevři znovu odkaz z pozvánky a přihlas se účtem, na který přišla, nebo se obrať na správce.",
+  "neplatny-stav": "Přihlášení vypršelo. Otevři znovu odkaz z pozvánky.",
+  "nepodarilo-se": "Přihlášení se nepodařilo dokončit. Otevři znovu odkaz z pozvánky.",
+  "jiny-ucet": "Tento účet Google k pozvánce nepatří. Otevři znovu odkaz z pozvánky a přihlas se účtem, na který přišla.",
 };
 
 const LINK_RESULTS: Record<string, string> = {
-  neplatny: "Odkaz s pozvánkou neplatí. Zadejte přístupový kód, nebo si vyžádejte nový odkaz.",
-  limit: "Příliš mnoho pokusů. Zkuste to prosím za 15 minut.",
+  neplatny: "Odkaz s pozvánkou neplatí. Zadej přístupový kód, nebo si vyžádej nový odkaz.",
+  limit: "Příliš mnoho pokusů. Zkus to prosím za 15 minut.",
 };
 
 type SearchParams = { google?: string; pozvanka?: string; odkaz?: string; spravce?: string };
@@ -83,8 +83,8 @@ async function LiveGate({ googleResult, bootstrap }: { googleResult: string; boo
   if (!device && !bootstrap) {
     return (
       <GateShell title="Vstup do Wiki">
-        <p className="gate-lead">Do Wiki se vstupuje přes osobní pozvánku. Odkaz vám pošle správce.</p>
-        {/* Bez pozvánky tu tlačítko Google není, hláška proto nesmí radit „zkuste jiný účet“. */}
+        <p className="gate-lead">Do Wiki se vstupuje přes osobní pozvánku. Odkaz ti pošle správce.</p>
+        {/* Bez pozvánky tu tlačítko Google není, hláška proto nesmí radit „zkus jiný účet“. */}
         {googleError && (
           <p className={isPending ? "notice" : "form-error"} role={isPending ? "status" : "alert"}>
             {NO_INVITE_RESULTS[googleResult] ?? googleError}
@@ -96,8 +96,8 @@ async function LiveGate({ googleResult, bootstrap }: { googleResult: string; boo
   }
   const spravce = device ? "" : "&spravce=1";
   return (
-    <GateShell title={known ? "Vítejte zpět" : "Vítejte ve Wiki"}>
-      <p className="gate-lead">{known ? "Přihlaste se svým účtem Google." : "Zadejte pracovní e-mail a přihlaste se přes Google."}</p>
+    <GateShell title={known ? "Vítej zpět" : "Vítej ve Wiki"}>
+      <p className="gate-lead">{known ? "Přihlas se svým účtem Google." : "Zadej pracovní e-mail a přihlas se přes Google."}</p>
       {googleLoginConfig() ? (
         <section className="gate-google" aria-label="Přihlášení účtem Google">
           {googleError && (
@@ -137,7 +137,7 @@ async function LiveGate({ googleResult, bootstrap }: { googleResult: string; boo
         </section>
       ) : (
         <p className="form-error" role="alert">
-          Přihlášení zatím není nastavené. Obraťte se na správce Wiki.
+          Přihlášení zatím není nastavené. Obrať se na správce Wiki.
         </p>
       )}
       <p className="gate-note">
@@ -159,7 +159,7 @@ async function DemoGate({ linkResult }: { linkResult: string }) {
   return (
     <GateShell title="Ukázka modulu Vzdělávání" wide>
       <p className="gate-lead">
-        Prohlížíte ukázku s fiktivními daty.{" "}
+        Prohlížíš ukázku s fiktivními daty.{" "}
         {calendarMode() === "google-test"
           ? attendeeSource() === "allowlist"
             ? "Google pošle pozvánky jen testovacím adresám."

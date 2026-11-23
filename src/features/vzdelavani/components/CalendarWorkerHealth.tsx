@@ -10,7 +10,7 @@ const when = (iso: string) => {
 };
 
 const KIND_TEXT = {
-  access: "Účet organizátora nesmí do Kalendáře zapisovat (odebraný přístup nebo odmítnutá operace). Připojte Kalendář znovu.",
+  access: "Účet organizátora nesmí do Kalendáře zapisovat (odebraný přístup nebo odmítnutá operace). Připoj Kalendář znovu.",
   config: "Chybí nebo nesedí nastavení Kalendáře na serveru.",
   transient: "Google je dlouho nedostupný nebo hlásí limit. Wiki to dál zkouší sama.",
   data: "",
@@ -20,9 +20,9 @@ const KIND_TEXT = {
 export function workerAlertText(alert: WorkerAlert): string {
   switch (alert.kind) {
     case "scheduler_never":
-      return "Pravidelné zpracování ještě neproběhlo. Pozvánky se odešlou jen při zveřejnění a návštěvě Wiki. Nastavte plánovač (GitHub Actions), postup je v docs/kalendar-organizator.md.";
+      return "Pravidelné zpracování ještě neproběhlo. Pozvánky se odešlou jen při zveřejnění a návštěvě Wiki. Nastav plánovač (GitHub Actions), postup je v docs/kalendar-organizator.md.";
     case "scheduler_stale":
-      return `Pravidelné zpracování naposledy proběhlo ${when(alert.lastSuccessAt)}. Plánovač mohl vypadnout nebo ho GitHub vypnul. Zkontrolujte workflow „Fronta Kalendáře“.`;
+      return `Pravidelné zpracování naposledy proběhlo ${when(alert.lastSuccessAt)}. Plánovač mohl vypadnout nebo ho GitHub vypnul. Zkontroluj workflow „Fronta Kalendáře“.`;
     case "queue":
       return `${alert.count} ${alert.count === 1 ? "akce čeká" : alert.count < 5 ? "akce čekají" : "akcí čeká"} na odeslání od ${when(alert.since)}. ${KIND_TEXT[alert.errorKind]}`;
     case "responses":

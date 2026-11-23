@@ -24,6 +24,8 @@ delete shared.DATABASE_URL;
 const demoEnv = {
   ...shared,
   PGLITE_DIR: ".data/e2e-demo",
+  // Ukázka nahrávky (F14) je ve výchozím stavu skrytá. Testy nahrávky ji potřebují, server účasti ne.
+  RECORDING_DEMO: "on",
   FEEDBACK_WEBHOOK_URL: `http://127.0.0.1:${FEEDBACK_HOOK_PORT}/hook`,
   FEEDBACK_WEBHOOK_SECRET: FEEDBACK_HOOK_SECRET,
 };
@@ -45,13 +47,16 @@ const liveEnv = {
   BOOTSTRAP_ADMIN_EMAILS: "spravce@example.invalid",
 };
 
+// Next přímo přes Node, ne přes `npx`: na Windows `spawn("npx")` bez shellu nenajde `npx.cmd` a server nevznikne.
+const NEXT_BIN = "node_modules/next/dist/bin/next";
+
 // Každý běh začíná z čistého seedu, testy pak nezávisí na tom, co zůstalo z minula.
 rmSync(".data/e2e-demo", { recursive: true, force: true });
 rmSync(".data/e2e-live", { recursive: true, force: true });
 rmSync(".data/e2e-ucast", { recursive: true, force: true });
 
 if (process.env.E2E_SKIP_BUILD !== "1") {
-  const build = spawnSync("npx", ["next", "build"], { env: shared, stdio: "inherit" });
+  const build = spawnSync(process.execPath, [NEXT_BIN, "build"], { env: shared, stdio: "inherit" });
   if (build.status !== 0) process.exit(build.status ?? 1);
 }
 
@@ -87,7 +92,7 @@ createHttpServer((req, res) => {
   });
 }).listen(FEEDBACK_HOOK_PORT, "127.0.0.1");
 
-const start = (env, port) => spawn("npx", ["next", "start", "-p", String(port)], { env, stdio: "inherit" });
+const start = (env, port) => spawn(process.execPath, [NEXT_BIN, "start", "-p", String(port)], { env, stdio: "inherit" });
 
 // Nejdřív ostrá Wiki. Playwright čeká na port ukázky, takže v tu chvíli běží obě.
 const live = start(liveEnv, LIVE_PORT);
@@ -98,7 +103,7 @@ for (let i = 0; i < 120; i++) {
   await new Promise((resolve) => setTimeout(resolve, 500));
 }
 // Ukázka s přihláškami a omluvami (PR2). Stejný seed i tajemství session, jen vlastní databáze.
-const ucast = start({ ...demoEnv, PGLITE_DIR: ".data/e2e-ucast", PARTICIPATION: "on" }, UCAST_PORT);
+const ucast = start({ ...demoEnv, PGLITE_DIR: ".data/e2e-ucast", PARTICIPATION: "on", RECORDING_DEMO: "" }, UCAST_PORT);
 for (let i = 0; i < 120; i++) {
   try {
     if ((await fetch(`http://localhost:${UCAST_PORT}/soukromi`)).ok) break;
