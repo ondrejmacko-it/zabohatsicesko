@@ -168,6 +168,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
           label={participation.label}
           actions={participation.actions}
           excuse={participation.excuse}
+          calendar={participation.calendar}
           preview={Boolean(preview)}
         />
       )}

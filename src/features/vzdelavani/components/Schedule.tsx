@@ -339,7 +339,13 @@ export function Agenda({
   addHref,
   movableFrom,
   menuFor,
-}: { monthKey: string; cards: EventCard[]; todayKey: string; emptyText?: string } & Linking & Planning) {
+}: {
+  monthKey: string;
+  cards: EventCard[];
+  todayKey: string;
+  /** Text prázdného měsíce. Null: prázdný stav už ukazuje stránka sama (Plán správce, F06). */
+  emptyText?: string | null;
+} & Linking & Planning) {
   const days = byDay(cards.filter((c) => monthOf(dayOf(c)) === monthKey));
   const ghosts = ghostsByDay(cards);
   const weeks = monthWeeks(monthKey)
@@ -349,7 +355,7 @@ export function Agenda({
       current: week.includes(todayKey),
     }))
     .filter((w) => w.days.length);
-  if (!weeks.length) return <p className="muted">{emptyText ?? "V tomto měsíci zatím nejsou žádné akce."}</p>;
+  if (!weeks.length) return emptyText === null ? null : <p className="muted">{emptyText ?? "V tomto měsíci zatím nejsou žádné akce."}</p>;
   return (
     <div className={styles.agenda}>
       {weeks.map((week) => (

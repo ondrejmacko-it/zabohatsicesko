@@ -79,6 +79,8 @@ type CreateProps = Omit<FormProps, "mode" | "id" | "revision" | "published" | "s
   /** Okno se otevře hned (odkaz „+“ na dni v Plánu). Po zavření se adresa vrátí na `closeHref`. */
   openOnMount?: boolean;
   closeHref?: string;
+  /** Vedlejší tlačítko: v prázdném měsíci je hlavní akcí Připravit měsíc (F06). */
+  quiet?: boolean;
 };
 
 const copyHref = (values: EventFormValues, id?: string) =>
@@ -98,7 +100,7 @@ export function EventDialog(props: CreateProps) {
     <>
       <button
         type="button"
-        className="btn btn-primary"
+        className={props.quiet ? "btn" : "btn btn-primary"}
         onClick={() => {
           setSession((s) => s + 1);
           setOpen(true);

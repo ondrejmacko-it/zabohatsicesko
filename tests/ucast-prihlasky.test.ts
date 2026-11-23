@@ -13,6 +13,8 @@ import { PAST_FP, organizer, outsider, participant, resetDemo } from "./helpers"
 
 let sessionUser: Viewer = participant;
 vi.mock("next/cache", () => ({ refresh: () => undefined }));
+// `after` z Next běží jen v požadavku. Tady se úloha po odpovědi zahodí, Kalendář ověřuje tests/kalendar-f04.test.ts.
+vi.mock("next/server", async (original) => ({ ...(await original<typeof import("next/server")>()), after: () => undefined }));
 vi.mock("@/server/auth/session", () => ({ getCurrentUser: async () => ({ ...sessionUser, name: "Test", email: "t@example.invalid", signedInWith: "demo" }) }));
 const { changeParticipationAction } = await import("@/features/vzdelavani/actions");
 
