@@ -92,7 +92,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
     if (!attendanceFilter || c.type === "holiday") return true;
     if (attendanceFilter === "moje") return isMine(c.participation, c.handler);
     if (attendanceFilter === "povinne") return c.participation?.state === "required" || c.participation?.state === "excused";
-    return c.participation?.state === "optional" || c.participation?.state === "voluntary_enrolled";
+    return c.participation?.state === "optional" || c.participation?.state === "voluntary_enrolled" || c.participation?.state === "withdrawn";
   });
   const filtering = selectedTypes.length > 0 || states.length > 0;
   const syncing = monthCards.some((c) => c.syncStatus === "pending");
