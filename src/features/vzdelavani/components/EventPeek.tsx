@@ -169,6 +169,7 @@ export async function EventPeek({ user, eventId, preview, closeHref, presetTopic
           actions={participation.actions}
           excuse={participation.excuse}
           calendar={participation.calendar}
+          enrollment={participation.enrollment}
           preview={Boolean(preview)}
         />
       )}

@@ -20,8 +20,9 @@ riziko, **N** = návrh (změna chování, potřebuje rozhodnutí vlastníka).
 | U12 | P2 | C | e2e po PR #86 | `e2e/nahled.spec.ts:90` čekal „Akce není dostupná“ u zveřejněné RM akce (dnes legitimně viditelné všem); `e2e/ucast.spec.ts:37` bral první (už proběhlou) kartu a po odhlášení čekal stav „nikdy nepřihlášeno“ místo Odhlášeno (0017). Příčina obou pádů je nezávislá na této větvi (padají i na základu podle analýzy, samostatně nespuštěno) | Sada e2e nehlídala účast ani náhled | Testy převedeny na původní záměr bez oslabení: cookie nic nezmění (bez pruhu a panelu účasti) a nezveřejněný návrh `ev-11-19` nevydá okno ani `/vzdelavani/akce/…` (404); účast se mění na budoucí akci a po odhlášení se ověřuje Odhlášeno + znovu přihlásit | Playwright | `e2e/nahled.spec.ts`, `e2e/ucast.spec.ts` |
 | U07 | P3 | – | Migrace 0016 → 0017 | Analýza: 0017 jen nahradí `event_participation_kind_check` (výchozí název inline CHECK z 0016) a přidá `withdrawn`; data nemění | – (chyba nenalezena), doplněno pokrytí | – | vitest na PGlite, nikdy živá DB | `tests/migrace-0016.test.ts` „0017 nad skutečnými záznamy 0016…“ |
 | U08 | P3 | R | Přihláška po zániku povinnosti | Stará omluva u (už) nepovinné akce: „Přihlásit se“ ji přepíše záznamem `voluntary_enrolled` | Když se povinnost vrátí, omluva už neplatí a akce je zase povinná. Okrajový případ, chování je bezpečné (víc pozvánek, ne méně) | – | analýza | – |
-| U09 | P3 | N | Filtry Povinné/Moje a zrušené akce | Zrušená akce má stav `cancelled`, takže z Povinné i Moje zmizí, i když byla povinná | Kolega v Povinné nevidí, že jeho povinná akce byla zrušena (ve Všechny ji vidí) | Návrh: u zrušené akce si pamatovat původní povinnost a nechat ji v Povinné/Moje se štítkem Zrušeno | – | – |
-| U10 | P3 | N | Detail bez zapnutých přihlášek | `ownParticipationDetail` vrací bez `PARTICIPATION` a mimo náhled `null`; měsíc přitom ukazuje „Povinné pro tebe“ | Detail nic o účasti neříká, měsíc ano (rozpor jen v informovanosti) | Návrh: read-only panel se stavem podle rolí (vyžaduje změnu existujícího testu „vypnutý přepínač“, proto neprovedeno) | – | – |
+| U09 | P3 | C → vyřešeno | Filtry Povinné/Moje a zrušené akce | Zrušená akce měla stav `cancelled` bez povinnosti, z Povinné i Moje zmizela | Kolega v Povinné neviděl, že jeho povinná akce byla zrušena | Rozhodnutí vlastníka 23. 11.: `required` platí i u zrušené akce, která byla povinná (publikum vs. skupiny); zůstává v Povinné i Moje se štítkem Zrušeno (text). Zrušená nepovinná jen ve Všechny | vitest | `tests/audit-ucast-nahledy.test.ts` „U09…“ a matice filtrů |
+| U10 | P3 | C → vyřešeno | Detail bez zapnutých přihlášek | `ownParticipationDetail` vracel bez `PARTICIPATION` `null`, měsíc přitom ukazoval „Povinné pro tebe“ | Detail o účasti mlčel | Rozhodnutí vlastníka 23. 11.: detail ukáže „Povinné pro tebe“ / „Dobrovolné“ jen ke čtení, bez tlačítek a bez čtení `event_participation`; panel bez textu „Akce už začala“ | vitest + Playwright | `tests/audit-ucast-nahledy.test.ts` „U10…“, upravený `tests/ucast-prihlasky.test.ts` „vypnutý přepínač“ (dál hlídá, že nejsou akce ke změně účasti a tabulka se nečte), `e2e/nahled.spec.ts` |
+| PM-13 | P2 | C → vyřešeno | `e2e/okna.spec.ts` „cizí akce neprozradí obsah“ | Čekal „Akce není dostupná“ u zveřejněné RM akce `tr-rm-1112` (od PR #86 viditelná všem), padal na 1280/1920/320 | Test nehlídal skutečný únik | Přesměrováno: nezveřejněný návrh `ev-11-19` (okno, `/vzdelavani/akce/…` 404, zápis), zveřejněná RM akce `ev-11-6` se zveřejněným zápisem – okno bez odkazu na zápis/nahrávku, zápis „není dostupný“, v HTML okna, detailu ani Zápisů není přepis, shrnutí ani sekce nahrávky. Důvody omluv ostatních hlídá `e2e/ucast.spec.ts` „soukromí omluvy“ (server s přihláškami) | Playwright | `e2e/okna.spec.ts` |
 
 ## Ověřeno bez nálezu
 
@@ -43,9 +44,12 @@ Doplněno i e2e F04 (`e2e/ucast.spec.ts`): po odhlášení se čeká stav Odhlá
 - Snímky prohlédnuty: seznam (Dobrovolné u proběhlých, Můžeš se přihlásit u budoucích, Odhlášeno, Omluveno, Zrušeno), Úvod na telefonu, okno akce v náhledu kolegy („Účast v náhledu“, Omluveno, bez důvodu a bez tlačítek).
 - Simulace vs. živý test: vše nad fiktivním seedem a PGlite. Proti živé DB ani Google nic nespuštěno; migrace 0016/0017 jen na PGlite.
 
+Kolo 2 (U09, U10, PM-13): eslint OK, tsc OK, vitest 56 / 561 OK, Playwright `e2e/okna.spec.ts e2e/nahled.spec.ts
+e2e/ucast.spec.ts` na windows-1280 a telefon-320 OK (88 + 16 po úpravě náhledového testu, 8 přeskočeno = ucast jen
+pro 1280/390), opět na lokálně posunutých portech.
+
 ## Navazující prompt
 
 Větev `oprava/audit-ucast-nahledy` (draft PR do `oprava/kompletni-audit-rozhrani-a-funkci`). Hotovo U01–U07, U11, U12.
-Otevřené pro vlastníka: U09 (nechat zrušenou povinnou akci v Povinné/Moje?), U10 (read-only panel účasti v detailu
-bez zapnutých přihlášek – mění existující test „vypnutý přepínač“), U08 jen riziko. Další krok: rozhodnutí U09/U10,
-případně celé e2e po sloučení souběžných větví auditu.
+U09, U10 a PM-13 vyřešeny podle rozhodnutí vlastníka 23. 11. Zbývá U08 (jen riziko). Další krok: celé e2e po
+sloučení souběžných větví auditu.

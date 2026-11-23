@@ -19,7 +19,8 @@ export const ATTENDANCE_FILTERS = ["povinne", "dobrovolne", "moje"] as const;
 export type AttendanceFilter = (typeof ATTENDANCE_FILTERS)[number];
 
 /**
- * Patří karta do filtru účasti? Svátky zůstávají vždy (orientace v měsíci). Povinné = povinné i omluvené,
+ * Patří karta do filtru účasti? Svátky zůstávají vždy (orientace v měsíci). Povinné = povinné, omluvené
+ * i zrušené, které byly povinné,
  * Dobrovolné = nabídka, přihláška i odhlášení, Moje = povinné (i omluvené), přihlášky a akce, které divák
  * sám vede nebo kontroluje. Obecné právo správce obsluhovat všechny akce z nich „Moje“ nedělá.
  */
@@ -27,7 +28,8 @@ export function matchesAttendance(card: Pick<EventCard, "type" | "participation"
   if (!filter || card.type === "holiday") return true;
   const state = card.participation?.state;
   if (filter === "moje") return isMine(card.participation, card.leadsOrReviews);
-  if (filter === "povinne") return state === "required" || state === "excused";
+  // Zrušená povinná akce zůstává v Povinné (a Moje) se štítkem Zrušeno; zrušená nepovinná jen ve Všechny.
+  if (filter === "povinne") return card.participation?.required === true;
   return state === "optional" || state === "voluntary_enrolled" || state === "withdrawn";
 }
 

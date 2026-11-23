@@ -23,6 +23,8 @@ type Props = {
   calendar?: OwnCalendar | null;
   /** Náhled „Zobrazit jako“: jen stav, žádné akce. */
   preview?: boolean;
+  /** Přihlášky a omluvy zapnuté. Bez nich jen stav podle rolí, stejně jako v měsíci (U10). */
+  enrollment?: boolean;
 };
 
 const STATE_TEXT: Partial<Record<ParticipationState, string>> = {
@@ -31,6 +33,13 @@ const STATE_TEXT: Partial<Record<ParticipationState, string>> = {
   voluntary_enrolled: "Jsi přihlášený dobrovolně.",
   excused: "Omluveno ve Wiki, platí hned.",
   withdrawn: "Z dobrovolné akce ses odhlásil. Můžeš se znovu přihlásit.",
+  cancelled: "Akce je zrušená, účast se u ní neeviduje.",
+};
+
+/** Přihlášky ve Wiki vypnuté: jen co vyplývá z rolí, nic se nenabízí. */
+const READ_ONLY_TEXT: Partial<Record<ParticipationState, string>> = {
+  required: "Akce je pro tebe povinná podle tvé role.",
+  optional: "Akce pro tebe není povinná.",
   cancelled: "Akce je zrušená, účast se u ní neeviduje.",
 };
 
@@ -44,16 +53,16 @@ const CLOSED_TEXT: Partial<Record<ParticipationState, string>> = {
  * Tvoje účast u akce: stav, štítek a akce Přihlásit se / Odhlásit se / Omluvit se / Zrušit omluvu.
  * Každá změna se potvrzuje v samostatném okně. Server znovu ověří session, stav i čas akce.
  */
-export function ParticipationPanel({ eventId, state, label, actions, excuse, calendar = null, preview }: Props) {
+export function ParticipationPanel({ eventId, state, label, actions, excuse, calendar = null, preview, enrollment = true }: Props) {
   // Mimo náhled jsou akce prázdné jen u akce, která už začala (vypnuté přihlášky panel vůbec nevykreslí).
-  const closed = !preview && actions.length === 0 && state !== "cancelled";
+  const closed = !preview && enrollment && actions.length === 0 && state !== "cancelled";
   const note = preview || closed ? null : calendarNote(state, calendar);
   return (
     <section className="section participation-panel" aria-labelledby="ucast" data-ucast-panel={state} data-kalendar-stav={calendar ? `${calendar.link}:${calendar.inCalendar}` : "neznamy"}>
       {/* V náhledu nejde o účast přihlášeného, proto ani „Tvoje“, ani vysvětlení vlastní omluvy. */}
       <h2 id="ucast">{preview ? "Účast v náhledu" : "Tvoje účast"}</h2>
       {label && <p className="participation-state"><span className={badgeClass(participationTone(state))}>{label}</span></p>}
-      <p className="small">{preview ? "Takhle vypadá účast ve vybraném pohledu. Náhled je jen ke čtení." : ((closed && CLOSED_TEXT[state]) || STATE_TEXT[state])}</p>
+      <p className="small">{preview ? "Takhle vypadá účast ve vybraném pohledu. Náhled je jen ke čtení." : !enrollment ? READ_ONLY_TEXT[state] : ((closed && CLOSED_TEXT[state]) || STATE_TEXT[state])}</p>
       {note && <p className="small" data-kalendar={calendar?.inCalendar ? "v-kalendari" : "mimo-kalendar"}>{note}</p>}
       {state === "excused" && !preview && (
         <p className="small muted">
@@ -62,7 +71,7 @@ export function ParticipationPanel({ eventId, state, label, actions, excuse, cal
         </p>
       )}
       {closed && <p className="small muted">Akce už začala, účast teď nejde změnit.</p>}
-      {!preview && actions.length > 0 && (
+      {!preview && enrollment && actions.length > 0 && (
         <div className="row participation-actions">
           {actions.includes("enroll") && (
             <ActionForm

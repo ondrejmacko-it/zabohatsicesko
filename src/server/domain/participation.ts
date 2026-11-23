@@ -70,7 +70,7 @@ export function participationState(
 
 export type Participation = {
   state: ParticipationState;
-  /** Povinnost podle rolí a publika (platí i u omluvy). */
+  /** Povinnost podle rolí a publika (platí i u omluvy a u zrušené akce, která byla povinná). */
   required: boolean;
   /** Má dostat pozvánku: povinná bez omluvy nebo dobrovolně přihlášená. Neříká nic o odpovědi v Googlu. */
   calendarGuest: boolean;
@@ -89,7 +89,7 @@ export function effectiveParticipation(
   if (!state || !snapshot) return null;
   return {
     state,
-    required: state === "required" || state === "excused",
+    required: state === "required" || state === "excused" || (state === "cancelled" && isRequiredForUser(person.groups, snapshot.audience)),
     calendarGuest: state === "required" || state === "voluntary_enrolled",
     open: state !== "cancelled" && new Date(snapshot.startsAt) > at,
   };
@@ -200,6 +200,8 @@ export const PARTICIPATION_LABELS = {
  */
 export type OwnParticipationView = {
   state: ParticipationState;
+  /** Akce je (nebo před zrušením byla) pro člověka povinná. Zrušená povinná akce tak zůstává v Povinné a Moje. */
+  required: boolean;
   label: string | null;
   actions: ParticipationAction[];
 };
@@ -225,7 +227,7 @@ export function ownParticipationView(
     if (canExcuse(participation) && state === "required") actions.push("excuse");
     if (canRevokeExcuse(participation)) actions.push("revoke_excuse");
   }
-  return { state, label, actions };
+  return { state, required: participation.required, label, actions };
 }
 
 /**
@@ -233,7 +235,7 @@ export function ownParticipationView(
  * `leadsOrReviews` je vedení či kontrola konkrétní akce, ne obecné právo správce obsluhovat všechny akce.
  */
 export function isMine(view: OwnParticipationView | null | undefined, leadsOrReviews: boolean): boolean {
-  if (leadsOrReviews) return true;
+  if (leadsOrReviews || view?.required) return true;
   return view?.state === "required" || view?.state === "excused" || view?.state === "voluntary_enrolled";
 }
 

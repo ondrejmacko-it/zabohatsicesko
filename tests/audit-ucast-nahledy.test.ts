@@ -1,7 +1,7 @@
 import { and, eq, sql } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { ParticipationState } from "@/lib/types";
-import { matchesAttendance, participationTone } from "@/features/vzdelavani/status";
+import { matchesAttendance, participationTone, primaryStatus } from "@/features/vzdelavani/status";
 import { now } from "@/server/config";
 import { getDb } from "@/server/db/client";
 import { events, users } from "@/server/db/schema";
@@ -9,14 +9,14 @@ import { ownParticipationView, type Participation } from "@/server/domain/partic
 import { listMonth } from "@/server/services/events";
 import { ownParticipationDetail, withOwnParticipation } from "@/server/services/participation";
 import type { Viewer } from "@/server/policy";
-import { PAST_FP, lead, organizer, participant, resetDemo } from "./helpers";
+import { PAST_FP, lead, organizer, outsider, participant, resetDemo } from "./helpers";
 
 // Audit 23. 11. 2026 (§5 a §6): filtr Moje, viditelnost v rollbacku, štítky bez přihlášek a tón štítků.
 
 beforeEach(resetDemo);
 afterEach(() => vi.unstubAllEnvs());
 
-const view = (state: ParticipationState) => ({ state, label: null, actions: [] });
+const view = (state: ParticipationState, required = state === "required" || state === "excused") => ({ state, required, label: null, actions: [] });
 const card = (patch: Partial<Parameters<typeof matchesAttendance>[0]>) => ({ type: "training-fp" as const, participation: null, leadsOrReviews: false, ...patch });
 
 async function futurePublishedId(audience: string): Promise<string> {
@@ -59,6 +59,10 @@ describe("filtr účasti ucast=", () => {
     expect(pick("dobrovolne")).toEqual(["optional", "voluntary_enrolled", "withdrawn"]);
     expect(pick("moje")).toEqual(["required", "excused", "voluntary_enrolled"]);
     expect(pick(undefined)).toEqual(states);
+    // U09: zrušená akce, která byla povinná, zůstává v Povinné i Moje; zrušená nepovinná jen ve Všechny.
+    const cancelledRequired = card({ participation: view("cancelled", true) });
+    expect(["povinne", "moje", undefined].map((f) => matchesAttendance(cancelledRequired, f as never))).toEqual([true, true, true]);
+    expect(matchesAttendance(cancelledRequired, "dobrovolne")).toBe(false);
     // Návrh bez zveřejněné verze nemá účast: do filtrů účasti nepatří.
     expect(matchesAttendance(card({ participation: null }), "povinne")).toBe(false);
     expect(matchesAttendance(card({ participation: null }), "dobrovolne")).toBe(false);
@@ -105,6 +109,37 @@ describe("štítky bez zapnutých přihlášek (PARTICIPATION vypnuté, i ostrá
       expect(cards.find((c) => c.id === rm)?.participation).toMatchObject({ state: "optional", label: "Dobrovolné", actions: [] });
     });
   }
+});
+
+describe("U09: zrušená akce v měsíci", () => {
+  test("zrušená povinná akce nese povinnost, zrušená nepovinná ne; štítek Zrušeno je text", async () => {
+    // Zrušená zveřejněná FP akce (seed 4. 11.): pro FP byla povinná, pro RM ne.
+    const fpCancelled = (await listMonth(participant, "2026-11")).find((c) => c.planStatus === "cancelled" && c.audience === "fp")!;
+    expect(fpCancelled).toBeDefined();
+    const forFp = (await withOwnParticipation(participant, null, [fpCancelled]))[0]!;
+    expect(forFp.participation).toMatchObject({ state: "cancelled", required: true, label: null, actions: [] });
+    expect(matchesAttendance(forFp, "povinne")).toBe(true);
+    expect(matchesAttendance(forFp, "moje")).toBe(true);
+    expect(primaryStatus(forFp)?.label).toBe("Zrušeno");
+    const forRm = (await withOwnParticipation(outsider, null, [fpCancelled]))[0]!;
+    expect(forRm.participation).toMatchObject({ state: "cancelled", required: false });
+    expect(matchesAttendance(forRm, "povinne")).toBe(false);
+    expect(matchesAttendance(forRm, "moje")).toBe(false);
+    expect(matchesAttendance(forRm, undefined)).toBe(true);
+  });
+});
+
+describe("U10: detail bez zapnutých přihlášek", () => {
+  test("ukáže povinnost i dobrovolnost jako měsíc, jen ke čtení a bez akcí", async () => {
+    vi.stubEnv("PARTICIPATION", "");
+    const fp = await futurePublishedId("fp");
+    const rm = await futurePublishedId("rm");
+    expect(await ownParticipationDetail(participant, null, fp)).toMatchObject({ state: "required", label: "Povinné pro tebe", actions: [], enrollment: false });
+    expect(await ownParticipationDetail(participant, null, rm)).toMatchObject({ state: "optional", label: "Dobrovolné", actions: [], enrollment: false });
+    const month = await withOwnParticipation(participant, null, await listMonth(participant, "2026-11"));
+    const card = month.find((c) => c.id === fp);
+    if (card) expect(card.participation?.label).toBe("Povinné pro tebe");
+  });
 });
 
 describe("tón štítku účasti", () => {
