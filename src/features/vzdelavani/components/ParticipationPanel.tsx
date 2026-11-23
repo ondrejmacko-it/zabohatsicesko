@@ -29,6 +29,7 @@ const STATE_TEXT: Partial<Record<ParticipationState, string>> = {
   optional: "Akce pro tebe není povinná. Pokud chceš, můžeš se přihlásit.",
   voluntary_enrolled: "Jsi přihlášený dobrovolně.",
   excused: "Omluveno ve Wiki, platí hned.",
+  withdrawn: "Z dobrovolné akce ses odhlásil. Můžeš se znovu přihlásit.",
 };
 
 /**
@@ -40,7 +41,7 @@ export function ParticipationPanel({ eventId, state, label, actions, excuse, cal
   return (
     <section className="section participation-panel" aria-labelledby="ucast" data-ucast-panel={state} data-kalendar-stav={calendar ? `${calendar.link}:${calendar.inCalendar}` : "neznamy"}>
       <h2 id="ucast">Tvoje účast</h2>
-      {label && <p className="participation-state"><span className={state === "excused" || state === "optional" ? "badge badge-outline" : "badge badge-ok"}>{label}</span></p>}
+      {label && <p className="participation-state"><span className={state === "excused" || state === "optional" || state === "withdrawn" ? "badge badge-outline" : "badge badge-ok"}>{label}</span></p>}
       <p className="small">{preview ? "Takhle vypadá účast ve vybraném pohledu. Náhled je jen ke čtení." : STATE_TEXT[state]}</p>
       {note && <p className="small" data-kalendar={calendar?.inCalendar ? "v-kalendari" : "mimo-kalendar"}>{note}</p>}
       {state === "excused" && (
