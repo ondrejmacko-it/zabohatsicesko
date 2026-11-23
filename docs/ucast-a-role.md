@@ -114,7 +114,7 @@ Zapnutá účast znamená i `EVENT_VISIBILITY=all-published`.
 **O04 (ověřeno v dokumentaci Google Calendar API, 21. 11. 2026):** `attendees[].responseStatus` je zapisovatelné, ale
 dokumentace nikde neříká, že organizátor smí nastavit `declined` za jiného účastníka. Uvádí, že předvyplněná odpověď se
 může vrátit na `needsAction`, a nastavení RSVP popisuje jen přes kalendář účastníka (s právem zápisu do něj). Wiki proto
-`declined` nenastavuje. Omluvený se jen přestane zvát a Wiki ukazuje pravdivý stav „Omluveno ve Wiki, Kalendář čeká“.
+`declined` nenastavuje. Omluvený se jen přestane zvát a Wiki ukazuje pravdivý stav („Odebrání z pozvánky v Kalendáři čeká na odeslání.“, potom „Wiki tě na tuto akci do Kalendáře nezve.“).
 Živý test v Googlu neproběhl.
 
 **Zvolené výchozí varianty (otevřené otázky, jdou později přepnout):**
