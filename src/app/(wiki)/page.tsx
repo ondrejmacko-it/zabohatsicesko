@@ -16,6 +16,8 @@ import { personalSyncNeeded, syncPersonalCalendars } from "@/server/calendar/per
 import { invitationsFor } from "@/server/calendar/rsvp";
 import { runWorkerIfDue } from "@/server/calendar/worker";
 import { now } from "@/server/config";
+import { isMine } from "@/server/domain/participation";
+import { withOwnParticipation } from "@/server/services/participation";
 import { getDb } from "@/server/db/client";
 import { canPlan } from "@/server/policy";
 import { loadPersonalCalendar } from "@/server/services/calendar-status";
@@ -40,13 +42,18 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const preview = await currentPreview(user);
   const viewer = preview?.viewer ?? user;
   const planner = canPlan(viewer);
-  const [upcoming, initial, own, monthCards, invitations] = await Promise.all([
-    nextEventsFor(viewer, NEXT_ROWS),
+  const [upcomingCandidates, initial, own, monthCards, invitations] = await Promise.all([
+    nextEventsFor(viewer, 100),
     preview ? null : loadPersonalCalendar(user),
     listTasks(viewer),
     planner ? listMonth(viewer, monthKey) : null,
     preview ? null : getDb().then((db) => invitationsFor(db, user)),
   ]);
+  // Úvod ukazuje osobní plán, nikoli první tři náhodné celofiremní události.
+  // Kompletní firemní harmonogram zůstává v Plánu; zobrazenou osobu respektuje i náhled.
+  const upcoming = (await withOwnParticipation(user, preview, upcomingCandidates))
+    .filter((card) => isMine(card.participation, card.handler))
+    .slice(0, NEXT_ROWS);
   // Režim organizátora: návštěva dožene frontu a odpovědi (nejvýš jednou za 5 minut), až po odeslání stránky.
   // Plánovač to dělá i bez návštěv, tady jde jen o čerstvější stav.
   after(() => runWorkerIfDue("visit"));
