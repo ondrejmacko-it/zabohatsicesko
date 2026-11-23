@@ -14,7 +14,8 @@ import { DomainError } from "@/server/services/errors";
 const PREVIEW_GROUPS: Group[] = ["fp", "rm", "tym-a"];
 
 export type PreviewOption = { key: string; label: string };
-export type PlanPreview = { viewer: Viewer; label: string };
+/** `personName`: jméno kolegy, za kterého se náhled dívá. U náhledu skupiny chybí. */
+export type PlanPreview = { viewer: Viewer; label: string; personName?: string };
 
 const groupKey = (group: Group) => `skupina-${group}`;
 const userKey = (id: string) => `kolega-${id}`;
@@ -52,5 +53,5 @@ export async function resolvePreview(viewer: Viewer, key: string | undefined): P
     .where(and(eq(users.orgId, config.orgId), eq(users.id, key.slice("kolega-".length)), eq(users.status, "active")))
     .limit(1);
   if (!person || person.id === viewer.id) return null;
-  return { viewer: { id: person.id, role: person.role, groups: person.groups }, label: person.name };
+  return { viewer: { id: person.id, role: person.role, groups: person.groups }, label: person.name, personName: person.name };
 }

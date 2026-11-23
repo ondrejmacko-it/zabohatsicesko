@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 
 const formatSize = (bytes: number) =>
   bytes < 1024 * 1024
@@ -20,6 +20,7 @@ export function FilePicker({
   maxBytes,
   tooLargeText,
   onChange,
+  optional = false,
 }: {
   name: string;
   label: string;
@@ -28,8 +29,11 @@ export function FilePicker({
   maxBytes: number;
   tooLargeText: string;
   onChange: (file: File | null) => void;
+  /** Soubor je jen jedna z možností (zápis: text, nebo soubor). Pole není povinné a vybraný soubor jde odebrat. */
+  optional?: boolean;
 }) {
   const id = useId();
+  const inputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const tooLarge = file !== null && file.size > maxBytes;
   return (
@@ -40,11 +44,12 @@ export function FilePicker({
       <div className="file-pick">
         <label className="btn">
           <input
+            ref={inputRef}
             className="visually-hidden"
             type="file"
             name={name}
             accept={accept}
-            required
+            required={!optional}
             aria-labelledby={`${id}-label`}
             aria-describedby={`${id}-state ${id}-hint`}
             aria-invalid={tooLarge || undefined}
@@ -59,6 +64,19 @@ export function FilePicker({
         <span className={file ? "small file-pick-name" : "small muted"} id={`${id}-state`}>
           {file ? `${file.name} · ${formatSize(file.size)}` : "Soubor není vybraný."}
         </span>
+        {optional && file && (
+          <button
+            type="button"
+            className="btn btn-small"
+            onClick={() => {
+              if (inputRef.current) inputRef.current.value = "";
+              setFile(null);
+              onChange(null);
+            }}
+          >
+            Odebrat soubor
+          </button>
+        )}
       </div>
       <span className="field-hint field-hint-key" id={`${id}-hint`}>
         {hint}

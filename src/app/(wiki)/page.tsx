@@ -8,6 +8,7 @@ import { NextEventsList } from "@/features/vzdelavani/components/Schedule";
 import { TasksCard, orderTasks } from "@/features/vzdelavani/components/TasksCard";
 import { invitationTask } from "@/features/vzdelavani/invitations";
 import { monthSummary } from "@/features/vzdelavani/status";
+import { greeting } from "@/lib/greeting";
 import { monthOf, toDateKey } from "@/lib/time";
 import { logError } from "@/server/audit";
 import { requireUser } from "@/server/auth/session";
@@ -69,9 +70,10 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   return (
     <>
       {peekId && <EventPeek key={peekId} user={user} eventId={peekId} preview={preview} closeHref="/" />}
-      {/* Jméno přihlášeného se do snímku zpětné vazby nedostane, hlášení jméno záměrně neposílá. */}
+      {/* Pozdrav patří tomu, čí pohled stránka ukazuje: v náhledu kolegovi, v náhledu skupiny bez jména (F16).
+          Jméno se do snímku zpětné vazby nedostane, hlášení jméno záměrně neposílá. */}
       <h1>
-        Vítejte, <span data-feedback-redact="">{user.name}</span>.
+        <span data-feedback-redact="">{greeting(preview ? preview.personName : user.name)}</span>.
       </h1>
       <ShotGrant page="/" />
       {personal && <PersonalCalendarStatus state={personal} />}
@@ -79,7 +81,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       {invite && <RefreshOnReturn />}
       <div className={tasks.length > 0 ? "home-columns" : undefined}>
         <section className="section" aria-labelledby="nejblizsi">
-          <h2 id="nejblizsi">Nejbližší akce</h2>
+          <h2 id="nejblizsi">{preview ? "Nejbližší akce" : "Co tě čeká"}</h2>
           <NextEventsList cards={upcoming} todayKey={toDateKey(now())} hrefFor={(card) => `/?akce=${encodeURIComponent(card.id)}`} />
           <p className="section-actions">
             <Link className="btn" href="/vzdelavani/harmonogram">

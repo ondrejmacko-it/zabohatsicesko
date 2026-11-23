@@ -29,7 +29,9 @@ export default async function WikiLayout({ children }: { children: React.ReactNo
       <Topbar user={user} personas={personas} preview={options && { ...options, active: preview?.key ?? null }} />
       {preview && <PreviewBar label={preview.label} />}
       <div className="shell">
-        <Sidebar badge={badge} canManageUsers={canManageUsers(user)} pendingRequests={pendingRequests} live={isLiveWiki()} />
+        {/* V náhledu navigace odpovídá pohledu, který se ukazuje: poradce Správu systému nevidí (F16). Stránka /sprava
+            sama dál používá skutečný účet, náhled ji neotevírá ani nezavírá. */}
+        <Sidebar badge={badge} canManageUsers={canManageUsers(preview?.viewer ?? user)} pendingRequests={pendingRequests} live={isLiveWiki()} />
         <main className="panel" id="obsah">
           <FlashMessage />
           {children}

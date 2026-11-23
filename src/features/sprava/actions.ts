@@ -86,7 +86,7 @@ export async function cleanupLegacyInvitesAction(): Promise<ActionResult> {
     const result = await cleanupLegacyInvites(user);
     const parts = [`Smazáno pozvánek: ${result.deleted}.`];
     if (result.keptForeign) parts.push(`Spárované události, které Wiki nezaložila, zůstaly v kalendáři beze změny: ${result.keptForeign}.`);
-    if (result.failed) return { ok: false, error: `${parts.join(" ")} Google teď neodpověděl u ${result.failed} pozvánek, zkuste to prosím za chvíli znovu.` };
+    if (result.failed) return { ok: false, error: `${parts.join(" ")} Google teď neodpověděl u ${result.failed} pozvánek, zkus to prosím za chvíli znovu.` };
     return { ok: true, message: parts.join(" ") };
   });
 }

@@ -153,7 +153,7 @@ export function MarkingLayer({ marks, onChange, onDone }: Props) {
       ))}
       <div className={toolbarTop ? "mark-toolbar mark-toolbar-top" : "mark-toolbar"} role="region" aria-label="Označení místa">
         <p className="mark-hint" aria-live="polite">
-          {full ? `Označeno ${FEEDBACK_MARKS_MAX} míst, víc už nejde.` : "Klikněte nebo klepněte na prvek, tažením vyznačíte oblast."}
+          {full ? `Označeno ${FEEDBACK_MARKS_MAX} míst, víc už nejde.` : "Klikni nebo klepni na prvek, tažením vyznačíš oblast."}
         </p>
         {marks.length > 0 && (
           <ol className="mark-list">

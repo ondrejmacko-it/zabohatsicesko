@@ -220,10 +220,10 @@ export function SyncPanelView({ eventId, sync }: { eventId: string; sync: SyncPa
         <div className="stack">
           <p className="small">
             {sync.unlinkedReason === "lookalike" &&
-              "V Kalendáři je ten den pozvánka, která může být touto akcí (blízký čas nebo stejný název). Wiki proto sama novou nezaloží, aby nevznikl duplikát. Spárujte ji, nebo výslovně založte novou. Rozhodnutí můžete i odložit."}
+              "V Kalendáři je ten den pozvánka, která může být touto akcí (blízký čas nebo stejný název). Wiki proto sama novou nezaloží, aby nevznikl duplikát. Spáruj ji, nebo výslovně založ novou. Rozhodnutí můžeš i odložit."}
             {sync.unlinkedReason === "automatic" &&
-              "Pozvánka zatím nevznikla. Wiki ji založí sama při příštím otevření Plánu správcem, nebo ji založte hned."}
-            {sync.unlinkedReason === "past" && "Akce už proběhla, Wiki k ní pozvánku sama nezakládá. Můžete ji spárovat s existující."}
+              "Pozvánka zatím nevznikla. Wiki ji založí sama při příštím otevření Plánu správcem, nebo ji založ hned."}
+            {sync.unlinkedReason === "past" && "Akce už proběhla, Wiki k ní pozvánku sama nezakládá. Můžeš ji spárovat s existující."}
             {sync.unlinkedReason === "unavailable" && "Akce zatím nemá pozvánku. Kalendář teď neodpovídá, stav jde ověřit až po jeho obnovení."}
             {sync.unlinkedReason === "cancelled" && "Akce je zrušená, pozvánka se nezakládá."}
           </p>
@@ -239,7 +239,7 @@ export function SyncPanelView({ eventId, sync }: { eventId: string; sync: SyncPa
             {sync.attendeeSource === "allowlist"
               ? `Testovací režim: nová pozvánka půjde jen povoleným testovacím příjemcům (${sync.inviteeCount}), ne publiku akce.`
               : `Nová pozvánka půjde publiku akce (${sync.inviteeCount}). Hosty, které přidáte ručně v Kalendáři, Wiki nemění.`}
-            {createInMenu && " Novou pozvánku místo spárování založíte v nabídce ⋯."}
+            {createInMenu && " Novou pozvánku místo spárování založíš v nabídce ⋯."}
           </p>
           {!createInMenu && sync.unlinkedReason !== "cancelled" && <div className="row">{createInvite(false)}</div>}
         </div>

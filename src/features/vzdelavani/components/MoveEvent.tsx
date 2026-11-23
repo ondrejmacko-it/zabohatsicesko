@@ -141,7 +141,7 @@ function MovePicker({ target, movableFrom, onPick }: { target: MoveTarget; movab
           </button>
         )}
       />
-      <p className="small muted">Jen dny od dneška do konce měsíce akce. Nic se neuloží, dokud přesun nepotvrdíte.</p>
+      <p className="small muted">Jen dny od dneška do konce měsíce akce. Nic se neuloží, dokud přesun nepotvrdíš.</p>
     </div>
   );
 }
@@ -393,7 +393,7 @@ export function MoveDropZone({ children, movableFrom }: { children: React.ReactN
         // Jen po dobu tažení prstem: den bez akcí nebo vzdálený den. Ovládá se jen tažením, čtečce nic nepřidává.
         <div ref={panel} className="move-panel" aria-hidden="true">
           <p className="move-panel-text">
-            Pusťte na den v seznamu nebo tady. <span className="muted">Jinam = zrušit.</span>
+            Pusť na den v seznamu nebo tady. <span className="muted">Jinam = zrušit.</span>
           </p>
           <MonthDays
             monthKey={monthOf(dragging.from)}

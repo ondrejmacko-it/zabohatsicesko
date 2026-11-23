@@ -10,7 +10,7 @@ function pagesFor(role: Role): PageCase[] {
   const seesRm = role !== "ucastnikFp";
   const seesTeamA = role === "spravce" || role === "vedouci";
   return [
-    { name: "Úvod", path: "/", heading: /Vítejte/ },
+    { name: "Úvod", path: "/", heading: /^Ahoj/ },
     { name: "Plán", path: "/vzdelavani/harmonogram", heading: /Vzdělávání/, text: "Setkání týmu" },
     { name: "Plán seznam", path: "/vzdelavani/harmonogram?mesic=2026-11&pohled=seznam", heading: /Vzdělávání/, text: "Setkání týmu" },
     { name: "Zápisy", path: "/vzdelavani/zapisy", heading: /Vzdělávání/ },

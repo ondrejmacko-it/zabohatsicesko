@@ -114,7 +114,7 @@ Zapnutá účast znamená i `EVENT_VISIBILITY=all-published`.
 **O04 (ověřeno v dokumentaci Google Calendar API, 21. 11. 2026):** `attendees[].responseStatus` je zapisovatelné, ale
 dokumentace nikde neříká, že organizátor smí nastavit `declined` za jiného účastníka. Uvádí, že předvyplněná odpověď se
 může vrátit na `needsAction`, a nastavení RSVP popisuje jen přes kalendář účastníka (s právem zápisu do něj). Wiki proto
-`declined` nenastavuje. Omluvený se jen přestane zvát a Wiki ukazuje pravdivý stav „Omluveno ve Wiki, Kalendář čeká“.
+`declined` nenastavuje. Omluvený se jen přestane zvát a Wiki ukazuje pravdivý stav („Odebrání z pozvánky v Kalendáři čeká na odeslání.“, potom „Wiki tě na tuto akci do Kalendáře nezve.“).
 Živý test v Googlu neproběhl.
 
 **Zvolené výchozí varianty (otevřené otázky, jdou později přepnout):**
@@ -136,3 +136,17 @@ hodnoty `GROUPS`, nic se tím neoslabuje ani nemigruje. Povinnost účasti z pub
 
 Varianta k pozdějšímu přepnutí: úplně skrýt `tym-a` i v editoru akce a v šabloně (typ „akce“ má dnes výchozí `tym-a`,
 `domain/generation.ts`). Bez zadání F01 v plném znění se to neměnilo.
+
+## PR4: Témata (F10–F12)
+
+* **Viditelnost:** `canSeeTopic(viewer, audience, mode)` v `server/policy.ts`. V režimu `all-published` (stejný
+  přepínač jako u akcí, `PARTICIPATION=on` ho zapíná, ostrá Wiki ignoruje) vidí každý přihlášený všechna
+  nearchivovaná témata a může u nich dát zájem. Jinak platí `canSeeAudience` jako dřív. Navrhnout téma jde jen pro
+  vlastní skupinu, jména zájemců vidí jen správce.
+* **Filtr Pro mou roli / Všechna:** `isTopicForRoles` používá `isRequiredForUser` (téma pro všechny + členství,
+  víc rolí = sjednocení). Technická role se nepočítá. Kolega ho vidí jen v režimu `all-published`, správce vždy.
+* **Pořadí:** úchyty, čísla pořadí a správa pořadí jen pro správce nad celým seznamem (filtr Všechna). Změny
+  pořadí dál ověřuje server (`moveTopic`, `placeTopic`, `setTopicPriority`, `resetTopicOrder`: jen správce).
+* **Testy:** `tests/temata-f10-f12.test.ts`, e2e `e2e/temata-planovani.spec.ts` (správce, účastník) a
+  `e2e/ucast.spec.ts` (režim všech zveřejněných, FP a RM).
+

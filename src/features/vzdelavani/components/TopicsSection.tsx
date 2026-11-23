@@ -8,20 +8,26 @@ import { GROUP_LABELS } from "@/lib/labels";
 import { formatDayMonth } from "@/lib/time";
 import { GROUPS, type Group } from "@/lib/types";
 import {
+  filterTopics,
   guaranteedTopics,
   hasManualOrder,
   interestedLabel,
   mostWantedIds,
   otherTopics,
+  parseTopicFilter,
   sortByInterest,
   type RankedTopic,
+  type TopicFilter,
 } from "@/server/domain/topics";
+import { eventVisibility } from "@/server/config";
 import { isOrganizer, type Viewer } from "@/server/policy";
 import { listArchivedTopics, listTopicInterested, listTopics } from "@/server/services/topics";
 
 type RowContext = {
   organizer: boolean;
   readOnly: boolean;
+  /** Pořadí jde měnit jen nad celým seznamem: ve filtru by posun o jedno místo přeskočil skrytá témata. */
+  sortable: boolean;
   groups: Group[];
   mostWanted: Set<string>;
   interested: Map<string, string[]> | null;
@@ -54,14 +60,20 @@ function topicItem(t: RankedTopic, index: number, count: number, ctx: RowContext
           {wanted && <span className="badge badge-ok topic-badge">Nejžádanější</span>}
         </p>
         <p className="item-meta">
-          {ctx.label(t.audience)} · {t.lastHeld ? `naposledy ${formatDayMonth(t.lastHeld)}` : "zatím neproběhlo"}
+          {/* Bez konání se nic nepíše: „zatím neproběhlo“ se opakovalo skoro u každého tématu (F12). */}
+          {ctx.label(t.audience)}
+          {t.lastHeld && ` · naposledy ${formatDayMonth(t.lastHeld)}`}
           {next}
           {/* Téma je jen v návrhu akce: kolegové termín ještě nevidí, správce ho má dotáhnout ke zveřejnění. */}
           {ctx.organizer && !t.nextPlanned && t.nextDraft && (
             <>
               {" · "}
-              <Link className="topic-in-draft" href={`/vzdelavani/harmonogram?mesic=${t.nextDraft.slice(0, 7)}${t.nextDraftId ? `&akce=${encodeURIComponent(t.nextDraftId)}` : ""}`}>
-                v návrhu na {formatDayMonth(t.nextDraft)}
+              <Link
+                className="topic-in-draft"
+                href={`/vzdelavani/harmonogram?mesic=${t.nextDraft.slice(0, 7)}${t.nextDraftId ? `&akce=${encodeURIComponent(t.nextDraftId)}` : ""}`}
+                title={`Návrh akce ${formatDayMonth(t.nextDraft)}`}
+              >
+                termín se potvrzuje
               </Link>
             </>
           )}
@@ -92,11 +104,27 @@ function topicItem(t: RankedTopic, index: number, count: number, ctx: RowContext
         ) : (
           <InterestButton topicId={t.id} interested={t.interestedByViewer} titleId={`tema-${t.id}`} />
         )}
-        {ctx.organizer && !ctx.readOnly && <TopicManage topic={t} groups={ctx.groups} canMoveUp={index > 0} canMoveDown={index < count - 1} />}
+        {ctx.organizer && !ctx.readOnly && (
+          <TopicManage topic={t} groups={ctx.groups} canMoveUp={ctx.sortable && index > 0} canMoveDown={ctx.sortable && index < count - 1} />
+        )}
       </div>
     </>
     ),
   };
+}
+
+/** Přepínač Pro mou roli / Všechna (F10). Odkazy jako u Moje / Všechny v Plánu, stav nese `aria-current`. */
+function TopicFilterToggle({ filter }: { filter: TopicFilter }) {
+  return (
+    <span className="view-toggle topic-filter" role="group" aria-label="Která témata">
+      <Link className="pill" href="/vzdelavani/temata?filtr=role" aria-current={filter === "role" ? "page" : undefined}>
+        Pro mou roli
+      </Link>
+      <Link className="pill" href="/vzdelavani/temata?filtr=vse" aria-current={filter === "all" ? "page" : undefined}>
+        Všechna
+      </Link>
+    </span>
+  );
 }
 
 /**
@@ -104,8 +132,11 @@ function topicItem(t: RankedTopic, index: number, count: number, ctx: RowContext
  * pořadí správce. Štítek Nejžádanější zůstává vázaný na skutečný počet zájemců v celém seznamu.
  * Správa je v nabídce u každého řádku.
  */
-export async function TopicsSection({ user, readOnly = false }: { user: Viewer; readOnly?: boolean }) {
+export async function TopicsSection({ user, readOnly = false, filter: requested }: { user: Viewer; readOnly?: boolean; filter?: string }) {
   const organizer = isOrganizer(user);
+  // Filtr má smysl, jen když člověk vidí i témata mimo své role: správce vždy, kolega v režimu všech zveřejněných akcí.
+  const filterable = organizer || eventVisibility() === "all-published";
+  const filter = filterable ? parseTopicFilter(requested, organizer) : "all";
   const [ranked, archived, interested] = await Promise.all([
     listTopics(user),
     listArchivedTopics(user),
@@ -113,16 +144,20 @@ export async function TopicsSection({ user, readOnly = false }: { user: Viewer; 
     organizer ? listTopicInterested(user) : null,
   ]);
   // Server vrací jen témata, která uživatel smí vidět, a bez archivu. Pořadí plánování (`rankTopics`) se tu nepoužívá.
-  const topics = sortByInterest(ranked);
-  const guaranteed = guaranteedTopics(topics);
-  const others = otherTopics(topics);
-  const manualOrder = hasManualOrder(topics);
+  // Pořadí i štítek Nejžádanější se počítají z celého seznamu, filtr jen skryje řádky (pořadí zůstává).
+  const all = sortByInterest(ranked);
+  const topics = filterTopics(all, user.groups, filter);
+  const guaranteed = filterTopics(guaranteedTopics(all), user.groups, filter);
+  const others = filterTopics(otherTopics(all), user.groups, filter);
+  const manualOrder = hasManualOrder(all);
+  const sortable = organizer && !readOnly && filter === "all";
   const groups = GROUPS.filter((g) => organizer || user.groups.includes(g)) as Group[];
   const ctx: RowContext = {
     organizer,
     readOnly,
+    sortable,
     groups,
-    mostWanted: mostWantedIds(topics),
+    mostWanted: mostWantedIds(all),
     interested,
     label: (g: string) => GROUP_LABELS[g as Group] ?? g,
   };
@@ -135,27 +170,41 @@ export async function TopicsSection({ user, readOnly = false }: { user: Viewer; 
         Témata
       </h2>
       {!readOnly && (
-        <PageCall text="Navrhněte téma nebo podpořte návrh kolegů.">
+        <PageCall text="Navrhni téma nebo podpoř návrh kolegů.">
           <ProposeTopicDialog groups={groups} />
         </PageCall>
       )}
-      {topics.length === 0 ? (
+      {filterable && all.length > 0 && (
+        <div className="topic-toolbar">
+          <TopicFilterToggle filter={filter} />
+        </div>
+      )}
+      {all.length === 0 ? (
         <div className="empty-state">
           <p className="item-title">Zatím tu nejsou žádná témata.</p>
           <p className="item-meta">
-            {readOnly ? "V tomto pohledu není vidět žádné téma." : "Navrhněte první tlačítkem Navrhnout téma. Kolegové pak mohou dát najevo zájem."}
+            {readOnly ? "V tomto pohledu není vidět žádné téma." : "Navrhni první tlačítkem Navrhnout téma. Kolegové pak můžou dát najevo zájem."}
           </p>
+        </div>
+      ) : topics.length === 0 ? (
+        <div className="empty-state">
+          <p className="item-title">Pro tvou roli tu teď žádné téma není.</p>
+          <p className="item-meta">Ostatní najdeš ve Všechna.</p>
         </div>
       ) : (
         <>
           <TopicBoard
-            sortable={organizer && !readOnly}
+            sortable={sortable}
             guaranteed={guaranteed.map((t, index) => topicItem(t, index, guaranteed.length, ctx))}
             others={others.map((t, index) => topicItem(t, index, others.length, ctx))}
             guaranteedHead={
-              <h3 id="temata-garantovana" className="topic-group-title">
-                Garantovaná témata
-              </h3>
+              <>
+                <h3 id="temata-garantovana" className="topic-group-title">
+                  Garantovaná témata
+                </h3>
+                {/* F10: krátce, co garantované znamená. Pravidlo plánování je v `recommendTopics`. */}
+                <p className="item-meta">Plánují se přednostně, i když o ně nikdo neprojevil zájem.</p>
+              </>
             }
             othersHead={
               <>
@@ -164,20 +213,22 @@ export async function TopicsSection({ user, readOnly = false }: { user: Viewer; 
                     Ostatní témata
                   </h3>
                 )}
-                {manualOrder && (
+                {/* Správa pořadí jen pro správce (F11), kolega vidí jen výsledný seznam. */}
+                {organizer && !readOnly && manualOrder && (
                   <div className="topic-order-note">
                     <p className="item-meta">Pořadí upravil správce. Nová témata přibývají na konec.</p>
-                    {organizer && !readOnly && <ActionForm action={resetTopicOrderAction} label="Seřadit podle zájmu" pendingLabel="Řadím…" small />}
+                    {sortable && <ActionForm action={resetTopicOrderAction} label="Seřadit podle zájmu" pendingLabel="Řadím…" small />}
                   </div>
                 )}
               </>
             }
           />
-          {organizer && !readOnly && (
+          {sortable && (
             <p id="tema-poradi-napoveda" className="visually-hidden">
-              Pořadí změníte přetažením úchytu, i mezi garantovanými a ostatními tématy. Šipkami nahoru a dolů posunete téma o jedno místo, přes okraj skupiny do druhé skupiny.
+              Pořadí změníš přetažením úchytu, i mezi garantovanými a ostatními tématy. Šipkami nahoru a dolů posuneš téma o jedno místo, přes okraj skupiny do druhé skupiny.
             </p>
           )}
+          {organizer && !readOnly && !sortable && <p className="item-meta topic-filter-note">Pořadí měníš v zobrazení Všechna.</p>}
         </>
       )}
 

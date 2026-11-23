@@ -55,7 +55,7 @@ test.describe("U05 Plán na telefonu", () => {
     const next = page.getByRole("region", { name: "Nejbližší akce" });
     await expect(next).toBeVisible();
     await expect(next.getByRole("link")).toHaveCount(1);
-    await expect(page.getByRole("region", { name: /Čeká na vás/ })).toHaveCount(0);
+    await expect(page.getByRole("region", { name: /Čeká na tebe/ })).toHaveCount(0);
     const nextTop = await next.evaluate((node) => node.getBoundingClientRect().top);
     expect(nextTop, "nejbližší akce bez posunu").toBeLessThan(760);
     await expectNoHorizontalScroll(page);

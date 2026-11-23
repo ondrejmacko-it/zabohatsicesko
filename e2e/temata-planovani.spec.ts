@@ -91,6 +91,29 @@ test.describe("Témata: garantovaná a ostatní", () => {
     // Garantovaná jsou dvě, třetí jde přidat.
     await menuOf(page, "Týmové priority").click();
     await expect(openMenu(page).getByRole("button", { name: "Nastavit prioritu" })).toBeVisible();
+    await page.keyboard.press("Escape");
+  });
+
+  test("F10–F12: vysvětlení garantovaných, filtr Pro mou roli / Všechna, úchyty jen nad celým seznamem, bez „zatím neproběhlo“", async ({ page }) => {
+    await openTopics(page);
+    await expect(guaranteedOf(page).getByText("Plánují se přednostně, i když o ně nikdo neprojevil zájem.")).toBeVisible();
+    await expect(page.getByRole("link", { name: "Všechna", exact: true })).toHaveAttribute("aria-current", "page");
+    await expect(page.locator(".topic-handle").first()).toBeVisible();
+    await expect(page.locator(".topic-guaranteed .topic-rank")).toHaveText(["1", "2"]);
+    await expect(page.getByText("zatím neproběhlo")).toHaveCount(0);
+    await expect(page.getByText("Navrhni téma nebo podpoř návrh kolegů.")).toBeVisible();
+
+    // Ve filtru pořadí měnit nejde: posun o jedno místo by přeskočil skrytá témata.
+    await page.getByRole("link", { name: "Pro mou roli", exact: true }).click();
+    await expect(page).toHaveURL(/filtr=role/);
+    await expect(page.getByRole("link", { name: "Pro mou roli", exact: true })).toHaveAttribute("aria-current", "page");
+    await expect(page.locator(".topic-handle")).toHaveCount(0);
+    await expect(page.locator(".topic-rank")).toHaveCount(0);
+    await expect(page.getByText("Pořadí měníš v zobrazení Všechna.")).toBeVisible();
+    await menuOf(page, "Otevřené otázky na schůzce").click();
+    await expect(openMenu(page).locator("a, button")).toHaveText(["Naplánovat téma", "Upravit téma", "Zrušit prioritu", "Archivovat…"]);
+    await page.keyboard.press("Escape");
+    await expectNoHorizontalScroll(page);
   });
 
   test("Zavřít dole v okně hlídá rozepsaný návrh, Zrušit úpravy u úprav (C-03)", async ({ page }) => {
@@ -399,11 +422,12 @@ test.describe("Témata: zápis priority, pořadí a návrhu @desktop @zapis-tema
     await expect(item).toContainText("návrh");
     await item.getByRole("button", { name: /^Přidat do návrhu/ }).click();
     await expect(plan).toBeHidden();
-    await expect(page.getByText(/Téma „Otevřené otázky na schůzce“ je v návrhu na 4\. 12\. Kolegové ho zatím nevidí, nic se neodeslalo\./)).toBeVisible();
+    await expect(page.getByText(/Téma „Otevřené otázky na schůzce“ je v návrhu akce 4\. 12\. Termín se potvrzuje, kolegové ho uvidí po zveřejnění\./)).toBeVisible();
     await openTopics(page);
     // Garantované téma bez zveřejněného termínu: místo červeného „bez termínu“ oranžově termín návrhu.
     const planned = rowOf(page.locator("main"), "Otevřené otázky na schůzce");
-    await expect(planned.locator(".topic-in-draft")).toHaveText("v návrhu na 4. 12.");
+    await expect(planned.locator(".topic-in-draft")).toHaveText("termín se potvrzuje");
+    await expect(planned.locator(".topic-in-draft")).toHaveAttribute("title", "Návrh akce 4. 12.");
     await expect(planned.locator(".topic-unscheduled")).toHaveCount(0);
 
     // Návrh má téma a zůstal návrhem.
@@ -424,5 +448,19 @@ test.describe("Témata očima účastníka", () => {
     await expect(page.getByRole("button", { name: /^Možnosti tématu/ })).toHaveCount(0);
     await expect(page.getByText(/Zatím nejsou nastavená garantovaná témata/)).toHaveCount(0);
     await expectNoHorizontalScroll(page);
+  });
+
+  test("F10–F12: vysvětlení ano, úchyty, čísla pořadí, správa pořadí ani „zatím neproběhlo“ ne", async ({ page }) => {
+    await openTopics(page);
+    await expect(guaranteedOf(page).getByText("Plánují se přednostně, i když o ně nikdo neprojevil zájem.")).toBeVisible();
+    await expect(page.locator(".topic-handle, .topic-rank, .topic-lead")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /^Změnit pořadí/ })).toHaveCount(0);
+    await expect(page.getByText("Pořadí upravil správce.")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Seřadit podle zájmu" })).toHaveCount(0);
+    await expect(page.getByText("zatím neproběhlo")).toHaveCount(0);
+    await expect(page.getByText(/termín se potvrzuje/i)).toHaveCount(0);
+    // Bez režimu všech zveřejněných vidí kolega jen témata svých rolí, filtr by nic neměnil.
+    await expect(page.getByRole("link", { name: "Pro mou roli", exact: true })).toHaveCount(0);
+    await expect(page.getByText("Návaznost po konzultaci")).toHaveCount(0);
   });
 });

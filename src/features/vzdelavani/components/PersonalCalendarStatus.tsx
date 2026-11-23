@@ -28,15 +28,15 @@ export function personalCalendarView(state: PersonalCalendarState): PersonalCale
         return {
           tone: "warn",
           badge: "Nedaří se zapsat",
-          text: "Google zatím nedovolil zapsat akce do kalendáře „Vzdělávání ZBC“. Wiki to zkouší dál. Když to vydrží, propojte Kalendář znovu.",
+          text: "Google zatím nedovolil zapsat akce do kalendáře „Vzdělávání ZBC“. Wiki to zkouší dál. Když to vydrží, propoj Kalendář znovu.",
           action: RECONNECT,
         };
       if (state.retrying)
-        return { tone: "warn", badge: "Zkusí se znovu", text: "Poslední změnu se do Kalendáře nepodařilo zapsat. Wiki to zkusí znovu sama, nic dělat nemusíte.", action: null };
+        return { tone: "warn", badge: "Zkusí se znovu", text: "Poslední změnu se do Kalendáře nepodařilo zapsat. Wiki to zkusí znovu sama, nic dělat nemusíš.", action: null };
       return {
         tone: "ok",
         badge: "Propojeno",
-        text: `Akce najdete v kalendáři „Vzdělávání ZBC“ (${state.accountEmail ?? "váš účet Google"}). ${
+        text: `Akce najdeš v kalendáři „Vzdělávání ZBC“ (${state.accountEmail ?? "tvůj účet Google"}). ${
           state.syncedAt ? `Aktualizováno ${when(state.syncedAt)}.` : "Akce se tam objeví během chvilky."
         } Den před akcí přijde připomínka e-mailem.`,
         action: null,
@@ -46,18 +46,18 @@ export function personalCalendarView(state: PersonalCalendarState): PersonalCale
       return {
         tone: "alert",
         badge: "Kalendář odpojen",
-        text: "Přístup Wiki k vašemu Google Kalendáři skončil (například jste ho odebrali v účtu Google). Nové akce ani změny se tam neobjeví, dokud Kalendář znovu nepřipojíte.",
+        text: "Přístup Wiki k tvému Google Kalendáři skončil (například byl odebrán v účtu Google). Nové akce ani změny se tam neobjeví, dokud Kalendář znovu nepřipojíš.",
         action: RECONNECT,
       };
     case "calendar_deleted":
-      return { tone: "alert", badge: "Kalendář smazán", text: "Kalendář „Vzdělávání ZBC“ jste v Google Kalendáři smazali, akce se do něj už nezapisují.", action: "Vytvořit znovu" };
+      return { tone: "alert", badge: "Kalendář smazán", text: "Kalendář „Vzdělávání ZBC“ byl v Google Kalendáři smazán, akce se do něj už nezapisují.", action: "Vytvořit znovu" };
     case "removal_failed":
       // Jen účty mimo Wiki (odebrané, vypnuté) nebo úklid po přechodu na organizátora. Řeší správce, ne uživatel.
       return { tone: "warn", badge: "Úklid se zopakuje", text: "Kalendář „Vzdělávání ZBC“ se nepodařilo smazat. Wiki to zkusí znovu.", action: null };
     case "declined":
-      return { tone: "warn", badge: "Nepropojeno", text: "Při přihlášení jste Kalendář nepovolili. Akce najdete jen tady ve Wiki.", action: "Propojit Kalendář" };
+      return { tone: "warn", badge: "Nepropojeno", text: "Při přihlášení nebyl Kalendář povolen. Akce najdeš jen tady ve Wiki.", action: "Propojit Kalendář" };
     default:
-      return { tone: "warn", badge: "Nepropojeno", text: "Akce můžete mít i ve svém Google Kalendáři. Wiki pro ně založí samostatný kalendář „Vzdělávání ZBC“.", action: "Propojit Kalendář" };
+      return { tone: "warn", badge: "Nepropojeno", text: "Akce můžeš mít i ve svém Google Kalendáři. Wiki pro ně založí samostatný kalendář „Vzdělávání ZBC“.", action: "Propojit Kalendář" };
   }
 }
 
