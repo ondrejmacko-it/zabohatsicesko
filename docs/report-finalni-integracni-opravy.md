@@ -141,17 +141,23 @@ Testovaný kód: commit `616456e` (opravy) + dokumentace v následujícím commi
 | Typecheck (`npm run typecheck`) | OK |
 | Unit + DB + migrace (`npx vitest run`) | 55 souborů, **547/547** (před větví 535, +12 nových) |
 | Production build (`npm run build`) | OK |
-| E2E Playwright, Chromium (`npm run e2e`), 1. celý běh | 1318 OK, **15 chyb**, 213 přeskočeno (11,3 min). Všechny chyby jen `okna.spec.ts` v projektu `telefon-360` (`page.goto … net::ERR_CONNECTION_RESET`, chyby v konzoli), tedy výpadek lokálního serveru během běhu |
-| E2E, 2. celý běh (stejný kód) | 1325 OK, **7 chyb**, 213 přeskočeno, 1 neproběhl (10,4 min). Chyby jen `temata-planovani.spec.ts`: řádek 75 ve všech šířkách (téma „Otevřené otázky na schůzce“ už nebylo „bez termínu“) a návazně řádek 216 (`zapis-temat`) |
-| E2E cíleně (stejný build) | `temata-planovani.spec.ts` všechny projekty **59/59** (1 přeskočen), `okna.spec.ts --project=telefon-360` **37/37** |
+| E2E Playwright, Chromium (`npm run e2e`), 3. a 4. celý běh po sobě | **1333 OK, 0 chyb, 213 přeskočeno** (15,8 min) a znovu **1333 OK, 0 chyb, 213 přeskočeno** (15,2 min) |
+| E2E, 1. celý běh (stejný kód) | 1318 OK, 15 chyb, 213 přeskočeno: jen `okna.spec.ts` v `telefon-360`, `net::ERR_CONNECTION_REFUSED/RESET` na ukázkovém serveru 3310 během několika sekund, pak další testy zase prošly |
+| E2E, 2. celý běh (stejný kód) | 1325 OK, 7 chyb, 213 přeskočeno: jen `temata-planovani.spec.ts:75` (od `windows-1920` dál; ve `windows-1280` prošel) a navazující :216 |
+| E2E cíleně (stejný build) | témata 59/59, okna `telefon-360` 37/37, 4 reprodukce se zapisujícími specy před testem témat a všechny specy pro `windows-1280` + `windows-1920` (465 OK): ani jednou selhání |
 | Firefox, WebKit | **netestováno** (prohlížeče nejsou nainstalované; `E2E_WEBKIT=1` po `npx playwright install webkit firefox`) |
 
-**Hodnocení E2E (pravdivě):** celý běh na Windows dvakrát nebyl zelený, pokaždé ale padala jiná skupina a obě
-skupiny izolovaně procházejí. Sada sdílí jednu ukázkovou databázi napříč projekty, druhý běh ukazuje na závislost
-na pořadí (test témat čeká seedový stav, který mezitím změnil jiný test). Příčinu jsem nedohledal a celý běh proti
-`153616b` bez oprav jsem nespustil. Opravy A, C a D se těchto testů netýkají (náhled dopadu je jen čtení, témata
-a okna Plánu nemění). Nic není přeskočené ani oslabené. Doporučení: před merge spustit `npm run e2e` ještě
-jednou (Linux nebo macOS), případně dohledat test, který mění termín tématu.
+**Hodnocení E2E (pravdivě):** dva poslední celé běhy po sobě jsou zelené (1333/0/213). Dvě dřívější selhání se
+nepodařilo reprodukovat ani dohledat jejich příčinu:
+* 1. běh: ukázkový server 3310 na několik sekund odmítal spojení (`ERR_CONNECTION_REFUSED`), proces nespadl a
+  `e2e/server.mjs` ho nerestartuje, takže jde nejspíš o přetížení Windows při 3 workerech a 3 serverech.
+* 2. běh: téma „Otevřené otázky na schůzce“ po testech ve `windows-1280` přestalo být „bez termínu“. Vyloučené
+  zapisující specy: `doporucene-tema`, `priprava-mesice*`, `zapisy*`, `okna` (jen formuláře bez uložení),
+  `temata-planovani` sám; ani celé dva projekty za sebou chybu nevyvolaly. Viník mohl být souběh dvou zápisů do
+  sdílené ukázkové DB.
+Kód aplikace ani testy jsem kvůli tomu neměnil: bez reprodukce by šlo jen o odhad. Nic není přeskočené ani
+oslabené. Opravy A, C a D se těchto testů netýkají. Nestabilitu sdílených dat ukázky v E2E doporučuji řešit
+samostatně (vlastní data pro každý zapisující test).
 
 Přeskočené E2E jsou záměrné: testy, které zapisují do sdílených dat, běží jen v jednom projektu
 (`windows-1280`, `telefon-390`), testy pro telefon jen na telefonu a pro počítač jen od 900 px.

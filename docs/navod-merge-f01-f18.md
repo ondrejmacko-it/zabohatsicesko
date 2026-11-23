@@ -58,8 +58,8 @@ produkční nasazení místo devíti a jeden bod pro případný rollback.
    ale lidem ho ukážeš až tlačítkem **Promote**. Když tuto volbu ve svém plánu nenajdeš, nevadí: produkci
    zasáhne až krok 9, který uděláš v klidné chvíli.
 3. V produkci **nenastavuj** `APPROVED_MIGRATIONS`, `PARTICIPATION` ani nic jiného. Merge to nepotřebuje.
-4. Celé E2E na Windows nebylo zelené (dvakrát jiná skupina chyb, izolovaně prochází, viz report oddíl 6).
-   Pokud chceš jistotu, nech před krokem 9 spustit `npm run e2e` ještě jednou.
+4. Celé E2E (Chromium) prošlo dvakrát po sobě 1333/0/213. Dva starší běhy měly ojedinělá selhání, která se
+   nepodařilo zopakovat (report oddíl 6). Kdyby některý merge narazil na červené CI, zastav se.
 5. Otevři [PR #85](https://github.com/ondrejmacko-it/zabohatsicesko/pull/85) a zkontroluj, že kontroly jsou
    zelené. Pokud ne, zastav se.
 
