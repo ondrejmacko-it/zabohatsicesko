@@ -1,4 +1,5 @@
 import type { EventSnapshot, Group, Role } from "@/lib/types";
+import { eventVisibility, type EventVisibility } from "@/server/config";
 import type { EventRow } from "@/server/domain/snapshot";
 import { snapshotOf } from "@/server/domain/snapshot";
 
@@ -26,13 +27,21 @@ export function canManageAccount(viewer: Viewer, target: { id: string; role: Rol
 }
 
 /**
- * Co smí uživatel z akce vidět. Správce vidí pracovní verzi, ostatní jen zveřejněný snímek
- * akce pro svou skupinu (nebo akce, kterou vedou či kontrolují). Jinak null.
+ * Co smí uživatel z akce vidět. Správce vidí pracovní verzi, ostatní jen zveřejněný snímek. Výchozí režim
+ * (`audience`) ho ukáže publiku akce a jejímu vedoucímu či kontrolorovi, režim `all-published` každému
+ * přihlášenému (`eventVisibility`). Jinak null. Viditelnost akce nedává přístup k nahrávce, pracovnímu
+ * ani zveřejněnému zápisu: ty mají vlastní pravidla níže.
  */
-export function visibleEvent(viewer: Viewer, row: EventRow): EventSnapshot | null {
+export function visibleEvent(viewer: Viewer, row: EventRow, mode: EventVisibility = eventVisibility()): EventSnapshot | null {
   if (isOrganizer(viewer)) return snapshotOf(row);
+  return publishedEventVisibleToMember(viewer, row, mode);
+}
+
+/** Zveřejněný snímek pro kolegu bez práva plánovat. Návrh (akce bez zveřejněné verze) nikdy. */
+export function publishedEventVisibleToMember(viewer: Viewer, row: EventRow, mode: EventVisibility): EventSnapshot | null {
   const snapshot = row.published;
   if (!snapshot) return null;
+  if (mode === "all-published") return snapshot;
   if (viewer.groups.includes(snapshot.audience)) return snapshot;
   if (isEventHandler(viewer, snapshot)) return snapshot;
   return null;
@@ -56,6 +65,18 @@ export function canApproveMinutes(viewer: Viewer, row: EventRow): boolean {
   return row.published !== null && row.published.leadId !== null && row.published.leadId === viewer.id;
 }
 
+/**
+ * F13: kdo má úkol k zápisu. Napsat (doplnit) zápis má vedoucí akce, u akce bez vedoucího správce. Kontrolor
+ * dostane jen úkol zkontrolovat hotový návrh. Účastník úkol nemá nikdy. Oprávnění upravovat (`canHandleRecording`)
+ * se tím nemění.
+ */
+export function minutesTaskRole(viewer: Viewer, snapshot: EventSnapshot): "write" | "review" | null {
+  if (snapshot.leadId === viewer.id) return "write";
+  if (snapshot.leadId === null && canPlan(viewer)) return "write";
+  if (snapshot.reviewerId === viewer.id) return "review";
+  return null;
+}
+
 /** Zveřejněný zápis: publikum akce, její vedoucí či kontrolor a správce. */
 export function canReadPublishedMinutes(viewer: Viewer, row: EventRow): boolean {
   const snapshot = row.published;
@@ -64,4 +85,22 @@ export function canReadPublishedMinutes(viewer: Viewer, row: EventRow): boolean 
 
 export function canSeeAudience(viewer: Viewer, audience: string): boolean {
   return isOrganizer(viewer) || viewer.groups.includes(audience as Group);
+}
+
+/**
+ * Téma v seznamu Témat (F10). Stejné pravidlo jako u akcí: v režimu `all-published` vidí každý přihlášený všechna
+ * nearchivovaná témata (filtr „Všechna“), jinak jen témata svých skupin. Jména zájemců dál vidí jen správce
+ * a navrhnout téma jde jen pro vlastní skupinu (`canSeeAudience`).
+ */
+export function canSeeTopic(viewer: Viewer, audience: string, mode: EventVisibility = eventVisibility()): boolean {
+  return mode === "all-published" || canSeeAudience(viewer, audience);
+}
+
+/**
+ * Důvod a poznámka omluvy jsou soukromé (u nemoci jde o údaj související se zdravím). Zatím je smí číst
+ * jen sám omluvený. Správce ani pracovní role „vedoucí týmu“ je automaticky nevidí: oprávněného manažera
+ * doplní PR2 podle schváleného mapování (O03).
+ */
+export function canReadExcuseDetails(viewer: Viewer, subjectUserId: string): boolean {
+  return viewer.id === subjectUserId;
 }

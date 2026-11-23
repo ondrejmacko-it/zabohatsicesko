@@ -15,7 +15,7 @@ export function GateForm({ personas, gate }: { personas: Persona[]; gate: GateMo
         <label className="field">
           <span className="field-label">Přístupový kód</span>
           <input className="input" name="code" type="password" autoComplete="off" required />
-          <span className="field-hint">Kód jste dostali spolu s odkazem na ukázku. Zvací odkaz ho vyplní sám.</span>
+          <span className="field-hint">Kód přišel spolu s odkazem na ukázku. Zvací odkaz ho vyplní sám.</span>
         </label>
       )}
       <fieldset className="persona-list">

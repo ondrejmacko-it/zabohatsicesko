@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { MinutesContent } from "@/lib/types";
 import { getDb } from "@/server/db/client";
+import { assertNoTraining, type AiDataUse } from "@/server/integrations/ai-data-use";
 import { readSwitch, simulatedLatency } from "@/server/settings";
 
 export type Transcript = {
@@ -19,8 +20,10 @@ export class TranscriptionError extends Error {
 /**
  * Poskytovatel přepisu a shrnutí. Skutečný adaptér (schválená služba v testovacím režimu)
  * implementuje stejné rozhraní. Výstup modelu je nedůvěryhodný a vždy prochází minutesSchema.
+ * F15: shrnutí dostane přepis až bez jmen a kontaktů klientů a služba musí mít zákaz trénování (`dataUse`).
  */
 export interface TranscriptionProvider {
+  readonly dataUse: AiDataUse;
   transcribe(audio: Uint8Array, sha256: string): Promise<Transcript>;
   summarize(transcript: Transcript, context: { label: string; topicTitle: string | null }): Promise<unknown>;
 }
@@ -67,6 +70,9 @@ const FIXTURE_MINUTES: MinutesContent = {
 };
 
 export class FixtureTranscription implements TranscriptionProvider {
+  // Ukázka bez sítě: nahrávka ani přepis neopustí server.
+  readonly dataUse: AiDataUse = { training: "never", retention: "none" };
+
   private async gate(): Promise<void> {
     await simulatedLatency();
     if (await readSwitch(await getDb(), "transcription.outage")) throw new TranscriptionError("transcription_unavailable");
@@ -86,7 +92,7 @@ export class FixtureTranscription implements TranscriptionProvider {
 }
 
 export function transcriptionProvider(): TranscriptionProvider {
-  return new FixtureTranscription();
+  return assertNoTraining("přepis nahrávky", new FixtureTranscription());
 }
 
 /**

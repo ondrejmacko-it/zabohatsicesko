@@ -116,7 +116,7 @@ export class PersonalCalendarApi {
    */
   async insertCalendar(): Promise<string> {
     const { status, body } = await this.request("POST", "/calendars", {
-      body: { summary: PERSONAL_CALENDAR_NAME, description: "Akce vzdělávání z firemní Wiki. Spravuje je Wiki, změny dělejte tam.", timeZone: TIME_ZONE },
+      body: { summary: PERSONAL_CALENDAR_NAME, description: "Akce vzdělávání z firemní Wiki. Spravuje je Wiki, změny dělej tam.", timeZone: TIME_ZONE },
     });
     const id = (body as { id?: unknown } | null)?.id;
     if (status !== 200 || typeof id !== "string") throw new CalendarError("calendar_unavailable", true);

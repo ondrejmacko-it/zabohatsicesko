@@ -34,11 +34,11 @@ const SWITCH_LABELS: Record<SimulationSwitch, { title: string; on: string; off: 
 const CONNECT_RESULTS: Record<string, { text: string; ok: boolean }> = {
   pripojeno: { text: "Google Kalendář je připojený.", ok: true },
   zamitnuto: { text: "Souhlas u Googlu nebyl udělen. Nic se nezměnilo.", ok: false },
-  "chybi-opravneni": { text: "Chybí oprávnění k událostem Kalendáře. Při souhlasu ho nechte zaškrtnuté.", ok: false },
-  "neplatny-stav": { text: "Připojení vypršelo nebo nezačalo v tomto prohlížeči. Zkuste to znovu.", ok: false },
-  "bez-pristupu": { text: "Účet je připojený, ale nemá přístup ke kalendáři, do kterého Wiki zapisuje. Připojte účet, který kalendář vlastní.", ok: false },
-  nepripojeno: { text: "Připojení se nepodařilo dokončit. Zkuste to znovu.", ok: false },
-  "jiny-ucet": { text: "Kalendář smí propojit jen účet organizátora. Zvolený účet Google to není, nic se neuložilo. Přihlaste se u Googlu účtem organizátora a zkuste to znovu.", ok: false },
+  "chybi-opravneni": { text: "Chybí oprávnění k událostem Kalendáře. Při souhlasu ho nech zaškrtnuté.", ok: false },
+  "neplatny-stav": { text: "Připojení vypršelo nebo nezačalo v tomto prohlížeči. Zkus to znovu.", ok: false },
+  "bez-pristupu": { text: "Účet je připojený, ale nemá přístup ke kalendáři, do kterého Wiki zapisuje. Připoj účet, který kalendář vlastní.", ok: false },
+  nepripojeno: { text: "Připojení se nepodařilo dokončit. Zkus to znovu.", ok: false },
+  "jiny-ucet": { text: "Kalendář smí propojit jen účet organizátora. Zvolený účet Google to není, nic se neuložilo. Přihlas se u Googlu účtem organizátora a zkus to znovu.", ok: false },
 };
 
 export default async function IntegrationsPage({ searchParams }: { searchParams: Promise<{ google?: string }> }) {

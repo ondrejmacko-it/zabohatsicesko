@@ -55,7 +55,7 @@ export function MinutesEditor({
       {published && (
         <p className="small muted">Uložení založí nový návrh. Kolegové do jeho schválení dál vidí tuto schválenou verzi.</p>
       )}
-      {!published && !hasLead && <p className="notice notice-danger">Doplňte vedoucího akce. Zápis schvaluje a zveřejňuje vedoucí, bez něj zveřejnit nejde.</p>}
+      {!published && !hasLead && <p className="notice notice-danger">Doplň vedoucího akce. Zápis schvaluje a zveřejňuje vedoucí, bez něj zveřejnit nejde.</p>}
       {!published && hasLead && !canApprove && <p className="small muted">Zápis zveřejní vedoucí akce, až návrh schválí.</p>}
       {!published && canApprove && <p className="small muted">Kolegové zápis uvidí až po schválení.</p>}
       <ActionMessage state={state} />

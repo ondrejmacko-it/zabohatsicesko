@@ -447,4 +447,36 @@ ALTER TABLE topics ALTER COLUMN priority_rank TYPE integer;
 ALTER TABLE topics ADD CONSTRAINT topics_priority_rank_positive CHECK (priority_rank >= 1);
 `,
   },
+  {
+    id: "0016_event_participation",
+    approval: true,
+    sql: `
+-- Individuální účast (PR1, F03/F05): jen výjimka z odvozené povinnosti nebo dobrovolná přihláška.
+-- Povinná účast se neukládá, odvozuje se ze zveřejněné akce a rolí. Jen nové objekty, nic se nemaže ani
+-- nepřepisuje, IF NOT EXISTS dovolí bezpečné opakování. Unikátní indexy (org_id, id) jen umožní cizí klíče
+-- v rámci organizace: id je už primární klíč, takže je stávající data vždy splňují.
+CREATE UNIQUE INDEX IF NOT EXISTS users_org_id_id_key ON users (org_id, id);
+CREATE UNIQUE INDEX IF NOT EXISTS events_org_id_id_key ON events (org_id, id);
+-- Jeden aktuální záznam na člověka a akci (souběh nevytvoří dva). Důvod jen u omluvy, poznámka volitelná
+-- a krátká, nikdy diagnóza. Smazání akce (jen nezveřejněný návrh) nebo účtu záznam smaže (minimalizace dat),
+-- historie změn zůstává v audit_log bez důvodu i poznámky.
+CREATE TABLE IF NOT EXISTS event_participation (
+  org_id text NOT NULL,
+  event_id text NOT NULL,
+  user_id text NOT NULL,
+  kind text NOT NULL CHECK (kind IN ('voluntary_enrolled', 'excused')),
+  excuse_reason text CHECK (excuse_reason IN ('illness', 'vacation', 'other')),
+  excuse_note text CHECK (char_length(excuse_note) BETWEEN 1 AND 280),
+  revision integer NOT NULL DEFAULT 1 CHECK (revision >= 1),
+  actor_id text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (org_id, event_id, user_id),
+  CONSTRAINT event_participation_event_fk FOREIGN KEY (org_id, event_id) REFERENCES events (org_id, id) ON DELETE CASCADE,
+  CONSTRAINT event_participation_user_fk FOREIGN KEY (org_id, user_id) REFERENCES users (org_id, id) ON DELETE CASCADE,
+  CONSTRAINT event_participation_excuse_check CHECK ((kind = 'excused') = (excuse_reason IS NOT NULL) AND (kind = 'excused' OR excuse_note IS NULL))
+);
+CREATE INDEX IF NOT EXISTS event_participation_user_idx ON event_participation (org_id, user_id);
+`,
+  },
 ];

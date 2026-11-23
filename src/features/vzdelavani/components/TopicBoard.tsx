@@ -298,7 +298,7 @@ export function TopicBoard({
       if (!sortable) return null;
       return (
         <div data-zone={section} className={target ? "topic-drop-empty is-target" : "topic-drop-empty"}>
-          {ordered ? "Zatím žádné. Přetáhněte sem téma, které se má plánovat přednostně." : "Žádná další témata. Přetáhněte sem téma, které nemá mít přednost."}
+          {ordered ? "Zatím žádné. Přetáhni sem téma, které se má plánovat přednostně." : "Žádná další témata. Přetáhni sem téma, které nemá mít přednost."}
         </div>
       );
     }
@@ -308,30 +308,29 @@ export function TopicBoard({
       <List data-zone={section} className={classes}>
         {ids.map((id, index) => {
           const item = byId.get(id)!;
-          const rowClasses = [item.className, (sortable || ordered) && "topic-has-lead", dragId === id && "topic-dragged"].filter(Boolean).join(" ");
+          // Úchyt i číslo pořadí jen pro správce (F11). Ostatní vidí čistý seznam, pořadí nese samo řazení.
+          const rowClasses = [item.className, sortable && "topic-has-lead", dragId === id && "topic-dragged"].filter(Boolean).join(" ");
           return (
             <li key={id} className={rowClasses} data-topic={id} data-section={section}>
-              {(sortable || ordered) && (
+              {sortable && (
                 <div className="topic-lead">
-                  {sortable && (
-                    <button
-                      type="button"
-                      className="topic-handle"
-                      data-handle={id}
-                      aria-label={`Změnit pořadí: ${item.name}`}
-                      aria-describedby="tema-poradi-napoveda"
-                      title="Přetáhněte, nebo použijte šipky nahoru a dolů"
-                      onPointerDown={(e) => onPointerDown(e, id)}
-                      onPointerMove={onPointerMove}
-                      onPointerUp={(e) => onPointerEnd(e, true)}
-                      onPointerCancel={(e) => onPointerEnd(e, false)}
-                      // Ztráta zachycení bez puštění (např. systémové gesto) přesun neuloží.
-                      onLostPointerCapture={(e) => onPointerEnd(e, false)}
-                      onKeyDown={(e) => onKeyDown(e, id)}
-                    >
-                      <Icon name="grip" size={16} />
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    className="topic-handle"
+                    data-handle={id}
+                    aria-label={`Změnit pořadí: ${item.name}`}
+                    aria-describedby="tema-poradi-napoveda"
+                    title="Přetáhni, nebo použij šipky nahoru a dolů"
+                    onPointerDown={(e) => onPointerDown(e, id)}
+                    onPointerMove={onPointerMove}
+                    onPointerUp={(e) => onPointerEnd(e, true)}
+                    onPointerCancel={(e) => onPointerEnd(e, false)}
+                    // Ztráta zachycení bez puštění (např. systémové gesto) přesun neuloží.
+                    onLostPointerCapture={(e) => onPointerEnd(e, false)}
+                    onKeyDown={(e) => onKeyDown(e, id)}
+                  >
+                    <Icon name="grip" size={16} />
+                  </button>
                   {ordered && (
                     <span className="topic-rank" aria-hidden="true">
                       {index + 1}

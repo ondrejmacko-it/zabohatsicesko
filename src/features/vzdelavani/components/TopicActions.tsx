@@ -150,7 +150,7 @@ export function TopicManage({ topic, groups, canMoveUp, canMoveDown }: TopicMana
           buttonClassName="menu-danger"
           confirm={{
             title: "Archivovat téma",
-            text: `Téma „${topic.name}“ zmizí z nabídky a z doporučení${guaranteed ? " a přestane být garantované" : ""}. Akce, které ho už měly, si vazbu nechají a téma můžete kdykoli obnovit.`,
+            text: `Téma „${topic.name}“ zmizí z nabídky a z doporučení${guaranteed ? " a přestane být garantované" : ""}. Akce, které ho už měly, si vazbu nechají a téma můžeš kdykoli obnovit.`,
             confirmLabel: "Archivovat téma",
           }}
         />
@@ -213,7 +213,7 @@ function PlanTopicDialog({ topic, onClose }: { topic: { id: string; name: string
         {options && (
           <h3 className="plan-topic-heading">{scheduled ? "Další termín" : "Vhodné akce"}</h3>
         )}
-        {options && candidates.length === 0 && <p className="small">Žádná budoucí akce bez tématu se pro skupinu tématu nehodí. Vytvořte novou.</p>}
+        {options && candidates.length === 0 && <p className="small">Žádná budoucí akce bez tématu se pro skupinu tématu nehodí. Vytvoř novou.</p>}
         {candidates.length > 0 && (
           <ul className="plan-topic-list" aria-label="Vhodné akce">
             {shown.map((c) => (

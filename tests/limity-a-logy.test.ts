@@ -15,7 +15,7 @@ describe("limit serverových akcí a provozní logy", () => {
     let runs = 0;
     const task = async () => (runs++, { ok: true as const });
     for (let i = 0; i < ACTION_LIMIT.count; i++) expect((await runAction(task)).ok).toBe(true);
-    expect(await runAction(task)).toEqual({ ok: false, error: "Příliš mnoho pokusů. Zkuste to prosím za chvíli." });
+    expect(await runAction(task)).toEqual({ ok: false, error: "Příliš mnoho pokusů. Zkus to prosím za chvíli." });
     expect(runs).toBe(ACTION_LIMIT.count);
   });
 
