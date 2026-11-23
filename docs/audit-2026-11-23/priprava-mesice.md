@@ -19,10 +19,11 @@ PR #86 přidal do `generateMonth` obnovu: když v měsíci není žádná nesvá
 | PM-04 | P2 | potvrzená, opravená | `generateMonth` | Obnova vyprázdněného aktuálního měsíce vracela i proběhlé termíny. Takový návrh nejde zveřejnit (`publishDrafts` bere jen budoucí). |
 | PM-05 | P2 | potvrzená, opravená | texty mazání | Okno Smazat vybrané tvrdilo „nejde to vrátit“, okno Smazat návrh „doplnění ho už znovu nevytvoří“. U termínů z rozvrhu to po opravě neplatí. |
 | PM-06 | P2 | potvrzená, opravená | počet smazaných | Obnova by nabízela termíny dne, který je v rozvrhu vypnutý (nic by nevzniklo, tlačítko by zůstalo). |
-| PM-07 | P3 | riziko, beze změny | `planMonth` | První doplnění aktuálního měsíce vytvoří návrhy i pro proběhlé dny. V okně se nezobrazí (bere jen budoucí), ale jsou v datech. Otázka O2. |
+| PM-07 | P3 | opravená (O2) | `generateMonth` | Doplnění aktuálního měsíce vytvářelo návrhy i pro proběhlé dny. V okně se nezobrazily (bere jen budoucí), ale byly v datech. Nově se pro den před dneškem návrh nevytvoří, svátky a existující akce beze změny. |
 | PM-10 | P2 | potvrzená, opravená | okno Připravit měsíc | Po Doplnit chybějící termíny (nebo Uložit změny) a zavření se okno ptalo „Neuložené změny“, i když nikdo nic nepsal. `Modal` bral otisk polí jen při otevření, formulář se po načtení nových návrhů založil znovu. |
 | PM-11 | P3 | potvrzená, opravená | okno Připravit měsíc | Po obnově zůstala pod Doplnit stará hláška „…se nevrací“, která odporovala výsledku. |
-| PM-12 | P2 | riziko, beze změny | okno Připravit měsíc | Rozepsané (neuložené) úpravy řádků zmizí bez varování, když správce mezitím stiskne Doplnit nebo Obnovit (formulář má `key` podle verzí návrhů). Otázka O4. |
+| PM-12 | P2 | opravená (O4) | okno Připravit měsíc | Rozepsané (neuložené) úpravy řádků zmizely bez varování, když správce mezitím stiskl Doplnit nebo Obnovit (formulář má `key` podle verzí návrhů). Nově se Doplnit i Obnovit nejdřív zeptá, Zpět úpravy nechá. |
+| PM-14 | – | doplněno (O3) | okno Připravit měsíc | Obnova jednoho smazaného termínu: rozbalovací „Obnovit jednotlivě (N)“ se seznamem (název, den, čas) a tlačítkem Obnovit u každého. |
 | PM-13 | – | mimo rozsah | `e2e/okna.spec.ts` | „cizí akce neprozradí obsah“ padá na 1280/1920/320 (FP vidí akci RM `tr-rm-1112`). Souvisí s výchozí viditelností `all-published` z PR #86, ne s přípravou měsíce. Patří relaci účast/náhledy. |
 | PM-08 | – | ověřeno, v pořádku | klíč slotu | `split(":").at(-1)` odpovídá formátu `<org>:slot-<den>:<YYYY-MM-DD>`. Nová podmínka bere posledních 10 znaků klíče. |
 | PM-09 | – | ověřeno v simulaci | souběh | `events.generation_key` je `UNIQUE` a vkládá se s `ON CONFLICT DO NOTHING`. Výjimka se maže až pro opravdu vložené řádky. Dva požadavky naráz nevytvoří duplicitu. PGlite dotazy serializuje, skutečný souběh na Postgresu nebyl živě testovaný. |
@@ -79,14 +80,20 @@ Starší pokrytí beze změny: `tests/plan.test.ts` (generování ze šablony, s
   `e2e/priprava-mesice*.spec.ts` a `tests/priprava-mesice*.test.ts`. Nové chyby jsem tu nenašel.
 * Dialog s celým měsícem návrhů: E2E snímky 320/390/1280/1920 a kontrola vodorovného posunu (viz Ověření).
 
-## Otázky pro vlastníka
+## Rozhodnutí vlastníka (23. 11. 2026)
 
-* **O1:** Má zůstat automatická obnova úplně vyprázdněného měsíce (PR #86) vedle tlačítka Obnovit smazané návrhy?
-  Zachováno, protože to popisuje `docs/opravne-kolo-ucast-mesic-2026-11-23.md` (akceptační test 1).
-  Čistší by bylo vracet smazané jen tlačítkem.
-* **O2:** Má doplnění aktuálního měsíce vytvářet návrhy i pro proběhlé dny (PM-07)? Beze změny.
-* **O4:** Má Doplnit/Obnovit při rozepsaných úpravách řádků nejdřív upozornit (PM-12)? Beze změny.
-* **O3:** Stačí obnova všech smazaných termínů měsíce najednou, nebo je potřeba vracet jednotlivě?
+* **O1 – rozhodnuto, beze změny:** automatická obnova úplně vyprázdněného měsíce (PR #86, akceptační test 1)
+  zůstává vedle tlačítka Obnovit smazané návrhy.
+* **O2 – vyřešeno:** doplnění nevytvoří návrh pro proběhlý den (před dneškem podle `now()`). Ručně vytvořené ani
+  zveřejněné minulé akce se nemění. Test „O2 aktuální měsíc…“.
+* **O3 – vyřešeno:** kromě hromadné obnovy jde obnovit i jednotlivý smazaný termín. `generateMonth(…, { restoreKey })`
+  přes `generateMonthAction` (pole `key`, validace formátu klíče, `requireOrganizer`). Obnoví jen termín ze seznamu
+  smazaných (`restorableExclusion`), vytvoří jen návrh, nedoplní nic dalšího. Zrušenou akci, existující návrh ani cizí
+  klíč nevrátí. Souběh a dvojklik hlídá `UNIQUE generation_key`. Seznam se načítá jen, když nějaké smazané termíny
+  jsou (rozpočet dotazů Plánu beze změny). Testy „O3 …“ a e2e (1280, snímek 320).
+* **O4 – vyřešeno:** při rozepsaných úpravách řádků se Doplnit chybějící termíny, Obnovit smazané návrhy i Obnovit
+  u jednoho termínu nejdřív zeptají („Máš neuložené úpravy návrhů, doplněním se zahodí.“). Zpět úpravy nechá.
+  Úprava vrácená na původní hodnotu se za rozepsanou nepočítá. E2E.
 
 ## Ověření (23. 11. 2026)
 
@@ -97,8 +104,10 @@ Starší pokrytí beze změny: `tests/plan.test.ts` (generování ze šablony, s
   Uložit změny / Zrušit úpravy zůstává dole, krok 1 s obnovou se zalamuje čitelně. Snímky se necommitují.
 * Simulace: PGlite a demo server s fiktivními daty. Živě netestováno: souběh na skutečném Postgresu, Google.
 
+* Kolo O1–O4: lint, tsc, `vitest run` a `e2e/priprava-mesice*.spec.ts` (windows-1280, telefon-320: 35 passed,
+  1 skipped) zelené. Snímek seznamu smazaných termínů na 320 px prohlédnutý (zalamuje se, bez posunu).
+
 ## Navazující prompt
 
-Stav: větev `oprava/audit-priprava-mesice`, draft PR do `oprava/kompletni-audit-rozhrani-a-funkci`. Další krok:
-rozhodnutí vlastníka k O1–O4. PM-13 předat relaci účast/náhledy. Případně varování před ztrátou rozepsaných řádků
-(PM-12) jako samostatná malá změna.
+Stav: větev `oprava/audit-priprava-mesice`, draft PR do `oprava/kompletni-audit-rozhrani-a-funkci`. O1–O4 rozhodnuté a
+zapracované. Zbývá jen PM-13 (řeší relace účast/náhledy) a ruční kontrola v preview.

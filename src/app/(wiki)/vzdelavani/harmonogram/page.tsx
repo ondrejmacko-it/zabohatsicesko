@@ -190,6 +190,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
         drafts={monthDrafts.drafts}
         changeDrafts={monthDrafts.changeDrafts}
         deletedSlots={monthDrafts.deletedSlots}
+        deleted={monthDrafts.deleted}
         people={people}
         topics={topics.map((t) => t.name)}
         recipients={calendar.recipients}

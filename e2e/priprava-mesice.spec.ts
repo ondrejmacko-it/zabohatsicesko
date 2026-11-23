@@ -373,16 +373,44 @@ test.describe("Připravit měsíc: obnova smazaných návrhů", () => {
     await expect(prepare).toBeHidden();
 
     await deleteDrafts(page, false);
+    await deleteDrafts(page, false);
     await page.getByRole("button", { name: /^Připravit měsíc/ }).click();
-    await expect(rows).toHaveCount(total - 1);
-    const restore = prepare.getByRole("button", { name: "Obnovit smazané návrhy (1)" });
-    await expect(restore).toBeVisible();
-    await expect(prepare.getByText("Smazané termíny z rozvrhu: 1. Doplnění je nevrací.")).toBeVisible();
+    await expect(rows).toHaveCount(total - 2);
+    await expect(prepare.getByRole("button", { name: "Obnovit smazané návrhy (2)" })).toBeVisible();
+    await expect(prepare.getByText("Smazané termíny z rozvrhu: 2. Doplnění je nevrací.")).toBeVisible();
 
     // Běžné doplnění smazaný termín nevrátí a řekne proč (dřív: „Všechny pravidelné termíny už v plánu jsou“).
     await prepare.getByRole("button", { name: "Doplnit chybějící termíny" }).click();
-    await expect(prepare.getByText(/Nic nového k doplnění\. Dřív smazané termíny \(1\) se nevrací/)).toBeVisible();
+    await expect(prepare.getByText(/Nic nového k doplnění\. Dřív smazané termíny \(2\) se nevrací/)).toBeVisible();
+    await expect(rows).toHaveCount(total - 2);
+
+    // O4: rozepsaná úprava řádku. Doplnit se nejdřív zeptá, Zpět úpravu nechá, vrácená hodnota už ne.
+    const lead = prepare.getByLabel(/^Vedoucí: /).first();
+    const person = await lead.locator("option").nth(1).getAttribute("value");
+    await lead.selectOption(person!);
+    await prepare.getByRole("button", { name: "Doplnit chybějící termíny" }).click();
+    const keep = page.getByRole("dialog", { name: "Neuložené úpravy" });
+    await expect(keep).toContainText("Máš neuložené úpravy návrhů, doplněním se zahodí.");
+    await keep.getByRole("button", { name: "Zpět" }).click();
+    await expect(keep).toBeHidden();
+    await expect(lead).toHaveValue(person!);
+    await lead.selectOption("");
+    await expect(prepare.getByRole("button", { name: "Doplnit chybějící termíny" })).toBeVisible();
+
+    // O3: obnova jednoho termínu ze seznamu smazaných.
+    await prepare.getByText("Obnovit jednotlivě (2)").click();
+    const deletedList = prepare.getByRole("list", { name: "Smazané termíny" });
+    await expect(deletedList.getByRole("listitem")).toHaveCount(2);
+    await page.setViewportSize({ width: 320, height: 760 });
+    await deletedList.scrollIntoViewIfNeeded();
+    await expectNoHorizontalScroll(page);
+    await page.screenshot({ path: testInfo.outputPath("priprava-mesice-jednotlive-320.png") });
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await deletedList.getByRole("listitem").first().getByRole("button", { name: "Obnovit" }).click();
     await expect(rows).toHaveCount(total - 1);
+    const restore = prepare.getByRole("button", { name: "Obnovit smazané návrhy (1)" });
+    await expect(restore).toBeVisible();
+    await expect(prepare.getByText("Obnovit jednotlivě (1)")).toBeVisible();
 
     await restore.click();
     await expect(prepare.getByText(/^Doplněno 1 termín jako návrh, nic se nezveřejnilo\. Z toho obnovené smazané termíny: 1\./)).toBeVisible();

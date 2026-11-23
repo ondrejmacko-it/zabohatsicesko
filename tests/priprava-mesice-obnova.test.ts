@@ -17,7 +17,7 @@ import {
   updateTemplate,
   type EventInput,
 } from "@/server/services/events";
-import { organizer, resetDemo } from "./helpers";
+import { PAST_FP, organizer, participant, resetDemo } from "./helpers";
 
 // Audit P0 §7 (23. 11. 2026): příprava měsíce a ztráta návrhů. Ukázka běží 12. 11. 2026.
 // Prosinec 2026: úterý 10:00–12:00 je v šabloně akce pro tým A, 24. a 25. 12. jsou svátky.
@@ -241,5 +241,68 @@ describe("příprava měsíce: obnova smazaných návrhů", () => {
     expect(await generateMonth(organizer, MONTH, { restoreDeleted: true })).toMatchObject({ created: count, restored: count });
     expect(await exclusionsOf("2027-01")).toHaveLength(january);
     expect(await templateDrafts("2027-01")).toHaveLength(0);
+  });
+});
+
+// Rozhodnutí vlastníka 23. 11. 2026 (O2, O3).
+describe("příprava měsíce: proběhlé dny a obnova po jednom", () => {
+  test("O2 aktuální měsíc: doplnění nevytvoří návrh pro proběhlý den, budoucí ano, minulé akce beze změny", async () => {
+    const db = await getDb();
+    const keyed = (await monthRows("2026-11")).filter((e) => e.generationKey && e.type !== "holiday" && e.id !== PAST_FP);
+    const past = keyed.find((e) => toDateKey(e.startsAt) < "2026-11-12")!;
+    const future = keyed.find((e) => toDateKey(e.startsAt) > "2026-11-12")!;
+    // Termíny bez akce i bez výjimky (např. dřív vypnutý den rozvrhu): doplnění je vidí jako chybějící.
+    for (const row of [past, future]) await db.delete(events).where(eq(events.id, row.id));
+    const before = (await loadEventRow(db, PAST_FP))!;
+
+    const result = await generateMonth(organizer, "2026-11");
+    expect(result.created).toBe(1);
+    const keys = new Set((await monthRows("2026-11")).map((e) => e.generationKey));
+    expect(keys.has(future.generationKey)).toBe(true);
+    expect(keys.has(past.generationKey)).toBe(false);
+    const after = (await loadEventRow(db, PAST_FP))!;
+    expect(after.revision).toBe(before.revision);
+    expect(after.status).toBe(before.status);
+  });
+
+  test("O3 jeden smazaný termín: obnoví jen ten, jako návrh, idempotentně i v souběhu", async () => {
+    await generateMonth(organizer, MONTH);
+    const one = (await draftOn(TUESDAY))!;
+    const other = (await draftOn("2026-12-15"))!;
+    await deleteDraft(organizer, one.id, one.revision);
+    await deleteDraft(organizer, other.id, other.revision);
+    const listed = (await listMonthDrafts(organizer, MONTH)).deleted;
+    expect(listed.map((d) => d.dateKey)).toEqual([TUESDAY, "2026-12-15"]);
+    const key = listed[0]!.key;
+
+    const results = await Promise.all([
+      generateMonth(organizer, MONTH, { restoreKey: key }),
+      generateMonth(organizer, MONTH, { restoreKey: key }),
+    ]);
+    expect(results.reduce((sum, r) => sum + r.created, 0)).toBe(1);
+    expect((await loadEventRow(await getDb(), (await draftOn(TUESDAY))!.id))!.status).toBe("draft");
+    expect(await draftOn("2026-12-15")).toBeUndefined();
+    const left = await listMonthDrafts(organizer, MONTH);
+    expect(left.deletedSlots).toBe(1);
+    expect(left.deleted.map((d) => d.dateKey)).toEqual(["2026-12-15"]);
+    expect((await generateMonth(organizer, MONTH, { restoreKey: key })).created).toBe(0);
+    await expectNoDuplicates();
+  });
+
+  test("O3 jeden termín: zrušenou akci, existující návrh ani cizí klíč nevrátí, účastník nesmí", async () => {
+    await generateMonth(organizer, MONTH);
+    const draft = (await draftOn(TUESDAY))!;
+    const key = (await monthRows()).find((e) => e.id === draft.id)!.generationKey!;
+    await publishDrafts(organizer, MONTH, [{ id: draft.id, revision: draft.revision, topicTitle: "Téma", leadId: "demo-vedouci" }]);
+    const row = (await loadEventRow(await getDb(), draft.id))!;
+    await cancelEvent(organizer, draft.id, row.revision, "Lektor onemocněl");
+    expect((await generateMonth(organizer, MONTH, { restoreKey: key })).created).toBe(0);
+
+    const existing = (await draftOn("2026-12-15"))!;
+    const existingKey = (await monthRows()).find((e) => e.id === existing.id)!.generationKey!;
+    expect((await generateMonth(organizer, MONTH, { restoreKey: existingKey })).created).toBe(0);
+    expect((await generateMonth(organizer, MONTH, { restoreKey: "jina-org:slot-2:2026-12-22" })).created).toBe(0);
+    await expect(generateMonth(participant, MONTH, { restoreKey: key })).rejects.toThrow();
+    await expectNoDuplicates();
   });
 });

@@ -678,7 +678,14 @@ function monthDraftFilter(monthKey: string) {
 export async function listMonthDrafts(
   viewer: Viewer,
   monthKey: string,
-): Promise<{ drafts: MonthDraft[]; changeDrafts: number; /** Smazané budoucí termíny rozvrhu, které jde vrátit. */ deletedSlots: number }> {
+): Promise<{
+  drafts: MonthDraft[];
+  changeDrafts: number;
+  /** Smazané budoucí termíny rozvrhu, které jde vrátit. */
+  deletedSlots: number;
+  /** Tytéž termíny jednotlivě (obnova po jednom). */
+  deleted: DeletedSlot[];
+}> {
   requireOrganizer(viewer);
   const db = await getDb();
   const { start, end } = monthRange(monthKey);
@@ -732,6 +739,8 @@ export async function listMonthDrafts(
     })),
     changeDrafts: changes?.count ?? 0,
     deletedSlots: changes?.deletedSlots ?? 0,
+    // Seznam jen když je co vracet: běžný Plán tak nemá dotaz navíc (rozpočet dotazů).
+    deleted: changes?.deletedSlots ? await deletedSlotList(db, monthKey) : [],
   };
 }
 
@@ -905,6 +914,19 @@ function restorableExclusion(monthKey: string) {
     )`;
 }
 
+/** Smazaný termín, který jde vrátit, pro seznam v okně Připravit měsíc. */
+export type DeletedSlot = { key: string; dateKey: string; label: string; startTime: string; endTime: string };
+
+/** Seznam smazaných termínů měsíce podle aktuálního rozvrhu (jen když nějaké jsou, dva dotazy navíc). */
+async function deletedSlotList(db: Executor, monthKey: string): Promise<DeletedSlot[]> {
+  const keys = new Set(await deletedSlotKeys(db, monthKey));
+  if (!keys.size) return [];
+  const slots = await db.select().from(templateSlots).where(eq(templateSlots.orgId, config.orgId));
+  return planMonth(config.orgId, monthKey, slots, new Set())
+    .filter((slot) => keys.has(slot.generationKey) && !slot.holiday)
+    .map((slot) => ({ key: slot.generationKey, dateKey: slot.dateKey, label: slot.label, startTime: slot.startTime, endTime: slot.endTime }));
+}
+
 async function deletedSlotKeys(db: Executor, monthKey: string): Promise<string[]> {
   const rows = await db.select({ key: generationExclusions.generationKey }).from(generationExclusions).where(restorableExclusion(monthKey));
   return rows.map((r) => r.key);
@@ -915,7 +937,11 @@ async function deletedSlotKeys(db: Executor, monthKey: string): Promise<string[]
  * `restoreDeleted` (tlačítko Obnovit smazané návrhy), nebo samo doplnění, když v měsíci nezůstala žádná
  * pracovní akce (všechny návrhy smazané). Výjimka zmizí jen u termínu, který opravdu znovu vznikl.
  */
-export async function generateMonth(viewer: Viewer, monthKey: string, options: { restoreDeleted?: boolean } = {}): Promise<GenerateResult> {
+export async function generateMonth(
+  viewer: Viewer,
+  monthKey: string,
+  options: { restoreDeleted?: boolean; /** Obnoví jen tento jeden smazaný termín, nic dalšího nedoplní. */ restoreKey?: string } = {},
+): Promise<GenerateResult> {
   requireOrganizer(viewer);
   const db = await getDb();
   const ranked = await listTopics(viewer);
@@ -941,7 +967,11 @@ export async function generateMonth(viewer: Viewer, monthKey: string, options: {
       gt(events.endsAt, start),
     )).limit(1);
     const deleted = await deletedSlotKeys(tx, monthKey);
-    const restoring = new Set(options.restoreDeleted || active.length === 0 ? deleted : []);
+    const restoring = new Set(
+      options.restoreKey !== undefined
+        ? deleted.filter((key) => key === options.restoreKey)
+        : options.restoreDeleted || active.length === 0 ? deleted : [],
+    );
     const taken = new Set([...existing, ...excluded.filter((r) => !restoring.has(r.key))].map((r) => r.key as string));
     // Akce, které v měsíci už jsou, rozhodnou o každém termínu: přeskočit, doplnit, nebo doplnit s varováním.
     const occupants: Occupant[] = (
@@ -960,8 +990,12 @@ export async function generateMonth(viewer: Viewer, monthKey: string, options: {
     ).map((o) => ({ ...o, dateKey: toDateKey(o.startsAt) }));
     let skipped = 0;
     const review: string[] = [];
+    // Proběhlé dny nedostanou návrh (rozhodnutí vlastníka O2): zveřejnit by nešel. Svátek je záznam, ne návrh.
+    const today = toDateKey(now());
     const plannedSlots = planMonth(config.orgId, monthKey, slots, taken).filter((slot) => {
+      if (options.restoreKey !== undefined && !restoring.has(slot.generationKey)) return false;
       if (slot.holiday) return true;
+      if (slot.dateKey < today) return false;
       const verdict = slotConflict(
         { start: fromPragueLocal(slot.dateKey, slot.startTime), end: fromPragueLocal(slot.dateKey, slot.endTime), audience: slot.audience, type: slot.type, dateKey: slot.dateKey },
         occupants,
