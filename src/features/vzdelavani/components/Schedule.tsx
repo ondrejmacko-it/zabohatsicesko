@@ -480,6 +480,11 @@ export function NextEventsList({ cards, todayKey, hrefFor = pageHref, emptyText 
                   {formatEventTime(new Date(card.startsAt), new Date(card.endsAt), card.allDay)}
                   {card.leadName ? ` · Vede: ${card.leadName}` : ""}
                 </span>
+                {card.participation?.label && (
+                  <span className={badgeClass(card.participation.state === "excused" ? "outline" : "ok")} data-ucast={card.participation.state}>
+                    {card.participation.label}
+                  </span>
+                )}
               </span>
             </Link>
           </li>
