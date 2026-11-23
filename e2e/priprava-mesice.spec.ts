@@ -329,3 +329,79 @@ test.describe("okno akce: zahození neveřejných změn se potvrzuje @desktop", 
     await expect(window.getByLabel(/^Vede/).locator("option:checked")).toHaveText("Vedoucí akce");
   });
 });
+
+// Audit P0 §7: smazaný návrh z rozvrhu se běžným doplněním nevrací, vrátí ho výslovné Obnovit smazané návrhy.
+// Únor 2028 je v ukázce prázdný a žádný jiný test do něj nezapisuje. Na konci se návrhy zase smažou.
+test.describe("Připravit měsíc: obnova smazaných návrhů", () => {
+  test.use({ storageState: authFile("spravce") });
+  const MONTH_PLAN = "/vzdelavani/harmonogram?mesic=2028-02";
+
+  async function deleteDrafts(page: Page, all: boolean) {
+    await page.getByRole("button", { name: "Vybrat návrhy" }).click();
+    const bar = page.getByRole("region", { name: "Hromadný výběr návrhů" });
+    if (all) {
+      await page.getByRole("checkbox", { name: /^Vybrat: / }).filter({ visible: true }).first().check();
+      const everything = bar.getByRole("button", { name: /^Vybrat všechny návrhy/ });
+      if (await everything.isVisible()) await everything.click();
+    } else {
+      await page.getByRole("checkbox", { name: /^Vybrat: / }).filter({ visible: true }).first().check();
+      await expect(bar).toContainText("Vybráno 1");
+    }
+    await bar.getByRole("button", { name: "Smazat vybrané" }).click();
+    const ask = page.getByRole("alertdialog", { name: /^Smazat / });
+    await expect(ask).toContainText("termíny z rozvrhu obnoví Připravit měsíc");
+    await ask.getByRole("button", { name: "Potvrdit smazání" }).click();
+    // Hláška z předchozího mazání může být ještě vidět, stačí aspoň jedna.
+    await expect(page.getByRole("status").filter({ hasText: /Smazán/ }).first()).toBeVisible();
+    await settle(page);
+  }
+
+  test("smazaný návrh: doplnění řekne proč nic nevzniklo, obnova ho vrátí právě jednou", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "windows-1280", "zápis jen jednou");
+    await page.goto(MONTH_PLAN);
+    await settle(page);
+    await page.getByRole("button", { name: /^Připravit měsíc/ }).click();
+    const prepare = dialog(page, /Připravit měsíc:/);
+    await prepare.getByRole("button", { name: "Doplnit chybějící termíny" }).click();
+    await expect(prepare.getByText(/^Doplněno \d+ termín/)).toBeVisible();
+    const rows = prepare.locator(".publish-row");
+    await expect.poll(() => rows.count()).toBeGreaterThan(10);
+    const total = await rows.count();
+    // Po doplnění nikdo nic nepsal: zavření se nesmí ptát na neuložené změny (dřív se ptalo).
+    await prepare.getByRole("button", { name: "Zavřít" }).click();
+    await expect(page.getByRole("alertdialog", { name: "Neuložené změny" })).toHaveCount(0);
+    await expect(prepare).toBeHidden();
+
+    await deleteDrafts(page, false);
+    await page.getByRole("button", { name: /^Připravit měsíc/ }).click();
+    await expect(rows).toHaveCount(total - 1);
+    const restore = prepare.getByRole("button", { name: "Obnovit smazané návrhy (1)" });
+    await expect(restore).toBeVisible();
+    await expect(prepare.getByText("Smazané termíny z rozvrhu: 1. Doplnění je nevrací.")).toBeVisible();
+
+    // Běžné doplnění smazaný termín nevrátí a řekne proč (dřív: „Všechny pravidelné termíny už v plánu jsou“).
+    await prepare.getByRole("button", { name: "Doplnit chybějící termíny" }).click();
+    await expect(prepare.getByText(/Nic nového k doplnění\. Dřív smazané termíny \(1\) se nevrací/)).toBeVisible();
+    await expect(rows).toHaveCount(total - 1);
+
+    await restore.click();
+    await expect(prepare.getByText(/^Doplněno 1 termín jako návrh, nic se nezveřejnilo\. Z toho obnovené smazané termíny: 1\./)).toBeVisible();
+    await expect(rows).toHaveCount(total);
+    await expect(prepare.getByRole("button", { name: "Obnovit smazané návrhy", exact: true })).toBeVisible();
+    await expect(prepare.getByText(/^Smazané termíny z rozvrhu:/)).toHaveCount(0);
+    await expect(prepare.getByText(/se nevrací/)).toHaveCount(0);
+
+    // Dialog s celým měsícem návrhů: bez vodorovného posunu od telefonu po široký monitor.
+    for (const width of [320, 390, 1280, 1920]) {
+      await page.setViewportSize({ width, height: width < 768 ? 760 : 900 });
+      await expectNoHorizontalScroll(page);
+      await page.screenshot({ path: testInfo.outputPath(`priprava-mesice-obnova-${width}.png`) });
+    }
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await prepare.getByRole("button", { name: "Zavřít" }).click();
+    await expect(prepare).toBeHidden();
+
+    // Úklid: návrhy s doporučenými tématy by měnily stav Témat pro čtecí testy.
+    await deleteDrafts(page, true);
+  });
+});

@@ -167,7 +167,7 @@ export function DeleteDialog({ id, revision, onClose, stay = false }: { id: stri
       <form action={action} className="stack">
         <input type="hidden" name="id" value={id} />
         <input type="hidden" name="revision" value={revision} />
-        <p>Návrh se smaže. Pokud vznikl z Pravidelného týdne, další doplnění měsíce ho už znovu nevytvoří.</p>
+        <p>Návrh se smaže. Pokud vznikl z Pravidelného týdne, doplnění měsíce ho znovu nevytvoří. Vrátit ho jde v Připravit měsíc tlačítkem Obnovit smazané návrhy.</p>
         <ActionMessage state={state} />
         <div className="row">
           <button type="submit" className="btn btn-danger" disabled={pending}>

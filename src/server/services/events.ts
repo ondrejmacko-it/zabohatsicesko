@@ -675,7 +675,10 @@ function monthDraftFilter(monthKey: string) {
  * Návrhy měsíce, které jdou zveřejnit najednou. Návrhy změn už zveřejněných akcí sem nepatří:
  * mění platnou pozvánku, proto je správce zveřejňuje jednotlivě s přehledem dopadu. Vrací jen jejich počet.
  */
-export async function listMonthDrafts(viewer: Viewer, monthKey: string): Promise<{ drafts: MonthDraft[]; changeDrafts: number }> {
+export async function listMonthDrafts(
+  viewer: Viewer,
+  monthKey: string,
+): Promise<{ drafts: MonthDraft[]; changeDrafts: number; /** Smazané budoucí termíny rozvrhu, které jde vrátit. */ deletedSlots: number }> {
   requireOrganizer(viewer);
   const db = await getDb();
   const { start, end } = monthRange(monthKey);
@@ -694,8 +697,12 @@ export async function listMonthDrafts(viewer: Viewer, monthKey: string): Promise
     );
     return verdict === "skip" ? "group" : verdict === "warn" ? "shared" : null;
   };
+  // Počet smazaných termínů, které jde vrátit, jede ve stejném dotazu (rozpočet dotazů Plánu).
   const [changes] = await db
-    .select({ count: sql<number>`count(*)::int` })
+    .select({
+      count: sql<number>`count(*)::int`,
+      deletedSlots: sql<number>`(SELECT count(*)::int FROM ${generationExclusions} WHERE ${restorableExclusion(monthKey)})`,
+    })
     .from(events)
     .where(
       and(
@@ -724,6 +731,7 @@ export async function listMonthDrafts(viewer: Viewer, monthKey: string): Promise
       suggestion: pending.has(row.id) ? (reasons.get(row.topicId as string) ?? "doporučeno podle zájmu kolegů") : null,
     })),
     changeDrafts: changes?.count ?? 0,
+    deletedSlots: changes?.deletedSlots ?? 0,
   };
 }
 
@@ -861,8 +869,8 @@ async function plannedTopicIds(db: Executor): Promise<Set<string>> {
 }
 
 /**
- * Doplní chybějící sloty měsíce podle šablony. Budoucím termínům firemního vzdělávání předvyplní
- * doporučené téma podle zájmu a historie. Vše vzniká jako návrh, který správce upraví a zveřejní.
+ * Výsledek doplnění měsíce. Budoucím termínům firemního vzdělávání doplnění předvyplní doporučené téma
+ * podle zájmu a historie. Vše vzniká jako návrh, který správce upraví a zveřejní.
  */
 export type GenerateResult = {
   created: number;
@@ -871,9 +879,43 @@ export type GenerateResult = {
   skipped: number;
   /** Data nových návrhů, které se kryjí s jinou akcí pro stejné lidi. Správce rozhodne. */
   review: string[];
+  /** Z nově vzniklých návrhů ty, které vrátily dřív smazaný termín Pravidelného týdne. */
+  restored: number;
+  /** Smazané termíny měsíce, které po doplnění dál chybí (vrátí je jen Obnovit smazané návrhy). */
+  deletedLeft: number;
 };
 
-export async function generateMonth(viewer: Viewer, monthKey: string): Promise<GenerateResult> {
+/**
+ * Smazaný termín Pravidelného týdne v měsíci, který jde vrátit (podmínka nad `generation_exclusions`): má výjimku
+ * po smazání návrhu, žádná akce s jeho klíčem neexistuje (přesunutý, upravený i zrušený termín si klíč drží, takže
+ * sem nepatří), ještě nenastal a jeho den je v rozvrhu pořád aktivní. Proběhlé smazané termíny zůstávají smazané,
+ * návrh v minulosti by nešel zveřejnit. Klíč je `<org>:slot-<den>:<YYYY-MM-DD>` (viz `generationKey`).
+ */
+function restorableExclusion(monthKey: string) {
+  const key = generationExclusions.generationKey;
+  return sql`${generationExclusions.orgId} = ${config.orgId}
+    AND left(right(${key}, 10), 7) = ${monthKey}
+    AND right(${key}, 10) >= ${toDateKey(now())}
+    AND NOT EXISTS (SELECT 1 FROM ${events} WHERE ${events.generationKey} = ${key})
+    AND EXISTS (
+      SELECT 1 FROM ${templateSlots}
+      WHERE ${templateSlots.orgId} = ${generationExclusions.orgId} AND ${templateSlots.active}
+        AND cardinality(${templateSlots.types}) > 0
+        AND ${key} LIKE '%:slot-' || ${templateSlots.isoWeekday} || ':%'
+    )`;
+}
+
+async function deletedSlotKeys(db: Executor, monthKey: string): Promise<string[]> {
+  const rows = await db.select({ key: generationExclusions.generationKey }).from(generationExclusions).where(restorableExclusion(monthKey));
+  return rows.map((r) => r.key);
+}
+
+/**
+ * Doplní chybějící sloty měsíce podle šablony. Smazané termíny (výjimky) běžné doplnění nevrací. Vrátí je
+ * `restoreDeleted` (tlačítko Obnovit smazané návrhy), nebo samo doplnění, když v měsíci nezůstala žádná
+ * pracovní akce (všechny návrhy smazané). Výjimka zmizí jen u termínu, který opravdu znovu vznikl.
+ */
+export async function generateMonth(viewer: Viewer, monthKey: string, options: { restoreDeleted?: boolean } = {}): Promise<GenerateResult> {
   requireOrganizer(viewer);
   const db = await getDb();
   const ranked = await listTopics(viewer);
@@ -888,8 +930,8 @@ export async function generateMonth(viewer: Viewer, monthKey: string): Promise<G
       .select({ key: generationExclusions.generationKey })
       .from(generationExclusions)
       .where(eq(generationExclusions.orgId, config.orgId));
-    // Úplně vymazaný měsíc lze znovu připravit. Výjimky jinak chrání úmyslně smazané
-    // jednotlivé sloty před návratem. Svátek se nepočítá jako pracovní akce měsíce.
+    // Úplně vymazaný měsíc lze znovu připravit i bez tlačítka obnovy. Výjimky jinak chrání úmyslně smazané
+    // jednotlivé sloty před návratem. Svátek ani zrušená akce se nepočítá jako pracovní akce měsíce.
     const { start, end } = monthRange(monthKey);
     const active = await tx.select({ id: events.id }).from(events).where(and(
       eq(events.orgId, config.orgId),
@@ -898,16 +940,8 @@ export async function generateMonth(viewer: Viewer, monthKey: string): Promise<G
       lt(events.startsAt, end),
       gt(events.endsAt, start),
     )).limit(1);
-    const restore = active.length === 0
-      ? excluded.filter((r) => (r.key as string).split(":").at(-1)?.startsWith(`${monthKey}-`))
-      : [];
-    if (restore.length > 0) {
-      await tx.delete(generationExclusions).where(and(
-        eq(generationExclusions.orgId, config.orgId),
-        inArray(generationExclusions.generationKey, restore.map((r) => r.key as string)),
-      ));
-    }
-    const restoring = new Set(restore.map((r) => r.key));
+    const deleted = await deletedSlotKeys(tx, monthKey);
+    const restoring = new Set(options.restoreDeleted || active.length === 0 ? deleted : []);
     const taken = new Set([...existing, ...excluded.filter((r) => !restoring.has(r.key))].map((r) => r.key as string));
     // Akce, které v měsíci už jsou, rozhodnou o každém termínu: přeskočit, doplnit, nebo doplnit s varováním.
     const occupants: Occupant[] = (
@@ -942,6 +976,7 @@ export async function generateMonth(viewer: Viewer, monthKey: string): Promise<G
     let created = 0;
     let withTopic = 0;
     const reviewDays: string[] = [];
+    const restored: string[] = [];
     for (const slot of plannedSlots) {
       const holiday = slot.holiday;
       const topic = suggestions.get(slot.generationKey);
@@ -973,11 +1008,20 @@ export async function generateMonth(viewer: Viewer, monthKey: string): Promise<G
       created += 1;
       if (topic) withTopic += 1;
       if (review.includes(slot.generationKey)) reviewDays.push(slot.dateKey);
+      if (restoring.has(slot.generationKey)) restored.push(slot.generationKey);
       await tx.insert(eventRevisions).values({ eventId: row.id, revision: 1, action: "generate", snapshot: snapshotOf(row), actorId: viewer.id });
       if (holiday) await publishInTx(tx, row, viewer.id, "generate");
     }
+    // Termín, který se nevrátil (kolize se stejnou skupinou, slot už není v rozvrhu), zůstává smazaný.
+    if (restored.length) {
+      await tx.delete(generationExclusions).where(and(
+        eq(generationExclusions.orgId, config.orgId),
+        inArray(generationExclusions.generationKey, restored),
+      ));
+      await audit(tx, viewer.id, "plan.restore_deleted", "month", monthKey);
+    }
     if (created) await audit(tx, viewer.id, "plan.generate", "month", monthKey);
-    return { created, withTopic, skipped, review: reviewDays };
+    return { created, withTopic, skipped, review: reviewDays, restored: restored.length, deletedLeft: deleted.length - restored.length };
   });
 }
 

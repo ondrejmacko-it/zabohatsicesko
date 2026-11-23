@@ -193,7 +193,7 @@ export function SelectionZone({
               title={`Smazat ${drafts(selected.length)}?`}
               urgent
               busy={busy}
-              description={<p>{pastPicked > 0 && `Z toho ${pastPicked} v minulosti. `}Nic se neodešle a nejde to vrátit.</p>}
+              description={<p>{pastPicked > 0 && `Z toho ${pastPicked} v minulosti. `}Nic se neodešle. Ručně přidané návrhy nejde vrátit, termíny z rozvrhu obnoví Připravit měsíc.</p>}
               onCancel={back}
             >
               <button type="button" className="btn" onClick={back} autoFocus>

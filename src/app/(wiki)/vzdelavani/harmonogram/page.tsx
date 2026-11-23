@@ -189,6 +189,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
         todayKey={todayKey}
         drafts={monthDrafts.drafts}
         changeDrafts={monthDrafts.changeDrafts}
+        deletedSlots={monthDrafts.deletedSlots}
         people={people}
         topics={topics.map((t) => t.name)}
         recipients={calendar.recipients}

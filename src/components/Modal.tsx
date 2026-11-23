@@ -28,7 +28,7 @@ const subscribeNever = () => () => {};
  * Otisk všech polí v okně. Rozepsané změny se poznají podle toho, že se otisk od otevření změnil. Pomocná
  * pole bez vlastních dat (`data-unsaved-ignore`, např. volba pro hromadné doplnění) se nepočítají.
  */
-function fieldsFingerprint(root: HTMLElement): string {
+export function fieldsFingerprint(root: HTMLElement): string {
   const fields = root.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(
     "input:not([type='hidden']):not([data-unsaved-ignore]), textarea:not([data-unsaved-ignore]), select:not([data-unsaved-ignore])",
   );

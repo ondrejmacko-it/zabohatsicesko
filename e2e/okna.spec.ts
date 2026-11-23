@@ -161,7 +161,7 @@ test.describe("okna správce", () => {
     await expect(bar).toContainText("Vybráno 1");
     await bar.getByRole("button", { name: "Smazat vybrané" }).click();
     const ask = page.getByRole("alertdialog", { name: "Smazat 1 návrh?" });
-    await expect(ask).toContainText("Nic se neodešle a nejde to vrátit.");
+    await expect(ask).toContainText("Nic se neodešle. Ručně přidané návrhy nejde vrátit, termíny z rozvrhu obnoví Připravit měsíc.");
     await ask.getByRole("button", { name: "Potvrdit smazání" }).click();
     await expect(bar).toBeHidden();
     await expect(page.getByRole("status").filter({ hasText: /Smazán/ })).toBeVisible();
