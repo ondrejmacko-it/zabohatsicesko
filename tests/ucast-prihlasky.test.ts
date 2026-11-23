@@ -53,7 +53,10 @@ describe("akce formuláře: přechody", () => {
     expect(await act({ id: rm, change: "enroll" })).toMatchObject({ ok: true });
     expect(await records()).toHaveLength(1);
     expect(await act({ id: rm, change: "withdraw" })).toMatchObject({ ok: true });
-    expect(await records()).toHaveLength(0);
+    expect(await records()).toMatchObject([{ kind: "withdrawn", excuseReason: null }]);
+    expect((await ownParticipationDetail(participant, null, rm))?.state).toBe("withdrawn");
+    expect(await act({ id: rm, change: "enroll" })).toMatchObject({ ok: true });
+    expect(await records()).toMatchObject([{ kind: "voluntary_enrolled" }]);
   });
 
   test("omluva s důvodem a poznámkou, zrušení omluvy; nedovolené přechody", async () => {
@@ -96,15 +99,20 @@ describe("oprávnění", () => {
     expect(await records()).toHaveLength(0);
   });
 
-  test("náhled: štítky jen z rolí, bez cizích záznamů a bez akcí", async () => {
+  test("náhled konkrétního kolegy: skutečný stav, bez soukromého důvodu a bez akcí", async () => {
     const fp = await futurePublished("fp");
     await act({ id: fp, change: "excuse", reason: "illness", note: NOTE });
-    const preview = { viewer: participant, label: "Kolega" };
+    const preview = { viewer: participant, label: "Kolega", personName: "Testovací kolega" };
     const cards = await withOwnParticipation(organizer, preview, await listMonth(participant, "2026-11"));
     for (const card of cards) expect(card.participation?.actions ?? []).toEqual([]);
     const detail = await ownParticipationDetail(organizer, preview, fp);
-    expect(detail).toMatchObject({ state: "required", excuse: null, actions: [] });
+    expect(detail).toMatchObject({ state: "excused", excuse: null, actions: [] });
     expect(JSON.stringify(detail)).not.toContain(NOTE);
+    expect(cards.find((card) => card.id === fp)?.participation).toMatchObject({ state: "excused", actions: [] });
+    const groupPreview = { viewer: { ...participant, id: "nahled-skupiny" }, label: "Skupina" };
+    const groupDetail = await ownParticipationDetail(organizer, groupPreview, fp);
+    expect(groupDetail).toMatchObject({ state: "required", actions: [], });
+    expect(JSON.stringify(groupDetail)).not.toContain(NOTE);
   });
 
   test("limit četnosti", async () => {
@@ -140,11 +148,13 @@ describe("soukromí a souběh", () => {
 
 describe("štítky a filtr Moje", () => {
   test("pohled účasti a filtr", () => {
-    const p = (state: "required" | "optional" | "voluntary_enrolled" | "excused", open = true) => ({ state, required: false, calendarGuest: false, open });
+    const p = (state: "required" | "optional" | "voluntary_enrolled" | "excused" | "withdrawn", open = true) => ({ state, required: false, calendarGuest: false, open });
     expect(ownParticipationView(p("required"), { readOnly: false })).toEqual({ state: "required", label: "Povinné pro tebe", actions: ["excuse"] });
     expect(ownParticipationView(p("optional"), { readOnly: false })?.label).toBe("Můžeš se přihlásit");
     expect(ownParticipationView(p("voluntary_enrolled"), { readOnly: false })).toMatchObject({ label: "Přihlášeno", actions: ["withdraw"] });
     expect(ownParticipationView(p("required", false), { readOnly: false })?.actions).toEqual([]);
+    expect(ownParticipationView(p("withdrawn"), { readOnly: false })).toMatchObject({ label: "Odhlášeno", actions: ["enroll"] });
+    expect(isMine(ownParticipationView(p("withdrawn"), { readOnly: false }), false)).toBe(false);
     expect(isMine(ownParticipationView(p("optional"), { readOnly: false }), false)).toBe(false);
     expect(isMine(ownParticipationView(p("optional"), { readOnly: false }), true)).toBe(true);
     expect(isMine(ownParticipationView(p("excused"), { readOnly: false }), false)).toBe(true);
@@ -152,18 +162,20 @@ describe("štítky a filtr Moje", () => {
 });
 
 describe("vypnutý přepínač (výchozí stav)", () => {
-  test("akce nic nezapíše, karty beze změny, tabulka se nečte", async () => {
+  test("vypnutý zápis účasti: role se zobrazí jen ke čtení a tabulka se nečte", async () => {
     vi.stubEnv("PARTICIPATION", "");
     const rm = await futurePublished("rm");
     expect(await act({ id: rm, change: "enroll" })).toMatchObject({ ok: false });
     expect(await records()).toHaveLength(0);
     const cards = await listMonth(participant, "2026-11");
-    expect(await withOwnParticipation(participant, null, cards)).toBe(cards);
+    const readOnly = await withOwnParticipation(participant, null, cards);
+    expect(readOnly).toHaveLength(cards.length);
+    expect(readOnly.filter((card) => card.participation).every((card) => card.participation?.actions.length === 0)).toBe(true);
     expect(await ownParticipationDetail(participant, null, rm)).toBeNull();
     // Ani bez tabulky nic nespadne: přepínač vypnutý = žádný dotaz na event_participation.
     await (await getDb()).execute(sql`ALTER TABLE event_participation RENAME TO event_participation_off`);
     try {
-      expect(await withOwnParticipation(participant, null, cards)).toBe(cards);
+      expect((await withOwnParticipation(participant, null, cards)).length).toBe(cards.length);
       expect(await ownParticipationDetail(participant, null, rm)).toBeNull();
     } finally {
       await (await getDb()).execute(sql`ALTER TABLE event_participation_off RENAME TO event_participation`);

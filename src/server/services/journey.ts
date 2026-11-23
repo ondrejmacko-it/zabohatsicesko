@@ -253,7 +253,7 @@ export async function listTasks(viewer: Viewer): Promise<JourneyTask[]> {
       .from(topics)
       .where(and(eq(topics.orgId, config.orgId), isNull(topics.archivedAt)));
     if (topicState && Number(topicState.active) > 0 && Number(topicState.guaranteed) === 0) {
-      tasks.push({ key: "garantovana-temata", title: "Nastav garantovaná témata", detail: "Vyber až tři témata, která se mají probrat přednostně. Doporučení u akcí je pak nabídne jako první.", href: "/vzdelavani/temata", action: "Vybrat témata" });
+      tasks.push({ key: "garantovana-temata", title: "Nastav garantovaná témata", detail: "Vyber témata, která se mají probrat přednostně. Počet garantovaných témat není omezený.", href: "/vzdelavani/temata", action: "Vybrat témata" });
     }
   }
   if (canManageUsers(viewer)) {

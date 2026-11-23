@@ -81,7 +81,7 @@ function CardMeta({ card, managing }: { card: EventCard; managing: boolean }) {
   // Jeden stavový štítek; výstraha jen pro chybějící údaj, který karta jinak neukazuje.
   const missing = hiddenMissingDetails(card, managing);
   // Vlastní účast (jen se zapnutou účastí): „Povinné pro tebe“, „Můžeš se přihlásit“, „Přihlášeno“, „Omluveno“.
-  const own = card.past ? null : (card.participation?.label ?? null);
+  const own = card.participation?.label ?? null;
   if (!status && !missing.length && !own) return null;
   const missingText = `Chybí ${missing.join(" a ")}`;
   return (
@@ -208,7 +208,7 @@ function EventBlock({ card, hrefFor = pageHref, managing = false, movable = fals
     : {};
   return (
     <CardWrap card={card} managing={managing} menu={menuFor?.(card)} menuClass={styles.menuGrid} stacked={card.original !== null}>
-      <Link href={hrefFor(card)} scroll={false} className={`${styles.event} ${styles[tone]}`} {...drag} {...pickAttr(card, managing)}>
+      <Link href={hrefFor(card)} scroll={false} className={`${styles.event} ${styles[tone]}`} data-ucast={card.participation?.state} {...drag} {...pickAttr(card, managing)}>
         <span className={styles.title}>{card.label}</span>
         <CardDetails card={card} managing={managing} />
         {!isHoliday && !cancelled && <span className={styles.line}>{formatEventTime(new Date(card.startsAt), new Date(card.endsAt), card.allDay)}</span>}
@@ -404,7 +404,7 @@ export function Agenda({
                           <Link
                             href={hrefFor(card)}
                             scroll={false}
-                            className={`${styles.agendaEvent} ${styles[toneOf(card)]}${handle ? ` ${styles.withHandle}` : ""}${menu.length ? ` ${styles.withMenu}` : ""}`}
+                            className={`${styles.agendaEvent} ${styles[toneOf(card)]}${handle ? ` ${styles.withHandle}` : ""}${menu.length ? ` ${styles.withMenu}` : ""}`} data-ucast={card.participation?.state}
                             {...pickAttr(card, managing)}
                           >
                             <span className={styles.agendaTime}>
@@ -480,6 +480,11 @@ export function NextEventsList({ cards, todayKey, hrefFor = pageHref, emptyText 
                   {formatEventTime(new Date(card.startsAt), new Date(card.endsAt), card.allDay)}
                   {card.leadName ? ` · Vede: ${card.leadName}` : ""}
                 </span>
+                {card.participation?.label && (
+                  <span className={badgeClass(card.participation.state === "excused" ? "outline" : "ok")} data-ucast={card.participation.state}>
+                    {card.participation.label}
+                  </span>
+                )}
               </span>
             </Link>
           </li>

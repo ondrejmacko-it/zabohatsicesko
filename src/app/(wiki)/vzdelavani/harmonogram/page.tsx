@@ -73,7 +73,10 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   ]);
   // Vlastní účast (PARTICIPATION=on): štítky a filtr Moje. Bez přepínače karty beze změny a bez dotazu.
   const participation = participationEnabled();
-  const mineOnly = participation && params.ucast === "moje";
+  const participationFilters = true; // Přehled povinných/dobrovolných je dostupný i bez aktivace zápisu účasti.
+  const attendanceFilter = participationFilters && ["moje", "povinne", "dobrovolne"].includes(params.ucast ?? "")
+    ? params.ucast
+    : undefined;
   const monthCards = await withOwnParticipation(user, preview, rawMonthCards);
   const activeSlots = template.filter((s) => s.active);
   const slotTimes = Object.fromEntries(activeSlots.map((s) => [s.isoWeekday, `${s.startTime}–${s.endTime}`]));
@@ -85,7 +88,12 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   const states = managing ? filterValues(params.stav, PLAN_STATES) : [];
   const filtered = filterCards(monthCards, monthKey, { types: selectedTypes, states });
   // Svátky zůstávají i v Moje, jsou jen pro orientaci v měsíci.
-  const cards = mineOnly ? filtered.filter((c) => c.type === "holiday" || isMine(c.participation, c.handler)) : filtered;
+  const cards = filtered.filter((c) => {
+    if (!attendanceFilter || c.type === "holiday") return true;
+    if (attendanceFilter === "moje") return isMine(c.participation, c.handler);
+    if (attendanceFilter === "povinne") return c.participation?.state === "required" || c.participation?.state === "excused";
+    return c.participation?.state === "optional" || c.participation?.state === "voluntary_enrolled" || c.participation?.state === "withdrawn";
+  });
   const filtering = selectedTypes.length > 0 || states.length > 0;
   const syncing = monthCards.some((c) => c.syncStatus === "pending");
   // Čekající pozvánky (nový host ve skupině, obnovené propojení) i zveřejněné akce bez vazby se odešlou
@@ -93,7 +101,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   if (managing) after(() => syncPublished());
 
   type Current = { mesic: string; pohled?: string; ucast?: string; typ: string[]; stav: string[]; akce?: string; den?: string; kopie?: string };
-  const current: Current = { mesic: monthKey, pohled: listView ? "seznam" : undefined, ucast: mineOnly ? "moje" : undefined, typ: selectedTypes, stav: states };
+  const current: Current = { mesic: monthKey, pohled: listView ? "seznam" : undefined, ucast: attendanceFilter, typ: selectedTypes, stav: states };
   const link = (change: Partial<Current>) => {
     const query = new URLSearchParams();
     for (const [key, value] of Object.entries({ ...current, ...change })) {
@@ -138,7 +146,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
       const href = actionHref[action.kind]?.(card);
       return href ? { ...action, href } : action;
     });
-  const emptyText = filtering ? "Filtru v tomto měsíci neodpovídá žádná akce." : mineOnly ? "Tento měsíc pro tebe nemáš žádnou akci." : undefined;
+  const emptyText = filtering ? "Filtru v tomto měsíci neodpovídá žádná akce." : attendanceFilter ? "V tomto měsíci není žádná akce odpovídající vybranému filtru." : undefined;
 
   // Co v měsíci čeká na správce: štítky nad harmonogramem, klik plán zúží (znovu klik filtr zruší).
   const summary = managing && monthKey >= monthOf(todayKey) ? monthSummary(monthCards, monthKey) : null;
@@ -155,7 +163,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   // Prázdný měsíc (F06): jediné hlavní tlačítko je „Připravit měsíc“ (Přidat akci je vedlejší) a prázdný stav
   // se ukáže jen jednou. Okno zůstává na stejném místě v liště, aby po doplnění termínů nepřišlo o stav.
   const emptyMonth = Boolean(summary && !summary.planned && monthDrafts && calendar);
-  const scheduleEmpty = emptyMonth && !filtering && !mineOnly ? null : emptyText;
+  const scheduleEmpty = emptyMonth && !filtering && !attendanceFilter ? null : emptyText;
   // Vlastní úkoly diváka (záznam, zápis…) jsou v Plánu sbalené do jednoho řádku. Celé jsou na Úvodu.
   const tasks = viewerTasks;
   // Kdo nemá úkoly ani neplánuje, uvidí na telefonu nejdřív nejbližší akci (měsíční seznam začíná prvním dnem).
@@ -229,14 +237,23 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
                   Seznam
                 </Link>
               </span>
-              {participation && (
-                <span className="view-toggle participation-toggle" role="group" aria-label="Akce">
-                  <Link className="pill" href={link({ ucast: "moje" })} aria-current={mineOnly ? "page" : undefined}>
-                    Moje
-                  </Link>
-                  <Link className="pill" href={link({ ucast: undefined })} aria-current={!mineOnly ? "page" : undefined}>
-                    Všechny
-                  </Link>
+              {participationFilters && (
+                <span className="view-toggle participation-toggle" role="group" aria-label="Účast v harmonogramu">
+                  {([
+                    ["", "Všechny"],
+                    ["povinne", "Povinné"],
+                    ["dobrovolne", "Dobrovolné"],
+                    ["moje", "Moje"],
+                  ] as const).map(([value, label]) => (
+                    <Link
+                      key={value}
+                      className="pill"
+                      href={link({ ucast: value || undefined })}
+                      aria-current={(attendanceFilter ?? "") === value ? "page" : undefined}
+                    >
+                      {label}
+                    </Link>
+                  ))}
                 </span>
               )}
               {monthKey !== thisMonth && (

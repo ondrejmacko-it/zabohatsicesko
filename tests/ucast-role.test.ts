@@ -90,8 +90,12 @@ describe("přechody účasti", () => {
   test("dobrovolná přihláška a odhlášení, opakování bez účinku", () => {
     expect(participationTransition(fp(null, "rm"), null, { kind: "enroll" })).toEqual({ ok: true, write: { op: "upsert", kind: "voluntary_enrolled" } });
     expect(participationTransition(fp(enrolled, "rm"), enrolled, { kind: "enroll" })).toEqual({ ok: true, write: { op: "none" } });
-    expect(participationTransition(fp(enrolled, "rm"), enrolled, { kind: "withdraw" })).toEqual({ ok: true, write: { op: "delete" } });
+    expect(participationTransition(fp(enrolled, "rm"), enrolled, { kind: "withdraw" })).toEqual({ ok: true, write: { op: "upsert", kind: "withdrawn" } });
     expect(participationTransition(fp(null, "rm"), null, { kind: "withdraw" })).toEqual({ ok: true, write: { op: "none" } });
+    const withdrawn: ParticipationRecord = { kind: "withdrawn", excuseReason: null };
+    expect(fp(withdrawn, "rm")?.state).toBe("withdrawn");
+    expect(participationTransition(fp(withdrawn, "rm"), withdrawn, { kind: "enroll" })).toEqual({ ok: true, write: { op: "upsert", kind: "voluntary_enrolled" } });
+    expect(participationTransition(fp(withdrawn, "rm"), withdrawn, { kind: "withdraw" })).toEqual({ ok: true, write: { op: "none" } });
   });
 
   test("omluva z povinné, odvolání obnoví povinnost; z dobrovolné omluva nejde", () => {
@@ -137,22 +141,23 @@ describe("viditelnost zveřejněných akcí (F02, přepínač)", () => {
   beforeEach(resetDemo);
   afterEach(() => vi.unstubAllEnvs());
 
-  test("výchozí stav: přepínač vypnutý, chování beze změny", async () => {
-    expect(eventVisibility()).toBe("audience");
+  test("výchozí stav: všechny zveřejněné akce vidí každá aktivní role", async () => {
+    expect(eventVisibility()).toBe("all-published");
     const ids = (await listMonth(participant, "2026-11")).map((c) => c.id);
     expect(ids).toContain(PAST_FP);
-    expect(ids).not.toContain(PUBLISHED_RM);
-    expect(await getEventDetail(outsider, PAST_FP)).toBeNull();
+    expect(ids).toContain(PUBLISHED_RM);
+    expect(await getEventDetail(outsider, PAST_FP)).not.toBeNull();
   });
 
-  test("ostrá Wiki přepínač ignoruje", () => {
-    vi.stubEnv("EVENT_VISIBILITY", "all-published");
+  test("ostrá Wiki sdílí zveřejněné akce, explicitní rollback audience je možný", () => {
     vi.stubEnv("WIKI_MODE", "production");
+    expect(eventVisibility()).toBe("all-published");
+    vi.stubEnv("EVENT_VISIBILITY", "audience");
     expect(eventVisibility()).toBe("audience");
     vi.stubEnv("WIKI_MODE", "demo");
-    expect(eventVisibility()).toBe("all-published");
-    vi.stubEnv("EVENT_VISIBILITY", "all");
     expect(eventVisibility()).toBe("audience");
+    vi.stubEnv("EVENT_VISIBILITY", "all-published");
+    expect(eventVisibility()).toBe("all-published");
   });
 
   test("zapnuto: FP vidí cizí zveřejněnou RM akci, ne návrh ani zápis či nahrávku", async () => {
@@ -208,8 +213,8 @@ describe("individuální účast v databázi", () => {
     const rows = await (await db()).select().from(eventParticipation);
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ userId: participant.id, kind: "voluntary_enrolled", revision: 1 });
-    expect((await changeOwnParticipation(participant, id, { kind: "withdraw" })).state).toBe("optional");
-    expect(await (await db()).select().from(eventParticipation)).toHaveLength(0);
+    expect((await changeOwnParticipation(participant, id, { kind: "withdraw" })).state).toBe("withdrawn");
+    expect(await (await db()).select().from(eventParticipation)).toMatchObject([{ kind: "withdrawn", excuseReason: null }]);
     const actions = (await (await db()).select().from(auditLog).where(eq(auditLog.entityId, id))).map((a) => a.action);
     expect(actions).toEqual(["participation.enroll", "participation.withdraw"]);
   });

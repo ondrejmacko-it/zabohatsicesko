@@ -13,6 +13,7 @@ import {
   cancelEvent,
   createEvent,
   deleteDraft,
+  deleteDrafts,
   generateMonth,
   listMonth,
   loadEventRow,
@@ -264,6 +265,29 @@ describe("generování ze šablony", () => {
     expect(await loadEventRow(db, toDelete.id)).toBeNull();
     const all = await db.select().from(events);
     expect(new Set(all.map((e) => e.generationKey).filter(Boolean)).size).toBe(all.filter((e) => e.generationKey).length);
+  });
+
+  test("po smazání všech návrhů lze znovu připravit měsíc bez duplicit svátků", async () => {
+    const month = "2027-07";
+    const first = await generateMonth(organizer, month);
+    expect(first.created).toBeGreaterThan(10);
+    const initial = (await listMonth(organizer, month)).filter(
+      (card) => monthOf(toDateKey(new Date(card.startsAt))) === month,
+    );
+    const drafts = initial.filter((card) => card.planStatus === "draft" && card.type !== "holiday");
+    const holidays = initial.filter((card) => card.type === "holiday").length;
+    expect(drafts.length).toBeGreaterThan(10);
+    const deleted = await deleteDrafts(organizer, drafts.map((card) => ({ id: card.id, revision: card.revision! })));
+    expect(deleted.deleted).toHaveLength(drafts.length);
+
+    const next = await generateMonth(organizer, month);
+    expect(next.created).toBe(drafts.length);
+    const restored = (await listMonth(organizer, month)).filter(
+      (card) => monthOf(toDateKey(new Date(card.startsAt))) === month,
+    );
+    expect(restored.filter((card) => card.planStatus === "draft")).toHaveLength(drafts.length);
+    expect(restored.filter((card) => card.type === "holiday")).toHaveLength(holidays);
+    expect((await generateMonth(organizer, month)).created).toBe(0);
   });
 
   test("firemnímu vzdělávání předvyplní doporučené téma, každé nejvýš jednou a jen jako návrh", async () => {

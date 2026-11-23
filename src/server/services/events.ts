@@ -888,9 +888,28 @@ export async function generateMonth(viewer: Viewer, monthKey: string): Promise<G
       .select({ key: generationExclusions.generationKey })
       .from(generationExclusions)
       .where(eq(generationExclusions.orgId, config.orgId));
-    const taken = new Set([...existing, ...excluded].map((r) => r.key as string));
-    // Akce, které v měsíci už jsou, rozhodnou o každém termínu: přeskočit, doplnit, nebo doplnit s varováním.
+    // Úplně vymazaný měsíc lze znovu připravit. Výjimky jinak chrání úmyslně smazané
+    // jednotlivé sloty před návratem. Svátek se nepočítá jako pracovní akce měsíce.
     const { start, end } = monthRange(monthKey);
+    const active = await tx.select({ id: events.id }).from(events).where(and(
+      eq(events.orgId, config.orgId),
+      ne(events.type, "holiday"),
+      ne(events.status, "cancelled"),
+      lt(events.startsAt, end),
+      gt(events.endsAt, start),
+    )).limit(1);
+    const restore = active.length === 0
+      ? excluded.filter((r) => (r.key as string).split(":").at(-1)?.startsWith(`${monthKey}-`))
+      : [];
+    if (restore.length > 0) {
+      await tx.delete(generationExclusions).where(and(
+        eq(generationExclusions.orgId, config.orgId),
+        inArray(generationExclusions.generationKey, restore.map((r) => r.key as string)),
+      ));
+    }
+    const restoring = new Set(restore.map((r) => r.key));
+    const taken = new Set([...existing, ...excluded.filter((r) => !restoring.has(r.key))].map((r) => r.key as string));
+    // Akce, které v měsíci už jsou, rozhodnou o každém termínu: přeskočit, doplnit, nebo doplnit s varováním.
     const occupants: Occupant[] = (
       await tx
         .select({ startsAt: events.startsAt, endsAt: events.endsAt, audience: events.audience, type: events.type })

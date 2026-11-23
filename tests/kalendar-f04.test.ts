@@ -150,7 +150,7 @@ describe("F04: dobrovolná akce se přidá až po přihlášení", () => {
     expect(await noteFor(participant, id)).toBe("Wiki akci z tvého Kalendáře právě odebírá.");
     await runAfter();
     expect((await guests(id)).emails).not.toContain(email(participant.id));
-    expect(await noteFor(participant, id)).toBe("Do Kalendáře se akce přidá, až se přihlásíš.");
+    expect(await noteFor(participant, id)).toBe("Wiki tě na tuto akci do Kalendáře nezve.");
   });
 });
 

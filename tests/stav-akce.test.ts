@@ -92,8 +92,10 @@ describe("zrušená akce pro jednotlivé role", () => {
       expect(labels(detail!.card), name).toEqual(["Zrušeno"]);
       expect(detail!.cancelReason, name).toBe("Vedoucí onemocněl");
     }
-    // Účastník bez skupiny RM akci nevidí ani zrušenou.
-    expect(await getEventDetail(participant, PUBLISHED_RM)).toBeNull();
+    // Zrušená zveřejněná akce zůstává viditelná všem; její zrušení neznamená skrytí.
+    const forFp = await getEventDetail(participant, PUBLISHED_RM);
+    expect(forFp?.card.planStatus).toBe("cancelled");
+    expect(forFp?.cancelReason).toBe("Vedoucí onemocněl");
   });
 
   test("zrušenou akci nejde uložit jako aktivní", async () => {
