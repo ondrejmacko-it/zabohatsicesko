@@ -65,7 +65,8 @@ describe("F10 a F11 na serveru", () => {
   beforeEach(resetDemo);
   afterEach(() => vi.unstubAllEnvs());
 
-  test("bez přepínače kolega vidí jen témata svých skupin, cizí téma nejde podpořit", async () => {
+  test("v nouzovém audience režimu je zachován původní omezený seznam", async () => {
+    vi.stubEnv("EVENT_VISIBILITY", "audience");
     expect((await listTopics(outsider)).some((t) => t.audience === "fp")).toBe(false);
     expect(await code(setInterest(outsider, "topic-questions", true))).toBe("not_found");
   });
@@ -81,10 +82,11 @@ describe("F10 a F11 na serveru", () => {
     expect(await code(listTopicInterested(outsider))).toBe("forbidden");
   });
 
-  test("ostrá Wiki přepínač ignoruje: cizí témata zůstávají skrytá", async () => {
+  test("ostrá Wiki sdílí témata všech rolí, ale ne právo je spravovat", async () => {
     vi.stubEnv("EVENT_VISIBILITY", "all-published");
     vi.stubEnv("WIKI_MODE", "production");
-    expect((await listTopics(outsider)).some((t) => t.audience === "fp")).toBe(false);
+    expect((await listTopics(outsider)).some((t) => t.audience === "fp")).toBe(true);
+    expect(await code(proposeTopic(outsider, "Cizí role", "fp"))).toBe("forbidden");
   });
 
   test("F11: pořadí mění jen správce, i v režimu všech zveřejněných a i kolega s více rolemi", async () => {
