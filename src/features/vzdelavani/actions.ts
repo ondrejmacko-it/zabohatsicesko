@@ -739,6 +739,8 @@ export async function changeParticipationAction(_prev: ActionResult | null, form
       throw new DomainError("rate_limited");
     }
     await changeOwnParticipation(user, data.id, change);
+    // F04 + D01: omluva i přihláška platí ve Wiki hned, pozvánka v Kalendáři se upraví hned po odpovědi.
+    after(() => syncEvent(data.id));
     return { ok: true, message: PARTICIPATION_MESSAGES[change.kind] };
   });
 }

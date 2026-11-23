@@ -8,7 +8,7 @@ import { requestNewInvite, syncEvent, syncPending } from "@/server/calendar/sync
 import { changeOwnParticipation } from "@/server/services/participation";
 import { config, googleCalendarConfig } from "@/server/config";
 import { getDb } from "@/server/db/client";
-import { inviteUser } from "@/server/services/users";
+import { inviteUser, updateAccess } from "@/server/services/users";
 import type { Viewer } from "@/server/policy";
 import { CALENDAR, FakeGoogle, type Stored } from "./fake-google";
 import { PUBLISHED_RM, admin, organizer, resetDemo } from "./helpers";
@@ -129,6 +129,61 @@ describe("pozvánky podle účasti (desiredGuestIds)", () => {
     await changeOwnParticipation(fp, PUBLISHED_RM, { kind: "withdraw" });
     await syncPending();
     expect(emails(invite())).not.toContain("fp@example.com");
+  });
+
+  // Oprava A (finální integrační kolo): přepočet po změně účtu dřív hledal akce jen podle skupin. Dobrovolná
+  // přihláška k akci jiné skupiny tak po deaktivaci zůstala v hostech spravovaných Wiki.
+  test("deaktivace odebere i dobrovolnou přihlášku k akci jiné skupiny, opětovná aktivace ji vrátí", async () => {
+    await invited();
+    await inviteUser(admin, { email: "fp@example.com", name: "FP Kolega", role: "member", groups: ["vsichni", "fp"] });
+    const fp = await viewerOf("fp@example.com");
+    await changeOwnParticipation(fp, PUBLISHED_RM, { kind: "enroll" });
+    await syncPending();
+    google.put({ ...invite(), attendees: [...(invite().attendees as object[]), { email: "rucni@example.com", responseStatus: "accepted" }] });
+    expect(emails(invite())).toContain("fp@example.com");
+
+    await updateAccess(admin, fp.id, { role: "member", groups: ["vsichni", "fp"], status: "disabled" });
+    expect((await link()).syncStatus).toBe("pending");
+    await syncPending();
+    expect(emails(invite()).sort()).toEqual([DRUHA, KOLEGA, "rucni@example.com"]);
+    expect((await link()).managedAttendees?.sort()).toEqual([DRUHA, KOLEGA]);
+
+    await updateAccess(admin, fp.id, { role: "member", groups: ["vsichni", "fp"], status: "active" });
+    await syncPending();
+    expect(emails(invite()).sort()).toEqual([DRUHA, "fp@example.com", KOLEGA, "rucni@example.com"]);
+    // Dvojí spuštění fronty nic nezdvojí ani znovu neposílá.
+    const before = google.requests.filter((r) => r.method === "PATCH").length;
+    await syncPending();
+    expect(google.requests.filter((r) => r.method === "PATCH").length).toBe(before);
+    expect(emails(invite()).filter((e) => e === "fp@example.com")).toHaveLength(1);
+  });
+
+  test("odebrání poslední pracovní role i bez uloženého „vsichni“ odebere spravovaného hosta", async () => {
+    await invited();
+    // Účet jen s rolí RM (bez zaškrtnutého „vsichni“) přijde o roli: akce RM se musí přepočítat podle jeho adresy.
+    await inviteUser(admin, { email: "jen-rm@example.com", name: "Jen RM", role: "member", groups: ["rm"] });
+    await syncPending();
+    expect(emails(invite())).toContain("jen-rm@example.com");
+    const person = await viewerOf("jen-rm@example.com");
+    await updateAccess(admin, person.id, { role: "member", groups: [], status: "active" });
+    await syncPending();
+    expect(emails(invite())).not.toContain("jen-rm@example.com");
+    expect((await link()).managedAttendees?.sort()).toEqual([DRUHA, KOLEGA]);
+  });
+
+  test("výpadek Kalendáře po deaktivaci: změna účtu platí, pozvánka se srovná při dalším pokusu", async () => {
+    await invited();
+    const kolega = await viewerOf(KOLEGA);
+    google.forced = [{ status: 400 }];
+    await updateAccess(admin, kolega.id, { role: "member", groups: ["vsichni", "rm"], status: "disabled" });
+    await syncPending();
+    const [row] = await (await getDb()).select({ status: users.status }).from(users).where(eq(users.id, kolega.id));
+    expect(row!.status).toBe("disabled");
+    expect(emails(invite())).toContain(KOLEGA);
+    expect((await link()).syncStatus).toBe("attention");
+    await (await getDb()).update(calendarLinks).set({ syncStatus: "pending", attempts: 0 }).where(eq(calendarLinks.eventId, PUBLISHED_RM));
+    await syncPending();
+    expect(emails(invite())).toEqual([DRUHA]);
   });
 
   test("bez přepínače se hosté řídí publikem jako dřív a omluva Kalendář nemění", async () => {

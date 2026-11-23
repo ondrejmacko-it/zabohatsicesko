@@ -102,3 +102,50 @@ nestačí.
 
 Uživatel 22. 11. 2026: F06–F09 jsou součástí PR3 (#79). PR3 je draft, body nejsou finálně schválené. V dalších PR je
 neopravuj mimo jejich rozsah; konečné ověření proběhne v závěrečném auditu (PR7).
+
+## Bod → konkrétní testy (PR8, 22. 11. 2026)
+
+Každý bod má aspoň jeden cílený test. Unit = `tests/` (Vitest), e2e = `e2e/` (Playwright). Názvy jsou názvy testů
+(`describe` › `test`).
+
+| Bod | Unit | E2E |
+|---|---|---|
+| F01 | `priprava-mesice.test.ts` › Pro koho v přípravě měsíce (F01) › nové plánování nabízí jen Všichni, FP a RM; `ucast-role.test.ts` › matice F01/F05 › FP: FP povinná, RM dobrovolná; RM naopak | `okna.spec.ts` › Připravit měsíc: kroky, sloupce, mezery a uložení bez změn (Pro koho) |
+| F02 | `ucast-role.test.ts` › viditelnost zveřejněných akcí (F02, přepínač); `ucast-prihlasky.test.ts` › štítky a filtr Moje | `ucast.spec.ts` › přepínač Moje/Všechny, štítky, přihlášení, odhlášení, omluva a její zrušení |
+| F03 | `ucast-prihlasky.test.ts` › akce formuláře: přechody (přihlásit…, omluva s důvodem a poznámkou…), oprávnění, soukromí a souběh | `ucast.spec.ts` › přepínač Moje/Všechny, …, omluva a její zrušení; soukromí omluvy › poznámka kolegy není v HTML jiného uživatele |
+| F04 | `kalendar-f04.test.ts` › F04: povinná akce přijde po zveřejnění jako pozvánka; F04 + D01: omluva pozvánku odmítne a platí ihned (2 testy); F04: dobrovolná akce se přidá až po přihlášení; F04 nad ukázkovými daty (2 testy); F04: okno akce v Plánu ukazuje stav vlastní pozvánky; calendarNote; `kalendar-ucast.test.ts` › pozvánky podle účasti (fake Google) | `ucast.spec.ts` › F04: pozvánka v Kalendáři podle povinnosti, omluvy a přihlášky |
+| F05 | `ucast-role.test.ts` › FP+RM: obě povinné, pozvaný jen jednou; FP + vedoucí týmu | `ucast.spec.ts` › víc pracovních rolí (F05) › vedoucí s rolemi FP i RM má povinné akce obou rolí |
+| F06 | `priprava-mesice-f06-f09.test.ts` | `priprava-mesice-f06-f09.spec.ts` › F06: jedno hlavní tlačítko Připravit měsíc a prázdný stav jen jednou |
+| F07 | `priprava-mesice-f06-f09.test.ts` | `priprava-mesice-f06-f09.spec.ts` › F07: průvodce ukáže všechny tři kroky dopředu a Zavřít je jen jedno |
+| F08 | `priprava-mesice-f06-f09.test.ts` › hromadné doplnění tématu (F08); štítek přehledu filtruje řádky (F08) | `priprava-mesice-f06-f09.spec.ts` › F08: hromadně doplnit téma…; F08: klik na Chybí téma vyfiltruje řádky… |
+| F09 | `priprava-mesice-f06-f09.test.ts` › proč je Zveřejnit šedé (F09) | `priprava-mesice-f06-f09.spec.ts` › F09: šedé Zveřejnit říká proč a s potvrzením se odemkne |
+| F10 | `temata-f10-f12.test.ts` › F10 filtr Pro mou roli / Všechna: pravidla; F10 a F11 na serveru | `temata-planovani.spec.ts` › F10–F12 (správce i kolega); `ucast.spec.ts` › témata v režimu všech zveřejněných (F10, F11) |
+| F11 | `temata-f10-f12.test.ts` › F11: pořadí mění jen správce… | `temata-planovani.spec.ts` › F10–F12; `ucast.spec.ts` › … pořadí kolega měnit nemůže |
+| F12 | `temata-f10-f12.test.ts` › F12 texty | `temata-planovani.spec.ts` › F10–F12 … bez „zatím neproběhlo“ |
+| F13 | `zapisy-f13-f15.test.ts` › F13: kdo zápis schvaluje a kdo má úkol ho napsat (4 testy) | `zapisy-schvaleni.spec.ts` › vložit text → upravit → vedoucí schválí → zveřejněno… (`schvaluje`) |
+| F14 | `zapisy-f13-f15.test.ts` › F14: méně voleb, nahrávka skrytá, dokud nefunguje (3 testy) | `zapisy-bez-nahravky.spec.ts` › nahrávka se nenabízí, jedno pole, jména a kontakty klientů v návrhu nejsou |
+| F15 | `zapisy-f13-f15.test.ts` › F15: jména klientů vynechat, AI bez trénování (4 testy) | `zapisy-bez-nahravky.spec.ts` › (stejný test, jména klientů) |
+| F16 | `nahled.test.ts` › F16: náhled kolegy nese jeho jméno a oprávnění kolegy… | `nahled.spec.ts` › pohled kolegy: úvod nezdraví správce a Správa systému v navigaci chybí (F16) |
+| F17 | `osloveni.test.ts` › oslovení jménem (5. pád, neutrální „Ahoj“, vlastní podoba) | `domu-ukoly.spec.ts` › „Co tě čeká“; `nahled.spec.ts` › neutrální „Ahoj.“ |
+| F18 | (jen rozvržení, unit test nedává smysl) | `zahlavi.spec.ts` › účet je na jednom řádku a lišta nepřetéká (F18) |
+
+**F04 v simulaci (PR8):** povinná akce = pozvánka po zveřejnění (hosté = povinní − omluvení + přihlášení); omluva platí
+ve Wiki hned (D01) a hned po odpovědi (`after(() => syncEvent)` v `changeParticipationAction`) Wiki omluveného z hostů
+odebere, Google mu pošle zrušení. `declined` za něj Wiki nenastavuje (O04). Panel „Tvoje účast“ v detailu akce i v okně akce v Plánu říká
+pravdivý stav vlastní pozvánky (`calendarNote`, `ownCalendarState`): „Pozvánku máš v Kalendáři.“, „…čeká na odeslání.“,
+„Odebrání z pozvánky v Kalendáři čeká na odeslání.“, „Wiki tě na tuto akci do Kalendáře nezve.“, „Wiki tvoji pozvánku
+nespravuje. Její stav ověř v Kalendáři.“, „Do Kalendáře se akce přidá, až
+se přihlásíš.“, chyba Kalendáře. Kde stav Wiki nezná (osobní kalendáře, pevný seznam testovacích příjemců, starší
+pozvánka bez spravovaných hostů, například spárovaná ukázková `tr-rm-1112`), panel o Kalendáři nic netvrdí.
+
+**Stav F04: hotovo v simulaci** (unit `kalendar-f04.test.ts` 18/18, e2e `ucast.spec.ts` › F04 na windows-1280 i
+telefon-390, celé e2e 1333 OK / 213 přeskočeno / 0 chyb). Živý test s Googlem dál čeká na schválení (D06).
+
+**O09 vyřešeno (finální integrační kolo, 23. 11. 2026):** věty panelu netvrdí nic, co Wiki neví. U hosta mimo
+spravované hosty (ruční host spárované pozvánky) panel neříká, že pozvánku nemá ani že ji omluva „odmítla“. Test
+`kalendar-f04.test.ts` › O09. Podrobnosti v `docs/report-finalni-integracni-opravy.md`.
+
+**Zbývá pro živý test (vyžaduje schválení uživatele, D06):** účet organizátora v Google, `CALENDAR_MODE=google-test`,
+`CALENDAR_DELIVERY=organizer`, `CALENDAR_ATTENDEES=audience`, `PARTICIPATION=on` na preview; ověřit, že pozvaný dostane
+e-mail s pozvánkou, že odebrání z hostů po omluvě Google doručí jako zrušení a pozvánka zmizí z kalendáře účastníka, že
+přihláška přidá a odhlášení odebere; zda organizátor smí nastavit `declined` (O04, varianta k přepnutí).

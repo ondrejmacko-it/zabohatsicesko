@@ -65,8 +65,8 @@ V Production **nenastavovat** `GOOGLE_LOGIN_ACCOUNTS` (ostrá Wiki ho ignoruje),
    obrazovka v režimu Testing pouští jen přidané testovací uživatele (nejvýš 100) a propojení Kalendáře
    vyprší po 7 dnech. Pro firmu je potřeba ji zveřejnit.
 5. **Vercel:** ochrana nasazení (Vercel Authentication) chrání i Production. Pro ostrou Wiki ji vypnout
-   jen pro Production, nebo nechat a pouštět lidi přes Vercel. Ignored build step dnes produkci
-   přeskakuje, pro první nasazení ho upravit. Hobby plán je podle podmínek Vercelu jen nekomerční.
+   jen pro Production, nebo nechat a pouštět lidi přes Vercel. Pozor: každý merge do `main` dnes produkci
+   nasadí automaticky (ověřeno 23. 11. 2026), postup slučování je v `docs/navod-merge-f01-f18.md`. Hobby plán je podle podmínek Vercelu jen nekomerční.
 6. **První nasazení a první správce:** otevřít produkční adresu, přihlásit se Googlem s adresou
    z `BOOTSTRAP_ADMIN_EMAILS`. Vznikne aktivní správce. Pak propojit Kalendář (Plán nabídne
    „Propojit Kalendář“) a ve Správě systému pozvat další lidi. Kdo se přihlásí bez pozvánky, čeká na

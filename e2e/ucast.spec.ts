@@ -10,6 +10,8 @@ test.describe.configure({ mode: "serial" });
 const BASE = `http://localhost:${UCAST_PORT}`;
 const PROJECTS = ["windows-1280", "telefon-390"];
 const NOTE = "e2e-soukroma-poznamka";
+/** Ukázková akce se spárovanou existující pozvánkou (seed `calendarFixture`). */
+const PAIRED_INVITE = "tr-rm-1112";
 
 test.beforeEach(({}, info) => test.skip(!PROJECTS.includes(info.project.name), "jen windows-1280 a telefon-390"));
 
@@ -18,8 +20,10 @@ async function plan(page: Page, query = "") {
   await settle(page);
 }
 
-async function openCard(page: Page, state: string) {
-  const card = page.locator(`a:has([data-ucast="${state}"])`).filter({ visible: true }).first();
+/** `except`: ID akce, jejíž kartu přeskočit. */
+async function openCard(page: Page, state: string, except?: string) {
+  const skip = except ? `:not([href*="${except}"])` : "";
+  const card = page.locator(`a:has([data-ucast="${state}"])${skip}`).filter({ visible: true }).first();
   await expect(card).toBeVisible();
   await page.goto(`${BASE}${await card.getAttribute("href")}`);
   await settle(page);
@@ -60,7 +64,7 @@ test.describe("účast v harmonogramu", () => {
     await expectNoHorizontalScroll(page);
     await dialog.getByRole("button", { name: "Omluvit se" }).click();
     const excused = page.locator('[data-ucast-panel="excused"]');
-    await expect(excused).toContainText("Omluveno ve Wiki, Kalendář čeká.");
+    await expect(excused).toContainText("Omluveno ve Wiki, platí hned.");
     await expect(excused).toContainText(`${NOTE}-${info.project.name}`);
 
     // Moje: omluvená akce zůstává, nabídky k přihlášení ne.
@@ -76,7 +80,54 @@ test.describe("účast v harmonogramu", () => {
     await page.getByRole("dialog", { name: "Zrušit omluvu?" }).getByRole("button", { name: "Zrušit omluvu" }).click();
     await expect(page.locator('[data-ucast-panel="required"]')).toBeVisible();
   });
+
+  // F04 v simulaci Kalendáře: povinná akce je pozvánka, omluva ji odmítne, dobrovolná se přidá až po přihlášení.
+  // Akce, jejíž pozvánku založila Wiki. Ukázková tr-rm-1112 je spárovaná existující pozvánka: její hosté jsou
+  // ruční (ne spravovaní Wiki), panel o nich proto nic netvrdí (`data-kalendar-stav="neznamy"`).
+  test("F04: pozvánka v Kalendáři podle povinnosti, omluvy a přihlášky", async ({ page }) => {
+    // Návštěva Úvodu spustí frontu Kalendáře: zveřejněné akce dostanou pozvánku.
+    await page.goto(`${BASE}/`);
+    await settle(page);
+
+    await plan(page);
+    let panel = await openCard(page, "required", PAIRED_INVITE);
+    await expectCalendar(page, "Pozvánku máš v Kalendáři.");
+    await panel.getByRole("button", { name: "Omluvit se" }).click();
+    await page.getByRole("dialog", { name: "Omluvit se z akce?" }).getByRole("button", { name: "Omluvit se" }).click();
+    await expect(page.locator('[data-ucast-panel="excused"]')).toContainText("Omluveno ve Wiki, platí hned.");
+    await expectCalendar(page, "Wiki tě na tuto akci do Kalendáře nezve.");
+    await page.locator("[data-ucast-panel]").getByRole("button", { name: "Zrušit omluvu" }).click();
+    await page.getByRole("dialog", { name: "Zrušit omluvu?" }).getByRole("button", { name: "Zrušit omluvu" }).click();
+    await expectCalendar(page, "Pozvánku máš v Kalendáři.");
+
+    await plan(page);
+    panel = await openCard(page, "optional", PAIRED_INVITE);
+    await expectCalendar(page, "Do Kalendáře se akce přidá, až se přihlásíš.");
+    await panel.getByRole("button", { name: "Přihlásit se" }).click();
+    await page.getByRole("dialog", { name: "Přihlásit se na akci?" }).getByRole("button", { name: "Přihlásit se" }).click();
+    await expectCalendar(page, "Pozvánku máš v Kalendáři.");
+    await page.locator("[data-ucast-panel]").getByRole("button", { name: "Odhlásit se" }).click();
+    await page.getByRole("dialog", { name: "Odhlásit se z akce?" }).getByRole("button", { name: "Odhlásit se" }).click();
+    await expectCalendar(page, "Do Kalendáře se akce přidá, až se přihlásíš.");
+  });
 });
+
+/** Stav vlastní pozvánky v panelu „Tvoje účast“. Kalendář se upravuje hned po odpovědi, proto se čeká na obnovení. */
+async function expectCalendar(page: Page, text: string) {
+  await expect
+    .poll(
+      async () => {
+        await page.reload();
+        await settle(page);
+        // Stav vazby (data-kalendar-stav) je v hlášce chyby, aby šlo poznat, proč věta chybí.
+        const stav = await page.locator("[data-ucast-panel]").getAttribute("data-kalendar-stav");
+        const note = await page.locator("[data-ucast-panel] [data-kalendar]").textContent({ timeout: 500 }).catch(() => `(bez věty, stav ${stav})`);
+        return note;
+      },
+      { timeout: 20_000, intervals: [300, 600, 1_000] },
+    )
+    .toBe(text);
+}
 
 test.describe("soukromí omluvy", () => {
   test.use({ storageState: authFile("vedouci") });
@@ -126,5 +177,16 @@ test.describe("témata v režimu všech zveřejněných (F10, F11)", () => {
     await expect(page.locator(".topic-handle, .topic-rank")).toHaveCount(0);
     await expect(page.getByRole("button", { name: /^Možnosti tématu/ })).toHaveCount(0);
     await expectNoHorizontalScroll(page);
+  });
+});
+
+test.describe("víc pracovních rolí (F05)", () => {
+  test.use({ storageState: authFile("vedouci") });
+
+  test("F05: vedoucí s rolemi FP i RM má povinné akce obou rolí, nic jen dobrovolného", async ({ page }) => {
+    await plan(page);
+    await expect(page.locator('[data-ucast="required"]').filter({ visible: true }).first()).toBeVisible();
+    expect(await page.locator('[data-ucast="required"]').filter({ visible: true }).count()).toBeGreaterThan(1);
+    await expect(page.locator('[data-ucast="optional"]').filter({ visible: true })).toHaveCount(0);
   });
 });

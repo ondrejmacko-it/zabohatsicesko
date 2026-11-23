@@ -1,3 +1,43 @@
+# 18 BODŮ ZADAVATELKY – FINÁLNÍ INTEGRAČNÍ OPRAVY (23. 11. 2026) – začni tímto
+
+* Větev `claude/funkce/finalni-integracni-opravy` nad `claude/funkce/kalendar-f04` (PR #84), draft PR do ní.
+  Nic nemergnuto, žádná produkční operace.
+* Opraveno s regresními testy, které před opravou selhaly: A (přepočet pozvánek po změně účtu i pro přihlášky,
+  „Všichni“ a spravované adresy), C (náhled dopadu změny = stejný výpočet hostů jako synchronizace, pravdivá věta
+  o publiku), D/O09 (věty panelu o Kalendáři bez nepravdivých tvrzení). B: manažerská struktura neexistuje,
+  oprávnění beze změny, doplněné testy.
+* Výsledky, otevřená rozhodnutí R1–R7 a checklist: `docs/report-finalni-integracni-opravy.md`.
+* Postup merge pro uživatele: `docs/navod-merge-f01-f18.md` (odshora dolů, merge commit, jen #77 do `main`).
+  Každý merge do `main` nasazuje produkci (ostrá Wiki se skutečným Google Kalendářem).
+
+**Další krok:** uživatel slučuje podle návodu, nebo rozhodne R1–R7. Nic nemergovat za něj.
+
+# 18 BODŮ ZADAVATELKY – PR8 F04 HOTOVO V SIMULACI, VŠECH 18 BODŮ OVĚŘENO (22. 11. 2026) – začni tímto
+
+* **Znění F01–F18 a D01–D07 je v `docs/pozadavky-f01-f18.md`. Na zadání se uživatele už neptej.**
+* PR8: větev `claude/funkce/kalendar-f04` (draft PR #84), stacked na `claude/funkce/release-audit` (PR #83), nic nemergnuto.
+* Oprava padajícího e2e F04, dvě příčiny:
+  1. Okno akce v Plánu (`EventPeek`, `?akce=`) stav vlastní pozvánky spočítalo, ale `ParticipationPanel` nedostal
+     `calendar` (detail akce ano). Přidán jeden prop; okno teď stav Kalendáře ukazuje (dřívější otevřený bod uzavřen).
+  2. Test otevíral první kartu, pro RM to byla ukázková `tr-rm-1112` se spárovanou pozvánkou (ruční hosté, managed
+     null), o které panel záměrně nic netvrdí. Test ji přeskakuje (`PAIRED_INVITE`). Seed se neměnil: `plan.test.ts`
+     a `publishing.test.ts` počítají s tím, že host spárované pozvánky je ruční.
+  * Nové unit testy v `tests/kalendar-f04.test.ts` (18/18): okno předá panelu stav, spárovaná pozvánka = neznámý stav,
+    pozvánka založená frontou nad seedem (`ev-11-26`) zná stav při povinné akci, omluvě a přihlášce.
+* Ověření: lint, typecheck, unit 535/535, build OK, celé e2e 1333 OK / 213 přeskočeno / 0 chyb.
+
+| Bod | Stav po PR8 |
+|---|---|
+| F01–F03, F05 | hotovo (F02, F03, F05 za přepínačem `PARTICIPATION`) |
+| F04 | hotovo v simulaci (unit + e2e); živý test s Googlem čeká na schválení (D06) |
+| F06–F18 | hotovo |
+
+**Další krok:** zkontrolovat celý stack PR #77–#84 (base, diffy, popisy, výsledky testů) a připravit souhrn pro
+uživatele ke schválení. Nic nemergovat. Relaci spouští uživatel ručně (automatické založení odmítl limit
+zanoření relací 8).
+**Otevřené:** O09 (věta panelu u omluvy ručního hosta spárované pozvánky, viz `docs/pozadavky-f01-f18.md`), O04
+(`declined` za omluveného Wiki nenastavuje), živý test F04 (D06). Starší otevřené otázky viz oddíl PR7 níže.
+
 # 18 BODŮ ZADAVATELKY – PR7 RELEASE AUDIT + F06–F09 (draft PR), DALŠÍ JE PR8 (22. 11. 2026) – začni tímto
 
 * **Znění F01–F18 a rozhodnutí D01–D07 je v `docs/pozadavky-f01-f18.md`. Na zadání se uživatele už neptej.**
