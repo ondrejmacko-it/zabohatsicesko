@@ -91,7 +91,7 @@ describe("F04: povinná akce přijde po zveřejnění jako pozvánka", () => {
     expect(emails).not.toContain(email(participant.id)); // jen FP: dobrovolná
     expect(link.managedAttendees).toEqual(expect.arrayContaining([email(outsider.id)]));
     expect(await noteFor(outsider, id)).toBe("Pozvánku máš v Kalendáři.");
-    expect(await noteFor(participant, id)).toBe("Do Kalendáře se akce přidá, až se přihlásíš.");
+    expect(await noteFor(participant, id)).toBe("Wiki tě na tuto akci do Kalendáře nezve.");
     const sent = await (await getDb()).select().from(simCalendarNotifications).where(eq(simCalendarNotifications.externalEventId, link.externalEventId!));
     expect(sent.map((n) => n.kind)).toEqual(["created"]);
   });
