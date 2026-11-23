@@ -13,17 +13,17 @@ const code = (promise: Promise<unknown>) => promise.then(() => "ok", (e: unknown
 beforeEach(resetDemo);
 
 describe("přístup k akcím", () => {
-  test("kolega vidí jen zveřejněné akce své skupiny", async () => {
+  test("kolega vidí všechny zveřejněné akce, nikdy interní návrhy", async () => {
     const ids = (await listMonth(participant, "2026-11")).map((c) => c.id);
     expect(ids).toContain(PAST_FP);
-    expect(ids).not.toContain("tr-rm-1112"); // publikum RM
+    expect(ids).toContain("tr-rm-1112"); // zveřejněno pro RM, viditelné všem
     expect(ids).not.toContain("ev-11-13"); // návrh
     const all = (await listMonth(organizer, "2026-11")).map((c) => c.id);
     expect(all).toContain("ev-11-13");
   });
 
-  test("kolega mimo publikum nezíská detail ani přímým ID", async () => {
-    expect(await getEventDetail(outsider, PAST_FP)).toBeNull();
+  test("kolega získá detail zveřejněné akce jiné skupiny, ne neexistující akce", async () => {
+    expect(await getEventDetail(outsider, PAST_FP)).not.toBeNull();
     expect(await getEventDetail(participant, "neexistuje")).toBeNull();
     expect(await getEventDetail(participant, PAST_FP)).not.toBeNull();
   });
@@ -32,7 +32,7 @@ describe("přístup k akcím", () => {
 describe("přístup k nahrávce a zápisu", () => {
   test("účastník a kolega mimo publikum nahrát nesmí", async () => {
     expect(await code(uploadRecording(participant, PAST_FP, asFile(fixtureWav(), "a.wav")))).toBe("forbidden");
-    expect(await code(uploadRecording(outsider, PAST_FP, asFile(fixtureWav(), "a.wav")))).toBe("not_found");
+    expect(await code(uploadRecording(outsider, PAST_FP, asFile(fixtureWav(), "a.wav")))).toBe("forbidden");
   });
 
   test("správce smí u cizí akce nahrát záznam a číst pracovní zápis (obě hodnoty role)", async () => {
@@ -51,7 +51,7 @@ describe("přístup k nahrávce a zápisu", () => {
 
     expect((await readRecording(lead, PAST_FP)).data.byteLength).toBeGreaterThan(0);
     expect(await code(readRecording(participant, PAST_FP))).toBe("forbidden");
-    expect(await code(readRecording(outsider, PAST_FP))).toBe("not_found");
+    expect(await code(readRecording(outsider, PAST_FP))).toBe("forbidden");
 
     const row = (await loadEventRow(await getDb(), PAST_FP))!;
     const draftView = await recordingPanel(participant, row);
