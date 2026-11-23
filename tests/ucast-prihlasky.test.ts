@@ -96,15 +96,20 @@ describe("oprávnění", () => {
     expect(await records()).toHaveLength(0);
   });
 
-  test("náhled: štítky jen z rolí, bez cizích záznamů a bez akcí", async () => {
+  test("náhled konkrétního kolegy: skutečný stav, bez soukromého důvodu a bez akcí", async () => {
     const fp = await futurePublished("fp");
     await act({ id: fp, change: "excuse", reason: "illness", note: NOTE });
-    const preview = { viewer: participant, label: "Kolega" };
+    const preview = { viewer: participant, label: "Kolega", personName: "Testovací kolega" };
     const cards = await withOwnParticipation(organizer, preview, await listMonth(participant, "2026-11"));
     for (const card of cards) expect(card.participation?.actions ?? []).toEqual([]);
     const detail = await ownParticipationDetail(organizer, preview, fp);
-    expect(detail).toMatchObject({ state: "required", excuse: null, actions: [] });
+    expect(detail).toMatchObject({ state: "excused", excuse: null, actions: [] });
     expect(JSON.stringify(detail)).not.toContain(NOTE);
+    expect(cards.find((card) => card.id === fp)?.participation).toMatchObject({ state: "excused", actions: [] });
+    const groupPreview = { viewer: { ...participant, id: "nahled-skupiny" }, label: "Skupina" };
+    const groupDetail = await ownParticipationDetail(organizer, groupPreview, fp);
+    expect(groupDetail).toMatchObject({ state: "required", actions: [], });
+    expect(JSON.stringify(groupDetail)).not.toContain(NOTE);
   });
 
   test("limit četnosti", async () => {
