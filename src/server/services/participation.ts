@@ -128,7 +128,8 @@ async function loadPerson(db: Executor, userId: string) {
  * ani omluvy se tak správci neukážou a akce se nenabízejí (identita akcí je vždy skutečná session).
  */
 export async function withOwnParticipation(session: Viewer, preview: PlanPreview | null, cards: EventCard[]): Promise<EventCard[]> {
-  if (!participationEnabled() || !cards.length) return cards;
+  // Náhled může bezpečně zobrazit povinnost podle role i při vypnuté možnosti měnit účast.
+  if ((!participationEnabled() && !preview) || !cards.length) return cards;
   const db = await getDb();
   const ids = [...new Set(cards.map((c) => c.id))];
   const rows = await db
@@ -137,7 +138,13 @@ export async function withOwnParticipation(session: Viewer, preview: PlanPreview
     .where(and(eq(events.orgId, config.orgId), inArray(events.id, ids)));
   const published = new Map(rows.map((r) => [r.id, r.published]));
   const person = preview ? { status: "active" as const, groups: preview.viewer.groups } : await loadPerson(db, session.id);
-  const records = preview ? new Map<string, ParticipationRecord>() : await ownParticipationRecords(db, session, ids);
+  // Náhled skupiny je hypotetický. Náhled konkrétního kolegy smí správci zobrazit
+  // stav přihlášení/omluvení, nikdy však důvod ani poznámku a nikdy akce ke změně.
+  const records = participationEnabled() && preview?.personName
+    ? await ownParticipationRecords(db, preview.viewer, ids)
+    : participationEnabled() && !preview
+      ? await ownParticipationRecords(db, session, ids)
+      : new Map<string, ParticipationRecord>();
   const at = now();
   return cards.map((card) => {
     const snapshot = published.get(card.id) ?? null;
@@ -155,7 +162,7 @@ export type OwnParticipationDetail = OwnParticipationView & {
 
 /** Vlastní účast pro detail akce včetně vlastního důvodu omluvy. Null = přepínač vypnutý nebo účast nevzniká. */
 export async function ownParticipationDetail(session: Viewer, preview: PlanPreview | null, eventId: string): Promise<OwnParticipationDetail | null> {
-  if (!participationEnabled()) return null;
+  if (!participationEnabled() && !preview) return null;
   const db = await getDb();
   const [row] = await db
     .select({ published: events.published })
@@ -164,7 +171,12 @@ export async function ownParticipationDetail(session: Viewer, preview: PlanPrevi
     .limit(1);
   if (!row) return null;
   if (preview) {
-    const view = ownParticipationView(effectiveParticipation({ status: "active", groups: preview.viewer.groups }, row.published, null, now()), { readOnly: true });
+    const record = participationEnabled() && preview.personName
+      ? await loadRecord(db, eventId, preview.viewer.id)
+      : null;
+    const view = ownParticipationView(effectiveParticipation(
+      { status: "active", groups: preview.viewer.groups }, row.published, record, now(),
+    ), { readOnly: true });
     return view && { ...view, excuse: null, calendar: null };
   }
   const person = await loadPerson(db, session.id);
