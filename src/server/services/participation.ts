@@ -149,10 +149,8 @@ export async function withOwnParticipation(session: Viewer, preview: PlanPreview
   return cards.map((card) => {
     const snapshot = published.get(card.id) ?? null;
     const participation = person ? effectiveParticipation(person, snapshot, records.get(card.id) ?? null, at) : null;
-    const view = ownParticipationView(participation, { readOnly: Boolean(preview) || !participationEnabled() });
-    return { ...card, participation: view && !participationEnabled() && view.state === "optional"
-      ? { ...view, label: "Dobrovolné" }
-      : view };
+    const enrollment = participationEnabled();
+    return { ...card, participation: ownParticipationView(participation, { readOnly: Boolean(preview) || !enrollment, enrollment }) };
   });
 }
 
@@ -179,7 +177,7 @@ export async function ownParticipationDetail(session: Viewer, preview: PlanPrevi
       : null;
     const view = ownParticipationView(effectiveParticipation(
       { status: "active", groups: preview.viewer.groups }, row.published, record, now(),
-    ), { readOnly: true });
+    ), { readOnly: true, enrollment: participationEnabled() });
     return view && { ...view, excuse: null, calendar: null };
   }
   const person = await loadPerson(db, session.id);

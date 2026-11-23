@@ -14,7 +14,7 @@ import {
   weekdayShort,
 } from "@/lib/time";
 import type { EventCard } from "@/server/services/events";
-import { badgeClass, cardDetails, cardStatus, cardTone, hiddenMissingDetails, isMovable, isPickable, primaryStatus } from "../status";
+import { badgeClass, cardDetails, participationTone, cardStatus, cardTone, hiddenMissingDetails, isMovable, isPickable, primaryStatus } from "../status";
 import { CardMenu, type CardMenuItem } from "./CardMenu";
 import { PickBox } from "./PlanSelection";
 import styles from "./schedule.module.css";
@@ -88,7 +88,7 @@ function CardMeta({ card, managing }: { card: EventCard; managing: boolean }) {
     <span className={styles.meta}>
       {status && <span className={badgeClass(status.tone)}>{status.label}</span>}
       {own && (
-        <span className={badgeClass(card.participation!.state === "required" || card.participation!.state === "voluntary_enrolled" ? "ok" : "outline")} data-ucast={card.participation!.state}>
+        <span className={badgeClass(participationTone(card.participation!.state))} data-ucast={card.participation!.state}>
           {own}
         </span>
       )}
@@ -481,7 +481,7 @@ export function NextEventsList({ cards, todayKey, hrefFor = pageHref, emptyText 
                   {card.leadName ? ` · Vede: ${card.leadName}` : ""}
                 </span>
                 {card.participation?.label && (
-                  <span className={badgeClass(card.participation.state === "excused" ? "outline" : "ok")} data-ucast={card.participation.state}>
+                  <span className={badgeClass(participationTone(card.participation.state))} data-ucast={card.participation.state}>
                     {card.participation.label}
                   </span>
                 )}

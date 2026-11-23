@@ -156,6 +156,37 @@ test.describe("soukromí omluvy", () => {
   });
 });
 
+test.describe("náhled kolegy s omluvou (audit 23. 11.)", () => {
+  test.use({ storageState: authFile("spravce") });
+
+  test("správce vidí stav kolegy, ale ne jeho důvod, ne „Tvoje účast“ a žádné akce", async ({ browser, page, context }, info) => {
+    const persona = info.project.name === "windows-1280" ? { auth: "ucastnikFp", id: "demo-ucastnik" } : { auth: "ucastnikRm", id: "demo-mimo-skupinu" };
+    const own = await browser.newContext({ storageState: authFile(persona.auth as "ucastnikFp" | "ucastnikRm") });
+    const colleague = await own.newPage();
+    await plan(colleague);
+    await openCard(colleague, "required");
+    const url = colleague.url();
+    const note = `${NOTE}-nahled-${info.project.name}`;
+    await colleague.locator("[data-ucast-panel]").getByRole("button", { name: "Omluvit se" }).click();
+    const dialog = colleague.getByRole("dialog", { name: "Omluvit se z akce?" });
+    await dialog.getByLabel("Poznámka (nepovinná)").fill(note);
+    await dialog.getByRole("button", { name: "Omluvit se" }).click();
+    await expect(colleague.locator('[data-ucast-panel="excused"]')).toBeVisible();
+    await own.close();
+
+    await context.addCookies([{ name: "zbc_nahled", value: `demo-spravce|kolega-${persona.id}`, domain: "localhost", path: "/", httpOnly: true, sameSite: "Lax" }]);
+    await page.goto(url);
+    await settle(page);
+    const panel = page.locator('[data-ucast-panel="excused"]');
+    await expect(panel.getByRole("heading", { name: "Účast v náhledu" })).toBeVisible();
+    await expect(panel).toContainText("Omluveno");
+    await expect(panel).not.toContainText("Důvod vidíš jen ty");
+    await expect(panel).not.toContainText(note);
+    await expect(panel.getByRole("button")).toHaveCount(0);
+    expect(await page.content()).not.toContain(note);
+  });
+});
+
 test.describe("témata v režimu všech zveřejněných (F10, F11)", () => {
   // eslint-disable-next-line react-hooks/rules-of-hooks -- `use` je fixture Playwrightu, ne hook Reactu.
   test.use({ storageState: ({}, use, info) => use(authFile(info.project.name === "windows-1280" ? "ucastnikFp" : "ucastnikRm")) });

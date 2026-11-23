@@ -204,10 +204,20 @@ export type OwnParticipationView = {
   actions: ParticipationAction[];
 };
 
-export function ownParticipationView(participation: Participation | null, { readOnly }: { readOnly: boolean }): OwnParticipationView | null {
+/** Štítek nepovinné akce, když přihlášky ve Wiki nejsou zapnuté: nic nenabízí, jen popisuje. */
+export const OPTIONAL_READ_ONLY_LABEL = "Dobrovolné";
+
+/**
+ * `enrollment: false` = přihlášky ve Wiki nejsou zapnuté (`PARTICIPATION`): nepovinná akce pak nesmí
+ * slibovat „Můžeš se přihlásit“ ani v měsíci, ani v detailu, ani v náhledu.
+ */
+export function ownParticipationView(
+  participation: Participation | null,
+  { readOnly, enrollment = true }: { readOnly: boolean; enrollment?: boolean },
+): OwnParticipationView | null {
   if (!participation) return null;
   const { state } = participation;
-  const label = state === "cancelled" ? null : PARTICIPATION_LABELS[state];
+  const label = state === "cancelled" ? null : state === "optional" && !enrollment ? OPTIONAL_READ_ONLY_LABEL : PARTICIPATION_LABELS[state];
   const actions: ParticipationAction[] = [];
   if (!readOnly) {
     if (canVoluntarilyJoin(participation)) actions.push("enroll");
@@ -218,9 +228,12 @@ export function ownParticipationView(participation: Participation | null, { read
   return { state, label, actions };
 }
 
-/** Filtr „Moje“: povinné (i omluvené), dobrovolně přihlášené a akce, které člověk vede nebo kontroluje. */
-export function isMine(view: OwnParticipationView | null | undefined, handler: boolean): boolean {
-  if (handler) return true;
+/**
+ * Filtr „Moje“: povinné (i omluvené), dobrovolně přihlášené a akce, které člověk vede nebo kontroluje.
+ * `leadsOrReviews` je vedení či kontrola konkrétní akce, ne obecné právo správce obsluhovat všechny akce.
+ */
+export function isMine(view: OwnParticipationView | null | undefined, leadsOrReviews: boolean): boolean {
+  if (leadsOrReviews) return true;
   return view?.state === "required" || view?.state === "excused" || view?.state === "voluntary_enrolled";
 }
 

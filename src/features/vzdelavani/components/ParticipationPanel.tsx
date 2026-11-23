@@ -5,6 +5,7 @@ import { ActionForm, ActionMessage } from "@/components/ActionForm";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { changeParticipationAction, type ActionResult } from "@/features/vzdelavani/actions";
 import { calendarNote, type OwnCalendar } from "@/lib/calendar-note";
+import { badgeClass, participationTone } from "@/features/vzdelavani/status";
 import { EXCUSE_NOTE_MAX, EXCUSE_REASONS, type ExcuseReason, type ParticipationState } from "@/lib/types";
 
 export const EXCUSE_REASON_LABELS: Record<ExcuseReason, string> = { illness: "Nemoc", vacation: "Dovolená", other: "Jiné" };
@@ -30,6 +31,7 @@ const STATE_TEXT: Partial<Record<ParticipationState, string>> = {
   voluntary_enrolled: "Jsi přihlášený dobrovolně.",
   excused: "Omluveno ve Wiki, platí hned.",
   withdrawn: "Z dobrovolné akce ses odhlásil. Můžeš se znovu přihlásit.",
+  cancelled: "Akce je zrušená, účast se u ní neeviduje.",
 };
 
 /**
@@ -40,11 +42,12 @@ export function ParticipationPanel({ eventId, state, label, actions, excuse, cal
   const note = preview ? null : calendarNote(state, calendar);
   return (
     <section className="section participation-panel" aria-labelledby="ucast" data-ucast-panel={state} data-kalendar-stav={calendar ? `${calendar.link}:${calendar.inCalendar}` : "neznamy"}>
-      <h2 id="ucast">Tvoje účast</h2>
-      {label && <p className="participation-state"><span className={state === "excused" || state === "optional" || state === "withdrawn" ? "badge badge-outline" : "badge badge-ok"}>{label}</span></p>}
+      {/* V náhledu nejde o účast přihlášeného, proto ani „Tvoje“, ani vysvětlení vlastní omluvy. */}
+      <h2 id="ucast">{preview ? "Účast v náhledu" : "Tvoje účast"}</h2>
+      {label && <p className="participation-state"><span className={badgeClass(participationTone(state))}>{label}</span></p>}
       <p className="small">{preview ? "Takhle vypadá účast ve vybraném pohledu. Náhled je jen ke čtení." : STATE_TEXT[state]}</p>
       {note && <p className="small" data-kalendar={calendar?.inCalendar ? "v-kalendari" : "mimo-kalendar"}>{note}</p>}
-      {state === "excused" && (
+      {state === "excused" && !preview && (
         <p className="small muted">
           {excuse ? `Důvod: ${EXCUSE_REASON_LABELS[excuse.reason]}${excuse.note ? ` · ${excuse.note}` : ""}. ` : ""}
           Důvod vidíš jen ty. Wiki tě z pozvánky odebere, odpověď v Google Kalendáři za tebe ale nemění.
