@@ -65,7 +65,7 @@ export function participationState(
   if (!snapshot || snapshot.type === "holiday" || person.status !== "active") return null;
   if (snapshot.status === "cancelled") return "cancelled";
   if (isRequiredForUser(person.groups, snapshot.audience)) return record?.kind === "excused" ? "excused" : "required";
-  return record?.kind === "voluntary_enrolled" ? "voluntary_enrolled" : "optional";
+  return record?.kind === "voluntary_enrolled" ? "voluntary_enrolled" : record?.kind === "withdrawn" ? "withdrawn" : "optional";
 }
 
 export type Participation = {
@@ -95,7 +95,7 @@ export function effectiveParticipation(
   };
 }
 
-export const canVoluntarilyJoin = (p: Participation | null) => p !== null && p.open && p.state === "optional";
+export const canVoluntarilyJoin = (p: Participation | null) => p !== null && p.open && (p.state === "optional" || p.state === "withdrawn");
 export const canWithdraw = (p: Participation | null) => p !== null && p.open && p.state === "voluntary_enrolled";
 export const canExcuse = (p: Participation | null) => p !== null && p.open && (p.state === "required" || p.state === "excused");
 export const canRevokeExcuse = (p: Participation | null) => p !== null && p.open && p.state === "excused";
@@ -110,7 +110,7 @@ export type ParticipationChange =
 
 /** Co se má se záznamem stát. `none` = stav už odpovídá (dvojklik, opakování), nic se nezapíše. */
 export type RecordWrite =
-  | { op: "upsert"; kind: "voluntary_enrolled" }
+  | { op: "upsert"; kind: "voluntary_enrolled" | "withdrawn" }
   | { op: "upsert"; kind: "excused"; excuse: Excuse }
   | { op: "delete" }
   | { op: "none" };
@@ -132,11 +132,11 @@ export function participationTransition(
   switch (change.kind) {
     case "enroll":
       if (state === "voluntary_enrolled") return { ok: true, write: { op: "none" } };
-      return state === "optional" ? { ok: true, write: { op: "upsert", kind: "voluntary_enrolled" } } : { ok: false, reason: "not_allowed" };
+      return state === "optional" || state === "withdrawn" ? { ok: true, write: { op: "upsert", kind: "voluntary_enrolled" } } : { ok: false, reason: "not_allowed" };
     case "withdraw":
-      if (state === "voluntary_enrolled") return { ok: true, write: { op: "delete" } };
+      if (state === "voluntary_enrolled") return { ok: true, write: { op: "upsert", kind: "withdrawn" } };
       // Nepřihlášený: není co odhlásit (případnou starou omluvu odhlášení nemaže).
-      return state === "optional" ? { ok: true, write: { op: "none" } } : { ok: false, reason: "not_allowed" };
+      return state === "optional" || state === "withdrawn" ? { ok: true, write: { op: "none" } } : { ok: false, reason: "not_allowed" };
     case "excuse":
       return state === "required" || state === "excused"
         ? { ok: true, write: { op: "upsert", kind: "excused", excuse: change.excuse } }
@@ -191,6 +191,7 @@ export const PARTICIPATION_LABELS = {
   optional: "Můžeš se přihlásit",
   voluntary_enrolled: "Přihlášeno",
   excused: "Omluveno",
+  withdrawn: "Odhlášeno",
 } as const satisfies Partial<Record<ParticipationState, string>>;
 
 /**
