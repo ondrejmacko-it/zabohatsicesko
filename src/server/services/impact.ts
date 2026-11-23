@@ -3,10 +3,10 @@ import { eq } from "drizzle-orm";
 import { GROUP_LABELS } from "@/lib/labels";
 import { formatDate, formatEventTime, toDateKey } from "@/lib/time";
 import type { EventSnapshot, Group } from "@/lib/types";
-import { audienceAttendees, planGuests } from "@/server/calendar/attendees";
+import { eventAttendees, planGuests } from "@/server/calendar/attendees";
 import { CalendarError } from "@/server/calendar/provider";
 import { calendarProvider } from "@/server/calendar/sync";
-import { attendeeSource, calendarMode, now } from "@/server/config";
+import { attendeeSource, calendarMode, eventVisibility, now, participationEnabled } from "@/server/config";
 import { getDb, type Db } from "@/server/db/client";
 import { calendarLinks } from "@/server/db/schema";
 import { calendarSummary, type EventRow } from "@/server/domain/snapshot";
@@ -23,7 +23,7 @@ export type ChangeImpact = {
   changes: Array<{ field: string; from: string; to: string }>;
   guests: { add: string[]; remove: string[]; manual: string[] };
   notes: string[];
-  /** Kolik lidí dnes zveřejněnou akci vidí (skupina zveřejněné verze). Null, když seznam nejde sestavit. */
+  /** Kolik lidí Wiki ke zveřejněné verzi dnes zve (stejný výpočet jako synchronizace). Null, když seznam nejde sestavit. */
   affected: number | null;
 };
 
@@ -33,6 +33,19 @@ function nextOf(input: EventInput): Next {
   const times = resolveTimes(input);
   return { summary: calendarSummary(input), ...times, audience: input.audience };
 }
+
+/**
+ * Zveřejněná verze po změně, jen pro výpočet hostů. Hosté se tak počítají stejně jako při synchronizaci
+ * (`eventAttendees`: povinní podle rolí bez omluvených plus dobrovolně přihlášení), ne jen podle skupiny.
+ */
+const nextSnapshot = (published: EventSnapshot, input: EventInput, next: Next): EventSnapshot => ({
+  ...published,
+  type: input.type,
+  audience: next.audience,
+  startsAt: next.startsAt.toISOString(),
+  endsAt: next.endsAt.toISOString(),
+  allDay: next.allDay,
+});
 
 const term = (startsAt: Date, endsAt: Date, allDay: boolean) =>
   `${formatDate(toDateKey(startsAt))} · ${formatEventTime(startsAt, endsAt, allDay)}`;
@@ -58,9 +71,9 @@ function changesOf(published: EventSnapshot, input: EventInput, next: Next): Cha
  * Otisk skutečných příjemců publika. Do potvrzení se tak promítne i změna skupin účtu mezi zobrazením
  * dopadu a zveřejněním (audit A02). Adresy se jen hashují, nikam se neukládají ani nelogují.
  */
-async function recipientsFingerprint(db: Db, audience: Group): Promise<string> {
+async function recipientsFingerprint(db: Db, eventId: string, snapshot: EventSnapshot): Promise<string> {
   try {
-    const emails = (await audienceAttendees(db, audience)).map((a) => a.email.toLowerCase()).sort();
+    const emails = (await eventAttendees(db, eventId, snapshot)).map((a) => a.email.toLowerCase()).sort();
     return createHash("sha256").update(emails.join("\n")).digest("hex");
   } catch {
     // Seznam nejde sestavit (třeba chybí testovací příjemci). Potvrzení pak platí pro tento stav.
@@ -68,10 +81,23 @@ async function recipientsFingerprint(db: Db, audience: Group): Promise<string> {
   }
 }
 
-async function tokenOf(db: Db, row: EventRow, next: Next): Promise<string> {
-  const recipients = await recipientsFingerprint(db, next.audience);
+async function tokenOf(db: Db, row: EventRow, input: EventInput, next: Next): Promise<string> {
+  const recipients = row.published ? await recipientsFingerprint(db, row.id, nextSnapshot(row.published, input, next)) : "unpublished";
   const payload = [row.id, row.publishedRevision, next.summary, next.startsAt.toISOString(), next.endsAt.toISOString(), next.audience, recipients];
   return createHash("sha256").update(JSON.stringify(payload)).digest("hex");
+}
+
+/**
+ * Věta o změně publika podle toho, kdo akci ve Wiki vidí. Při `all-published` ji vidí všichni dál,
+ * mění se jen povinnost (s účastí) nebo komu Wiki posílá pozvánku (bez ní).
+ */
+function audienceNote(from: Group, to: Group): string {
+  if (eventVisibility() === "audience") {
+    return `Ve Wiki akci i její zápis nově uvidí skupina ${GROUP_LABELS[to]}. Skupina ${GROUP_LABELS[from]} ji vidět přestane.`;
+  }
+  if (!participationEnabled()) return `Ve Wiki akci dál uvidí všichni. Pozvánku nově dostane skupina ${GROUP_LABELS[to]}.`;
+  const required = to === "vsichni" ? "všechny" : `skupinu ${GROUP_LABELS[to]}`;
+  return `Ve Wiki akci dál uvidí všichni. Nově je povinná pro ${required}${to === "vsichni" ? "" : ", pro ostatní dobrovolná"}. Omluvy a přihlášky se ve výpočtu pozvaných zohlední.`;
 }
 
 /** Významná změna: mění to, co vidí pozvaní (název, téma, termín) nebo kdo je pozvaný (publikum). */
@@ -94,14 +120,9 @@ export async function changeImpact(viewer: Viewer, eventId: string, input: Event
   const next = nextOf(input);
   if (!published || published.status === "cancelled" || !isSignificant(published, next)) return null;
 
-  const impact: ChangeImpact = { token: await tokenOf(db, row, next), changes: changesOf(published, input, next), guests: { add: [], remove: [], manual: [] }, notes: [], affected: null };
-  impact.affected = await audienceAttendees(db, published.audience).then((list) => list.length, () => null);
-  const audienceChanged = published.audience !== next.audience;
-  if (audienceChanged) {
-    impact.notes.push(
-      `Ve Wiki akci i její zápis nově uvidí skupina ${GROUP_LABELS[next.audience]}. Skupina ${GROUP_LABELS[published.audience]} ji vidět přestane.`,
-    );
-  }
+  const impact: ChangeImpact = { token: await tokenOf(db, row, input, next), changes: changesOf(published, input, next), guests: { add: [], remove: [], manual: [] }, notes: [], affected: null };
+  impact.affected = await eventAttendees(db, eventId, published).then((list) => list.length, () => null);
+  if (published.audience !== next.audience) impact.notes.push(audienceNote(published.audience, next.audience));
   if (published.startsAt !== next.startsAt.toISOString() || published.endsAt !== next.endsAt.toISOString()) {
     impact.notes.push("Mění se termín, Google proto pozvané požádá o novou odpověď. U změny názvu nebo tématu odpovědi zůstávají.");
   }
@@ -120,7 +141,7 @@ export async function changeImpact(viewer: Viewer, eventId: string, input: Event
   }
   let desired;
   try {
-    desired = await audienceAttendees(db, next.audience);
+    desired = await eventAttendees(db, eventId, nextSnapshot(published, input, next));
   } catch {
     impact.notes.push("Seznam hostů pro nové publikum se nepodařilo sestavit. Synchronizace se zastaví a ukáže důvod.");
     return impact;
@@ -149,7 +170,7 @@ export async function changeImpact(viewer: Viewer, eventId: string, input: Event
   } catch (error) {
     if (!(error instanceof CalendarError)) throw error;
     impact.notes.push(
-      "Aktuální hosty se z Kalendáře nepodařilo načíst, dopad na hosty proto není ověřený. Wiki přidá chybějící lidi z nového publika, odebere jen hosty, které sama přidala, a ručně přidané nechá.",
+      "Aktuální hosty se z Kalendáře nepodařilo načíst, dopad na hosty proto není ověřený. Wiki přidá chybějící pozvané, odebere jen hosty, které sama přidala, a ručně přidané nechá.",
     );
   }
   return impact;
@@ -163,7 +184,7 @@ export async function assertImpactConfirmed(eventId: string, input: EventInput, 
   const next = nextOf(input);
   if (!isSignificant(row.published, next)) return;
   if (!token) throw new ImpactNotConfirmed(false);
-  if (token !== (await tokenOf(db, row, next))) throw new ImpactNotConfirmed(true);
+  if (token !== (await tokenOf(db, row, input, next))) throw new ImpactNotConfirmed(true);
 }
 
 export class ImpactNotConfirmed extends Error {
