@@ -18,11 +18,12 @@ describe("témata a zájem", () => {
 
   test("doporučení odpovídá zájmu, historii a publiku", async () => {
     const forParticipant = await listTopics(participant);
-    expect(forParticipant.map((t) => t.id)).toEqual(["topic-questions", "topic-priority", "topic-preparation"]);
+    expect(forParticipant.map((t) => t.id)).toEqual(["topic-questions", "topic-rm", "topic-priority", "topic-preparation"]);
     expect(forParticipant[0]!.reason).toBe("2 zájemci");
     expect(forParticipant.at(-1)!.reason).toContain("naplánováno na 26. 11.");
-    expect((await listTopics(outsider)).some((t) => t.audience === "fp")).toBe(false);
-    await expect(setInterest(outsider, "topic-questions", true)).rejects.toMatchObject({ code: "not_found" });
+    expect((await listTopics(outsider)).some((t) => t.audience === "fp")).toBe(true);
+    await setInterest(outsider, "topic-questions", true);
+    expect((await listTopics(outsider)).find((t) => t.id === "topic-questions")?.interestedByViewer).toBe(true);
   });
 
   test("návrh tématu: jen do vlastní skupiny a bez duplicit", async () => {
