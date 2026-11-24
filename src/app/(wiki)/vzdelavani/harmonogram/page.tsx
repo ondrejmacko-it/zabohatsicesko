@@ -204,7 +204,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
           key={value}
           className="pill"
           // Povinné a Dobrovolné nesou barvu odpovídajícího štítku účasti, Všechny a Moje zůstávají neutrální.
-          data-ucast-filtr={value === "povinne" ? "required" : value === "dobrovolne" ? "optional" : undefined}
+          data-ucast-filter={value === "povinne" ? "required" : value === "dobrovolne" ? "optional" : undefined}
           href={link({ ucast: value || undefined })}
           aria-current={(attendanceFilter ?? "") === value ? "page" : undefined}
         >

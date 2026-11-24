@@ -25,7 +25,7 @@ vzdálené migrace ani změny Vercel proměnných bez schválení.
   `EXCUSE_REASON_LABELS` přesunuto do `lib/labels.ts`. tsc + eslint OK.
 
 ## Další kroky (pořadí)
-1. Výsledek E2E běhu (stranky, temata-planovani, ucast, nahled; 1280+390) – log byl ve scratchpadu, spustit znovu.
+1. E2E (stranky, temata-planovani, ucast, nahled; 1280+390): 191/191 OK po opravě filtru (`data-ucast-filter`). Celou sadu spustit až na konci.
 2. Dokončit 0018: UI ve Správě (u účtu „Nadřízený pro omluvy“, checkboxy aktivních účtů, akce `setExcuseManagersAction`
    v `features/sprava/actions.ts` přes `runAction`), ManagedExcuses i v `EventPeek`; vitest: nadřízený vidí důvod,
    jiný kolega/správce/náhled ne, bez 0018 nic; e2e scénář 4.
