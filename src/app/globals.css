@@ -3435,6 +3435,33 @@ p.cal-status {
   background: var(--band);
 }
 
+/* Smazané termíny měsíce s obnovou po jednom (rozbalovací, ať dlouhý seznam nezakryje kroky). */
+.prepare-deleted {
+  align-self: stretch;
+}
+
+.prepare-deleted summary {
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.prepare-deleted ul {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.prepare-deleted li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 12px;
+  padding: 6px 0;
+  border-top: 1px solid var(--line);
+  font-size: 0.875rem;
+}
+
 .prepare-step h3 {
   margin: 0;
   font-family: var(--font-sans);
