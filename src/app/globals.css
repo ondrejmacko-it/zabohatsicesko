@@ -2939,7 +2939,40 @@ p.cal-status {
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  padding-bottom: 14px;
+}
+
+/* Přepínač zobrazení: segmentový ovladač (společný rámeček, ikony, vybraný díl jako zvednutá karta).
+   Záměrně jiný než pilulky filtru účasti, aby nebylo zaměnitelné „jak se dívám“ a „co vidím“. */
+.segmented {
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--beige);
+}
+
+.segment {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 4px 12px;
+  border-radius: 7px;
+  color: var(--ink-soft);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.segment:hover {
+  color: var(--ink);
+}
+
+.segment[aria-current="page"] {
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.14);
+  color: var(--ochre-dark);
 }
 
 .schedule-toolbar .pill,
@@ -3031,6 +3064,21 @@ p.cal-status {
   margin: 0 0 14px;
   padding-top: 12px;
   border-top: 1px solid var(--line);
+}
+
+.plan-filters-lead {
+  display: flex;
+  align-items: center;
+}
+
+/* Správce má za filtrem účasti ještě štítky souhrnu měsíce: oddělí je svislá čára. */
+.plan-filters-lead:has(+ .plan-filters-start > *) {
+  padding-right: 12px;
+  border-right: 1px solid var(--line);
+}
+
+.plan-filters-start:empty {
+  display: none;
 }
 
 .plan-filters-start,
@@ -4103,6 +4151,22 @@ body[data-moving] .quick-actions,
   .plan-filters-start,
   .plan-filters-end {
     display: contents;
+  }
+
+  /* Filtr účasti má na telefonu celý první řádek mřížky; ten má vlastní výšku (stejná výška platí jen pro řádky pod ním). */
+  .plan-filters:has(> .plan-filters-lead) {
+    grid-template-rows: auto;
+  }
+  /* Filtr účasti má na telefonu celý první řádek mřížky. */
+  .plan-filters-lead {
+    grid-column: 1 / -1;
+    padding-right: 0;
+    border-right: 0;
+  }
+
+  .plan-filters-lead:has(+ .plan-filters-start > *) {
+    padding-right: 0;
+    border-right: 0;
   }
 
   .plan-filters .pill-count,

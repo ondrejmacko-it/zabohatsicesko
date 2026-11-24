@@ -18,9 +18,10 @@ async function toolbarProblems(page: Page) {
       const style = getComputedStyle(el);
       return r.width > 0 && r.height > 0 && style.visibility !== "hidden" && style.display !== "none";
     };
-    const items = [
-      ...head.querySelectorAll(".pill, .btn, .month-title, summary"),
-    ].filter(visible) as HTMLElement[];
+    // Lišta i řádek filtrů pod ní (filtr účasti, štítky souhrnu, Filtry, Vybrat návrhy).
+    const items = [...document.querySelectorAll(".plan-head, .plan-filters")]
+      .flatMap((zone) => [...zone.querySelectorAll(".pill, .segment, .btn, .month-title, summary")])
+      .filter(visible) as HTMLElement[];
     const name = (el: HTMLElement) => (el.textContent || el.getAttribute("aria-label") || el.className).trim().slice(0, 30);
     const problems: string[] = [];
     items.forEach((first, i) => {
@@ -77,5 +78,25 @@ test.describe("Filtr účasti je vidět i na telefonu", () => {
     await expect(filter.getByRole("link", { name: "Povinné" })).toHaveAttribute("aria-current", "page");
     expect(await toolbarProblems(page)).toEqual([]);
     await expectNoHorizontalScroll(page);
+  });
+});
+
+test.describe("Záhlaví harmonogramu účastníka @desktop", () => {
+  test.use({ storageState: authFile("ucastnikFp") });
+
+  test("Měsíc/Seznam je segmentový přepínač a Filtry jsou ve stejném řádku jako filtr účasti", async ({ page }) => {
+    await page.goto("/vzdelavani/harmonogram?mesic=2026-11");
+    await settle(page);
+    const view = page.getByRole("group", { name: "Zobrazení" });
+    await expect(view.locator(".segment")).toHaveCount(2);
+    await expect(view.locator(".segment[aria-current=page]")).toHaveText("Měsíc");
+    // Zobrazení nesdílí vzhled s filtrem účasti (pilulky).
+    expect(await view.locator(".pill").count()).toBe(0);
+    const participation = page.getByRole("navigation", { name: "Účast v harmonogramu" });
+    const filters = page.locator(".plan-filters summary", { hasText: "Filtry" });
+    await expect(filters).toBeVisible();
+    const [a, b] = await Promise.all([participation.boundingBox(), filters.boundingBox()]);
+    // Stejný řádek: svislé středy se liší nejvýš o pár pixelů.
+    expect(Math.abs(a!.y + a!.height / 2 - (b!.y + b!.height / 2))).toBeLessThan(6);
   });
 });
