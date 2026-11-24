@@ -1,9 +1,37 @@
 import { monthOf, toDateKey } from "@/lib/time";
-import type { EventType } from "@/lib/types";
+import type { EventType, ParticipationState } from "@/lib/types";
+import { isMine } from "@/server/domain/participation";
 import type { EventCard } from "@/server/services/events";
 
 export type Tone = "neutral" | "ochre" | "ok" | "danger" | "outline" | "draft";
 export type CardTone = "regular" | "extra" | "muted" | "draft";
+
+/**
+ * Tón štítku vlastní účasti, stejný v měsíci, seznamu, Úvodu i detailu: plný jen u účasti, která platí
+ * (povinná, přihlášená). Omluveno, Odhlášeno a nabídka bez přihlášky jsou obrysové, aby nevypadaly jako účast.
+ */
+export function participationTone(state: ParticipationState): Tone {
+  return state === "required" || state === "voluntary_enrolled" ? "ok" : "outline";
+}
+
+/** Filtr účasti v Plánu (`ucast=`). Bez hodnoty = Všechny. */
+export const ATTENDANCE_FILTERS = ["povinne", "dobrovolne", "moje"] as const;
+export type AttendanceFilter = (typeof ATTENDANCE_FILTERS)[number];
+
+/**
+ * Patří karta do filtru účasti? Svátky zůstávají vždy (orientace v měsíci). Povinné = povinné, omluvené
+ * i zrušené, které byly povinné,
+ * Dobrovolné = nabídka, přihláška i odhlášení, Moje = povinné (i omluvené), přihlášky a akce, které divák
+ * sám vede nebo kontroluje. Obecné právo správce obsluhovat všechny akce z nich „Moje“ nedělá.
+ */
+export function matchesAttendance(card: Pick<EventCard, "type" | "participation" | "leadsOrReviews">, filter: AttendanceFilter | undefined): boolean {
+  if (!filter || card.type === "holiday") return true;
+  const state = card.participation?.state;
+  if (filter === "moje") return isMine(card.participation, card.leadsOrReviews);
+  // Zrušená povinná akce zůstává v Povinné (a Moje) se štítkem Zrušeno; zrušená nepovinná jen ve Všechny.
+  if (filter === "povinne") return card.participation?.required === true;
+  return state === "optional" || state === "voluntary_enrolled" || state === "withdrawn";
+}
 
 /** Jeden nejdůležitější stav akce pro mřížku a seznam. Text vždy doplňuje barvu. */
 export function primaryStatus(card: EventCard): { label: string; tone: Tone } | null {

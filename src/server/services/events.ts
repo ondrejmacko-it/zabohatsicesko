@@ -21,7 +21,7 @@ import {
 import { planMonth, slotConflict, type Occupant } from "@/server/domain/generation";
 import { snapshotOf, type EventRow } from "@/server/domain/snapshot";
 import { suggestTopics, suggestionPending, topicFitsAudience, TOPIC_ACCEPT, TOPIC_REJECT } from "@/server/domain/topics";
-import { canHandleRecording, canReadPublishedMinutes, isOrganizer, visibleEvent, type Viewer } from "@/server/policy";
+import { canHandleRecording, canReadPublishedMinutes, isEventHandler, isOrganizer, visibleEvent, type Viewer } from "@/server/policy";
 import { DomainError } from "@/server/services/errors";
 import { listTopics, topicIdByName } from "@/server/services/topics";
 
@@ -55,6 +55,11 @@ export type EventCard = {
   revision: number | null;
   /** Divák smí obsluhovat nahrávku a zápis (vedoucí, kontrolor, správce; `canHandleRecording`). */
   handler: boolean;
+  /**
+   * Divák zveřejněnou akci vede nebo kontroluje (`isEventHandler`). Na rozdíl od `handler` nezahrnuje
+   * právo správce obsluhovat všechny akce, proto podle něj počítá filtr Moje a Úvod.
+   */
+  leadsOrReviews: boolean;
   /** Akce má zveřejněný zápis a divák ho smí číst (`canReadPublishedMinutes`). */
   minutesPublished: boolean;
   /** Vlastní účast (štítek, akce). Jen se zapnutou účastí, doplňuje `withOwnParticipation`. */
@@ -148,6 +153,7 @@ function toCard(
         : null,
     revision: organizer ? row.revision : null,
     handler: canHandleRecording(viewer, row),
+    leadsOrReviews: row.published !== null && isEventHandler(viewer, row.published),
     minutesPublished: withMinutes.has(row.id) && canReadPublishedMinutes(viewer, row),
   };
 }

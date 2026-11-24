@@ -52,7 +52,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   // Úvod ukazuje osobní plán, nikoli první tři náhodné celofiremní události.
   // Kompletní firemní harmonogram zůstává v Plánu; zobrazenou osobu respektuje i náhled.
   const upcoming = (await withOwnParticipation(user, preview, upcomingCandidates))
-    .filter((card) => isMine(card.participation, card.handler))
+    .filter((card) => isMine(card.participation, card.leadsOrReviews))
     .slice(0, NEXT_ROWS);
   // Režim organizátora: návštěva dožene frontu a odpovědi (nejvýš jednou za 5 minut), až po odeslání stránky.
   // Plánovač to dělá i bez návštěv, tady jde jen o čerstvější stav.

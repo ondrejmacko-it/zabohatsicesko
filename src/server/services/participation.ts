@@ -149,10 +149,8 @@ export async function withOwnParticipation(session: Viewer, preview: PlanPreview
   return cards.map((card) => {
     const snapshot = published.get(card.id) ?? null;
     const participation = person ? effectiveParticipation(person, snapshot, records.get(card.id) ?? null, at) : null;
-    const view = ownParticipationView(participation, { readOnly: Boolean(preview) || !participationEnabled() });
-    return { ...card, participation: view && !participationEnabled() && view.state === "optional"
-      ? { ...view, label: "Dobrovolné" }
-      : view };
+    const enrollment = participationEnabled();
+    return { ...card, participation: ownParticipationView(participation, { readOnly: Boolean(preview) || !enrollment, enrollment }) };
   });
 }
 
@@ -161,11 +159,15 @@ export type OwnParticipationDetail = OwnParticipationView & {
   excuse: { reason: ExcuseReason; note: string | null } | null;
   /** Vlastní pozvánka v Kalendáři (F04). Null = Wiki stav nezná, nebo jde o náhled. */
   calendar: OwnCalendar | null;
+  /** Přihlášky a omluvy jsou zapnuté (`PARTICIPATION`). Bez nich je panel jen informace podle rolí. */
+  enrollment: boolean;
 };
 
-/** Vlastní účast pro detail akce včetně vlastního důvodu omluvy. Null = přepínač vypnutý nebo účast nevzniká. */
+/**
+ * Vlastní účast pro detail akce včetně vlastního důvodu omluvy. Null = účast nevzniká. Bez přepínače
+ * (rozhodnutí vlastníka 23. 11., U10) detail ukáže totéž co měsíc, jen ke čtení a bez čtení `event_participation`.
+ */
 export async function ownParticipationDetail(session: Viewer, preview: PlanPreview | null, eventId: string): Promise<OwnParticipationDetail | null> {
-  if (!participationEnabled() && !preview) return null;
   const db = await getDb();
   const [row] = await db
     .select({ published: events.published })
@@ -179,11 +181,15 @@ export async function ownParticipationDetail(session: Viewer, preview: PlanPrevi
       : null;
     const view = ownParticipationView(effectiveParticipation(
       { status: "active", groups: preview.viewer.groups }, row.published, record, now(),
-    ), { readOnly: true });
-    return view && { ...view, excuse: null, calendar: null };
+    ), { readOnly: true, enrollment: participationEnabled() });
+    return view && { ...view, excuse: null, calendar: null, enrollment: participationEnabled() };
   }
   const person = await loadPerson(db, session.id);
   if (!person) return null;
+  if (!participationEnabled()) {
+    const view = ownParticipationView(effectiveParticipation(person, row.published, null, now()), { readOnly: true, enrollment: false });
+    return view && { ...view, excuse: null, calendar: null, enrollment: false };
+  }
   const [record] = await db
     .select({ kind: eventParticipation.kind, excuseReason: eventParticipation.excuseReason, excuseNote: eventParticipation.excuseNote, userId: eventParticipation.userId })
     .from(eventParticipation)
@@ -195,5 +201,5 @@ export async function ownParticipationDetail(session: Viewer, preview: PlanPrevi
     view.state === "excused" && record?.excuseReason && canReadExcuseDetails(session, record.userId)
       ? { reason: record.excuseReason, note: record.excuseNote }
       : null;
-  return { ...view, excuse, calendar: await ownCalendarState(db, eventId, session.id) };
+  return { ...view, excuse, calendar: await ownCalendarState(db, eventId, session.id), enrollment: true };
 }

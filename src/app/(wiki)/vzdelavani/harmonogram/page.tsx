@@ -14,7 +14,7 @@ import { inviteModeOf } from "@/lib/invite-mode";
 import { PlanFilters, type StateChip } from "@/features/vzdelavani/components/PlanFilters";
 import { Agenda, NextEventsList, ScheduleGrid } from "@/features/vzdelavani/components/Schedule";
 import { TasksCard } from "@/features/vzdelavani/components/TasksCard";
-import { PLAN_STATES, cardActions, filterCards, filterValues, isPickable, monthSummary, type CardActionKind } from "@/features/vzdelavani/status";
+import { ATTENDANCE_FILTERS, PLAN_STATES, cardActions, matchesAttendance, filterCards, filterValues, isPickable, monthSummary, type CardActionKind } from "@/features/vzdelavani/status";
 import type { CardMenuFor } from "@/features/vzdelavani/components/Schedule";
 import styles from "@/features/vzdelavani/components/schedule.module.css";
 import { MoveDropZone } from "@/features/vzdelavani/components/MoveEvent";
@@ -23,7 +23,6 @@ import { EVENT_TYPES } from "@/lib/types";
 import { syncPublished } from "@/server/calendar/sync";
 import { requireUser } from "@/server/auth/session";
 import { now } from "@/server/config";
-import { isMine } from "@/server/domain/participation";
 import { withOwnParticipation } from "@/server/services/participation";
 import { defaultAudience } from "@/server/domain/generation";
 import { isOrganizer } from "@/server/policy";
@@ -72,9 +71,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
     preview ? null : loadPersonalCalendar(user),
   ]);
   // Filtr účasti (Všechny / Povinné / Dobrovolné / Moje) funguje i bez zapnutých přihlášek (PARTICIPATION).
-  const attendanceFilter = ["moje", "povinne", "dobrovolne"].includes(params.ucast ?? "")
-    ? params.ucast
-    : undefined;
+  const attendanceFilter = ATTENDANCE_FILTERS.find((value) => value === params.ucast);
   const monthCards = await withOwnParticipation(user, preview, rawMonthCards);
   const activeSlots = template.filter((s) => s.active);
   const slotTimes = Object.fromEntries(activeSlots.map((s) => [s.isoWeekday, `${s.startTime}–${s.endTime}`]));
@@ -86,12 +83,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   const states = managing ? filterValues(params.stav, PLAN_STATES) : [];
   const filtered = filterCards(monthCards, monthKey, { types: selectedTypes, states });
   // Svátky zůstávají i v Moje, jsou jen pro orientaci v měsíci.
-  const cards = filtered.filter((c) => {
-    if (!attendanceFilter || c.type === "holiday") return true;
-    if (attendanceFilter === "moje") return isMine(c.participation, c.handler);
-    if (attendanceFilter === "povinne") return c.participation?.state === "required" || c.participation?.state === "excused";
-    return c.participation?.state === "optional" || c.participation?.state === "voluntary_enrolled" || c.participation?.state === "withdrawn";
-  });
+  const cards = filtered.filter((c) => matchesAttendance(c, attendanceFilter));
   const filtering = selectedTypes.length > 0 || states.length > 0;
   const syncing = monthCards.some((c) => c.syncStatus === "pending");
   // Čekající pozvánky (nový host ve skupině, obnovené propojení) i zveřejněné akce bez vazby se odešlou
