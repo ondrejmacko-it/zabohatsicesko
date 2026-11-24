@@ -665,12 +665,14 @@ a.item-card:hover {
 .badge-ucast {
   border: 1px solid transparent;
 }
-[data-ucast="required"] {
+[data-ucast="required"],
+[data-ucast-filter="required"] {
   --ucast: var(--ucast-required);
   --ucast-bg: var(--ucast-required-bg);
   --ucast-fg: var(--ucast-required-fg);
 }
-[data-ucast="optional"] {
+[data-ucast="optional"],
+[data-ucast-filter="optional"] {
   --ucast: var(--ucast-optional);
   --ucast-bg: var(--ucast-optional-bg);
   --ucast-fg: var(--ucast-optional-fg);
@@ -701,11 +703,11 @@ a.item-card:hover {
   color: var(--ucast-fg);
 }
 /* Filtry Povinné / Dobrovolné: stejná barva jako štítek, neaktivní decentní, aktivní plná. */
-.pill[data-ucast] {
+.pill[data-ucast-filter] {
   border-color: color-mix(in srgb, var(--ucast) 45%, transparent);
   color: var(--ucast-fg);
 }
-.pill[data-ucast][aria-current="page"] {
+.pill[data-ucast-filter][aria-current="page"] {
   border-color: var(--ucast);
   background: var(--ucast-bg);
   color: var(--ucast-fg);
