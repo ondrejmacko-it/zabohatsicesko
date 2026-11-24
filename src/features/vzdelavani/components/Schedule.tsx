@@ -123,7 +123,7 @@ function CardWrap({
   handle?: boolean;
   menu?: CardMenuItem[];
   menuClass?: string;
-  /** Návrh změny zveřejněné akce: decentní náznak druhé vrstvy bez textu. */
+  /** Karta návrhu změny leží na zveřejněné verzi (`OriginalLayer`). */
   stacked?: boolean;
   children: React.ReactNode;
 }) {
@@ -187,6 +187,33 @@ const toneOf = (card: EventCard) => (card.original ? "draft" : cardTone(card));
 const changesText = (card: EventCard) =>
   card.original?.changes.length ? `Mění ${card.original.changes.join(", ")}` : "Liší se od zveřejněné verze";
 
+/**
+ * Zveřejněná verze za kartou návrhu změny („stoh“). Vykukuje nad kartou jako pruh; při najetí myší se vysune
+ * dopředu a karta návrhu ustoupí. Klik otevře totéž okno akce, kde je originál i rozhodnutí. Pro čtečky
+ * a klávesnici je skrytá: okno akce i řádek „Mění …“ na kartě říkají totéž slovy. V režimu výběru jen
+ * řekne proč (`data-pick-reason`), okno neotevře.
+ */
+function OriginalLayer({ card, href }: { card: EventCard; href: string }) {
+  const original = card.original!;
+  return (
+    <Link
+      href={href}
+      scroll={false}
+      className={`${styles.event} ${styles.original}`}
+      aria-hidden="true"
+      tabIndex={-1}
+      data-original-of={card.id}
+      data-pick-reason="Zveřejněná verze patří zveřejněné akci, vybrat nejde."
+    >
+      <span className={styles.originalTab}>Zveřejněná verze</span>
+      <span className={styles.title}>{original.label}</span>
+      {original.leadName && <span className={styles.topic}>Kdo: {original.leadName}</span>}
+      {original.topicTitle && original.topicTitle !== original.label && <span className={styles.topic}>Téma: {original.topicTitle}</span>}
+      <span className={styles.line}>{formatEventTime(new Date(original.startsAt), new Date(original.endsAt), original.allDay)}</span>
+    </Link>
+  );
+}
+
 // Karta v mřížce: název, Kdo a Téma, čas a jeden stav. Podrobnosti ukáže okno akce po kliknutí.
 function EventBlock({ card, hrefFor = pageHref, managing = false, planView = managing, movable = false, menuFor }: { card: EventCard; movable?: boolean } & Linking) {
   const tone = toneOf(card);
@@ -205,6 +232,7 @@ function EventBlock({ card, hrefFor = pageHref, managing = false, planView = man
         {card.original && <span className={styles.changes}>{changesText(card)}</span>}
         <CardMeta card={card} managing={planView} />
       </Link>
+      {card.original && <OriginalLayer card={card} href={hrefFor(card)} />}
     </CardWrap>
   );
 }

@@ -46,7 +46,8 @@ test.describe("Plán: hromadný výběr návrhů s návrhem změny zveřejněné
       await page.getByRole("button", { name: "Vybrat návrhy" }).click();
       const bar = page.getByRole("region", { name: "Hromadný výběr návrhů" });
       await expect(bar).toBeVisible();
-      const cards = page.locator("table a[data-pick-id], table a[data-pick-reason]");
+      // Zveřejněná verze ve stohu leží pod kartou návrhu záměrně (vykukuje jen pruh), překryv se u ní nekontroluje.
+      const cards = page.locator("table a[data-pick-id], table a[data-pick-reason]:not([data-original-of])");
       for (const card of await cards.all()) await expect(card).toHaveCSS("opacity", "1");
       await expectNoTextOverlap(cards);
 
