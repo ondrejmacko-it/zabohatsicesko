@@ -24,19 +24,32 @@ vzdálené migrace ani změny Vercel proměnných bez schválení.
   nikdy v náhledu), `canReadExcuseDetails(viewer, subject, managedIds)`, `ManagedExcuses` v detailu akce,
   `EXCUSE_REASON_LABELS` přesunuto do `lib/labels.ts`. tsc + eslint OK.
 
+## Relace 2 (hotovo, pushnuto)
+- E2E stranky/temata-planovani/ucast/nahled (1280+390): 191/191 po opravě filtru (`data-ucast-filter`).
+- 0018 dokončeno: Správa (menu účtu „Nadřízený pro omluvy…“, okno s checkboxy aktivních účtů, řádek „Omluvy čte: …“,
+  `setExcuseManagersAction`), `ManagedExcuses` i v `EventPeek`. Vitest `tests/omluvy-nadrizeny.test.ts` (5/5),
+  e2e `ucast.spec.ts` „nadřízený pro omluvy“ (jen 1280, po sobě uklidí). Plná vitest sada 586/586 před změnami.
+- Izolovaný Neon branch `overeni-ucast-0016-0018` (br-wandering-paper-b9ef86og) v `neon-zbz-vzdelavani-demo`:
+  migrace 0016–0018 provedeny přes Neon MCP (stejné příkazy jako `prepareDatabase`, PG 18) a zapsány do
+  `schema_migrations`. SQL kontroly (vrácené zpět): withdrawn, unikát účasti, omluva bez důvodu/poznámka mimo omluvu
+  odmítnuty, vazba nadřízeného, ne sám sobě, FK; 0015 garantovaných 4/5/10/20 OK. Aplikaci proti branchi odsud
+  spustit nejde: proxy cloudu nepodporuje WebSocket (driver `@neondatabase/serverless` Pool). Skript
+  `scripts/overeni-ucasti-db.ts` (aplikační ověření, jen `OVERENI_CIL=izolovany-branch`, ne v ostré Wiki) spustí
+  vlastník lokálně nebo jde ověřit přes Vercel Preview s DATABASE_URL branche (vyžaduje schválení změny proměnných).
+  Branch nechán pro Preview test; smazat po ověření (free limit 10 branchí).
+
 ## Další kroky (pořadí)
-1. E2E (stranky, temata-planovani, ucast, nahled; 1280+390): 191/191 OK po opravě filtru (`data-ucast-filter`). Celou sadu spustit až na konci.
-2. Dokončit 0018: UI ve Správě (u účtu „Nadřízený pro omluvy“, checkboxy aktivních účtů, akce `setExcuseManagersAction`
-   v `features/sprava/actions.ts` přes `runAction`), ManagedExcuses i v `EventPeek`; vitest: nadřízený vidí důvod,
-   jiný kolega/správce/náhled ne, bez 0018 nic; e2e scénář 4.
-3. Izolovaný Neon branch z `neon-zbz-vzdelavani-demo` (fiktivní data) → lokální build s `DATABASE_URL` branche,
-   `APPROVED_MIGRATIONS=0016_event_participation,0017_participation_withdrawn,0018_excuse_managers`, `PARTICIPATION=on`
-   → ověřit účast a 0015 (4/5/10/20 garantovaných) na skutečném Postgresu. Connection string nevypisovat.
-4. Náhled 1:1 pro správce-kolegu (`managing = organizer && !preview` v EventPeek/harmonogram/akce) – read-only správa.
-5. Animace původní verze návrhu změny (bod 8), hromadný výběr počítadla (bod 9), Zápisy k dokončení UX (bod 11),
+1. Náhled 1:1 pro správce-kolegu (analýza hotová): v `harmonogram/page.tsx` je `managing = organizer && !preview`,
+   `viewer = preview?.viewer ?? user`. Zavést `planView = isOrganizer(viewer)` pro čtecí části (listMonthDrafts,
+   filtr stavů, `monthSummary`/štítky, `CardMeta`/`CardDetails` chybějící údaje), zápisové prvky (add, kopie, tema,
+   movable, MoveDropZone, PickBox, syncPublished, menu úprav) nechat na `managing`. Totéž v `EventPeek`
+   (advice, Todo `fillable`, technický odkaz jen ke čtení, bez formuláře) a `akce/[id]`. E2E do `nahled.spec.ts`:
+   náhled „Druhý správce ukázky“ ukáže návrhy a štítky stavů, žádné tlačítko zápisu.
+2. Animace původní verze návrhu změny (bod 8), hromadný výběr počítadla (bod 9), Zápisy k dokončení UX (bod 11),
    Topbar jméno (bod 13), dvakrát Zavřít v Navrhnout téma.
-6. Release návod (bod 17: ověřit, zda merge do main nasazuje produkci – Vercel Git integrace), report F01–F18 (bod 19),
-   draft PR, screenshoty (lokální/Preview označit).
+3. Celá sada: lint, tsc, vitest, build, e2e všech projektů.
+4. Release návod (bod 17: ověřit Vercel Git integraci – nasazuje merge do main produkci?; existuje
+   `docs/navod-merge-f01-f18.md`, aktualizovat), report F01–F18 (18 řádků, bod 19), draft PR do main, screenshoty.
 
 ## Otevřené otázky pro vlastníka
 - Schválení migrací 0015–0018 na `zbc-wiki-produkce` a `PARTICIPATION=on` na produkci (až po Preview testu).
