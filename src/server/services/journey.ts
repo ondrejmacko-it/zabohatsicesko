@@ -172,6 +172,19 @@ const MINUTES_TASKS: Record<Exclude<RecordingProgress, "published">, { detail: s
 /** S ukázkou nahrávky (F14) úkol nahrávku zmíní, bez ní ne. */
 const NONE_WITH_RECORDING = { detail: "Proběhla a nemá zápis. Připrav ho z nahrávky, přepisu nebo poznámek.", action: "Dokončit zápis" };
 
+/**
+ * Úkol z dnešní akce v ukázce nahrávky (`RECORDING_DEMO`). Rozhodnutí vlastníka (audit P1): text nesmí slibovat
+ * automatické zpracování libovolné nahrávky. Ukázka přepíše jen ukázkovou nahrávku, jiný soubor ne. Dostane ho jen ten,
+ * kdo zápis píše (`minutesTaskRole` = write: vedoucí, u akce bez vedoucího správce), kontrolor ne.
+ */
+export function todayRecordingTask(title: string): { title: string; detail: string; action: string } {
+  return {
+    title: "Nahraj ukázkovou nahrávku z dnešní akce",
+    detail: `${title}. Ukázka přepíše jen ukázkovou nahrávku z Wiki, jiný soubor nezpracuje. Zápis pak zkontroluješ a schválí ho vedoucí akce.`,
+    action: "Nahrát nahrávku",
+  };
+}
+
 /** Vedoucí akce zápis schvaluje, proto má vlastní úkol „Dokončit zápis“ místo kontroly. */
 const LEAD_DRAFT_TASK = { detail: "Návrh zápisu čeká na tvoje schválení. Zveřejní se až po schválení.", action: "Dokončit zápis" };
 
@@ -218,7 +231,7 @@ export async function listTasks(viewer: Viewer): Promise<JourneyTask[]> {
       const href = `/vzdelavani/akce/${row.id}?odkud=prehled#nahravka`;
       const base = { href, eventType: snapshot.type };
       if (today && state === "none" && canUpload) {
-        tasks.push({ ...base, key: `nahravka-${row.id}`, title: "Nahraj nahrávku z dnešní akce", detail: `${title}. Zápis se z nahrávky připraví sám, ty ho jen zkontroluješ.`, action: "Nahrát nahrávku" });
+        tasks.push({ ...base, key: `nahravka-${row.id}`, ...todayRecordingTask(title) });
         continue;
       }
       const task =

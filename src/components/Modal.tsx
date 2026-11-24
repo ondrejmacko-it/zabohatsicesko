@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
+import { createContext, useCallback, useContext, useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { ConfirmDialog } from "./ConfirmDialog";
 
@@ -23,6 +23,17 @@ type Props = {
 };
 
 const subscribeNever = () => () => {};
+
+const MarkSavedContext = createContext<(() => void) | null>(null);
+
+/**
+ * Formulář, který v okně ukládá a okno nezavírá (zápis akce), po úspěšném uložení zavolá vrácenou funkci:
+ * aktuální hodnoty polí se stanou novým výchozím otiskem a zavření se už na „neuložené změny“ neptá.
+ * Mimo okno vrací null.
+ */
+export function useMarkModalSaved(): (() => void) | null {
+  return useContext(MarkSavedContext);
+}
 
 /**
  * Otisk všech polí v okně. Rozepsané změny se poznají podle toho, že se otisk od otevření změnil. Pomocná
@@ -66,6 +77,9 @@ export function Modal({ open, title, onRequestClose, children, wide, selfGuarded
   const [save, setSave] = useState<HTMLButtonElement | null>(null);
   const inBrowser = useSyncExternalStore(subscribeNever, () => true, () => false);
   const shown = open && inBrowser;
+  const markSaved = useCallback(() => {
+    if (ref.current) initialFields.current = fieldsFingerprint(ref.current);
+  }, []);
 
   useEffect(() => {
     const dialog = ref.current;
@@ -132,7 +146,7 @@ export function Modal({ open, title, onRequestClose, children, wide, selfGuarded
             Zavřít
           </button>
         </div>
-        {children}
+        <MarkSavedContext.Provider value={markSaved}>{children}</MarkSavedContext.Provider>
       </div>
       <ConfirmDialog
         open={confirming}

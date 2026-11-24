@@ -57,7 +57,11 @@ function topicItem(t: RankedTopic, index: number, count: number, ctx: RowContext
       <div className="topic-main">
         <p className="item-title">
           <span id={`tema-${t.id}`}>{t.name}</span>
-          {wanted && <span className="badge badge-ok topic-badge">Nejžádanější</span>}
+          {wanted && (
+            <span className="badge badge-ok topic-badge" title="Patří mezi tři témata s největším zájmem kolegů. S garancí nesouvisí.">
+              Nejžádanější
+            </span>
+          )}
         </p>
         <p className="item-meta">
           {/* Bez konání se nic nepíše: „zatím neproběhlo“ se opakovalo skoro u každého tématu (F12). */}
@@ -203,7 +207,7 @@ export async function TopicsSection({ user, readOnly = false, filter: requested 
                   Garantovaná témata
                 </h3>
                 {/* F10: krátce, co garantované znamená. Pravidlo plánování je v `recommendTopics`. */}
-                <p className="item-meta">Plánují se přednostně, i když o ně nikdo neprojevil zájem.</p>
+                <p className="item-meta">Vybírá je správce. Plánují se přednostně, i když o ně nikdo neprojevil zájem.</p>
               </>
             }
             othersHead={
@@ -223,6 +227,12 @@ export async function TopicsSection({ user, readOnly = false, filter: requested 
               </>
             }
           />
+          {/* Rozhodnutí vlastníka (audit P1): Nejžádanější = zájem kolegů, Garantované = priorita správce. Oddělené. */}
+          {ctx.mostWanted.size > 0 && (
+            <p className="item-meta" data-testid="nejzadanejsi-vysvetleni">
+              Štítek Nejžádanější mají nejvýš tři témata s největším zájmem kolegů. S garancí nesouvisí, může ho mít i garantované téma.
+            </p>
+          )}
           {sortable && (
             <p id="tema-poradi-napoveda" className="visually-hidden">
               Pořadí změníš přetažením úchytu, i mezi garantovanými a ostatními tématy. Šipkami nahoru a dolů posuneš téma o jedno místo, přes okraj skupiny do druhé skupiny.
