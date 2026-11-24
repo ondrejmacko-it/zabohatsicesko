@@ -1,4 +1,4 @@
-# Navazující relace (stav 24. 11. 2026, finální dokončení F01–F18 po PR #91)
+# Navazující relace (stav 24. 11. 2026, relace 4, finální dokončení F01–F18 po PR #91)
 
 Limit relace: **200 tis. tokenů tvrdě**. Zadání: prompt „ZBČ – FINÁLNÍ DOKONČENÍ F01–F18, AKTIVACE ÚČASTI A SJEDNOCENÍ UI
 PO PR #91“ (body 0–19). Větev `claude/nice-lamport-vjfy87` (z main a30605c). Nic nemergovat/nenasazovat, žádné
@@ -46,13 +46,16 @@ vzdálené migrace ani změny Vercel proměnných bez schválení.
 - `ucast.spec.ts` (verze z relace 2) celý prošel 1280+390 (22 passed, 1 skip) – ověřeno v relaci 3 před resetem
   na vzdálenou větev; po něm neověřeno znovu, spustit v kroku 2.
 
+## Hotovo v relaci 4
+- Bod 8: vrácen stoh návrhu změny nad zveřejněnou verzí (omylem odstraněn v PR #91, 791840a), hover vysune
+  originál, v režimu výběru jen důvod. Navrhnout téma má jedno Zavřít. Commit a32243e.
+- Body 9, 11, 13: vlastník je 24. 11. odložil (znění není v repu).
+- Release návod `docs/navod-merge-f01-f18.md` přepsán (Vercel: merge do main = produkce, ověřeno; v produkci
+  nejsou `PARTICIPATION` ani `APPROVED_MIGRATIONS`). Report `docs/report-dokonceni-f01-f18.md` (18 řádků).
+
 ## Další kroky (pořadí)
-1. UX body: animace původní verze návrhu změny (bod 8), hromadný výběr počítadla (bod 9), Zápisy k dokončení UX
-   (bod 11), Topbar jméno (bod 13), dvakrát Zavřít v Navrhnout téma. Přesné znění bodů je jen v zadání – pokud
-   v docs (`pozadavky-f01-f18.md`, `audit-2026-11-23/`) chybí, zeptat se uživatele, nedomýšlet.
-2. Celá sada: lint, tsc, vitest, build, e2e všech projektů.
-3. Release návod (bod 17: ověřit Vercel Git integraci – nasazuje merge do main produkci?; aktualizovat
-   `docs/navod-merge-f01-f18.md`), report F01–F18 (18 řádků, bod 19), draft PR do main, screenshoty.
+1. Pokud draft PR do main ještě neexistuje: založit (report + návod v popisu), sledovat CI.
+2. Po schválení vlastníka: Preview test účasti (izolovaný Neon branch), pak případně body 9, 11, 13.
 
 ## Otevřené otázky pro vlastníka
 - Schválení migrací 0015–0018 na `zbc-wiki-produkce` a `PARTICIPATION=on` na produkci (až po Preview testu).
