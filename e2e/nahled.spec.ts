@@ -176,3 +176,32 @@ test.describe("lišta s pohledem na telefonu", () => {
     );
   });
 });
+
+test.describe("lišta s pohledem na počítači @desktop", () => {
+  test.use({ storageState: authFile("spravce") });
+
+  test("značka, Pohled a účet bez překryvu; od 1000 px na jednom řádku", async ({ page }) => {
+    await page.goto("/");
+    await settle(page);
+    for (const width of [768, 1024, 1280, 1440, 1920]) {
+      await page.setViewportSize({ width, height: 900 });
+      const boxes = await page.evaluate(() =>
+        [".brand", ".view-switch", ".account"].map((s) => {
+          const r = document.querySelector(s)!.getBoundingClientRect();
+          return { s, left: r.left, right: r.right, top: r.top, bottom: r.bottom, mid: r.top + r.height / 2 };
+        }),
+      );
+      boxes.forEach((a, i) =>
+        boxes.slice(i + 1).forEach((b) => {
+          const overlap = a.left < b.right - 1 && b.left < a.right - 1 && a.top < b.bottom - 1 && b.top < a.bottom - 1;
+          expect(overlap, `${width}px: ${a.s} × ${b.s}`).toBe(false);
+        }),
+      );
+      if (width >= 1000) {
+        const mids = boxes.map((b) => b.mid);
+        expect(Math.max(...mids) - Math.min(...mids), `${width}px: jeden řádek`).toBeLessThan(12);
+      }
+      await expectNoHorizontalScroll(page);
+    }
+  });
+});

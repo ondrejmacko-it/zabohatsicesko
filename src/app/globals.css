@@ -4487,6 +4487,68 @@ body[data-moving] .quick-actions,
   border-right: 1px solid var(--line);
 }
 
+/* Horní lišta na počítači: mřížka značka | Pohled | účet. Pohled je uprostřed volného místa,
+   takže správce má celou lištu na jednom řádku a nic se nepřeskupuje podle délky jména. */
+@media (min-width: 641px) {
+  .topbar {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: "brand view account";
+  }
+
+  .brand {
+    grid-area: brand;
+  }
+
+  .account {
+    grid-area: account;
+  }
+
+  .view-switch {
+    grid-area: view;
+    justify-self: center;
+    margin-left: 0;
+    padding: 0 12px;
+    border-right: 0;
+  }
+
+  .view-select {
+    max-width: 220px;
+  }
+}
+
+/* Užší počítač: kratší tlačítko role a užší výběr, aby se účet vešel vedle Pohledu. */
+@media (min-width: 641px) and (max-width: 1439px) {
+  .topbar:has(.view-switch) .persona-btn-detail {
+    display: none;
+  }
+
+  .topbar:has(.view-switch) .persona-select {
+    max-width: 190px;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1199px) {
+  .topbar:has(.view-switch) .brand-tagline {
+    display: none;
+  }
+}
+
+/* Tablet: Pohled má vlastní řádek pod značkou a účtem. */
+@media (min-width: 641px) and (max-width: 999px) {
+  .topbar:has(.view-switch) {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      "brand account"
+      "view view";
+  }
+
+  .topbar:has(.view-switch) .view-switch {
+    justify-self: start;
+    padding: 0;
+  }
+}
+
 .view-switch-form {
   display: flex;
   align-items: center;
