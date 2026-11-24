@@ -161,7 +161,7 @@ test.describe("okna správce", () => {
     await expect(bar).toContainText("Vybráno 1");
     await bar.getByRole("button", { name: "Smazat vybrané" }).click();
     const ask = page.getByRole("alertdialog", { name: "Smazat 1 návrh?" });
-    await expect(ask).toContainText("Nic se neodešle a nejde to vrátit.");
+    await expect(ask).toContainText("Nic se neodešle. Ručně přidané návrhy nejde vrátit, termíny z rozvrhu obnoví Připravit měsíc.");
     await ask.getByRole("button", { name: "Potvrdit smazání" }).click();
     await expect(bar).toBeHidden();
     await expect(page.getByRole("status").filter({ hasText: /Smazán/ })).toBeVisible();
@@ -330,14 +330,31 @@ for (const role of Object.keys(ROLES) as Role[]) {
 test.describe("cizí akce neprozradí obsah", () => {
   test.use({ storageState: authFile("ucastnikFp") });
 
-  test("akce RM v náhledu vypadá jako neexistující", async ({ page }) => {
-    await page.goto("/vzdelavani/harmonogram?akce=tr-rm-1112");
+  // Od PR #86 je zveřejněný plán společný: RM akce je FP vidět. Neuniknout nesmí nezveřejněný návrh
+  // (ev-11-19, RM) ani zápis, přepis a nahrávka akce, kterou FP nevede a není pro jeho skupinu (ev-11-6, RM).
+  test("nezveřejněný návrh vypadá jako neexistující, cizí zápis ani přepis neuniknou", async ({ page }) => {
+    await page.goto("/vzdelavani/harmonogram?akce=ev-11-19");
     await settle(page);
-    const opened = dialog(page, "Akce není dostupná");
-    await expect(opened).toBeVisible();
-    await expect(opened).not.toContainText("Rozbor");
-    await page.goto("/vzdelavani/zapisy?zapis=tr-rm-1112");
+    await expect(dialog(page, "Akce není dostupná")).toBeVisible();
+    expect((await page.request.get("/vzdelavani/akce/ev-11-19")).status()).toBe(404);
+    await page.goto("/vzdelavani/zapisy?zapis=ev-11-19");
     await expect(dialog(page, "Zápis není dostupný")).toBeVisible();
+
+    // Zveřejněná RM akce se zveřejněným zápisem: údaje akce ano, zápis, přepis ani nahrávka ne.
+    await page.goto("/vzdelavani/harmonogram?akce=ev-11-6");
+    await settle(page);
+    const peek = page.getByRole("dialog");
+    await expect(peek).toBeVisible();
+    await expect(dialog(page, "Akce není dostupná")).toHaveCount(0);
+    await expect(peek.getByRole("link", { name: /zápis|Nahrávka/i })).toHaveCount(0);
+    await page.goto("/vzdelavani/zapisy?zapis=ev-11-6");
+    await expect(dialog(page, "Zápis není dostupný")).toBeVisible();
+    for (const target of ["/vzdelavani/akce/ev-11-6", "/vzdelavani/harmonogram?akce=ev-11-6", "/vzdelavani/zapisy?zapis=ev-11-6"]) {
+      const html = await (await page.request.get(target)).text();
+      expect(html).not.toContain("Fiktivní přepis");
+      expect(html).not.toContain("struktura schůzky");
+      expect(html).not.toContain('id="nahravka"');
+    }
   });
 });
 

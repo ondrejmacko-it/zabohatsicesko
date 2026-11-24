@@ -17,7 +17,7 @@ export type TopicStat = {
   /** Nejbližší budoucí akce, která má téma jen v návrhu (dateKey). Plní se jen pro správce. */
   nextDraft?: string | null;
   nextDraftId?: string | null;
-  /** Garantované téma: pořadí 1–3. Null nebo chybí = běžné téma. */
+  /** Garantované téma: pořadí 1..n (počet není omezený). Null nebo chybí = běžné téma. */
   priorityRank?: number | null;
   /** Ruční pořadí mezi ostatními tématy. Null nebo chybí = podle zájmu. */
   manualRank?: number | null;

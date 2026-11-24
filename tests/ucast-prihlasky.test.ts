@@ -149,7 +149,7 @@ describe("soukromí a souběh", () => {
 describe("štítky a filtr Moje", () => {
   test("pohled účasti a filtr", () => {
     const p = (state: "required" | "optional" | "voluntary_enrolled" | "excused" | "withdrawn", open = true) => ({ state, required: false, calendarGuest: false, open });
-    expect(ownParticipationView(p("required"), { readOnly: false })).toEqual({ state: "required", label: "Povinné pro tebe", actions: ["excuse"] });
+    expect(ownParticipationView(p("required"), { readOnly: false })).toEqual({ state: "required", required: false, label: "Povinné pro tebe", actions: ["excuse"] });
     expect(ownParticipationView(p("optional"), { readOnly: false })?.label).toBe("Můžeš se přihlásit");
     expect(ownParticipationView(p("voluntary_enrolled"), { readOnly: false })).toMatchObject({ label: "Přihlášeno", actions: ["withdraw"] });
     expect(ownParticipationView(p("required", false), { readOnly: false })?.actions).toEqual([]);
@@ -171,12 +171,13 @@ describe("vypnutý přepínač (výchozí stav)", () => {
     const readOnly = await withOwnParticipation(participant, null, cards);
     expect(readOnly).toHaveLength(cards.length);
     expect(readOnly.filter((card) => card.participation).every((card) => card.participation?.actions.length === 0)).toBe(true);
-    expect(await ownParticipationDetail(participant, null, rm)).toBeNull();
+    // Rozhodnutí vlastníka 23. 11. (U10): detail ukáže totéž co měsíc, jen ke čtení, bez akcí ke změně účasti.
+    expect(await ownParticipationDetail(participant, null, rm)).toMatchObject({ state: "optional", label: "Dobrovolné", actions: [], excuse: null, calendar: null, enrollment: false });
     // Ani bez tabulky nic nespadne: přepínač vypnutý = žádný dotaz na event_participation.
     await (await getDb()).execute(sql`ALTER TABLE event_participation RENAME TO event_participation_off`);
     try {
       expect((await withOwnParticipation(participant, null, cards)).length).toBe(cards.length);
-      expect(await ownParticipationDetail(participant, null, rm)).toBeNull();
+      expect(await ownParticipationDetail(participant, null, rm)).toMatchObject({ state: "optional", label: "Dobrovolné", actions: [], excuse: null, calendar: null, enrollment: false });
     } finally {
       await (await getDb()).execute(sql`ALTER TABLE event_participation_off RENAME TO event_participation`);
     }

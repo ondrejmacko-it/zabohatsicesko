@@ -70,7 +70,7 @@ export function participationState(
 
 export type Participation = {
   state: ParticipationState;
-  /** Povinnost podle rolí a publika (platí i u omluvy). */
+  /** Povinnost podle rolí a publika (platí i u omluvy a u zrušené akce, která byla povinná). */
   required: boolean;
   /** Má dostat pozvánku: povinná bez omluvy nebo dobrovolně přihlášená. Neříká nic o odpovědi v Googlu. */
   calendarGuest: boolean;
@@ -89,7 +89,7 @@ export function effectiveParticipation(
   if (!state || !snapshot) return null;
   return {
     state,
-    required: state === "required" || state === "excused",
+    required: state === "required" || state === "excused" || (state === "cancelled" && isRequiredForUser(person.groups, snapshot.audience)),
     calendarGuest: state === "required" || state === "voluntary_enrolled",
     open: state !== "cancelled" && new Date(snapshot.startsAt) > at,
   };
@@ -200,14 +200,26 @@ export const PARTICIPATION_LABELS = {
  */
 export type OwnParticipationView = {
   state: ParticipationState;
+  /** Akce je (nebo před zrušením byla) pro člověka povinná. Zrušená povinná akce tak zůstává v Povinné a Moje. */
+  required: boolean;
   label: string | null;
   actions: ParticipationAction[];
 };
 
-export function ownParticipationView(participation: Participation | null, { readOnly }: { readOnly: boolean }): OwnParticipationView | null {
+/** Štítek nepovinné akce, ke které se přihlásit nejde (přihlášky vypnuté, akce už začala): jen popisuje. */
+export const OPTIONAL_READ_ONLY_LABEL = "Dobrovolné";
+
+/**
+ * `enrollment: false` = přihlášky ve Wiki nejsou zapnuté (`PARTICIPATION`). Nepovinná akce pak, stejně jako
+ * proběhlá nepovinná akce, nesmí slibovat „Můžeš se přihlásit“ ani v měsíci, ani v detailu, ani v náhledu.
+ */
+export function ownParticipationView(
+  participation: Participation | null,
+  { readOnly, enrollment = true }: { readOnly: boolean; enrollment?: boolean },
+): OwnParticipationView | null {
   if (!participation) return null;
   const { state } = participation;
-  const label = state === "cancelled" ? null : PARTICIPATION_LABELS[state];
+  const label = state === "cancelled" ? null : state === "optional" && (!enrollment || !participation.open) ? OPTIONAL_READ_ONLY_LABEL : PARTICIPATION_LABELS[state];
   const actions: ParticipationAction[] = [];
   if (!readOnly) {
     if (canVoluntarilyJoin(participation)) actions.push("enroll");
@@ -215,12 +227,15 @@ export function ownParticipationView(participation: Participation | null, { read
     if (canExcuse(participation) && state === "required") actions.push("excuse");
     if (canRevokeExcuse(participation)) actions.push("revoke_excuse");
   }
-  return { state, label, actions };
+  return { state, required: participation.required, label, actions };
 }
 
-/** Filtr „Moje“: povinné (i omluvené), dobrovolně přihlášené a akce, které člověk vede nebo kontroluje. */
-export function isMine(view: OwnParticipationView | null | undefined, handler: boolean): boolean {
-  if (handler) return true;
+/**
+ * Filtr „Moje“: povinné (i omluvené), dobrovolně přihlášené a akce, které člověk vede nebo kontroluje.
+ * `leadsOrReviews` je vedení či kontrola konkrétní akce, ne obecné právo správce obsluhovat všechny akce.
+ */
+export function isMine(view: OwnParticipationView | null | undefined, leadsOrReviews: boolean): boolean {
+  if (leadsOrReviews || view?.required) return true;
   return view?.state === "required" || view?.state === "excused" || view?.state === "voluntary_enrolled";
 }
 

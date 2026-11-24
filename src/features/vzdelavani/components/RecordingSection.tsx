@@ -64,7 +64,9 @@ function draftHint(minutes: HandlerMinutes): string {
     return `Návrh z ukázkového přepisu (šablona ${TEMPLATE_LABELS[minutes.detectedTemplate]}). Jde o ukázku, ne o přepis skutečné schůzky.`;
   }
   if (!minutesStarted(minutes.content)) return "Vyplň aspoň Shrnutí. Ke schválení je zápis až s obsahem.";
-  return "Návrh vznikl z vloženého textu, nic se nedomýšlí. Jména a kontakty klientů jsou vynechané.";
+  // Vynechání jmen je heuristika (`redactClientData`), proto věta nic neslibuje a vede ke kontrole.
+  const origin = minutes.source === "manual" ? "Zápis píšeš ručně." : "Návrh vznikl ze zdrojového textu, nic se nedomýšlí.";
+  return `${origin} Zkontroluj, že v něm nezůstalo jméno ani kontakt klienta, pravidla Wiki nepoznají každé jméno.`;
 }
 
 /**

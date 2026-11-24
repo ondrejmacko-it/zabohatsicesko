@@ -1,15 +1,15 @@
 "use client";
 
-import { useActionState, useMemo, useRef, useState } from "react";
+import { useActionState, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActionForm, ActionMessage } from "@/components/ActionForm";
 import { Combobox } from "@/components/Combobox";
-import { Modal } from "@/components/Modal";
+import { Modal, fieldsFingerprint } from "@/components/Modal";
 import { submitKeepingValues } from "@/features/shared/keep-values";
 import { publishInviteNote, type InviteMode } from "@/lib/invite-mode";
 import { GROUP_LABELS } from "@/lib/labels";
 import { addDays, formatDayMonth, formatEventTime, shiftMonth, toDateKey, weekdayShort } from "@/lib/time";
 import type { Group } from "@/lib/types";
-import type { MonthDraft } from "@/server/services/events";
+import type { DeletedSlot, MonthDraft } from "@/server/services/events";
 import { generateMonthAction, publishMonthAction, type ActionResult } from "../actions";
 import {
   audienceOptions,
@@ -35,6 +35,10 @@ type Props = {
   drafts: MonthDraft[];
   /** Návrhy změn už zveřejněných akcí. Hromadně se nezveřejňují. */
   changeDrafts: number;
+  /** Smazané budoucí termíny z rozvrhu. Doplnění je nevrací, vrátí je až Obnovit smazané návrhy. */
+  deletedSlots: number;
+  /** Tytéž smazané termíny jednotlivě, každý jde obnovit zvlášť. */
+  deleted: DeletedSlot[];
   people: Array<{ id: string; name: string }>;
   topics: string[];
   recipients: Record<Group, Array<{ email: string; name: string }>>;
@@ -62,10 +66,27 @@ export function PrepareMonthDialog(props: Props) {
     return result;
   }, null);
   const draftsKey = props.drafts.map((d) => `${d.id}:${d.revision}`).join("|");
+  // Obnova zůstane v okně i po úspěchu (počet smazaných klesne na 0), jinak by zmizela i její hláška.
+  const [showRestore, setShowRestore] = useState(props.deletedSlots > 0);
+  if (props.deletedSlots > 0 && !showRestore) setShowRestore(true);
+  // Rozepsané změny se měří od posledního načtení návrhů, ne od otevření okna: po doplnění termínů nebo uložení
+  // se formulář založí znovu s novými řádky a zavření se nesmí ptát na změny, které nikdo neudělal.
+  const unsaved = useRef<() => boolean>(() => false);
+  const trackUnsaved = useCallback((check: () => boolean) => {
+    unsaved.current = check;
+  }, []);
+  // Doplnit i Obnovit založí formulář návrhů znovu a rozepsané úpravy řádků by zmizely (rozhodnutí O4: zeptat se).
+  const [dirty, setDirty] = useState(false);
+  const keepEdits = dirty
+    ? { title: "Neuložené úpravy", text: "Máš neuložené úpravy návrhů, doplněním se zahodí. Ulož je, nebo pokračuj bez nich.", confirmLabel: "Zahodit úpravy a pokračovat" }
+    : undefined;
 
   return (
     <>
-      <button type="button" className={props.primary ? "btn btn-primary" : "btn"} onClick={() => setOpen(true)}>
+      <button type="button" className={props.primary ? "btn btn-primary" : "btn"} onClick={() => {
+          setShowRestore(props.deletedSlots > 0);
+          setOpen(true);
+        }}>
         Připravit měsíc
         {props.drafts.length > 0 && (
           <span className="count-badge" aria-label={plural(props.drafts.length, "návrh", "návrhy", "návrhů")}>
@@ -74,7 +95,7 @@ export function PrepareMonthDialog(props: Props) {
         )}
       </button>
       {!open && state?.ok && <ActionMessage state={state} />}
-      <Modal open={open} title={`Připravit měsíc: ${props.monthName}`} onRequestClose={() => setOpen(false)} wide="extra">
+      <Modal open={open} title={`Připravit měsíc: ${props.monthName}`} onRequestClose={() => setOpen(false)} wide="extra" hasUnsavedChanges={() => unsaved.current()}>
         <div className="stack">
           <section className="prepare-step" aria-labelledby="prepare-fill">
             <h3 id="prepare-fill">
@@ -83,11 +104,41 @@ export function PrepareMonthDialog(props: Props) {
             <p className="hint">Doplní návrhy podle pravidelného rozvrhu, nic nezveřejní.</p>
             <div className="row prepare-fill">
               {/* Bez návrhů je doplnění termínů jediný možný krok, a proto hlavní tlačítko okna. */}
-              <ActionForm action={generateMonthAction} fields={{ month: props.monthKey }} label="Doplnit chybějící termíny" pendingLabel="Doplňuji…" variant={props.drafts.length ? undefined : "primary"} />
+              {/* Klíč: po obnově smazaných by stará hláška „se nevrací“ odporovala výsledku, formulář se založí znovu. */}
+              <ActionForm key={props.deletedSlots} action={generateMonthAction} fields={{ month: props.monthKey }} label="Doplnit chybějící termíny" pendingLabel="Doplňuji…" confirm={keepEdits} variant={props.drafts.length ? undefined : "primary"} />
               <TemplateDialog slots={props.template} />
             </div>
+            {/* Smazání návrhu je vědomé rozhodnutí, doplnění ho nepřepíše. Vrácení je proto samostatné tlačítko. */}
+            {showRestore && (
+              <div className="row prepare-restore">
+                {props.deletedSlots > 0 && <p className="small muted">Smazané termíny z rozvrhu: {props.deletedSlots}. Doplnění je nevrací.</p>}
+                <ActionForm
+                  action={generateMonthAction}
+                  fields={{ month: props.monthKey, restore: "1" }}
+                  label={props.deletedSlots > 0 ? `Obnovit smazané návrhy (${props.deletedSlots})` : "Obnovit smazané návrhy"}
+                  pendingLabel="Obnovuji…"
+                  small
+                  confirm={keepEdits}
+                />
+              </div>
+            )}
+            {props.deleted.length > 0 && (
+              <details className="prepare-deleted">
+                <summary>Obnovit jednotlivě ({props.deleted.length})</summary>
+                <ul aria-label="Smazané termíny">
+                  {props.deleted.map((slot) => (
+                    <li key={slot.key}>
+                      <span>
+                        {slot.label} · {weekdayShort(slot.dateKey)} {formatDayMonth(slot.dateKey)} · {slot.startTime}–{slot.endTime}
+                      </span>
+                      <ActionForm action={generateMonthAction} fields={{ month: props.monthKey, key: slot.key }} label="Obnovit" pendingLabel="Obnovuji…" small confirm={keepEdits} />
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
           </section>
-          <MonthDraftsForm key={draftsKey} {...props} action={action} pending={pending} state={state} onCancel={() => setOpen(false)} />
+          <MonthDraftsForm key={draftsKey} {...props} action={action} pending={pending} state={state} onCancel={() => setOpen(false)} trackUnsaved={trackUnsaved} onDirtyChange={setDirty} />
         </div>
       </Modal>
     </>
@@ -99,13 +150,17 @@ type FormProps = Props & {
   pending: boolean;
   state: ActionResult | null;
   onCancel: () => void;
+  /** Předá oknu kontrolu rozepsaných změn vůči stavu, se kterým se formulář založil. */
+  trackUnsaved: (check: () => boolean) => void;
+  /** Hlásí oknu, zda jsou v řádcích rozepsané úpravy (Doplnit a Obnovit se pak nejdřív zeptají). */
+  onDirtyChange: (dirty: boolean) => void;
 };
 
 /**
  * Návrhy měsíce. Předvybraný ke zveřejnění je základ ze šablony, návrhy přidané navíc si správce zaškrtne
  * sám. „Uložit změny“ uloží úpravy všech řádků a nic neodešle, „Zveřejnit“ vydá jen vybrané.
  */
-function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, topics, recipients, inviteMode, action, pending, state, onCancel }: FormProps) {
+function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, topics, recipients, inviteMode, action, pending, state, onCancel, trackUnsaved, onDirtyChange }: FormProps) {
   const [picked, setPicked] = useState<Set<string>>(() => new Set(drafts.filter((d) => d.fromTemplate).map((d) => d.id)));
   const toggle = (id: string, on: boolean) =>
     setPicked((before) => {
@@ -127,7 +182,9 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
   // Pole řádků jsou neřízená, mezery a publikum se proto čtou z formuláře.
   type Filled = { topic: boolean; topicText: string; lead: boolean; audience: Group };
   const [filled, setFilled] = useState<Record<string, Filled>>({});
+  const baseline = useRef<string | null>(null);
   const readFilled = (form: HTMLFormElement) => {
+    if (baseline.current !== null) onDirtyChange(fieldsFingerprint(form) !== baseline.current);
     const data = new FormData(form);
     setFilled(
       Object.fromEntries(
@@ -175,6 +232,17 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
   const rows = [...templateDrafts, ...extraDrafts].map(rowState);
   const overview = prepareOverview(rows);
   const formRef = useRef<HTMLFormElement>(null);
+  useEffect(() => {
+    const form = formRef.current;
+    onDirtyChange(false);
+    if (!form) {
+      trackUnsaved(() => false);
+      return;
+    }
+    const start = fieldsFingerprint(form);
+    baseline.current = start;
+    trackUnsaved(() => fieldsFingerprint(form) !== start);
+  }, [trackUnsaved, onDirtyChange]);
   // Klik na štítek přehledu zúží řádky na danou kategorii (F08), druhý klik filtr zruší. Skryté řádky zůstávají
   // ve formuláři, takže se jejich úpravy uloží i odešlou stejně jako dřív.
   const [rowFilter, setRowFilter] = useState<OverviewKey | null>(null);

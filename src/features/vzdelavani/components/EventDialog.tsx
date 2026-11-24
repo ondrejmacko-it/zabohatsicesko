@@ -41,7 +41,7 @@ export type TopicOption = {
   reason: string;
   interestCount: number;
   nextPlanned?: string | null;
-  /** Garantované téma (pořadí 1–3). */
+  /** Garantované téma (pořadí 1..n, počet není omezený). */
   priorityRank?: number | null;
 };
 

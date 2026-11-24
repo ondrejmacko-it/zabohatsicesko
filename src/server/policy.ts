@@ -42,7 +42,8 @@ export function publishedEventVisibleToMember(viewer: Viewer, row: EventRow, mod
   const snapshot = row.published;
   if (!snapshot) return null;
   if (mode === "all-published") return snapshot;
-  if (viewer.groups.includes(snapshot.audience)) return snapshot;
+  // „Všichni“ platí pro každého, i když účet `vsichni` uložené nemá (stejně jako `isRequiredForUser`).
+  if (snapshot.audience === "vsichni" || viewer.groups.includes(snapshot.audience)) return snapshot;
   if (isEventHandler(viewer, snapshot)) return snapshot;
   return null;
 }

@@ -30,6 +30,28 @@ describe("migrace 0016 (individuální účast)", () => {
     expect(records.rows).toEqual([{ kind: "withdrawn" }]);
   });
 
+  test("0017 nad skutečnými záznamy 0016: přihláška i omluva zůstanou, jde spustit znovu, neznámý stav dál neprojde", async () => {
+    const pg = new PGlite();
+    for (const m of migrations.slice(0, index + 1)) await run(pg, m.sql);
+    await pg.exec(`INSERT INTO users (id, org_id, name, email, role, groups) VALUES
+      ('u1', 'o1', 'A', 'a@example.invalid', 'member', '{fp}'), ('u2', 'o1', 'B', 'b@example.invalid', 'member', '{rm}')`);
+    await pg.exec(`INSERT INTO events (id, org_id, type, label, starts_at, ends_at, all_day, audience, status, revision, updated_by, calendar_intent, origin)
+      VALUES ('e1', 'o1', 'training-fp', 'Test', now(), now() + interval '1 hour', false, 'fp', 'published', 1, 'u1', 'none', 'manual')`);
+    await pg.exec(`INSERT INTO event_participation (org_id, event_id, user_id, kind, excuse_reason, excuse_note) VALUES
+      ('o1', 'e1', 'u1', 'excused', 'illness', 'poznamka'), ('o1', 'e1', 'u2', 'voluntary_enrolled', NULL, NULL)`);
+    const before = await pg.query(`SELECT * FROM event_participation ORDER BY user_id`);
+    const next = migrations[index + 1]!;
+    await run(pg, next.sql);
+    await run(pg, next.sql);
+    expect((await pg.query(`SELECT * FROM event_participation ORDER BY user_id`)).rows).toEqual(before.rows);
+    // Jediná kontrola stavu (stará se nahradila, nezdvojila) a dál odmítá neznámý stav i důvod u odhlášení.
+    const checks = await pg.query<{ conname: string }>(`SELECT conname FROM pg_constraint WHERE conrelid = 'event_participation'::regclass AND conname = 'event_participation_kind_check'`);
+    expect(checks.rows).toHaveLength(1);
+    await expect(pg.exec(`UPDATE event_participation SET kind = 'neznamy' WHERE user_id = 'u2'`)).rejects.toThrow();
+    await expect(pg.exec(`UPDATE event_participation SET kind = 'withdrawn', excuse_reason = 'illness' WHERE user_id = 'u2'`)).rejects.toThrow();
+    await pg.exec(`UPDATE event_participation SET kind = 'withdrawn' WHERE user_id = 'u2'`);
+  });
+
   test("projde nad stávajícími daty, data nemění a jde spustit znovu", async () => {
     const pg = new PGlite();
     for (const m of migrations.slice(0, index)) await run(pg, m.sql);

@@ -246,13 +246,19 @@
 /* Stav karty: jeden štítek a vedle něj decentní indikátor chybějících údajů. */
 .meta {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
+  gap: 4px 6px;
   margin-top: 4px;
+  min-width: 0;
 }
 
+/* Úzký sloupec měsíce (tablet): dva štítky se zalomí pod sebe a dlouhý štítek („Povinné pro tebe“) se zalomí
+   uvnitř, místo aby přetekl přes okraj karty a ořízl se. */
 .meta :global(.badge) {
   margin: 0;
+  max-width: 100%;
+  white-space: normal;
 }
 
 .missing {

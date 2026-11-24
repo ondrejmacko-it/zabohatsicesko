@@ -285,22 +285,38 @@ export async function discardChangesAction(_prev: ActionResult | null, formData:
   });
 }
 
+/**
+ * Krok 1 okna Připravit měsíc. Bez `restore` doplní chybějící termíny podle rozvrhu a smazané nechá smazané;
+ * s `restore=1` (Obnovit smazané návrhy) vrátí i dřív smazané budoucí termíny. Vždy jen jako návrh.
+ */
 export async function generateMonthAction(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
   return run(async (user) => {
     const month = z.string().refine(isValidMonthKey).parse(formData.get("month"));
-    const { created, withTopic, skipped, review } = await generateMonth(user, month);
+    const restoreDeleted = formData.get("restore") === "1";
+    // Jeden smazaný termín (`key`): klíč slotu `<org>:slot-<den>:<YYYY-MM-DD>`, server ho ověří proti smazaným.
+    const restoreKey = z.string().max(120).regex(/^[\w-]+:slot-[1-7]:\d{4}-\d{2}-\d{2}$/).optional().parse(formData.get("key") || undefined);
+    const { created, withTopic, skipped, review, restored, deletedLeft } = await generateMonth(user, month, { restoreDeleted, restoreKey });
+    const terms = (count: number) => `${count} ${count === 1 ? "termín" : count < 5 ? "termíny" : "termínů"}`;
     const skippedNote = skipped
       ? ` ${skipped} ${skipped === 1 ? "termín je" : skipped < 5 ? "termíny jsou" : "termínů je"} vynechaných, ve stejný čas už je akce pro stejnou skupinu.`
       : "";
-    if (!created) return { ok: true, message: `Nic nového k doplnění.${skippedNote || " Všechny pravidelné termíny už v plánu jsou."}` };
-    const places = `${created} ${created === 1 ? "termín" : created < 5 ? "termíny" : "termínů"}`;
+    // Smazaný termín se běžným doplněním nevrací. Hláška to musí říct, jinak to vypadá, že doplnění nefunguje.
+    const deletedNote = deletedLeft && !restoreDeleted && !restoreKey
+      ? ` Dřív smazané termíny (${deletedLeft}) se nevrací, obnovíš je tlačítkem Obnovit smazané návrhy.`
+      : "";
+    if (!created) {
+      if (restoreKey) return { ok: true, message: `Nic se neobnovilo.${skippedNote || " Termín už v plánu je nebo už nenastane."}` };
+      if (restoreDeleted) return { ok: true, message: `Nic se neobnovilo.${skippedNote || " Smazané termíny už v plánu jsou nebo už nenastanou."}` };
+      return { ok: true, message: `Nic nového k doplnění.${skippedNote}${deletedNote || (skippedNote ? "" : " Všechny pravidelné termíny už v plánu jsou.")}` };
+    }
+    const restoredNote = restored ? ` Z toho obnovené smazané termíny: ${restored}.` : "";
     const topicNote = withTopic
       ? ` U ${withTopic} ${withTopic === 1 ? "termínu" : "termínů"} je předvyplněné doporučené téma (✦), přijmi, změň nebo odmítni ho.`
       : "";
     const reviewNote = review.length
       ? ` Zkontroluj ${review.map((d) => formatDayMonth(d)).join(", ")}: ve stejný den nebo čas už mají stejní lidé jinou akci.`
       : "";
-    return { ok: true, message: `Doplněno ${places} jako návrh, nic se nezveřejnilo.${skippedNote}${topicNote}${reviewNote}` };
+    return { ok: true, message: `Doplněno ${terms(created)} jako návrh, nic se nezveřejnilo.${restoredNote}${skippedNote}${deletedNote}${topicNote}${reviewNote}` };
   });
 }
 
