@@ -41,12 +41,14 @@ export async function EventPeek({ user, eventId, preview, closeHref, presetTopic
   const { card } = detail;
   const holiday = card.type === "holiday";
   const managing = isOrganizer(user) && !preview;
+  // Náhled očima kolegy-správce: stav, rady a chybějící údaje jako u něj, ale bez formuláře a oprav.
+  const planView = isOrganizer(preview?.viewer ?? user);
   const editable = managing && !holiday && detail.form && card.planStatus !== "cancelled";
   // Zrušenou akci už nikdo nedoplňuje: chybějící údaj je jen „zatím neurčeno“, ne výzva.
-  const fillable = managing && card.planStatus !== "cancelled";
+  const fillable = planView && card.planStatus !== "cancelled";
   const status = primaryStatus(card);
   // Návrh: pás už říká, že ho kolegové nevidí, a chybějící údaje jsou vidět přímo v prázdných polích.
-  const advice = managing && card.planStatus !== "draft" ? statusAdvice(card) : null;
+  const advice = planView && card.planStatus !== "draft" ? statusAdvice(card) : null;
   const fullHref = `/vzdelavani/akce/${encodeURIComponent(card.id)}`;
   const minutesReady = detail.recording.access === "reader" && Boolean(detail.recording.minutes);
   const handlesRecording = detail.recording.access === "handler" && !preview && card.past;
@@ -153,7 +155,7 @@ export async function EventPeek({ user, eventId, preview, closeHref, presetTopic
     ...(managing && !holiday && card.syncStatus === "attention" ? [{ href: `${fullHref}#kalendar`, label: "Opravit v Kalendáři" }] : []),
   ];
   // Technické informace jsou pro správce jen tichý odkaz, nikdy hlavní tlačítko okna.
-  const technical = managing && !holiday && links.length === 0;
+  const technical = planView && !holiday && links.length === 0;
 
   return (
     <RouteModal title={card.label} closeHref={closeHref}>

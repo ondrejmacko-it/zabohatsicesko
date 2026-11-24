@@ -120,6 +120,40 @@ test.describe("správce: pohled skupiny", () => {
   });
 });
 
+test.describe("správce: náhled kolegy-správce 1:1", () => {
+  test.use({ storageState: authFile("spravce") });
+
+  test("Plán očima druhého správce: stejné stavy a „— doplnit“, žádné ovládání zápisu", async ({ page, context }, info) => {
+    const plan = "/vzdelavani/harmonogram?mesic=2026-11&pohled=seznam";
+    const snapshot = async () => {
+      await page.goto(plan);
+      await settle(page);
+      return {
+        chips: (await page.locator(".pill-count").filter({ visible: true }).allTextContents()).map((t) => t.replace(/\s+/g, " ").trim()),
+        todo: await page.getByText("— doplnit").filter({ visible: true }).count(),
+        drafts: await page.getByText("Návrh", { exact: true }).filter({ visible: true }).count(),
+      };
+    };
+    const own = await snapshot();
+    expect(own.todo + own.drafts + own.chips.length).toBeGreaterThan(0);
+
+    await context.addCookies([cookie("demo-spravce|kolega-demo-organizator")]);
+    expect(await snapshot()).toEqual(own);
+    await expect(bar(page)).toContainText("jen ke čtení");
+    // Zápisové prvky správce v náhledu nejsou: přidání, výběr návrhů, přesun ani menu úprav.
+    await expect(page.getByRole("button", { name: "Přidat akci" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Připravit měsíc" })).toHaveCount(0);
+    await expect(page.locator("[data-pick-id], [data-handle-label]")).toHaveCount(0);
+
+    // Okno akce: stav a rady jako u správce, ale bez formuláře úprav.
+    await page.locator("a[href*='akce=']").filter({ visible: true }).first().click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog.locator(".status-band")).toContainText("jen ke čtení");
+    await expect(dialog.locator("form")).toHaveCount(0);
+    await page.screenshot({ path: info.outputPath("nahled-kolegy-spravce.png"), fullPage: true });
+  });
+});
+
 test.describe("účastník: podvržená cookie náhledu", () => {
   test.use({ storageState: authFile("ucastnikFp") });
 

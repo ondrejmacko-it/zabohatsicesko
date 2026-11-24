@@ -34,7 +34,11 @@ export type CardHref = (card: EventCard) => string;
 const pageHref: CardHref = (card) => `/vzdelavani/akce/${encodeURIComponent(card.id)}`;
 /** Položky menu ⋯ karty (jen Plán). Server je odvodí z `cardActions` a doplní adresy se zachovaným měsícem a filtry. */
 export type CardMenuFor = (card: EventCard) => CardMenuItem[];
-type Linking = { hrefFor?: CardHref; managing?: boolean; menuFor?: CardMenuFor };
+/**
+ * `managing`: správce smí v Plánu měnit (výběr, přesun, menu úprav). `planView`: karty se ukazují správcovsky
+ * (stavy, „— doplnit“), i když jde jen o náhled očima kolegy-správce. Bez `planView` platí `managing`.
+ */
+type Linking = { hrefFor?: CardHref; managing?: boolean; planView?: boolean; menuFor?: CardMenuFor };
 /** Plánování v mřížce (jen správce): odkaz „+“ pro přidání akce na den a přesun tažením od dneška dál. */
 type Planning = { addHref?: (day: string) => string; movableFrom?: string };
 const dayOf = (card: EventCard) => toDateKey(new Date(card.startsAt));
@@ -184,7 +188,7 @@ const changesText = (card: EventCard) =>
   card.original?.changes.length ? `Mění ${card.original.changes.join(", ")}` : "Liší se od zveřejněné verze";
 
 // Karta v mřížce: název, Kdo a Téma, čas a jeden stav. Podrobnosti ukáže okno akce po kliknutí.
-function EventBlock({ card, hrefFor = pageHref, managing = false, movable = false, menuFor }: { card: EventCard; movable?: boolean } & Linking) {
+function EventBlock({ card, hrefFor = pageHref, managing = false, planView = managing, movable = false, menuFor }: { card: EventCard; movable?: boolean } & Linking) {
   const tone = toneOf(card);
   const isHoliday = card.type === "holiday";
   const cancelled = card.planStatus === "cancelled";
@@ -196,10 +200,10 @@ function EventBlock({ card, hrefFor = pageHref, managing = false, movable = fals
     <CardWrap card={card} managing={managing} menu={menuFor?.(card)} menuClass={styles.menuGrid} stacked={card.original !== null}>
       <Link href={hrefFor(card)} scroll={false} className={`${styles.event} ${styles[tone]}`} data-ucast={card.participation?.state} {...drag} {...pickAttr(card, managing)}>
         <span className={styles.title}>{card.label}</span>
-        <CardDetails card={card} managing={managing} />
+        <CardDetails card={card} managing={planView} />
         {!isHoliday && !cancelled && <span className={styles.line}>{formatEventTime(new Date(card.startsAt), new Date(card.endsAt), card.allDay)}</span>}
         {card.original && <span className={styles.changes}>{changesText(card)}</span>}
-        <CardMeta card={card} managing={managing} />
+        <CardMeta card={card} managing={planView} />
       </Link>
     </CardWrap>
   );
@@ -212,6 +216,7 @@ export function ScheduleGrid({
   slotTimes,
   hrefFor = pageHref,
   managing = false,
+  planView = managing,
   addHref,
   movableFrom,
   menuFor,
@@ -294,6 +299,7 @@ export function ScheduleGrid({
                           card={card}
                           hrefFor={hrefFor}
                           managing={managing}
+                          planView={planView}
                           movable={plannable && isMovable(card)}
                           menuFor={menuFor}
                         />
@@ -322,6 +328,7 @@ export function Agenda({
   emptyText,
   hrefFor = pageHref,
   managing = false,
+  planView = managing,
   addHref,
   movableFrom,
   menuFor,
@@ -398,10 +405,10 @@ export function Agenda({
                             </span>
                             <span className={styles.agendaMain}>
                               <span className={styles.title}>{card.label}</span>
-                              <CardDetails card={card} managing={managing} />
+                              <CardDetails card={card} managing={planView} />
                               {card.original && <span className={styles.changes}>{changesText(card)}</span>}
                             </span>
-                            <CardMeta card={card} managing={managing} />
+                            <CardMeta card={card} managing={planView} />
                           </Link>
                         </CardWrap>
                       </li>

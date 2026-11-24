@@ -47,6 +47,8 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
   const participation = card.type === "holiday" ? null : await ownParticipationDetail(user, preview, card.id);
   const managedExcuses = card.type === "holiday" ? [] : await managedExcusesAt(user, card.id, Boolean(preview));
   const organizer = isOrganizer(user) && !preview;
+  // Náhled očima kolegy-správce: rady a chybějící údaje jako u něj, akce (úpravy, návrh změny) ne.
+  const planView = isOrganizer(preview?.viewer ?? user);
   const start = new Date(card.startsAt);
   const dayKey = toDateKey(start);
   const title = eventTitle(card.label, card.topicTitle);
@@ -54,7 +56,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
   // Úpravy akce jsou jen v okně akce v Plánu. Tahle stránka nese nahrávku, zápis a stav v Kalendáři.
   const editable = organizer && detail.form && card.planStatus !== "cancelled" && card.type !== "holiday";
   // Zrušenou akci už nikdo nedoplňuje: chybějící údaj je jen „zatím neurčeno“, ne výzva.
-  const fillable = organizer && card.planStatus !== "cancelled";
+  const fillable = planView && card.planStatus !== "cancelled";
   // Nástroje vedoucího (nahrání, úprava zápisu) by v náhledu běžely pod správcem, proto se nenabízejí.
   const handlerPreview = Boolean(preview) && detail.recording.access === "handler";
   const handler = detail.recording.access === "handler" && !preview;
@@ -87,7 +89,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
               </span>
             ))}
           </div>
-          {organizer && advice && <p className="small muted status-advice">{advice}</p>}
+          {planView && advice && <p className="small muted status-advice">{advice}</p>}
         </div>
         <div className="row">
           {handler && card.past && (
