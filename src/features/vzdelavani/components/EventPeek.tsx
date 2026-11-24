@@ -18,6 +18,8 @@ import { EventMenu } from "./EventMenu";
 import { minutesSectionLabel } from "@/lib/minutes";
 import { ownParticipationDetail } from "@/server/services/participation";
 import { ParticipationPanel } from "./ParticipationPanel";
+import { managedExcusesAt } from "@/server/services/excuse-managers";
+import { ManagedExcuses } from "./ManagedExcuses";
 
 type Props = {
   user: Viewer;
@@ -79,6 +81,10 @@ export async function EventPeek({ user, eventId, preview, closeHref, presetTopic
     />
   );
 
+  // Důvody omluv jen výslovně určenému nadřízenému, nikdy v náhledu (F03/D01).
+  const managed = holiday ? [] : await managedExcusesAt(user, card.id, Boolean(preview));
+  const managedPanel = <ManagedExcuses excuses={managed} />;
+
   if (editable) {
     const [people, topics, template, invite] = await Promise.all([
       listPeople(user),
@@ -100,6 +106,7 @@ export async function EventPeek({ user, eventId, preview, closeHref, presetTopic
         )}
         {card.original && <ChangeBanner eventId={card.id} revision={detail.revision} original={card.original} />}
         {participationPanel}
+        {managedPanel}
       </>
     );
     // Funkční Kalendář se v okně neukazuje. Oprava je odkaz jen při chybě, technické informace jsou v nabídce.
@@ -177,6 +184,7 @@ export async function EventPeek({ user, eventId, preview, closeHref, presetTopic
       </dl>
       {holiday && <p className="hint">Jen pro přehled, do Kalendáře se neposílá.</p>}
       {participationPanel}
+      {managedPanel}
       {technical && (
         <p className="small peek-tech">
           <Link href={fullHref}>Technické informace</Link>
