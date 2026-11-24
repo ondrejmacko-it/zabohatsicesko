@@ -4,6 +4,7 @@ import { logError, withinRateLimit } from "@/server/audit";
 import { getCurrentUser, type CurrentUser } from "@/server/auth/session";
 import { getDb } from "@/server/db/client";
 import { DOMAIN_ERROR_MESSAGES, DomainError } from "@/server/services/errors";
+import { currentPreview } from "@/server/services/preview-context";
 
 /** `link` = zvací odkaz, který se ukáže jen jednou (Správa). */
 export type ActionResult = { ok: true; message?: string; id?: string; link?: string } | { ok: false; error: string };
@@ -16,12 +17,14 @@ export const ACTION_LIMIT = { count: 120, windowSec: 60 };
 
 /**
  * Společný obal serverových akcí: znovu načte session (role z databáze), pohlídá limit četnosti,
- * převede doménové chyby a chyby validace na srozumitelnou zprávu a ostatní zapíše do logu jen kódem.
+ * odmítne jakoukoli změnu během náhledu „Zobrazit jako“ (náhled je jen ke čtení, akce by běžely pod
+ * skutečnou session správce, ne kolegy), převede doménové chyby a chyby validace na srozumitelnou zprávu a ostatní zapíše do logu jen kódem.
  */
 export async function runAction(task: (user: CurrentUser) => Promise<ActionResult>): Promise<ActionResult> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Přihlášení vypršelo. Načti stránku a vstup znovu." };
   try {
+    if (await currentPreview(user)) return { ok: false, error: DOMAIN_ERROR_MESSAGES.preview_read_only };
     if (!(await withinRateLimit(await getDb(), `action:${user.id}`, ACTION_LIMIT.count, ACTION_LIMIT.windowSec))) {
       return { ok: false, error: DOMAIN_ERROR_MESSAGES.rate_limited };
     }

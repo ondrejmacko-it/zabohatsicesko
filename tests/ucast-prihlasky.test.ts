@@ -7,6 +7,7 @@ import { PARTICIPATION_LIMIT, isMine, ownParticipationView } from "@/server/doma
 import { listMonth } from "@/server/services/events";
 import { ownParticipationDetail, withOwnParticipation } from "@/server/services/participation";
 import type { Viewer } from "@/server/policy";
+import { PREVIEW_COOKIE, encodePreviewCookie } from "@/server/services/preview-context";
 import { PAST_FP, organizer, outsider, participant, resetDemo } from "./helpers";
 
 // PR2: akce formuláře nad changeOwnParticipation, štítky, Moje/Všechny a přepínač PARTICIPATION.
@@ -16,6 +17,12 @@ vi.mock("next/cache", () => ({ refresh: () => undefined }));
 // `after` z Next běží jen v požadavku. Tady se úloha po odpovědi zahodí, Kalendář ověřuje tests/kalendar-f04.test.ts.
 vi.mock("next/server", async (original) => ({ ...(await original<typeof import("next/server")>()), after: () => undefined }));
 vi.mock("@/server/auth/session", () => ({ getCurrentUser: async () => ({ ...sessionUser, name: "Test", email: "t@example.invalid", signedInWith: "demo" }) }));
+// Cookie náhledu „Zobrazit jako“ (jinak žádná): ověřuje serverovou pojistku `runAction`.
+let previewCookie: string | undefined;
+vi.mock("next/headers", async (original) => ({
+  ...(await original<typeof import("next/headers")>()),
+  cookies: async () => ({ get: (name: string) => (name === PREVIEW_COOKIE && previewCookie ? { name, value: previewCookie } : undefined) }),
+}));
 const { changeParticipationAction } = await import("@/features/vzdelavani/actions");
 
 const NOTE = "soukroma-poznamka-pr2";
@@ -99,20 +106,38 @@ describe("oprávnění", () => {
     expect(await records()).toHaveLength(0);
   });
 
-  test("náhled konkrétního kolegy: skutečný stav, bez soukromého důvodu a bez akcí", async () => {
+  test("náhled konkrétního kolegy 1:1: skutečný stav a stejné akce jako kolega, bez soukromého důvodu", async () => {
     const fp = await futurePublished("fp");
     await act({ id: fp, change: "excuse", reason: "illness", note: NOTE });
     const preview = { viewer: participant, label: "Kolega", personName: "Testovací kolega" };
-    const cards = await withOwnParticipation(organizer, preview, await listMonth(participant, "2026-11"));
-    for (const card of cards) expect(card.participation?.actions ?? []).toEqual([]);
+    const month = await listMonth(participant, "2026-11");
+    const cards = await withOwnParticipation(organizer, preview, month);
+    const own = await withOwnParticipation(participant, null, month);
+    expect(cards.map((c) => c.participation)).toEqual(own.map((c) => c.participation));
     const detail = await ownParticipationDetail(organizer, preview, fp);
-    expect(detail).toMatchObject({ state: "excused", excuse: null, actions: [] });
+    expect(detail).toMatchObject({ state: "excused", excuse: null, calendar: null, actions: ["revoke_excuse"] });
     expect(JSON.stringify(detail)).not.toContain(NOTE);
-    expect(cards.find((card) => card.id === fp)?.participation).toMatchObject({ state: "excused", actions: [] });
     const groupPreview = { viewer: { ...participant, id: "nahled-skupiny" }, label: "Skupina" };
     const groupDetail = await ownParticipationDetail(organizer, groupPreview, fp);
-    expect(groupDetail).toMatchObject({ state: "required", actions: [], });
+    // Skupina nemá individuální přihlášky ani omluvy: stav jen podle rolí.
+    expect(groupDetail).toMatchObject({ state: "required", actions: ["excuse"] });
     expect(JSON.stringify(groupDetail)).not.toContain(NOTE);
+  });
+
+  test("serverová pojistka: v náhledu „Zobrazit jako“ se účast nezmění ani podvrženým požadavkem", async () => {
+    const rm = await futurePublished("rm");
+    sessionUser = organizer;
+    previewCookie = encodePreviewCookie(organizer.id, `kolega-${participant.id}`);
+    try {
+      const result = await act({ id: rm, change: "enroll" });
+      expect(result).toEqual({ ok: false, error: expect.stringContaining("Náhled je jen ke čtení") });
+      expect(await records()).toHaveLength(0);
+      // Cookie jiného účtu (správce) náhled kolegovi nezapne: kolega jedná normálně za sebe.
+      sessionUser = participant;
+      expect(await act({ id: rm, change: "enroll" })).toMatchObject({ ok: true });
+    } finally {
+      previewCookie = undefined;
+    }
   });
 
   test("limit četnosti", async () => {

@@ -20,6 +20,8 @@ import { PUBLISHED_RM, organizer, outsider, participant, resetDemo } from "./hel
 let sessionUser: Viewer = participant;
 const queued: Array<() => unknown> = [];
 vi.mock("next/cache", () => ({ refresh: () => undefined }));
+// Mimo požadavek nejsou cookies: bez náhledu „Zobrazit jako“.
+vi.mock("next/headers", async (original) => ({ ...(await original<typeof import("next/headers")>()), cookies: async () => ({ get: () => undefined }) }));
 vi.mock("next/server", async (original) => ({
   ...(await original<typeof import("next/server")>()),
   after: (task: () => unknown) => void queued.push(task),

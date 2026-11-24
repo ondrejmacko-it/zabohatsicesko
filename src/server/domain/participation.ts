@@ -196,7 +196,8 @@ export const PARTICIPATION_LABELS = {
 
 /**
  * Vlastní účast pro kartu a detail: jen stav, štítek a dovolené akce. Bez důvodu a poznámky omluvy a bez
- * jakýchkoli údajů o ostatních. `actions` je prázdné u proběhlé či zrušené akce a v náhledu.
+ * jakýchkoli údajů o ostatních. `actions` je prázdné u proběhlé či zrušené akce a bez zapnutých přihlášek.
+ * V náhledu „Zobrazit jako“ jsou akce stejné jako u kolegy, UI je ale jen zamčeně ukáže.
  */
 export type OwnParticipationView = {
   state: ParticipationState;

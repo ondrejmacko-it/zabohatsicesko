@@ -34,8 +34,12 @@ test.describe("správce: pohled skupiny", () => {
     await page.goto("/vzdelavani/temata");
     await expect(bar(page)).toContainText("jen ke čtení");
     await expect(page.locator(".topic-row").first()).toBeVisible();
-    await expect(page.getByRole("button", { name: "Navrhnout téma" })).toHaveCount(0);
-    await expect(page.getByRole("button", { name: /Mám zájem/ })).toHaveCount(0);
+    // Stejné ovládání jako u člena skupiny, jen zamčené s vysvětlením.
+    await expect(page.getByRole("button", { name: "Navrhnout téma" })).toBeDisabled();
+    await expect(page.getByText("Náhled je jen ke čtení. Tady se navrhují témata")).toBeVisible();
+    const interest = page.getByRole("button", { name: /Mám zájem/ });
+    expect(await interest.count()).toBeGreaterThan(0);
+    for (const button of await interest.all()) await expect(button).toBeDisabled();
     await expect(page.getByRole("button", { name: /^Možnosti tématu/ }).or(page.locator(".topic-handle"))).toHaveCount(0);
     await expect(page.getByText(/Archivovaná témata/)).toHaveCount(0);
 
@@ -57,6 +61,38 @@ test.describe("správce: pohled skupiny", () => {
     await expect(page.getByRole("button", { name: "Přidat akci" }).first()).toBeVisible();
     await expect(page.getByLabel("Pohled")).toHaveValue("");
     await expect(page.getByRole("complementary", { name: "Hlavní navigace" }).getByRole("link", { name: /Správa/ })).toBeVisible();
+  });
+
+  test("pohled kolegy 1:1: Témata, Zápisy a Domů mají stejné ovládání jako skutečný vedoucí, jen zamčené", async ({ browser, page, context }, info) => {
+    // Ovládání stránky: výzva nahoře, zájem u témat a tlačítka úkolů. Jen názvy, ne stav (ten se v čase mění).
+    const controls = async (target: import("@playwright/test").Page, path: string) => {
+      await target.goto(path);
+      await settle(target);
+      return target.locator(".page-call-action, .topic-actions, .tasks-card").getByRole("button").or(
+        target.locator(".page-call-action, .topic-actions, .tasks-card").getByRole("link"),
+      );
+    };
+    const real = await browser.newContext({ storageState: authFile("vedouci") });
+    const lead = await real.newPage();
+    await context.addCookies([cookie("demo-spravce|kolega-demo-vedouci")]);
+    for (const path of ["/vzdelavani/temata", "/vzdelavani/zapisy"]) {
+      const own = await controls(lead, path);
+      const ownNames = (await own.allTextContents()).map((t) => t.trim());
+      const viewed = await controls(page, path);
+      expect((await viewed.allTextContents()).map((t) => t.trim()), path).toEqual(ownNames);
+      for (const control of await viewed.all()) await expect(control, path).toBeDisabled();
+      if (ownNames.length) await expect(page.getByText(/Náhled je jen ke čtení/).first(), path).toBeVisible();
+    }
+    // Domů: stejné úkoly (i skryté pod Další úkoly) kromě osobních pozvánek z Kalendáře kolegy, ty náhled nenačítá.
+    const tasks = async (target: import("@playwright/test").Page) => {
+      await target.goto("/");
+      await settle(target);
+      return (await target.locator(".tasks-card .brief-row .item-title").allTextContents()).filter((t) => !t.startsWith("Odpověz na pozvánk"));
+    };
+    expect(await tasks(page)).toEqual(await tasks(lead));
+    for (const button of await page.locator(".tasks-card .brief-row").getByRole("button").all()) await expect(button).toBeDisabled();
+    await page.screenshot({ path: info.outputPath("nahled-kolegy-zamceno.png"), fullPage: true });
+    await real.close();
   });
 
   test("pohled kolegy: úvod nezdraví správce a Správa systému v navigaci chybí (F16)", async ({ page }) => {

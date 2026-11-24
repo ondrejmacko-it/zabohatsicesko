@@ -4,6 +4,8 @@ import { clearRateLimit, logError, safeLogCode } from "@/server/audit";
 import { organizer } from "./helpers";
 
 vi.mock("next/cache", () => ({ refresh: () => undefined }));
+// Mimo požadavek nejsou cookies: bez náhledu „Zobrazit jako“.
+vi.mock("next/headers", async (original) => ({ ...(await original<typeof import("next/headers")>()), cookies: async () => ({ get: () => undefined }) }));
 vi.mock("@/server/auth/session", () => ({ getCurrentUser: async () => ({ ...organizer, name: "Správce" }) }));
 
 const { ACTION_LIMIT, runAction } = await import("@/features/shared/run-action");

@@ -167,7 +167,7 @@ test.describe("soukromí omluvy", () => {
 test.describe("náhled kolegy s omluvou (audit 23. 11.)", () => {
   test.use({ storageState: authFile("spravce") });
 
-  test("správce vidí stav kolegy, ale ne jeho důvod, ne „Tvoje účast“ a žádné akce", async ({ browser, page, context }, info) => {
+  test("správce vidí stav a tlačítka kolegy 1:1 (zamčená), ale ne jeho důvod ani „Tvoje účast“", async ({ browser, page, context }, info) => {
     const persona = info.project.name === "windows-1280" ? { auth: "ucastnikFp", id: "demo-ucastnik" } : { auth: "ucastnikRm", id: "demo-mimo-skupinu" };
     const own = await browser.newContext({ storageState: authFile(persona.auth as "ucastnikFp" | "ucastnikRm") });
     const colleague = await own.newPage();
@@ -179,7 +179,10 @@ test.describe("náhled kolegy s omluvou (audit 23. 11.)", () => {
     const dialog = colleague.getByRole("dialog", { name: "Omluvit se z akce?" });
     await dialog.getByLabel("Poznámka (nepovinná)").fill(note);
     await dialog.getByRole("button", { name: "Omluvit se" }).click();
-    await expect(colleague.locator('[data-ucast-panel="excused"]')).toBeVisible();
+    const ownPanel = colleague.locator('[data-ucast-panel="excused"]');
+    await expect(ownPanel).toBeVisible();
+    const ownButtons = await ownPanel.getByRole("button").allTextContents();
+    expect(ownButtons).toEqual(["Zrušit omluvu"]);
     await own.close();
 
     await context.addCookies([{ name: "zbc_nahled", value: `demo-spravce|kolega-${persona.id}`, domain: "localhost", path: "/", httpOnly: true, sameSite: "Lax" }]);
@@ -190,7 +193,11 @@ test.describe("náhled kolegy s omluvou (audit 23. 11.)", () => {
     await expect(panel).toContainText("Omluveno");
     await expect(panel).not.toContainText("Důvod vidíš jen ty");
     await expect(panel).not.toContainText(note);
-    await expect(panel.getByRole("button")).toHaveCount(0);
+    // Stejná tlačítka jako kolega, ale zamčená s vysvětlením; server změnu v náhledu stejně odmítne.
+    const locked = panel.getByRole("button");
+    expect(await locked.allTextContents()).toEqual(ownButtons);
+    for (const button of await locked.all()) await expect(button).toBeDisabled();
+    await expect(panel.getByTestId("ucast-zamcena")).toContainText("Náhled je jen ke čtení");
     expect(await page.content()).not.toContain(note);
     await page.screenshot({ path: info.outputPath("nahled-kolegy-omluva.png") });
   });

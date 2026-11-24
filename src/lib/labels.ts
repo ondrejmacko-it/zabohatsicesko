@@ -142,3 +142,6 @@ export function eventContext(title: string, type: EventType, audience?: Group): 
   if (audience && AUDIENCE_IN_TYPE[type] !== audience && !mentions(title, GROUP_LABELS[audience])) parts.push(GROUP_LABELS[audience]);
   return parts;
 }
+
+/** Vysvětlení u zamčeného ovládání v náhledu „Zobrazit jako“ (stejné ovládání jako kolega, jen nejde použít). */
+export const PREVIEW_READ_ONLY = "Náhled je jen ke čtení";
