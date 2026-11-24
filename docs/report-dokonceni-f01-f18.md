@@ -38,7 +38,16 @@ mapování na testy tamtéž. Release postup: `docs/navod-merge-f01-f18.md`.
 
 ## Ověření (commit viz PR)
 
-VALIDACE_DOPLNIT
+Na a32243e (kód), 24. 11. 2026, cloudový kontejner, Chromium:
+
+* `npm run lint` OK, `tsc --noEmit` OK, `vitest run` 591/591, `npm run build` OK.
+* Celé e2e (všechny projekty: 1280, 1920, 1440, 1512, telefony 390/360/320, zápisy): **1441 passed, 250 skipped,
+  1 failed**. Selhání: `ucast.spec.ts:262` „nadřízený pro omluvy“ (windows-1280), překročený limit 90 s pod plnou
+  zátěží. Samostatně hned poté prošel (8/8 vč. přihlášení). Bez opravy, sledovat v CI.
+* Cílené po změně stohu: `priprava-mesice`, `vyber-navrhu`, `temata-planovani` (1280, 390, zápisy) prošly;
+  dvě chyby v paralelním běhu (sdílená data souběžných projektů) samostatně prošly.
+* Simulace × živý test: Kalendář jen simulace a fake Google; DB migrace 0016–0018 jen SQL na izolovaném Neon
+  branchi, aplikace proti němu neběžela.
 
 ## Rizika a otevřené věci
 
