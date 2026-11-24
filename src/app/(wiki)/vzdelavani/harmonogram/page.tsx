@@ -191,6 +191,26 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
         primary={emptyMonth}
       />
     ) : null;
+  // Filtr účasti je první skupina řádku filtrů: účastník tak nemá pod lištou osamělý řádek s tlačítkem Filtry.
+  const participationNav = (
+    <nav className="participation-filter" aria-label="Účast v harmonogramu">
+      {([
+        ["", "Všechny"],
+        ["povinne", "Povinné"],
+        ["dobrovolne", "Dobrovolné"],
+        ["moje", "Moje"],
+      ] as const).map(([value, label]) => (
+        <Link
+          key={value}
+          className="pill"
+          href={link({ ucast: value || undefined })}
+          aria-current={(attendanceFilter ?? "") === value ? "page" : undefined}
+        >
+          {label}
+        </Link>
+      ))}
+    </nav>
+  );
   return (
     <>
       <ShotGrant page="/vzdelavani/harmonogram" />
@@ -221,11 +241,14 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
         <div className="plan-head">
           <div className="schedule-toolbar">
             <div className="toolbar-start" role="group" aria-label="Zobrazení">
-              <span className="view-toggle">
-                <Link className="pill" href={link({ pohled: undefined })} aria-current={!listView ? "page" : undefined}>
+              {/* Přepínač zobrazení je segmentový ovladač s ikonami: vypadá jinak než filtr účasti (pilulky). */}
+              <span className="view-toggle segmented">
+                <Link className="segment" href={link({ pohled: undefined })} aria-current={!listView ? "page" : undefined}>
+                  <Icon name="calendar" />
                   Měsíc
                 </Link>
-                <Link className="pill" href={link({ pohled: "seznam" })} aria-current={listView ? "page" : undefined}>
+                <Link className="segment" href={link({ pohled: "seznam" })} aria-current={listView ? "page" : undefined}>
+                  <Icon name="list" />
                   Seznam
                 </Link>
               </span>
@@ -275,24 +298,6 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
               )}
             </div>
           </div>
-          {/* Filtr účasti má vlastní řádek: ve sdíleném sloupci lišty přetékal přes název měsíce. */}
-          <nav className="participation-filter" aria-label="Účast v harmonogramu">
-            {([
-              ["", "Všechny"],
-              ["povinne", "Povinné"],
-              ["dobrovolne", "Dobrovolné"],
-              ["moje", "Moje"],
-            ] as const).map(([value, label]) => (
-              <Link
-                key={value}
-                className="pill"
-                href={link({ ucast: value || undefined })}
-                aria-current={(attendanceFilter ?? "") === value ? "page" : undefined}
-              >
-                {label}
-              </Link>
-            ))}
-          </nav>
         </div>
         <SelectionZone
           monthKey={monthKey}
@@ -303,6 +308,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
         >
           <PlanFilters
             key={preview?.key ?? ""}
+            lead={participationNav}
             keep={[["mesic", monthKey], ...(current.pohled ? [["pohled", current.pohled] as [string, string]] : []), ...(current.ucast ? [["ucast", current.ucast] as [string, string]] : []), ...states.map((s): [string, string] => ["stav", s])]}
             types={types}
             selectedTypes={selectedTypes.map((t) => ({ type: t, removeHref: link({ typ: selectedTypes.filter((x) => x !== t) }) }))}

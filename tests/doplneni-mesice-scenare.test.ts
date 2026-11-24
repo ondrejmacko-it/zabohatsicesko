@@ -71,6 +71,8 @@ describe("doplnění měsíce: svátky, výjimky, přesuny a stav akcí", () => 
     expect((await draftOn(TUESDAY))!.clash).toBe("shared");
     await createEvent(organizer, { ...manual, label: "Duplicita" }, "draft");
     expect((await draftOn(TUESDAY))!.clash).toBe("group");
+    // Vysvětlení kolize jmenuje akci stejné skupiny (má přednost před akcí pro všechny).
+    expect((await draftOn(TUESDAY))!.clashWith?.label).toBe("Duplicita");
   });
 });
 

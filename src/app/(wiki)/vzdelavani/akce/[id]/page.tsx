@@ -170,7 +170,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
           excuse={participation.excuse}
           calendar={participation.calendar}
           enrollment={participation.enrollment}
-          preview={Boolean(preview)}
+          preview={preview ? (preview.personName ? "person" : "group") : undefined}
         />
       )}
 

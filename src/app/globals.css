@@ -22,6 +22,10 @@
   --beige-strong: #e2dbd5;
   --item: #ede8e2;
   --sage: #97a7a5;
+  /* Výzva stránky (PageCall): chladný zelenošedý tón, aby se nepletla s okrovými návrhy a koncepty. */
+  --call: #eef3f2;
+  --call-line: #c8d5d3;
+  --call-accent: #5d7774;
   --sidebar: #161616;
   --sidebar-line: #2c2c2c;
   --sidebar-text: #ece9e5;
@@ -2939,7 +2943,40 @@ p.cal-status {
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  padding-bottom: 14px;
+}
+
+/* Přepínač zobrazení: segmentový ovladač (společný rámeček, ikony, vybraný díl jako zvednutá karta).
+   Záměrně jiný než pilulky filtru účasti, aby nebylo zaměnitelné „jak se dívám“ a „co vidím“. */
+.segmented {
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--beige);
+}
+
+.segment {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 4px 12px;
+  border-radius: 7px;
+  color: var(--ink-soft);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.segment:hover {
+  color: var(--ink);
+}
+
+.segment[aria-current="page"] {
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.14);
+  color: var(--ochre-dark);
 }
 
 .schedule-toolbar .pill,
@@ -3031,6 +3068,21 @@ p.cal-status {
   margin: 0 0 14px;
   padding-top: 12px;
   border-top: 1px solid var(--line);
+}
+
+.plan-filters-lead {
+  display: flex;
+  align-items: center;
+}
+
+/* Správce má za filtrem účasti ještě štítky souhrnu měsíce: oddělí je svislá čára. */
+.plan-filters-lead:has(+ .plan-filters-start > *) {
+  padding-right: 12px;
+  border-right: 1px solid var(--line);
+}
+
+.plan-filters-start:empty {
+  display: none;
 }
 
 .plan-filters-start,
@@ -3170,14 +3222,18 @@ p.cal-status {
   outline-offset: 1px;
 }
 
-/* Co označit nejde (zveřejněné akce, svátky, návrhy změn), ustoupí do pozadí. */
-[data-selecting] a[href]:not([data-pick-id]) {
-  opacity: 0.5;
+/* Co označit nejde (zveřejněné akce, svátky, návrhy změn), jen jemně ustoupí: text zůstává plně čitelný,
+   karta ztratí barvu a ukazatel. Klik neotevře okno, lišta výběru řekne proč (`SelectionZone`). */
+[data-selecting] a[data-pick-reason] {
+  filter: grayscale(0.7);
+  cursor: default;
+  box-shadow: none;
+  transform: none;
 }
 
 .select-bar {
   position: sticky;
-  bottom: 12px;
+  bottom: max(12px, env(safe-area-inset-bottom));
   z-index: 15;
   display: grid;
   gap: 8px;
@@ -3195,6 +3251,31 @@ p.cal-status {
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
+}
+
+.select-bar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.select-bar-hint {
+  flex-basis: 100%;
+}
+
+/* Telefon: počet a odkaz nahoře, tři tlačítka pod nimi ve stejně širokých sloupcích. */
+@media (max-width: 560px) {
+  .select-bar-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .select-bar-actions .btn {
+    padding-inline: 6px;
+    white-space: normal;
+    line-height: 1.2;
+  }
 }
 
 .select-bar-text {
@@ -4076,6 +4157,22 @@ body[data-moving] .quick-actions,
     display: contents;
   }
 
+  /* Filtr účasti má na telefonu celý první řádek mřížky; ten má vlastní výšku (stejná výška platí jen pro řádky pod ním). */
+  .plan-filters:has(> .plan-filters-lead) {
+    grid-template-rows: auto;
+  }
+  /* Filtr účasti má na telefonu celý první řádek mřížky. */
+  .plan-filters-lead {
+    grid-column: 1 / -1;
+    padding-right: 0;
+    border-right: 0;
+  }
+
+  .plan-filters-lead:has(+ .plan-filters-start > *) {
+    padding-right: 0;
+    border-right: 0;
+  }
+
   .plan-filters .pill-count,
   .plan-filters .filter-button {
     justify-content: center;
@@ -4235,7 +4332,8 @@ body[data-moving] .quick-actions,
   font-weight: 600;
 }
 
-/* Hlavní výzva stránky (PageCall): účel stránky a jediné hlavní tlačítko, výrazně nad obsahem. */
+/* Hlavní výzva stránky (PageCall): účel stránky a jediné hlavní tlačítko, výrazně nad obsahem.
+   Vlastní zelenošedý tón: okrová patří návrhům a konceptům, výzva s nimi nesmí splývat. */
 .page-call {
   display: flex;
   flex-wrap: wrap;
@@ -4244,10 +4342,10 @@ body[data-moving] .quick-actions,
   gap: 12px 20px;
   margin: 0 0 20px;
   padding: 16px 20px;
-  border: 1px solid var(--draft-line);
-  border-left: 4px solid var(--ochre);
+  border: 1px solid var(--call-line);
+  border-left: 4px solid var(--call-accent);
   border-radius: var(--radius);
-  background: var(--ochre-soft);
+  background: var(--call);
 }
 
 .page-call-text {
@@ -4392,6 +4490,68 @@ body[data-moving] .quick-actions,
   margin-left: auto;
   padding-right: 12px;
   border-right: 1px solid var(--line);
+}
+
+/* Horní lišta na počítači: mřížka značka | Pohled | účet. Pohled je uprostřed volného místa,
+   takže správce má celou lištu na jednom řádku a nic se nepřeskupuje podle délky jména. */
+@media (min-width: 641px) {
+  .topbar {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: "brand view account";
+  }
+
+  .brand {
+    grid-area: brand;
+  }
+
+  .account {
+    grid-area: account;
+  }
+
+  .view-switch {
+    grid-area: view;
+    justify-self: center;
+    margin-left: 0;
+    padding: 0 12px;
+    border-right: 0;
+  }
+
+  .view-select {
+    max-width: 220px;
+  }
+}
+
+/* Užší počítač: kratší tlačítko role a užší výběr, aby se účet vešel vedle Pohledu. */
+@media (min-width: 641px) and (max-width: 1439px) {
+  .topbar:has(.view-switch) .persona-btn-detail {
+    display: none;
+  }
+
+  .topbar:has(.view-switch) .persona-select {
+    max-width: 190px;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1199px) {
+  .topbar:has(.view-switch) .brand-tagline {
+    display: none;
+  }
+}
+
+/* Tablet: Pohled má vlastní řádek pod značkou a účtem. */
+@media (min-width: 641px) and (max-width: 999px) {
+  .topbar:has(.view-switch) {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      "brand account"
+      "view view";
+  }
+
+  .topbar:has(.view-switch) .view-switch {
+    justify-self: start;
+    padding: 0;
+  }
 }
 
 .view-switch-form {

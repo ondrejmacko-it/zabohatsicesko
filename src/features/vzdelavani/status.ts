@@ -245,6 +245,18 @@ export function planGaps(cards: EventCard[], monthKey: string): PlanGap[] {
 /** Návrh, který jde v Plánu hromadně označit: nikdy nezveřejněná akce (ne svátek). Návrh změny má vlastní potvrzení. */
 export const isPickable = (card: EventCard) => card.planStatus === "draft" && card.type !== "holiday" && card.revision !== null;
 
+/**
+ * Proč kartu v režimu výběru označit nejde. Výběr ji neotevře, jen tento důvod ukáže v liště výběru.
+ * Null = kartu označit jde.
+ */
+export function pickBlockReason(card: EventCard): string | null {
+  if (isPickable(card)) return null;
+  if (card.type === "holiday") return "Svátek nejde vybrat.";
+  if (card.planStatus === "cancelled") return "Zrušenou akci nejde vybrat.";
+  if (card.original || card.unpublishedChanges) return "Návrh změny zveřejněné akce se zveřejňuje v okně akce.";
+  return "Zveřejněná akce není návrh, vybrat nejde.";
+}
+
 /** Akci jde přesunout jen budoucí, nezrušenou a ne svátek. Server totéž ověří znovu (`planMove`). */
 export const isMovable = (card: EventCard) => card.revision !== null && card.type !== "holiday" && card.planStatus !== "cancelled" && !card.past;
 

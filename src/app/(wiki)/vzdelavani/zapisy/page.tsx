@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PageCall } from "@/components/PageCall";
-import { GROUP_LABELS, TYPE_LABELS, eventContext } from "@/lib/labels";
+import { GROUP_LABELS, PREVIEW_READ_ONLY, TYPE_LABELS, eventContext } from "@/lib/labels";
 import { AddMinutesPicker, MinutesPeek } from "@/features/vzdelavani/components/MinutesPeek";
 import { TopicsAnchorRedirect } from "@/features/vzdelavani/components/TopicsAnchorRedirect";
 import { groupByMonth } from "@/features/vzdelavani/minutes";
@@ -19,7 +19,7 @@ type SearchParams = Promise<{ q?: string; typ?: string; skupina?: string; zapis?
 export default async function MinutesPage({ searchParams }: { searchParams: SearchParams }) {
   const user = await requireUser();
   const params = await searchParams;
-  // V náhledu (lišta Pohled) stránka ukáže zápisy, které vidí skupina nebo kolega, a nic nedovolí doplnit.
+  // V náhledu (lišta Pohled) stránka ukáže zápisy i tlačítko K dokončení jako skupině nebo kolegovi, nic ale nedovolí doplnit.
   const preview = await currentPreview(user);
   const viewer = preview?.viewer ?? user;
   const query = (params.q ?? "").slice(0, 80);
@@ -39,11 +39,12 @@ export default async function MinutesPage({ searchParams }: { searchParams: Sear
     const text = search.toString();
     return text ? `/vzdelavani/zapisy?${text}` : "/vzdelavani/zapisy";
   };
-  const missing = preview ? { items: [], handlesAny: false } : await listMissingMinutes(user);
-  const canAdd = !preview && (isOrganizer(user) || missing.handlesAny);
+  const missing = await listMissingMinutes(viewer);
+  const showAdd = isOrganizer(viewer) || missing.handlesAny;
+  const canAdd = !preview && showAdd;
   // Správce vidí všechny chybějící zápisy, vedoucí jen ty, za které odpovídá. Stránka odlišuje krátkými
   // názvy, co už kolegové čtou (Zveřejněné zápisy) a co se teprve dokončuje (K dokončení).
-  const missingTitle = isOrganizer(user) ? "Zápisy k dokončení" : "Moje zápisy k dokončení";
+  const missingTitle = isOrganizer(viewer) ? "Zápisy k dokončení" : "Moje zápisy k dokončení";
   const peekId = (params.zapis ?? "").slice(0, 120);
 
   return (
@@ -56,12 +57,19 @@ export default async function MinutesPage({ searchParams }: { searchParams: Sear
         assignHref={isOrganizer(user) ? (item) => `/vzdelavani/harmonogram?mesic=${item.startsAt.slice(0, 7)}&akce=${encodeURIComponent(item.eventId)}` : undefined} />
     )}
     <section className="section" aria-labelledby="zapisy">
-      {canAdd && (
-        <PageCall text="Dokonči zápisy z proběhlých akcí.">
-          <Link className="btn btn-primary" href={link({ pridat: "1" })} scroll={false} aria-label={`${missingTitle}: ${missing.items.length}`}>
-            K dokončení
-            {missing.items.length > 0 && <span className="count-badge">{missing.items.length}</span>}
-          </Link>
+      {showAdd && (
+        <PageCall text={canAdd ? "Dokonči zápisy z proběhlých akcí." : `${PREVIEW_READ_ONLY}. Kolega tu dokončuje zápisy z proběhlých akcí.`}>
+          {canAdd ? (
+            <Link className="btn btn-primary" href={link({ pridat: "1" })} scroll={false} aria-label={`${missingTitle}: ${missing.items.length}`}>
+              K dokončení
+              {missing.items.length > 0 && <span className="count-badge">{missing.items.length}</span>}
+            </Link>
+          ) : (
+            <button type="button" className="btn btn-primary" disabled title={PREVIEW_READ_ONLY} aria-label={`${missingTitle}: ${missing.items.length}`}>
+              K dokončení
+              {missing.items.length > 0 && <span className="count-badge">{missing.items.length}</span>}
+            </button>
+          )}
         </PageCall>
       )}
       <h2 id="zapisy">Zveřejněné zápisy</h2>

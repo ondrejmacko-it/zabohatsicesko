@@ -8,7 +8,7 @@ import { Icon } from "@/components/Icon";
 import { Menu } from "@/components/Menu";
 import { Modal } from "@/components/Modal";
 import { submitKeepingValues } from "@/features/shared/keep-values";
-import { GROUP_LABELS, eventContext } from "@/lib/labels";
+import { GROUP_LABELS, PREVIEW_READ_ONLY, eventContext } from "@/lib/labels";
 import { formatDayMonth } from "@/lib/time";
 import type { Group } from "@/lib/types";
 import type { TopicPlanOptions } from "@/server/services/topics";
@@ -28,8 +28,17 @@ import {
  * Přepínač zájmu. Jeden uživatel = nejvýš jeden zájem o téma (hlídá server). Viditelný text i přístupný název
  * jsou stále „Mám zájem“, stav nese `aria-pressed` (a fajfka), název tématu se čte jako popis z nadpisu karty.
  */
-export function InterestButton({ topicId, interested, titleId }: { topicId: string; interested: boolean; titleId: string }) {
+export function InterestButton({ topicId, interested, titleId, locked = false }: { topicId: string; interested: boolean; titleId: string; locked?: boolean }) {
   const [state, action, pending] = useActionState(toggleInterestAction, null);
+  if (locked) {
+    // Náhled: stejné tlačítko a stav zájmu jako u kolegy, jen zamčené (server změnu v náhledu stejně odmítne).
+    return (
+      <button type="button" className={interested ? "btn btn-small interest-on" : "btn btn-small"} aria-pressed={interested} aria-describedby={titleId} disabled title={PREVIEW_READ_ONLY}>
+        {interested && <Icon name="check" />}
+        Mám zájem
+      </button>
+    );
+  }
   return (
     <form action={action}>
       <input type="hidden" name="topicId" value={topicId} />
@@ -49,9 +58,16 @@ export function InterestButton({ topicId, interested, titleId }: { topicId: stri
   );
 }
 
-export function ProposeTopicDialog({ groups }: { groups: Group[] }) {
+export function ProposeTopicDialog({ groups, locked = false }: { groups: Group[]; locked?: boolean }) {
   const [open, setOpen] = useState(false);
   const [session, setSession] = useState(0);
+  if (locked) {
+    return (
+      <button type="button" className="btn btn-primary" disabled title={PREVIEW_READ_ONLY}>
+        Navrhnout téma
+      </button>
+    );
+  }
   return (
     <>
       <button

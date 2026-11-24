@@ -125,7 +125,8 @@ async function loadPerson(db: Executor, userId: string) {
 /**
  * Doplní ke kartám vlastní účast (štítek, dovolené akce). Bez zapnuté účasti vrací karty beze změny a
  * nedotazuje se. V náhledu („Zobrazit jako“) se počítá jen z rolí náhledu, bez záznamů: cizí přihlášky
- * ani omluvy se tak správci neukážou a akce se nenabízejí (identita akcí je vždy skutečná session).
+ * ani omluvy se tak správci neukážou. Akce se spočítají jako pro kolegu, aby náhled odpovídal 1:1, UI je ale
+ * vykreslí zamčené a server je v náhledu odmítne (identita akcí je vždy skutečná session).
  */
 export async function withOwnParticipation(session: Viewer, preview: PlanPreview | null, cards: EventCard[]): Promise<EventCard[]> {
   // Náhled může bezpečně zobrazit povinnost podle role i při vypnuté možnosti měnit účast.
@@ -139,7 +140,7 @@ export async function withOwnParticipation(session: Viewer, preview: PlanPreview
   const published = new Map(rows.map((r) => [r.id, r.published]));
   const person = preview ? { status: "active" as const, groups: preview.viewer.groups } : await loadPerson(db, session.id);
   // Náhled skupiny je hypotetický. Náhled konkrétního kolegy smí správci zobrazit
-  // stav přihlášení/omluvení, nikdy však důvod ani poznámku a nikdy akce ke změně.
+  // stav přihlášení/omluvení, nikdy však důvod ani poznámku; akce ke změně jen zamčené.
   const records = participationEnabled() && preview?.personName
     ? await ownParticipationRecords(db, preview.viewer, ids)
     : participationEnabled() && !preview
@@ -150,7 +151,8 @@ export async function withOwnParticipation(session: Viewer, preview: PlanPreview
     const snapshot = published.get(card.id) ?? null;
     const participation = person ? effectiveParticipation(person, snapshot, records.get(card.id) ?? null, at) : null;
     const enrollment = participationEnabled();
-    return { ...card, participation: ownParticipationView(participation, { readOnly: Boolean(preview) || !enrollment, enrollment }) };
+    // Náhled ukáže stejné akce jako kolegovi; zamyká je až UI (disabled) a server (`runAction` v náhledu odmítá).
+    return { ...card, participation: ownParticipationView(participation, { readOnly: !enrollment, enrollment }) };
   });
 }
 
@@ -181,7 +183,7 @@ export async function ownParticipationDetail(session: Viewer, preview: PlanPrevi
       : null;
     const view = ownParticipationView(effectiveParticipation(
       { status: "active", groups: preview.viewer.groups }, row.published, record, now(),
-    ), { readOnly: true, enrollment: participationEnabled() });
+    ), { readOnly: !participationEnabled(), enrollment: participationEnabled() });
     return view && { ...view, excuse: null, calendar: null, enrollment: participationEnabled() };
   }
   const person = await loadPerson(db, session.id);

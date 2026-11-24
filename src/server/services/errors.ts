@@ -34,10 +34,12 @@ export type DomainErrorCode =
   | "minutes_incomplete"
   | "minutes_invalid"
   | "replace_unconfirmed"
-  | "recording_disabled";
+  | "recording_disabled"
+  | "preview_read_only";
 
 export const DOMAIN_ERROR_MESSAGES: Record<DomainErrorCode, string> = {
   forbidden: "K této akci nemáte oprávnění.",
+  preview_read_only: "Náhled je jen ke čtení. Změny dělej po přepnutí Pohledu na Můj pohled.",
   not_found: "Záznam neexistuje nebo k němu nemáte přístup.",
   conflict: "Záznam mezitím změnil někdo jiný. Načti stránku znovu a změnu zopakuj.",
   invalid_input: "Formulář obsahuje neplatné údaje.",

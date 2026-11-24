@@ -4,7 +4,7 @@ import { PageCall } from "@/components/PageCall";
 import { resetTopicOrderAction } from "@/features/vzdelavani/actions";
 import { TopicBoard, type TopicOrderItem } from "@/features/vzdelavani/components/TopicBoard";
 import { InterestButton, ProposeTopicDialog, RestoreTopicButton, TopicManage } from "@/features/vzdelavani/components/TopicActions";
-import { GROUP_LABELS } from "@/lib/labels";
+import { GROUP_LABELS, PREVIEW_READ_ONLY } from "@/lib/labels";
 import { formatDayMonth } from "@/lib/time";
 import { GROUPS, type Group } from "@/lib/types";
 import {
@@ -102,12 +102,8 @@ function topicItem(t: RankedTopic, index: number, count: number, ctx: RowContext
         )}
       </div>
       <div className="topic-actions">
-        {/* Náhled nic nemění: místo tlačítka jen stav zájmu diváka. */}
-        {ctx.readOnly ? (
-          t.interestedByViewer && <span className="badge topic-badge">Má zájem</span>
-        ) : (
-          <InterestButton topicId={t.id} interested={t.interestedByViewer} titleId={`tema-${t.id}`} />
-        )}
+        {/* Náhled nic nemění: stejné tlačítko a stav zájmu jako u kolegy, jen zamčené. */}
+        <InterestButton topicId={t.id} interested={t.interestedByViewer} titleId={`tema-${t.id}`} locked={ctx.readOnly} />
         {ctx.organizer && !ctx.readOnly && (
           <TopicManage topic={t} groups={ctx.groups} canMoveUp={ctx.sortable && index > 0} canMoveDown={ctx.sortable && index < count - 1} />
         )}
@@ -173,11 +169,9 @@ export async function TopicsSection({ user, readOnly = false, filter: requested 
       <h2 id="temata" className="visually-hidden">
         Témata
       </h2>
-      {!readOnly && (
-        <PageCall text="Navrhni téma nebo podpoř návrh kolegů.">
-          <ProposeTopicDialog groups={groups} />
-        </PageCall>
-      )}
+      <PageCall text={readOnly ? `${PREVIEW_READ_ONLY}. Tady se navrhují témata a podporují návrhy kolegů.` : "Navrhni téma nebo podpoř návrh kolegů."}>
+        <ProposeTopicDialog groups={groups} locked={readOnly} />
+      </PageCall>
       {filterable && all.length > 0 && (
         <div className="topic-toolbar">
           <TopicFilterToggle filter={filter} />

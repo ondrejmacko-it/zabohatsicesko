@@ -1,28 +1,45 @@
-# Navazující relace (stav 24. 11. 2026)
+# Navazující relace (stav 24. 11. 2026, UX rework)
+
+Limit relace: **200 tis. tokenů tvrdě** (pokyn vlastníka). Při přiblížení commit, push, předávka, nová relace.
 
 ## Stav
-- Větev `oprava/kompletni-audit-rozhrani-a-funkci` (draft PR #87 do `main`) obsahuje opravu překryvu lišty harmonogramu
-  a sloučené větve auditu: #88 (účast, náhledy, U09/U10/PM-13), #89 (příprava měsíce, O1–O4), #90 (témata, zápisy,
-  Úvod, Kalendář). Rozhodnutí vlastníka jsou zapsaná v `docs/audit-2026-11-23/*.md`.
-- Ověřeno na spojené větvi: `npx eslint . --ignore-pattern ".claude/**"` 0 nálezů, `npx tsc --noEmit` OK,
-  `npx vitest run` 58 souborů / 581 testů zelených. Bez nové migrace, beze změny konfigurace a přepínačů.
-- Celá sada Playwright doběhla: 4 testy padají (viz níže), ostatní zelené.
-  Relace hlásily dva padající testy témat mimo svůj rozsah: `e2e/temata-planovani.spec.ts:216` (pořadí témat)
-  a „starší test účastníka na Tématech“.
+- Větev `claude/oprava-ux-vyber-ucast-nahled` (z `main` po merge PR #87). Zadání: prompt „ZBČ – cílený UX/UI rework“
+  (P0 výběr návrhů, účast, náhled 1:1; P1 záhlaví, Topbar, témata, výzvy, formuláře, mobil). Nic nemergovat/nenasazovat.
+- **Hotovo P0-1 (výběr návrhů, commit 791840a):** jedna karta návrhu změny, `data-pick-reason`, lišta „Vybráno N z M“,
+  e2e `vyber-navrhu.spec.ts`.
+- **Hotovo P0-3 (náhled 1:1, commit 0be4d99):** `withOwnParticipation`/`ownParticipationDetail` v náhledu počítají
+  `actions` jako pro kolegu (`readOnly: !enrollment`); `ParticipationPanel preview: "person"|"group"` vykreslí stejná
+  tlačítka `disabled` + „Náhled je jen ke čtení…“ (`data-testid=ucast-zamcena`), skupina má poznámku „bez individuálních
+  přihlášek a omluv“. Témata: `InterestButton`/`ProposeTopicDialog` `locked` (disabled, title `PREVIEW_READ_ONLY` z
+  `lib/labels.ts`). Zápisy: `listMissingMinutes(viewer)`, K dokončení disabled. `TasksCard readOnly` = disabled tlačítka.
+  **Serverová pojistka centrálně v `runAction`**: při `currentPreview(user)` vrací `preview_read_only` (nový DomainErrorCode).
+  Testy, které volají akce, mockují `next/headers` cookies. Vědomý rozdíl 1:1: osobní pozvánky (Gmail/Kalendář kolegy)
+  náhled nenačítá. Ověřeno: eslint 0, tsc OK, vitest 582/582, e2e nahled+ucast (1280, 390) 31+19 passed.
 
-## Celý běh E2E 24. 11.: 1346 passed, 28 failed, 244 skipped (12,4 min)
-Všech 28 selhání jsou tytéž 4 testy na všech 7 zařízeních (jinak vše zelené):
-- `e2e/stranky.spec.ts:32` Účastník FP: „Detail akce RM“ a „Detail akce týmu A“; Účastník RM: „Detail akce týmu A“.
-  Pravděpodobně test čeká starou viditelnost (cizí akce = „není dostupná“), ale od PR #86 je zveřejněná akce vidět všem.
-  Ověřit, co test tvrdí, a upravit na platné pravidlo bez oslabení (nezveřejněné/soukromé údaje dál nesmí uniknout).
-- `e2e/temata-planovani.spec.ts:455` Témata očima účastníka (F10–F12): ověřit oproti #90 (Nejžádanější/garance).
+## Zjištěné příčiny (ověřeno)
+- Demo `zbc-vzdelavani-demo.vercel.app` = Vercel **production** s `WIKI_MODE=production` → `participationEnabled()`
+  vždy false (záměrná pojistka), proto chybí Přihlásit/Omluvit. Preview: `WIKI_MODE=demo`, `PARTICIPATION` nenastaveno,
+  migrace 0016/0017 (a 0015 neomezená garance) mají `approval: true`, na vzdálené DB se spustí jen přes `APPROVED_MIGRATIONS`.
+  Lokálně/E2E (`PARTICIPATION=on`, PGlite) účast funguje (e2e/ucast.spec.ts). Nic na Vercelu/Neonu neměněno.
+
+## Hotovo v relaci 3 (24. 11.)
+- Krok 2 záhlaví harmonogramu (2a020c6): Měsíc/Seznam = `.segmented` s ikonami `calendar`/`list`; filtr účasti
+  je `lead` v `PlanFilters` (jeden řádek s Filtry/štítky). Test geometrie zahrnuje i `.plan-filters`, nový test účastníka.
+- Krok 3 Topbar (ea343ff): mřížka značka | Pohled | účet (≥641 px), <1440 kratší tlačítko role, <1200 bez podtitulu,
+  641–999 Pohled na 2. řádku. Optgroupy Skupina/Kolega už existovaly. Test `nahled.spec.ts` „lišta s pohledem na počítači“.
+- Krok 4+6 (c8538ae): `PageCall` tokeny `--call*` (zelenošedý). Kolize v Připravit měsíc jmenuje akci a čas
+  (`slotConflictWith`, `MonthDraft.clashWith`) + rada. Krok 5: pokryto vitestem `temata-priority.test.ts:226` (4 garantovaná).
+- Lint 0, tsc OK, vitest 583/583, cílené E2E (rozložení, účast, náhled, příprava měsíce) prošly.
 
 ## Další krok
-1. `npx playwright test --reporter=line` na této větvi (porty v `e2e/constants.mjs` jsou pevné, nesmí běžet jiné worktree).
-2. Každé selhání rozhodnout: skutečná chyba → oprava kódu, zastaralé očekávání → úprava jen podle platného pravidla.
-3. Prohlédnout snímky harmonogramu, náhledů a okna Připravit měsíc (320/768/1280/1920).
-4. Teprve pak doplnit report do PR #87 a označit ho jako připravený. Merge do `main` dělá jen vlastník.
+- Draft PR #91 do main založen (report A–G). Celá E2E sada: 1362 passed, 244 skipped, 28 failed = 4 testy ×7 projektů,
+  padaly už na main: `stranky.spec.ts:32` (FP/RM vidí detail akce cizí skupiny) a `temata-planovani.spec.ts:455`
+  („Pro mou roli“ u účastníka). Příčina: viditelnost v režimu PARTICIPATION=on. Otevřená otázka pro vlastníka:
+  opravit testy, nebo viditelnost? Po rozhodnutí upravit a doplnit výsledek do PR.
 
 ## Pozn.
-- `npx eslint .` bez `--ignore-pattern` prochází i ignorované `.claude/worktrees/` (worktree relací) a hlásí tisíce
-  falešných nálezů. Worktree lze po skončení smazat.
+- Nový kontejner: nejdřív `npm ci`. Snímky: dočasný spec v `e2e/` (necommitovat) s `authFile(role)`, `settle(page)`,
+  `page.screenshot` do scratchpadu; běh `npx playwright test <spec> --project=windows-1280 --project=telefon-390
+  --reporter=line --trace off` (webServer si udělá build sám, ~1 min).
+- Snímky obrázků stojí hodně kontextu: číst jen nezbytné, nejlépe 1–2 na krok.
+- Ve stávající sadě dříve padaly 4 testy (stranky.spec.ts:32, temata-planovani.spec.ts:455) – nezkontrolováno znovu.

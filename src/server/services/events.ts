@@ -18,7 +18,7 @@ import {
   topics,
   users,
 } from "@/server/db/schema";
-import { planMonth, slotConflict, type Occupant } from "@/server/domain/generation";
+import { planMonth, slotConflict, slotConflictWith, type Occupant } from "@/server/domain/generation";
 import { snapshotOf, type EventRow } from "@/server/domain/snapshot";
 import { suggestTopics, suggestionPending, topicFitsAudience, TOPIC_ACCEPT, TOPIC_REJECT } from "@/server/domain/topics";
 import { canHandleRecording, canReadPublishedMinutes, isEventHandler, isOrganizer, visibleEvent, type Viewer } from "@/server/policy";
@@ -641,6 +641,8 @@ export type MonthDraft = {
   fromTemplate: boolean;
   /** Souběh s jinou akcí v měsíci: „group“ = stejná skupina ve stejný čas, „shared“ = stejní lidé ve stejný den nebo čas. */
   clash: "group" | "shared" | null;
+  /** Akce, se kterou se návrh kryje: název a čas (ISO), aby správce věděl, co upravit. */
+  clashWith: { label: string; startsAt: string; endsAt: string } | null;
   /**
    * Téma předvyplnilo generování a správce o něm zatím nerozhodl: krátké vysvětlení doporučení
    * (např. „4 zájemci · zatím neproběhlo“). Po přijetí, změně nebo odmítnutí null.
@@ -698,17 +700,21 @@ export async function listMonthDrafts(
   const rows = await db.select().from(events).where(monthDraftFilter(monthKey)).orderBy(asc(events.startsAt), asc(events.id));
   // Stejné pravidlo jako při doplňování termínů: správce vidí souběh i u návrhů, které už v plánu jsou.
   const others = await db
-    .select({ id: events.id, startsAt: events.startsAt, endsAt: events.endsAt, audience: events.audience, type: events.type })
+    .select({ id: events.id, label: events.label, startsAt: events.startsAt, endsAt: events.endsAt, audience: events.audience, type: events.type })
     .from(events)
     .where(and(eq(events.orgId, config.orgId), ne(events.status, "cancelled"), eq(events.allDay, false), lt(events.startsAt, end), gt(events.endsAt, start)));
-  const clashOf = (row: EventRow): MonthDraft["clash"] => {
-    if (row.type === "holiday" || row.allDay) return null;
-    const occupants: Occupant[] = others.filter((o) => o.id !== row.id).map((o) => ({ ...o, dateKey: toDateKey(o.startsAt) }));
-    const verdict = slotConflict(
+  const clashOf = (row: EventRow): Pick<MonthDraft, "clash" | "clashWith"> => {
+    if (row.type === "holiday" || row.allDay) return { clash: null, clashWith: null };
+    const occupants = others.filter((o) => o.id !== row.id).map((o) => ({ ...o, dateKey: toDateKey(o.startsAt) }));
+    const found = slotConflictWith(
       { start: row.startsAt, end: row.endsAt, audience: row.audience, type: row.type, dateKey: toDateKey(row.startsAt) },
       occupants,
     );
-    return verdict === "skip" ? "group" : verdict === "warn" ? "shared" : null;
+    if (!found) return { clash: null, clashWith: null };
+    return {
+      clash: found.verdict === "skip" ? "group" : "shared",
+      clashWith: { label: found.with.label, startsAt: found.with.startsAt.toISOString(), endsAt: found.with.endsAt.toISOString() },
+    };
   };
   // Počet smazaných termínů, které jde vrátit, jede ve stejném dotazu (rozpočet dotazů Plánu).
   const [changes] = await db
@@ -740,7 +746,7 @@ export async function listMonthDrafts(
       topicTitle: row.topicTitle,
       leadId: row.leadId,
       fromTemplate: row.generationKey !== null,
-      clash: clashOf(row),
+      ...clashOf(row),
       suggestion: pending.has(row.id) ? (reasons.get(row.topicId as string) ?? "doporučeno podle zájmu kolegů") : null,
     })),
     changeDrafts: changes?.count ?? 0,

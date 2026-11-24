@@ -21,6 +21,9 @@ test.describe("Připravit měsíc: přehled a hromadné doplnění vedoucího", 
     for (const label of ["Připraveno", "Chybí vedoucí", "Chybí téma", "Kolize", "Vybráno"]) {
       await expect(overview.getByRole("button", { name: new RegExp(`^${label}: \\d+`) })).toBeVisible();
     }
+    // Kolize říká, s jakou akcí a kdy se návrh kryje, a co s tím (ne jen „jinou akci“).
+    const clashes = prepare.locator(".publish-clash");
+    for (const text of await clashes.allTextContents()) expect(text).toMatch(/„.+“ \(.+\d{1,2}:\d{2}.*\)\. /);
 
     // Prvnímu řádku vedoucího vyprázdníme: přehled to započítá živě a přechod skočí právě na jeho pole.
     const firstLead = prepare.getByLabel(/^Vedoucí: /).first();
@@ -277,25 +280,13 @@ test.describe("okno akce: zahození neveřejných změn se potvrzuje @desktop", 
     await window.getByLabel(/^Vede/).selectOption({ label: "Správce ZBC ukázky" });
     await window.getByRole("button", { name: "Uložit jako návrh" }).click();
     await expect(page.getByRole("status").filter({ hasText: "Návrh změny je uložený" })).toBeVisible();
-    // Mřížka: okrový návrh leží na zveřejněné verzi, z níž vykukuje pruh. Najetí myší originál vysune dopředu.
+    // Mřížka: jedna čitelná karta se štítkem a řádkem, co návrh mění. Zveřejněná verze není druhá textová karta.
     await page.goto("/vzdelavani/harmonogram?mesic=2026-11");
     await settle(page);
-    const original = page.locator('[data-original-of="ev-11-26"]');
-    await expect(original).toContainText("Zveřejněná verze");
-    await expect(original).toContainText("Vedoucí akce");
-    await expect(original).toHaveAttribute("aria-hidden", "true");
     const draftCard = page.locator('a[data-move-id="ev-11-26"]');
-    await draftCard.scrollIntoViewIfNeeded();
-    const box = (await original.boundingBox())!;
-    const cell = (await page.locator("td").filter({ has: draftCard }).boundingBox())!;
-    expect(box.x).toBeGreaterThanOrEqual(cell.x);
-    expect(box.x + box.width).toBeLessThanOrEqual(cell.x + cell.width + 0.5);
-    await page.mouse.move(box.x + box.width / 2, box.y + 6);
-    await expect(original).toHaveCSS("z-index", "2");
-    await expect(draftCard).toHaveCSS("opacity", "0.35");
-    await page.emulateMedia({ reducedMotion: "reduce" });
-    await expect(original).toHaveCSS("transition-duration", "0s");
-    await page.emulateMedia({ reducedMotion: null });
+    await expect(draftCard).toContainText("Návrh změny");
+    await expect(draftCard).toContainText("Mění vedoucí");
+    await expect(page.locator("[data-original-of]")).toHaveCount(0);
     await page.goto("/vzdelavani/harmonogram?mesic=2026-11&akce=ev-11-26");
     await settle(page);
     const notice = window.getByText("Kolegové a Kalendář zatím vidí zveřejněnou verzi.");
@@ -341,7 +332,7 @@ test.describe("Připravit měsíc: obnova smazaných návrhů", () => {
     const bar = page.getByRole("region", { name: "Hromadný výběr návrhů" });
     if (all) {
       await page.getByRole("checkbox", { name: /^Vybrat: / }).filter({ visible: true }).first().check();
-      const everything = bar.getByRole("button", { name: /^Vybrat všechny návrhy/ });
+      const everything = bar.getByRole("button", { name: "Vybrat všechny dostupné" });
       if (await everything.isVisible()) await everything.click();
     } else {
       await page.getByRole("checkbox", { name: /^Vybrat: / }).filter({ visible: true }).first().check();

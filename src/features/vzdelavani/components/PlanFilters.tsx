@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/Icon";
 import { TYPE_LABELS } from "@/lib/labels";
 import type { EventType } from "@/lib/types";
@@ -16,6 +16,8 @@ import { SelectToggle, useSelection } from "./PlanSelection";
 export type StateChip = { state: PlanState; label: string; spoken: string; count: number; hint: string; href: string };
 
 type Props = {
+  /** Skupina na začátku řádku (filtr účasti). Je vidět vždy, i když jiné filtry nejsou. */
+  lead?: ReactNode;
   /** Parametry, které filtr nemění (měsíc, zobrazení). Posílají se spolu s výběrem. */
   keep: [string, string][];
   types: EventType[];
@@ -112,12 +114,12 @@ function FilterFields({ keep, types, chips, selected, states }: FieldsProps) {
 }
 
 /**
- * Jeden řádek pod lištou Plánu: vlevo Návrhy a Chybí údaje (klik zúží plán, znovu klik zruší) a vybraný
+ * Jeden řádek pod lištou Plánu: vlevo filtr účasti (`lead`), Návrhy a Chybí údaje (klik zúží plán, znovu klik zruší) a vybraný
  * typ s křížkem, vpravo nabídka Filtry (typ akce, Zobrazit jako) a Vybrat návrhy. Výběr v nabídce se odešle
  * hned, tlačítko Použít zůstává pro prohlížeč bez JavaScriptu. Na telefonu je řádek mřížka 2 × 2 a při posunu
  * stránky nabízí stejné filtry a výběr rychlé ovládání (`QuickActions`).
  */
-export function PlanFilters({ keep, types, selectedTypes, resetHref, chips, states, quick }: Props) {
+export function PlanFilters({ lead, keep, types, selectedTypes, resetHref, chips, states, quick }: Props) {
   const menu = useRef<HTMLDetailsElement>(null);
   const row = useRef<HTMLDivElement>(null);
   const selection = useSelection();
@@ -171,10 +173,11 @@ export function PlanFilters({ keep, types, selectedTypes, resetHref, chips, stat
     />
   );
   // Bez nabídky „Zobrazit jako“ nejde o správce, takže ani Vybrat návrhy: bez štítků a filtrů není co ukázat.
-  if (!chips.length && !selectedTypes.length && !typeSelect) return quickActions;
+  if (!lead && !chips.length && !selectedTypes.length && !typeSelect) return quickActions;
   return (
     <>
       <div ref={row} className="plan-filters" data-items={count}>
+        {lead && <div className="plan-filters-lead">{lead}</div>}
         <div className="plan-filters-start" role="group" aria-label="Zúžit plán měsíce">
           <ChipLinks chips={chips} states={states} />
           {selectedTypes.map(({ type, removeHref }) => (

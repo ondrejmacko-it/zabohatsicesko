@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PREVIEW_READ_ONLY } from "@/lib/labels";
 import { formatMonth } from "@/lib/time";
 import type { JourneyTask } from "@/server/services/journey";
 import { monthTasks, type MonthSummary, type PlanState } from "../status";
@@ -36,7 +37,12 @@ function TaskItem({ task, readOnly }: { task: TaskRow; readOnly: boolean }) {
         <span className="item-title">{task.title}</span>
         <span className="item-meta">{task.detail}</span>
       </span>
-      {readOnly || !task.href ? null : task.external ? (
+      {!task.href ? null : readOnly ? (
+        // Náhled: stejné tlačítko jako u kolegy, jen zamčené (ze správcovské session by vedlo jinam).
+        <button type="button" className="btn btn-small btn-primary" disabled title={PREVIEW_READ_ONLY}>
+          {task.action}
+        </button>
+      ) : task.external ? (
         <a className="btn btn-small btn-primary" href={task.href} {...(task.newTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}>
           {task.action}
         </a>
@@ -62,7 +68,7 @@ export function TasksCard({
 }: {
   tasks: TaskRow[];
   title?: string;
-  /** Náhled očima jiného: úkoly jen ke čtení, bez tlačítek. */
+  /** Náhled očima jiného: úkoly jen ke čtení, tlačítka zamčená. */
   readOnly?: boolean;
   /** Kolik úkolů skryl filtr Plánu a kam vede jeho zrušení. */
   hidden?: { count: number; resetHref: string };

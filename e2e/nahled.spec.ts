@@ -34,8 +34,12 @@ test.describe("správce: pohled skupiny", () => {
     await page.goto("/vzdelavani/temata");
     await expect(bar(page)).toContainText("jen ke čtení");
     await expect(page.locator(".topic-row").first()).toBeVisible();
-    await expect(page.getByRole("button", { name: "Navrhnout téma" })).toHaveCount(0);
-    await expect(page.getByRole("button", { name: /Mám zájem/ })).toHaveCount(0);
+    // Stejné ovládání jako u člena skupiny, jen zamčené s vysvětlením.
+    await expect(page.getByRole("button", { name: "Navrhnout téma" })).toBeDisabled();
+    await expect(page.getByText("Náhled je jen ke čtení. Tady se navrhují témata")).toBeVisible();
+    const interest = page.getByRole("button", { name: /Mám zájem/ });
+    expect(await interest.count()).toBeGreaterThan(0);
+    for (const button of await interest.all()) await expect(button).toBeDisabled();
     await expect(page.getByRole("button", { name: /^Možnosti tématu/ }).or(page.locator(".topic-handle"))).toHaveCount(0);
     await expect(page.getByText(/Archivovaná témata/)).toHaveCount(0);
 
@@ -57,6 +61,38 @@ test.describe("správce: pohled skupiny", () => {
     await expect(page.getByRole("button", { name: "Přidat akci" }).first()).toBeVisible();
     await expect(page.getByLabel("Pohled")).toHaveValue("");
     await expect(page.getByRole("complementary", { name: "Hlavní navigace" }).getByRole("link", { name: /Správa/ })).toBeVisible();
+  });
+
+  test("pohled kolegy 1:1: Témata, Zápisy a Domů mají stejné ovládání jako skutečný vedoucí, jen zamčené", async ({ browser, page, context }, info) => {
+    // Ovládání stránky: výzva nahoře, zájem u témat a tlačítka úkolů. Jen názvy, ne stav (ten se v čase mění).
+    const controls = async (target: import("@playwright/test").Page, path: string) => {
+      await target.goto(path);
+      await settle(target);
+      return target.locator(".page-call-action, .topic-actions, .tasks-card").getByRole("button").or(
+        target.locator(".page-call-action, .topic-actions, .tasks-card").getByRole("link"),
+      );
+    };
+    const real = await browser.newContext({ storageState: authFile("vedouci") });
+    const lead = await real.newPage();
+    await context.addCookies([cookie("demo-spravce|kolega-demo-vedouci")]);
+    for (const path of ["/vzdelavani/temata", "/vzdelavani/zapisy"]) {
+      const own = await controls(lead, path);
+      const ownNames = (await own.allTextContents()).map((t) => t.trim());
+      const viewed = await controls(page, path);
+      expect((await viewed.allTextContents()).map((t) => t.trim()), path).toEqual(ownNames);
+      for (const control of await viewed.all()) await expect(control, path).toBeDisabled();
+      if (ownNames.length) await expect(page.getByText(/Náhled je jen ke čtení/).first(), path).toBeVisible();
+    }
+    // Domů: stejné úkoly (i skryté pod Další úkoly) kromě osobních pozvánek z Kalendáře kolegy, ty náhled nenačítá.
+    const tasks = async (target: import("@playwright/test").Page) => {
+      await target.goto("/");
+      await settle(target);
+      return (await target.locator(".tasks-card .brief-row .item-title").allTextContents()).filter((t) => !t.startsWith("Odpověz na pozvánk"));
+    };
+    expect(await tasks(page)).toEqual(await tasks(lead));
+    for (const button of await page.locator(".tasks-card .brief-row").getByRole("button").all()) await expect(button).toBeDisabled();
+    await page.screenshot({ path: info.outputPath("nahled-kolegy-zamceno.png"), fullPage: true });
+    await real.close();
   });
 
   test("pohled kolegy: úvod nezdraví správce a Správa systému v navigaci chybí (F16)", async ({ page }) => {
@@ -138,5 +174,34 @@ test.describe("lišta s pohledem na telefonu", () => {
         expect(overlap, `${a.s} × ${b.s}`).toBe(false);
       }),
     );
+  });
+});
+
+test.describe("lišta s pohledem na počítači @desktop", () => {
+  test.use({ storageState: authFile("spravce") });
+
+  test("značka, Pohled a účet bez překryvu; od 1000 px na jednom řádku", async ({ page }) => {
+    await page.goto("/");
+    await settle(page);
+    for (const width of [768, 1024, 1280, 1440, 1920]) {
+      await page.setViewportSize({ width, height: 900 });
+      const boxes = await page.evaluate(() =>
+        [".brand", ".view-switch", ".account"].map((s) => {
+          const r = document.querySelector(s)!.getBoundingClientRect();
+          return { s, left: r.left, right: r.right, top: r.top, bottom: r.bottom, mid: r.top + r.height / 2 };
+        }),
+      );
+      boxes.forEach((a, i) =>
+        boxes.slice(i + 1).forEach((b) => {
+          const overlap = a.left < b.right - 1 && b.left < a.right - 1 && a.top < b.bottom - 1 && b.top < a.bottom - 1;
+          expect(overlap, `${width}px: ${a.s} × ${b.s}`).toBe(false);
+        }),
+      );
+      if (width >= 1000) {
+        const mids = boxes.map((b) => b.mid);
+        expect(Math.max(...mids) - Math.min(...mids), `${width}px: jeden řádek`).toBeLessThan(12);
+      }
+      await expectNoHorizontalScroll(page);
+    }
   });
 });

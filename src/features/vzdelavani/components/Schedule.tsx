@@ -14,7 +14,7 @@ import {
   weekdayShort,
 } from "@/lib/time";
 import type { EventCard } from "@/server/services/events";
-import { badgeClass, cardDetails, participationTone, cardStatus, cardTone, hiddenMissingDetails, isMovable, isPickable, primaryStatus } from "../status";
+import { badgeClass, cardDetails, participationTone, cardStatus, cardTone, hiddenMissingDetails, isMovable, isPickable, pickBlockReason, primaryStatus } from "../status";
 import { CardMenu, type CardMenuItem } from "./CardMenu";
 import { PickBox } from "./PlanSelection";
 import styles from "./schedule.module.css";
@@ -62,7 +62,7 @@ function ghostsByDay(cards: EventCard[]): Map<string, EventCard[]> {
 function GhostBlock({ card, hrefFor = pageHref }: { card: EventCard; hrefFor?: CardHref }) {
   const from = card.movedFrom!;
   return (
-    <Link href={hrefFor(card)} scroll={false} className={`${styles.event} ${styles.ghost}`}>
+    <Link href={hrefFor(card)} scroll={false} className={`${styles.event} ${styles.ghost}`} data-pick-reason="Původní termín patří zveřejněné akci, vybrat nejde.">
       <span className={styles.title}>{card.label}</span>
       <span className={styles.line}>{formatEventTime(new Date(from.startsAt), new Date(from.endsAt), from.allDay)}</span>
       <span className={styles.line}>
@@ -120,7 +120,7 @@ function CardWrap({
   handle?: boolean;
   menu?: CardMenuItem[];
   menuClass?: string;
-  /** Karta návrhu změny leží na zveřejněné verzi (`OriginalLayer`). */
+  /** Návrh změny zveřejněné akce: decentní náznak druhé vrstvy bez textu. */
   stacked?: boolean;
   children: React.ReactNode;
 }) {
@@ -171,31 +171,18 @@ function CardDetails({ card, managing }: { card: EventCard; managing: boolean })
   ));
 }
 
-const pickAttr = (card: EventCard, managing: boolean) => (managing && isPickable(card) ? { "data-pick-id": card.id } : {});
+/**
+ * Režim výběru (jen správce): vybíratelná karta nese `data-pick-id`, ostatní `data-pick-reason`. `SelectionZone`
+ * podle toho klik buď přepne výběr, nebo jen ukáže důvod. Karta tak během výběru nikdy neotevře okno akce.
+ */
+const pickAttr = (card: EventCard, managing: boolean) =>
+  !managing ? {} : isPickable(card) ? { "data-pick-id": card.id } : { "data-pick-reason": pickBlockReason(card) ?? "" };
 
 /** Návrh změny zveřejněné akce se kreslí jako návrh (okrově), i když je akce zveřejněná. */
 const toneOf = (card: EventCard) => (card.original ? "draft" : cardTone(card));
 
 const changesText = (card: EventCard) =>
   card.original?.changes.length ? `Mění ${card.original.changes.join(", ")}` : "Liší se od zveřejněné verze";
-
-/**
- * Zveřejněná verze za kartou návrhu změny („stoh“). Vykukuje nad kartou jako pruh; při najetí myší se vysune
- * dopředu a karta návrhu ustoupí. Klik otevře totéž okno akce, kde je originál i rozhodnutí. Pro čtečky
- * a klávesnici je skrytá: okno akce i štítek karty říkají totéž slovy.
- */
-function OriginalLayer({ card, href }: { card: EventCard; href: string }) {
-  const original = card.original!;
-  return (
-    <Link href={href} scroll={false} className={`${styles.event} ${styles.original}`} aria-hidden="true" tabIndex={-1} data-original-of={card.id}>
-      <span className={styles.originalTab}>Zveřejněná verze</span>
-      <span className={styles.title}>{original.label}</span>
-      {original.leadName && <span className={styles.topic}>Kdo: {original.leadName}</span>}
-      {original.topicTitle && original.topicTitle !== original.label && <span className={styles.topic}>Téma: {original.topicTitle}</span>}
-      <span className={styles.line}>{formatEventTime(new Date(original.startsAt), new Date(original.endsAt), original.allDay)}</span>
-    </Link>
-  );
-}
 
 // Karta v mřížce: název, Kdo a Téma, čas a jeden stav. Podrobnosti ukáže okno akce po kliknutí.
 function EventBlock({ card, hrefFor = pageHref, managing = false, movable = false, menuFor }: { card: EventCard; movable?: boolean } & Linking) {
@@ -212,9 +199,9 @@ function EventBlock({ card, hrefFor = pageHref, managing = false, movable = fals
         <span className={styles.title}>{card.label}</span>
         <CardDetails card={card} managing={managing} />
         {!isHoliday && !cancelled && <span className={styles.line}>{formatEventTime(new Date(card.startsAt), new Date(card.endsAt), card.allDay)}</span>}
+        {card.original && <span className={styles.changes}>{changesText(card)}</span>}
         <CardMeta card={card} managing={managing} />
       </Link>
-      {card.original && <OriginalLayer card={card} href={hrefFor(card)} />}
     </CardWrap>
   );
 }
@@ -270,7 +257,7 @@ export function ScheduleGrid({
                   <span>{formatRange(monday, addDays(monday, 4))}</span>
                   {current && <span className={styles.weekNow}>tento týden</span>}
                   {offCards.map((card) => (
-                    <Link key={card.id} href={hrefFor(card)} scroll={false} className={styles.offDay}>
+                    <Link key={card.id} href={hrefFor(card)} scroll={false} className={styles.offDay} data-pick-reason={managing ? "Termín mimo sloupce vyber v zobrazení Seznam." : undefined}>
                       {weekdayShort(dayOf(card))} {formatDayMonth(dayOf(card))} · {card.label}
                       {primaryStatus(card) && <span className="visually-hidden">, {primaryStatus(card)!.label}</span>}
                     </Link>
