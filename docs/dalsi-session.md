@@ -54,7 +54,7 @@ vzdálené migrace ani změny Vercel proměnných bez schválení.
   nejsou `PARTICIPATION` ani `APPROVED_MIGRATIONS`). Report `docs/report-dokonceni-f01-f18.md` (18 řádků).
 
 ## Další kroky (pořadí)
-1. Pokud draft PR do main ještě neexistuje: založit (report + návod v popisu), sledovat CI.
+1. Draft PR #92 do main založen (report + návod v popisu): sledovat CI, nic nemergovat.
 2. Po schválení vlastníka: Preview test účasti (izolovaný Neon branch), pak případně body 9, 11, 13.
 
 ## Otevřené otázky pro vlastníka
