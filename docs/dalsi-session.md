@@ -32,8 +32,10 @@ Limit relace: **200 tis. tokenů tvrdě** (pokyn vlastníka). Při přiblížen�
 - Lint 0, tsc OK, vitest 583/583, cílené E2E (rozložení, účast, náhled, příprava měsíce) prošly.
 
 ## Další krok
-1. Výsledek celé sady `npx playwright test --reporter=line --trace off` (spuštěno, viz report v PR); případné pády opravit.
-2. Draft PR do main s reportem A–G.
+- Draft PR #91 do main založen (report A–G). Celá E2E sada: 1362 passed, 244 skipped, 28 failed = 4 testy ×7 projektů,
+  padaly už na main: `stranky.spec.ts:32` (FP/RM vidí detail akce cizí skupiny) a `temata-planovani.spec.ts:455`
+  („Pro mou roli“ u účastníka). Příčina: viditelnost v režimu PARTICIPATION=on. Otevřená otázka pro vlastníka:
+  opravit testy, nebo viditelnost? Po rozhodnutí upravit a doplnit výsledek do PR.
 
 ## Pozn.
 - Nový kontejner: nejdřív `npm ci`. Snímky: dočasný spec v `e2e/` (necommitovat) s `authFile(role)`, `settle(page)`,
