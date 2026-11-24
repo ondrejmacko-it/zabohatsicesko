@@ -6,12 +6,12 @@
   Úvod, Kalendář). Rozhodnutí vlastníka jsou zapsaná v `docs/audit-2026-11-23/*.md`.
 - Ověřeno na spojené větvi: `npx eslint . --ignore-pattern ".claude/**"` 0 nálezů, `npx tsc --noEmit` OK,
   `npx vitest run` 58 souborů / 581 testů zelených. Bez nové migrace, beze změny konfigurace a přepínačů.
-- NEOVĚŘENO: celá sada Playwright na spojené větvi. Běh byl spuštěn, ale přerušen vypnutím počítače.
+- Celá sada Playwright doběhla: 4 testy padají (viz níže), ostatní zelené.
   Relace hlásily dva padající testy témat mimo svůj rozsah: `e2e/temata-planovani.spec.ts:216` (pořadí témat)
   a „starší test účastníka na Tématech“.
 
-## Částečný běh E2E (649 z 1618 testů, přerušeno)
-Selhání (opakují se na windows-1280 i windows-1920):
+## Celý běh E2E 24. 11.: 1346 passed, 28 failed, 244 skipped (12,4 min)
+Všech 28 selhání jsou tytéž 4 testy na všech 7 zařízeních (jinak vše zelené):
 - `e2e/stranky.spec.ts:32` Účastník FP: „Detail akce RM“ a „Detail akce týmu A“; Účastník RM: „Detail akce týmu A“.
   Pravděpodobně test čeká starou viditelnost (cizí akce = „není dostupná“), ale od PR #86 je zveřejněná akce vidět všem.
   Ověřit, co test tvrdí, a upravit na platné pravidlo bez oslabení (nezveřejněné/soukromé údaje dál nesmí uniknout).
