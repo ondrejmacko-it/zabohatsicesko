@@ -22,6 +22,10 @@
   --beige-strong: #e2dbd5;
   --item: #ede8e2;
   --sage: #97a7a5;
+  /* Výzva stránky (PageCall): chladný zelenošedý tón, aby se nepletla s okrovými návrhy a koncepty. */
+  --call: #eef3f2;
+  --call-line: #c8d5d3;
+  --call-accent: #5d7774;
   --sidebar: #161616;
   --sidebar-line: #2c2c2c;
   --sidebar-text: #ece9e5;
@@ -4328,7 +4332,8 @@ body[data-moving] .quick-actions,
   font-weight: 600;
 }
 
-/* Hlavní výzva stránky (PageCall): účel stránky a jediné hlavní tlačítko, výrazně nad obsahem. */
+/* Hlavní výzva stránky (PageCall): účel stránky a jediné hlavní tlačítko, výrazně nad obsahem.
+   Vlastní zelenošedý tón: okrová patří návrhům a konceptům, výzva s nimi nesmí splývat. */
 .page-call {
   display: flex;
   flex-wrap: wrap;
@@ -4337,10 +4342,10 @@ body[data-moving] .quick-actions,
   gap: 12px 20px;
   margin: 0 0 20px;
   padding: 16px 20px;
-  border: 1px solid var(--draft-line);
-  border-left: 4px solid var(--ochre);
+  border: 1px solid var(--call-line);
+  border-left: 4px solid var(--call-accent);
   border-radius: var(--radius);
-  background: var(--ochre-soft);
+  background: var(--call);
 }
 
 .page-call-text {

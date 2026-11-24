@@ -363,7 +363,7 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
                     {missing(d).length > 0 && <span className="publish-gap">Chybí {missing(d).join(" a ")}</span>}
                     {d.clash && (
                       <span className="publish-clash">
-                        {d.clash === "group" ? "Stejná skupina má ve stejný čas jinou akci" : "Stejní lidé mají ve stejný den nebo čas jinou akci"}
+                        <ClashText kind={d.clash} other={d.clashWith} />
                       </span>
                     )}
                   </span>
@@ -617,6 +617,27 @@ function PrepareOverview({
         </li>
       ))}
     </ul>
+  );
+}
+
+/**
+ * Vysvětlení kolize: s jakou akcí a kdy se návrh kryje a co s tím. Zveřejnění kolize neblokuje
+ * (paralelní akce můžou být záměr), správce ale musí vědět, kterou akci zkontrolovat.
+ */
+function ClashText({ kind, other }: { kind: "group" | "shared"; other: MonthDraft["clashWith"] }) {
+  const what = other ? (
+    <>
+      {" "}
+      „{other.label}“ ({weekdayShort(toDateKey(new Date(other.startsAt)))} {formatDayMonth(toDateKey(new Date(other.startsAt)))} ·{" "}
+      {formatEventTime(new Date(other.startsAt), new Date(other.endsAt), false)})
+    </>
+  ) : (
+    " jinou akci"
+  );
+  return kind === "group" ? (
+    <>Kolize: stejná skupina má ve stejný čas{what}. Posuň datum nebo změň skupinu, jinak proběhnou obě akce souběžně.</>
+  ) : (
+    <>Ke kontrole: stejní lidé mají ve stejný den nebo čas{what}. Zveřejnit jde, jen ověř, že se akce nevylučují.</>
   );
 }
 

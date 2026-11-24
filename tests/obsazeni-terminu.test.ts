@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { slotConflict, type Occupant } from "@/server/domain/generation";
+import { slotConflict, slotConflictWith, type Occupant } from "@/server/domain/generation";
 
 const at = (h: number, m = 0) => new Date(Date.UTC(2026, 11, 1, h, m));
 const slot = { start: at(9), end: at(11), audience: "fp", type: "education-fp", dateKey: "2026-12-01" };
@@ -25,5 +25,12 @@ describe("obsazení termínu Pravidelného týdne", () => {
   });
   test("prázdný měsíc nic neblokuje", () => {
     expect(slotConflict(slot, [])).toBeNull();
+  });
+  test("kolize vrátí akci, se kterou se termín kryje (stejná skupina má přednost před akcí pro všechny)", () => {
+    const all = { ...occ({ audience: "vsichni" }), label: "Porada všech" };
+    const group = { ...occ({}), label: "Školení FP" };
+    expect(slotConflictWith(slot, [all, group])).toEqual({ verdict: "skip", with: group });
+    expect(slotConflictWith(slot, [all])).toEqual({ verdict: "warn", with: all });
+    expect(slotConflictWith(slot, [{ ...occ({ audience: "rm" }), label: "RM" }])).toBeNull();
   });
 });

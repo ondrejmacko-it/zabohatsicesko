@@ -21,6 +21,9 @@ test.describe("Připravit měsíc: přehled a hromadné doplnění vedoucího", 
     for (const label of ["Připraveno", "Chybí vedoucí", "Chybí téma", "Kolize", "Vybráno"]) {
       await expect(overview.getByRole("button", { name: new RegExp(`^${label}: \\d+`) })).toBeVisible();
     }
+    // Kolize říká, s jakou akcí a kdy se návrh kryje, a co s tím (ne jen „jinou akci“).
+    const clashes = prepare.locator(".publish-clash");
+    for (const text of await clashes.allTextContents()) expect(text).toMatch(/„.+“ \(.+\d{1,2}:\d{2}.*\)\. /);
 
     // Prvnímu řádku vedoucího vyprázdníme: přehled to započítá živě a přechod skočí právě na jeho pole.
     const firstLead = prepare.getByLabel(/^Vedoucí: /).first();

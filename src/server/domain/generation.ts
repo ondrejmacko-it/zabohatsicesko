@@ -126,10 +126,20 @@ export function slotConflict(
   slot: { start: Date; end: Date; audience: string; type: string; dateKey: string },
   occupants: ReadonlyArray<Occupant>,
 ): "skip" | "warn" | null {
+  return slotConflictWith(slot, occupants)?.verdict ?? null;
+}
+
+/** Totéž co `slotConflict`, navíc vrátí akci, se kterou se termín kryje (pro vysvětlení v Přípravě měsíce). */
+export function slotConflictWith<T extends Occupant>(
+  slot: { start: Date; end: Date; audience: string; type: string; dateKey: string },
+  occupants: ReadonlyArray<T>,
+): { verdict: "skip" | "warn"; with: T } | null {
   const overlaps = (o: Occupant) => o.startsAt < slot.end && o.endsAt > slot.start;
-  if (occupants.some((o) => overlaps(o) && o.audience === slot.audience)) return "skip";
   const shared = (o: Occupant) => o.audience === "vsichni" || slot.audience === "vsichni";
-  if (occupants.some((o) => overlaps(o) && shared(o))) return "warn";
-  if (occupants.some((o) => o.dateKey === slot.dateKey && o.audience === slot.audience && o.type === slot.type)) return "warn";
-  return null;
+  const sameGroup = occupants.find((o) => overlaps(o) && o.audience === slot.audience);
+  if (sameGroup) return { verdict: "skip", with: sameGroup };
+  const sharedPeople =
+    occupants.find((o) => overlaps(o) && shared(o)) ??
+    occupants.find((o) => o.dateKey === slot.dateKey && o.audience === slot.audience && o.type === slot.type);
+  return sharedPeople ? { verdict: "warn", with: sharedPeople } : null;
 }
