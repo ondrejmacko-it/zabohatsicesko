@@ -65,6 +65,8 @@ export function SelectionZone({
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [ask, setAsk] = useState<Ask>(null);
   const [single, setSingle] = useState<MonthDraft | null>(null);
+  // Proč naposledy kliknutou kartu vybrat nejde. Ukáže se v liště místo otevření okna akce.
+  const [hint, setHint] = useState<string | null>(null);
   const bar = useRef<HTMLDivElement>(null);
 
   const byId = new Map(items.map((i) => [i.id, i]));
@@ -78,10 +80,12 @@ export function SelectionZone({
     setActive(false);
     setPicked(new Set());
     setAsk(null);
+    setHint(null);
   };
   const toggle = (id: string) => {
     if (!byId.has(id)) return;
     setAsk(null);
+    setHint(null);
     setPicked((current) => {
       const next = new Set(current);
       if (next.has(id)) next.delete(id);
@@ -141,13 +145,15 @@ export function SelectionZone({
     }
   };
 
-  // V režimu výběru klik na kartu (myš i Enter) kartu označí. Ostatní odkazy fungují dál.
+  // V režimu výběru dělá klik na kartu (myš, Enter, dotyk) právě jednu věc: návrh označí, nebo u karty,
+  // kterou vybrat nejde, jen řekne proč. Okno akce se během výběru neotevře. Ostatní odkazy fungují dál.
   const onClickCapture = (event: React.MouseEvent) => {
     if (!active) return;
-    const card = (event.target as HTMLElement).closest<HTMLElement>("a[data-pick-id]");
+    const card = (event.target as HTMLElement).closest<HTMLElement>("a[data-pick-id], a[data-pick-reason]");
     if (!card) return;
     event.preventDefault();
-    toggle(card.dataset.pickId!);
+    if (card.dataset.pickId) toggle(card.dataset.pickId);
+    else setHint(card.dataset.pickReason || "Tuto akci vybrat nejde.");
   };
 
   const value: Selection = {
@@ -205,30 +211,36 @@ export function SelectionZone({
             </ConfirmDialog>
             <div className="select-bar-row">
               <p className="select-bar-text" aria-live="polite">
-                <strong>Vybráno {selected.length}</strong>
+                <strong>Vybráno {selected.length} z {items.length}</strong>
                 {selected.length < items.length && (
                   <button type="button" className="link-button" onClick={() => setPicked(new Set(items.map((i) => i.id)))}>
-                    Vybrat všechny návrhy ({items.length})
+                    Vybrat všechny dostupné
                   </button>
                 )}
-                {changeDrafts > 0 && <span className="small muted"> Návrhy změn se zveřejňují v okně akce.</span>}
+                {hint ? (
+                  <span className="small select-bar-hint" data-testid="duvod-vyberu">{hint}</span>
+                ) : (
+                  changeDrafts > 0 && <span className="small muted select-bar-hint">Návrhy změn se zveřejňují v okně akce.</span>
+                )}
               </p>
-              <button type="button" className="btn btn-quiet" onClick={stop}>
-                Zrušit výběr
-              </button>
-              <button type="button" data-intent="delete" className="btn btn-danger" disabled={busy || selected.length === 0} onClick={() => setAsk("delete")}>
-                Smazat vybrané
-              </button>
-              <button
-                type="button"
-                data-intent="publish"
-                className="btn btn-primary"
-                disabled={busy || toPublish.length === 0}
-                title={selected.length > 0 && toPublish.length === 0 ? "Návrhy v minulosti nejde zveřejnit" : undefined}
-                onClick={() => setAsk("publish")}
-              >
-                Zveřejnit vybrané
-              </button>
+              <div className="select-bar-actions">
+                <button type="button" className="btn btn-quiet" onClick={stop}>
+                  Zrušit výběr
+                </button>
+                <button type="button" data-intent="delete" className="btn btn-danger" disabled={busy || selected.length === 0} onClick={() => setAsk("delete")}>
+                  Smazat vybrané
+                </button>
+                <button
+                  type="button"
+                  data-intent="publish"
+                  className="btn btn-primary"
+                  disabled={busy || toPublish.length === 0}
+                  title={selected.length > 0 && toPublish.length === 0 ? "Návrhy v minulosti nejde zveřejnit" : undefined}
+                  onClick={() => setAsk("publish")}
+                >
+                  Zveřejnit vybrané
+                </button>
+              </div>
             </div>
           </div>
         )}

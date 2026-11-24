@@ -3170,14 +3170,18 @@ p.cal-status {
   outline-offset: 1px;
 }
 
-/* Co označit nejde (zveřejněné akce, svátky, návrhy změn), ustoupí do pozadí. */
-[data-selecting] a[href]:not([data-pick-id]) {
-  opacity: 0.5;
+/* Co označit nejde (zveřejněné akce, svátky, návrhy změn), jen jemně ustoupí: text zůstává plně čitelný,
+   karta ztratí barvu a ukazatel. Klik neotevře okno, lišta výběru řekne proč (`SelectionZone`). */
+[data-selecting] a[data-pick-reason] {
+  filter: grayscale(0.7);
+  cursor: default;
+  box-shadow: none;
+  transform: none;
 }
 
 .select-bar {
   position: sticky;
-  bottom: 12px;
+  bottom: max(12px, env(safe-area-inset-bottom));
   z-index: 15;
   display: grid;
   gap: 8px;
@@ -3195,6 +3199,31 @@ p.cal-status {
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
+}
+
+.select-bar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.select-bar-hint {
+  flex-basis: 100%;
+}
+
+/* Telefon: počet a odkaz nahoře, tři tlačítka pod nimi ve stejně širokých sloupcích. */
+@media (max-width: 560px) {
+  .select-bar-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .select-bar-actions .btn {
+    padding-inline: 6px;
+    white-space: normal;
+    line-height: 1.2;
+  }
 }
 
 .select-bar-text {
