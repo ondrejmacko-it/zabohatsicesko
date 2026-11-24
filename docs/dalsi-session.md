@@ -10,6 +10,13 @@
   Relace hlásily dva padající testy témat mimo svůj rozsah: `e2e/temata-planovani.spec.ts:216` (pořadí témat)
   a „starší test účastníka na Tématech“.
 
+## Částečný běh E2E (649 z 1618 testů, přerušeno)
+Selhání (opakují se na windows-1280 i windows-1920):
+- `e2e/stranky.spec.ts:32` Účastník FP: „Detail akce RM“ a „Detail akce týmu A“; Účastník RM: „Detail akce týmu A“.
+  Pravděpodobně test čeká starou viditelnost (cizí akce = „není dostupná“), ale od PR #86 je zveřejněná akce vidět všem.
+  Ověřit, co test tvrdí, a upravit na platné pravidlo bez oslabení (nezveřejněné/soukromé údaje dál nesmí uniknout).
+- `e2e/temata-planovani.spec.ts:455` Témata očima účastníka (F10–F12): ověřit oproti #90 (Nejžádanější/garance).
+
 ## Další krok
 1. `npx playwright test --reporter=line` na této větvi (porty v `e2e/constants.mjs` jsou pevné, nesmí běžet jiné worktree).
 2. Každé selhání rozhodnout: skutečná chyba → oprava kódu, zastaralé očekávání → úprava jen podle platného pravidla.
