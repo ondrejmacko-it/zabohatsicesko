@@ -63,6 +63,22 @@ export async function EventPeek({ user, eventId, preview, closeHref, presetTopic
     </div>
   );
 
+  // Vlastní účast (jen PARTICIPATION=on): stav a akce přímo v okně, potvrzení v samostatném okně. Správce ji vidí
+  // i nad formulářem úprav, aby se ke své účasti dostal bez technických informací.
+  const participation = holiday ? null : await ownParticipationDetail(user, preview, card.id);
+  const participationPanel = participation && (
+    <ParticipationPanel
+      eventId={card.id}
+      state={participation.state}
+      label={participation.label}
+      actions={participation.actions}
+      excuse={participation.excuse}
+      calendar={participation.calendar}
+      enrollment={participation.enrollment}
+      preview={preview ? (preview.personName ? "person" : "group") : undefined}
+    />
+  );
+
   if (editable) {
     const [people, topics, template, invite] = await Promise.all([
       listPeople(user),
@@ -83,6 +99,7 @@ export async function EventPeek({ user, eventId, preview, closeHref, presetTopic
           </p>
         )}
         {card.original && <ChangeBanner eventId={card.id} revision={detail.revision} original={card.original} />}
+        {participationPanel}
       </>
     );
     // Funkční Kalendář se v okně neukazuje. Oprava je odkaz jen při chybě, technické informace jsou v nabídce.
@@ -128,8 +145,6 @@ export async function EventPeek({ user, eventId, preview, closeHref, presetTopic
     // Zrušení do Kalendáře nedošlo: správce dostane opravu. Jinak se technický stav v okně neukazuje.
     ...(managing && !holiday && card.syncStatus === "attention" ? [{ href: `${fullHref}#kalendar`, label: "Opravit v Kalendáři" }] : []),
   ];
-  // Vlastní účast (jen PARTICIPATION=on): stav a akce přímo v okně, potvrzení v samostatném okně.
-  const participation = holiday ? null : await ownParticipationDetail(user, preview, card.id);
   // Technické informace jsou pro správce jen tichý odkaz, nikdy hlavní tlačítko okna.
   const technical = managing && !holiday && links.length === 0;
 
@@ -161,18 +176,7 @@ export async function EventPeek({ user, eventId, preview, closeHref, presetTopic
         </div>
       </dl>
       {holiday && <p className="hint">Jen pro přehled, do Kalendáře se neposílá.</p>}
-      {participation && (
-        <ParticipationPanel
-          eventId={card.id}
-          state={participation.state}
-          label={participation.label}
-          actions={participation.actions}
-          excuse={participation.excuse}
-          calendar={participation.calendar}
-          enrollment={participation.enrollment}
-          preview={preview ? (preview.personName ? "person" : "group") : undefined}
-        />
-      )}
+      {participationPanel}
       {technical && (
         <p className="small peek-tech">
           <Link href={fullHref}>Technické informace</Link>

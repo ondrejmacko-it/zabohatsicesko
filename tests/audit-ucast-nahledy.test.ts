@@ -1,7 +1,10 @@
 import { and, eq, sql } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { ParticipationState } from "@/lib/types";
-import { matchesAttendance, participationTone, primaryStatus } from "@/features/vzdelavani/status";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { ParticipationBadge } from "@/features/vzdelavani/components/ParticipationBadge";
+import { matchesAttendance, primaryStatus } from "@/features/vzdelavani/status";
 import { now } from "@/server/config";
 import { getDb } from "@/server/db/client";
 import { events, users } from "@/server/db/schema";
@@ -97,9 +100,9 @@ describe("štítky bez zapnutých přihlášek (PARTICIPATION vypnuté, i ostrá
 
   for (const mode of ["demo", "production"] as const) {
     test(`náhled skupiny (${mode}): detail i karta mají stejný štítek „Dobrovolné“`, async () => {
-      // Ostrá Wiki přepínač ignoruje i při PARTICIPATION=on, ukázka ho má vypnutý.
+      // Bez PARTICIPATION=on jsou přihlášky vypnuté v ukázce i v ostré Wiki.
       vi.stubEnv("WIKI_MODE", mode);
-      vi.stubEnv("PARTICIPATION", mode === "production" ? "on" : "");
+      vi.stubEnv("PARTICIPATION", "");
       const rm = await futurePublishedId("rm");
       const preview = { viewer: { ...participant, id: "nahled-skupiny" }, label: "Skupina FP" };
       const detail = await ownParticipationDetail(organizer, preview, rm);
@@ -142,10 +145,11 @@ describe("U10: detail bez zapnutých přihlášek", () => {
   });
 });
 
-describe("tón štítku účasti", () => {
-  test("plný jen u platné účasti; Odhlášeno, Omluveno a nabídka jsou obrysové", () => {
-    expect(participationTone("required")).toBe("ok");
-    expect(participationTone("voluntary_enrolled")).toBe("ok");
-    for (const state of ["optional", "excused", "withdrawn", "cancelled"] as const) expect(participationTone(state)).toBe("outline");
+describe("štítek účasti je jeden pro celou Wiki", () => {
+  test("každý stav nese vlastní data-ucast (barvu z tokenů) a vždy i text", () => {
+    for (const state of ["required", "optional", "voluntary_enrolled", "excused", "withdrawn", "cancelled"] as const) {
+      const html = renderToStaticMarkup(createElement(ParticipationBadge, { state, label: "Štítek" }));
+      expect(html).toBe(`<span class="badge badge-ucast" data-ucast="${state}">Štítek</span>`);
+    }
   });
 });

@@ -1,6 +1,6 @@
 import { sql, type SQL } from "drizzle-orm";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
-import { config, isLiveWiki } from "@/server/config";
+import { config, isLiveWiki, markParticipationSchema } from "@/server/config";
 import { migrations } from "./migrations";
 import * as schema from "./schema";
 import { seedDatabase, seedProductionBase } from "@/server/seed";
@@ -58,7 +58,9 @@ export async function prepareDatabase(db: Db): Promise<void> {
         await tx.execute(sql.raw(statement));
       }
       await tx.execute(sql`INSERT INTO schema_migrations (id) VALUES (${migration.id})`);
+      done.add(migration.id);
     }
+    markParticipationSchema(done);
     const [state] = await queryRows<{ users: number; slots: number }>(
       tx,
       sql`SELECT (SELECT count(*)::int FROM users) AS users, (SELECT count(*)::int FROM template_slots) AS slots`,

@@ -7,8 +7,8 @@ const UNAVAILABLE = /Tato stránka není dostupná/;
 /** Stránky a co má která role vidět. Nedostupná stránka vypadá stejně jako neexistující akce. */
 function pagesFor(role: Role): PageCase[] {
   const admin = role === "spravce";
-  const seesRm = role !== "ucastnikFp";
-  const seesTeamA = role === "spravce" || role === "vedouci";
+  // Zveřejněnou akci a její běžný detail vidí každý přihlášený (rozhodnutí vlastníka); „Pro koho“ určuje jen
+  // povinnost. Nezveřejněný návrh vidí dál jen správce.
   return [
     { name: "Úvod", path: "/", heading: /^Ahoj/ },
     { name: "Plán", path: "/vzdelavani/harmonogram", heading: /Vzdělávání/, text: "Setkání týmu" },
@@ -16,8 +16,9 @@ function pagesFor(role: Role): PageCase[] {
     { name: "Zápisy", path: "/vzdelavani/zapisy", heading: /Vzdělávání/ },
     { name: "Témata", path: "/vzdelavani/temata", heading: /Vzdělávání/, text: "Navrhnout téma" },
     { name: "Detail akce pro všechny", path: "/vzdelavani/akce/ev-11-5", heading: /Vzdělávání/, text: "Setkání týmu" },
-    { name: "Detail akce RM", path: "/vzdelavani/akce/tr-rm-1112", heading: seesRm ? /Vzdělávání/ : UNAVAILABLE },
-    { name: "Detail akce týmu A", path: "/vzdelavani/akce/ev-11-24", heading: seesTeamA ? /Vzdělávání/ : UNAVAILABLE },
+    { name: "Detail akce RM", path: "/vzdelavani/akce/tr-rm-1112", heading: /Vzdělávání/ },
+    { name: "Detail akce týmu A", path: "/vzdelavani/akce/ev-11-24", heading: /Vzdělávání/ },
+    { name: "Nezveřejněný návrh", path: "/vzdelavani/akce/ev-11-13", heading: admin ? /Vzdělávání/ : UNAVAILABLE },
     { name: "Správa", path: "/sprava", heading: admin ? /Správa systému/ : UNAVAILABLE },
     { name: "Integrace", path: "/vzdelavani/integrace", heading: admin ? /Vzdělávání/ : UNAVAILABLE },
     { name: "404", path: "/tato-stranka-neexistuje", heading: /Stránka nenalezena/ },

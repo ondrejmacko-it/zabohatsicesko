@@ -5,7 +5,7 @@ import { ActionForm, ActionMessage } from "@/components/ActionForm";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { changeParticipationAction, type ActionResult } from "@/features/vzdelavani/actions";
 import { calendarNote, type OwnCalendar } from "@/lib/calendar-note";
-import { badgeClass, participationTone } from "@/features/vzdelavani/status";
+import { ParticipationBadge } from "./ParticipationBadge";
 import { EXCUSE_NOTE_MAX, EXCUSE_REASONS, type ExcuseReason, type ParticipationState } from "@/lib/types";
 
 export const EXCUSE_REASON_LABELS: Record<ExcuseReason, string> = { illness: "Nemoc", vacation: "Dovolená", other: "Jiné" };
@@ -72,7 +72,7 @@ export function ParticipationPanel({ eventId, state, label, actions, excuse, cal
     <section className="section participation-panel" aria-labelledby="ucast" data-ucast-panel={state} data-kalendar-stav={calendar ? `${calendar.link}:${calendar.inCalendar}` : "neznamy"}>
       {/* V náhledu nejde o účast přihlášeného, proto ani „Tvoje“, ani vysvětlení vlastní omluvy. */}
       <h2 id="ucast">{preview ? "Účast v náhledu" : "Tvoje účast"}</h2>
-      {label && <p className="participation-state"><span className={badgeClass(participationTone(state))}>{label}</span></p>}
+      {label && <p className="participation-state"><ParticipationBadge state={state} label={label} /></p>}
       {/* Náhled ukáže stejný text jako kolegovi; „tebe“ v něm znamená kolegu, za kterého se správce dívá. */}
       <p className="small">{stateText}</p>
       {preview === "group" && <p className="small muted">Náhled skupiny ukazuje účast podle rolí, bez individuálních přihlášek a omluv.</p>}

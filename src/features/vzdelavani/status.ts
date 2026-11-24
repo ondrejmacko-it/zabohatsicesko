@@ -1,18 +1,10 @@
 import { monthOf, toDateKey } from "@/lib/time";
-import type { EventType, ParticipationState } from "@/lib/types";
+import type { EventType } from "@/lib/types";
 import { isMine } from "@/server/domain/participation";
 import type { EventCard } from "@/server/services/events";
 
 export type Tone = "neutral" | "ochre" | "ok" | "danger" | "outline" | "draft";
 export type CardTone = "regular" | "extra" | "muted" | "draft";
-
-/**
- * Tón štítku vlastní účasti, stejný v měsíci, seznamu, Úvodu i detailu: plný jen u účasti, která platí
- * (povinná, přihlášená). Omluveno, Odhlášeno a nabídka bez přihlášky jsou obrysové, aby nevypadaly jako účast.
- */
-export function participationTone(state: ParticipationState): Tone {
-  return state === "required" || state === "voluntary_enrolled" ? "ok" : "outline";
-}
 
 /** Filtr účasti v Plánu (`ucast=`). Bez hodnoty = Všechny. */
 export const ATTENDANCE_FILTERS = ["povinne", "dobrovolne", "moje"] as const;

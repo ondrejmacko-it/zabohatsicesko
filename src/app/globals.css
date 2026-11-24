@@ -642,6 +642,76 @@ a.item-card:hover {
   background: transparent;
 }
 
+/* Osobní účast (F02): jeden zdroj barev pro štítky, filtry i boční linku karet v Plánu.
+   Význam nese vždy i text štítku, barva jen doplňuje. Životní stav akce (návrh, zrušeno…) má vlastní štítky. */
+:root {
+  --ucast-required: #a3651b;
+  --ucast-required-bg: #f7e8d3;
+  --ucast-required-fg: #75400a;
+  --ucast-optional: #7b8990;
+  --ucast-optional-bg: #edf2f3;
+  --ucast-optional-fg: #334f60;
+  --ucast-enrolled: #267c64;
+  --ucast-enrolled-bg: #e1f1e8;
+  --ucast-enrolled-fg: #195a46;
+  --ucast-excused: #8761a5;
+  --ucast-excused-bg: #eee6f5;
+  --ucast-excused-fg: #603f7f;
+  --ucast-withdrawn: #9b8d84;
+  --ucast-withdrawn-bg: #f0ece9;
+  --ucast-withdrawn-fg: #55443d;
+}
+
+.badge-ucast {
+  border: 1px solid transparent;
+}
+[data-ucast="required"] {
+  --ucast: var(--ucast-required);
+  --ucast-bg: var(--ucast-required-bg);
+  --ucast-fg: var(--ucast-required-fg);
+}
+[data-ucast="optional"] {
+  --ucast: var(--ucast-optional);
+  --ucast-bg: var(--ucast-optional-bg);
+  --ucast-fg: var(--ucast-optional-fg);
+}
+[data-ucast="voluntary_enrolled"] {
+  --ucast: var(--ucast-enrolled);
+  --ucast-bg: var(--ucast-enrolled-bg);
+  --ucast-fg: var(--ucast-enrolled-fg);
+}
+[data-ucast="excused"] {
+  --ucast: var(--ucast-excused);
+  --ucast-bg: var(--ucast-excused-bg);
+  --ucast-fg: var(--ucast-excused-fg);
+}
+[data-ucast="withdrawn"] {
+  --ucast: var(--ucast-withdrawn);
+  --ucast-bg: var(--ucast-withdrawn-bg);
+  --ucast-fg: var(--ucast-withdrawn-fg);
+}
+[data-ucast="cancelled"] {
+  --ucast: var(--danger);
+  --ucast-bg: var(--danger-soft);
+  --ucast-fg: var(--danger);
+}
+.badge-ucast[data-ucast] {
+  border-color: color-mix(in srgb, var(--ucast) 35%, transparent);
+  background: var(--ucast-bg);
+  color: var(--ucast-fg);
+}
+/* Filtry Povinné / Dobrovolné: stejná barva jako štítek, neaktivní decentní, aktivní plná. */
+.pill[data-ucast] {
+  border-color: color-mix(in srgb, var(--ucast) 45%, transparent);
+  color: var(--ucast-fg);
+}
+.pill[data-ucast][aria-current="page"] {
+  border-color: var(--ucast);
+  background: var(--ucast-bg);
+  color: var(--ucast-fg);
+  box-shadow: inset 0 0 0 1px var(--ucast);
+}
+
 .notice {
   padding: 12px 14px;
   border-left: 3px solid var(--ochre);
