@@ -22,18 +22,18 @@ Limit relace: **200 tis. tokenů tvrdě** (pokyn vlastníka). Při přiblížen�
   migrace 0016/0017 (a 0015 neomezená garance) mají `approval: true`, na vzdálené DB se spustí jen přes `APPROVED_MIGRATIONS`.
   Lokálně/E2E (`PARTICIPATION=on`, PGlite) účast funguje (e2e/ucast.spec.ts). Nic na Vercelu/Neonu neměněno.
 
-## Další krok (pořadí)
-2. P1 záhlaví harmonogramu (rozpracováno jen analýzou, kód nezměněn). Zjištěno ze snímků 1280: Měsíc/Seznam
-   (`harmonogram/page.tsx` ~ř. 224, `.view-toggle .pill`) vypadají stejně jako filtr účasti Všechny/Povinné/… → udělat
-   segmented control s ikonami (přidat ikonu `list` do `components/Icon.tsx`, `calendar` existuje), vizuálně odlišný.
-   U účastníka visí „Filtry“ (`PlanFilters`, `.plan-filters-end`) sám na řádku pod filtrem účasti → spojit do jednoho
-   řádku (např. prop `lead` do PlanFilters s navigací účasti, pozor na mobilní mřížku `.plan-filters` v globals.css ~4085
-   a `data-items`). CSS: globals.css ř. 2900–3050.
-3. Topbar (správce se láme na 2 řádky: Pohled vpravo nahoře, role pod ním) → grid, Pohled na střed, optgroupy.
-4. `PageCall` vlastní tón (modro/zelenošedý) oddělený od okrových návrhů. 5. Témata: ověřit >3 garantovaná testem
-   (vyžaduje 0015). 6. Formuláře/Příprava měsíce (vysvětlit kolizi). 7. Mobil 320–1920 + zoom.
-8. Celá sada `npx playwright test --reporter=line --trace off`, draft PR s reportem A–G (tabulka problémů, změny,
-   výsledky testů, snímky, bezpečnost/feature flagy, git, verdikt).
+## Hotovo v relaci 3 (24. 11.)
+- Krok 2 záhlaví harmonogramu (2a020c6): Měsíc/Seznam = `.segmented` s ikonami `calendar`/`list`; filtr účasti
+  je `lead` v `PlanFilters` (jeden řádek s Filtry/štítky). Test geometrie zahrnuje i `.plan-filters`, nový test účastníka.
+- Krok 3 Topbar (ea343ff): mřížka značka | Pohled | účet (≥641 px), <1440 kratší tlačítko role, <1200 bez podtitulu,
+  641–999 Pohled na 2. řádku. Optgroupy Skupina/Kolega už existovaly. Test `nahled.spec.ts` „lišta s pohledem na počítači“.
+- Krok 4+6 (c8538ae): `PageCall` tokeny `--call*` (zelenošedý). Kolize v Připravit měsíc jmenuje akci a čas
+  (`slotConflictWith`, `MonthDraft.clashWith`) + rada. Krok 5: pokryto vitestem `temata-priority.test.ts:226` (4 garantovaná).
+- Lint 0, tsc OK, vitest 583/583, cílené E2E (rozložení, účast, náhled, příprava měsíce) prošly.
+
+## Další krok
+1. Výsledek celé sady `npx playwright test --reporter=line --trace off` (spuštěno, viz report v PR); případné pády opravit.
+2. Draft PR do main s reportem A–G.
 
 ## Pozn.
 - Nový kontejner: nejdřív `npm ci`. Snímky: dočasný spec v `e2e/` (necommitovat) s `authFile(role)`, `settle(page)`,
