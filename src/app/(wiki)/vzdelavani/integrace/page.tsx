@@ -17,6 +17,7 @@ import {
   isLiveWiki,
   loginMode,
   attendeeSource,
+  participationReadiness,
 } from "@/server/config";
 import { formatDayMonth, toDateKey, toTimeKey } from "@/lib/time";
 import { getDb } from "@/server/db/client";
@@ -41,6 +42,12 @@ const CONNECT_RESULTS: Record<string, { text: string; ok: boolean }> = {
   "jiny-ucet": { text: "Kalendář smí propojit jen účet organizátora. Zvolený účet Google to není, nic se neuložilo. Přihlas se u Googlu účtem organizátora a zkus to znovu.", ok: false },
 };
 
+const READINESS_TEXT = {
+  on: "Zapnuto. Kolegové se můžou přihlašovat, odhlašovat a omlouvat.",
+  off: "Vypnuto (PARTICIPATION není on). Štítky povinné a dobrovolné účasti se ukazují, tlačítka ne.",
+  "missing-schema": "Zapnutí čeká na databázi: chybí migrace 0016 a 0017. Dokud nejsou provedené, účast zůstává vypnutá.",
+} as const;
+
 export default async function IntegrationsPage({ searchParams }: { searchParams: Promise<{ google?: string }> }) {
   const user = await requireUser();
   if (!isOrganizer(user)) notFound();
@@ -51,6 +58,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
   const connection = googleTest ? await connectionStatus(db) : null;
   const connectResult = CONNECT_RESULTS[(await searchParams).google ?? ""];
   const live = isLiveWiki();
+  const readiness = participationReadiness();
   // Ostrá Wiki ukázkové přepínače ani obnovu dat nenabízí, server je stejně odmítne.
   const switchKeys = live
     ? []
@@ -109,6 +117,11 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
           </p>
         </section>
       )}
+
+      <section className="section" aria-labelledby="ucast-stav">
+        <h2 id="ucast-stav">Přihlášky a omluvy</h2>
+        <p data-testid="ucast-pripravenost" data-stav={readiness}>{READINESS_TEXT[readiness]}</p>
+      </section>
 
       {googleTest && (
         <section className="section" aria-labelledby="google-kalendar">

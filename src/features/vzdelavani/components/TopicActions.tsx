@@ -109,12 +109,10 @@ function ProposeForm({ groups, onClose }: { groups: Group[]; onClose: () => void
           </select>
         </label>
         <ActionMessage state={state} />
+        {/* Bez druhého „Zavřít“ dole: okno zavírá záhlaví, které s rozepsaným návrhem stejně zeptá. */}
         <div className="row">
           <button type="submit" className="btn btn-primary" disabled={pending}>
             Navrhnout téma
-          </button>
-          <button type="button" className="btn" data-modal-close>
-            Zavřít
           </button>
         </div>
       </form>

@@ -58,6 +58,9 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   const managing = organizer && !preview;
   // Celá stránka, tedy i úkoly, se počítá pro stejného diváka jako harmonogram.
   const viewer = preview?.viewer ?? user;
+  // Náhled 1:1 očima kolegy-správce: stavy, štítky „Doplnit“ a návrhy jako u něj, ale nic se nemění
+  // (přidání, přesun, výběr, menu úprav a odeslání do Kalendáře zůstávají na `managing`).
+  const planView = isOrganizer(viewer);
   // Všechna data stránky v jedné vlně: dotazy na sobě nezávisí, takže se čeká jen na nejpomalejší z nich.
   const [rawMonthCards, template, viewerTasks, people, topics, calendar, monthDrafts, personal] = await Promise.all([
     listMonth(viewer, monthKey),
@@ -80,7 +83,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   const types = EVENT_TYPES.filter((t) => monthCards.some((c) => c.type === t && monthOf(toDateKey(new Date(c.startsAt))) === monthKey));
   // Více hodnot v jedné kategorii (`typ=a&typ=b`) platí NEBO, mezi typem a stavem A. Stavy jsou jen pro správce.
   const selectedTypes = filterValues(params.typ, types);
-  const states = managing ? filterValues(params.stav, PLAN_STATES) : [];
+  const states = planView ? filterValues(params.stav, PLAN_STATES) : [];
   const filtered = filterCards(monthCards, monthKey, { types: selectedTypes, states });
   // Svátky zůstávají i v Moje, jsou jen pro orientaci v měsíci.
   const cards = filtered.filter((c) => matchesAttendance(c, attendanceFilter));
@@ -139,7 +142,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   const emptyText = filtering ? "Filtru v tomto měsíci neodpovídá žádná akce." : attendanceFilter ? "V tomto měsíci není žádná akce odpovídající vybranému filtru." : undefined;
 
   // Co v měsíci čeká na správce: štítky nad harmonogramem, klik plán zúží (znovu klik filtr zruší).
-  const summary = managing && monthKey >= monthOf(todayKey) ? monthSummary(monthCards, monthKey) : null;
+  const summary = planView && monthKey >= monthOf(todayKey) ? monthSummary(monthCards, monthKey) : null;
   const chips: StateChip[] = summary
     ? [
         { state: "navrhy" as const, label: "Návrhy", spoken: "ke zveřejnění", count: summary.toPublish, hint: "Návrhy, které kolegové uvidí až po zveřejnění." },
@@ -157,19 +160,19 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   // Vlastní úkoly diváka (záznam, zápis…) jsou v Plánu sbalené do jednoho řádku. Celé jsou na Úvodu.
   const tasks = viewerTasks;
   // Kdo nemá úkoly ani neplánuje, uvidí na telefonu nejdřív nejbližší akci (měsíční seznam začíná prvním dnem).
-  const nextEvent = !managing && tasks.length === 0 ? await nearestEvent(viewer, monthKey === monthOf(todayKey) ? monthCards : []) : null;
+  const nextEvent = !planView && tasks.length === 0 ? await nearestEvent(viewer, monthKey === monthOf(todayKey) ? monthCards : []) : null;
   const thisMonth = monthOf(todayKey);
   // Přesun (mřížka myší, agenda úchytem na telefonu) i „+“ u dne jen pro správce, od dneška dál.
   const planning = managing ? { addHref, movableFrom: todayKey } : {};
   const schedule = listView ? (
-    <Agenda monthKey={monthKey} cards={cards} todayKey={todayKey} emptyText={scheduleEmpty} hrefFor={peekHref} managing={managing} menuFor={menuFor} {...planning} />
+    <Agenda monthKey={monthKey} cards={cards} todayKey={todayKey} emptyText={scheduleEmpty} hrefFor={peekHref} managing={managing} planView={planView} menuFor={menuFor} {...planning} />
   ) : (
     <>
       <div className={styles.desktopOnly}>
-        <ScheduleGrid monthKey={monthKey} cards={cards} todayKey={todayKey} slotTimes={slotTimes} hrefFor={peekHref} managing={managing} menuFor={menuFor} {...planning} />
+        <ScheduleGrid monthKey={monthKey} cards={cards} todayKey={todayKey} slotTimes={slotTimes} hrefFor={peekHref} managing={managing} planView={planView} menuFor={menuFor} {...planning} />
       </div>
       <div className={styles.mobileOnly}>
-        <Agenda monthKey={monthKey} cards={cards} todayKey={todayKey} emptyText={scheduleEmpty} hrefFor={peekHref} managing={managing} menuFor={menuFor} {...planning} />
+        <Agenda monthKey={monthKey} cards={cards} todayKey={todayKey} emptyText={scheduleEmpty} hrefFor={peekHref} managing={managing} planView={planView} menuFor={menuFor} {...planning} />
       </div>
     </>
   );
@@ -203,6 +206,8 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
         <Link
           key={value}
           className="pill"
+          // Povinné a Dobrovolné nesou barvu odpovídajícího štítku účasti, Všechny a Moje zůstávají neutrální.
+          data-ucast-filter={value === "povinne" ? "required" : value === "dobrovolne" ? "optional" : undefined}
           href={link({ ucast: value || undefined })}
           aria-current={(attendanceFilter ?? "") === value ? "page" : undefined}
         >

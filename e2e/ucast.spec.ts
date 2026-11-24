@@ -255,3 +255,56 @@ test.describe("víc pracovních rolí (F05)", () => {
     await expect(page.locator('[data-ucast="optional"]').filter({ visible: true })).toHaveCount(0);
   });
 });
+
+test.describe("nadřízený pro omluvy (F03/D01, migrace 0018)", () => {
+  test.use({ storageState: authFile("spravce") });
+
+  test("správce určí nadřízeného, ten vidí důvod omluvy, jiný kolega ne", async ({ browser, page }, info) => {
+    test.skip(info.project.name !== "windows-1280", "zápis vazeb jen na jednom projektu");
+    // Tři role a dvě návštěvy Správy v jednom scénáři.
+    test.setTimeout(90_000);
+    const note = `${NOTE}-nadrizeny`;
+    const setManager = async (on: boolean) => {
+      await page.goto(`${BASE}/sprava`);
+      await settle(page);
+      await page.getByRole("button", { name: "Možnosti účtu Účastník – finanční poradce" }).click();
+      await page.getByRole("button", { name: "Nadřízený pro omluvy…" }).click();
+      const dialog = page.getByRole("dialog", { name: "Nadřízený pro omluvy" });
+      await dialog.getByLabel("Vedoucí akce").setChecked(on);
+      await dialog.getByRole("button", { name: "Uložit" }).click();
+      await expect(dialog).toBeHidden();
+    };
+    await setManager(true);
+    await expect(page.getByTestId("nadrizeni-omluvy")).toContainText("Vedoucí akce");
+
+    const own = await browser.newContext({ storageState: authFile("ucastnikFp") });
+    const ownPage = await own.newPage();
+    await plan(ownPage);
+    await openCard(ownPage, "required");
+    const url = ownPage.url();
+    await ownPage.locator("[data-ucast-panel]").getByRole("button", { name: "Omluvit se" }).click();
+    const dialog = ownPage.getByRole("dialog", { name: "Omluvit se z akce?" });
+    await dialog.getByLabel("Poznámka (nepovinná)").fill(note);
+    await dialog.getByRole("button", { name: "Omluvit se" }).click();
+    await expect(ownPage.locator('[data-ucast-panel="excused"]')).toBeVisible();
+
+    const manager = await browser.newContext({ storageState: authFile("vedouci") });
+    const managerPage = await manager.newPage();
+    await managerPage.goto(url);
+    await settle(managerPage);
+    await expect(managerPage.getByTestId("omluvy-nadrizeny")).toContainText(note);
+
+    // Jiný kolega ani správce, který nadřízeným není, důvod nevidí (ani v HTML).
+    const otherHtml = await (await page.request.get(url)).text();
+    expect(otherHtml).not.toContain(note);
+
+    // Úklid: odvolat omluvu a zrušit vazbu, ať další testy vidí seed.
+    await ownPage.locator("[data-ucast-panel]").getByRole("button", { name: "Zrušit omluvu" }).click();
+    await ownPage.getByRole("dialog", { name: "Zrušit omluvu?" }).getByRole("button", { name: "Zrušit omluvu" }).click();
+    await expect(ownPage.locator('[data-ucast-panel="required"]')).toBeVisible();
+    await own.close();
+    await manager.close();
+    await setManager(false);
+    await expect(page.getByTestId("nadrizeni-omluvy")).toHaveCount(0);
+  });
+});

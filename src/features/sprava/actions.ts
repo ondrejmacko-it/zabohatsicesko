@@ -8,6 +8,7 @@ import { cleanupLegacyInvites } from "@/server/calendar/legacy-invites";
 import { syncPending } from "@/server/calendar/sync";
 import { config } from "@/server/config";
 import { formatDayMonth, toDateKey } from "@/lib/time";
+import { setExcuseManagers } from "@/server/services/excuse-managers";
 import { createLoginLink, inviteUser, rejectRequest, revokeLoginLink, revokeUserDevice, updateAccess } from "@/server/services/users";
 
 /** Odkaz s tokenem ve fragmentu: prohlížeč ho na server sám nepošle ani při kliknutí. */
@@ -49,6 +50,16 @@ export async function updateAccessAction(_prev: ActionResult | null, formData: F
     if (data.status === "disabled") return { ok: true, message: "Přístup je odebraný." };
     const intent = formData.get("intent");
     return { ok: true, message: intent === "approve" ? "Přístup schválen." : intent === "restore" ? "Přístup vrácen." : "Role a skupiny uloženy." };
+  });
+}
+
+export async function setExcuseManagersAction(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
+  return runAction(async (user) => {
+    const data = z
+      .object({ userId, managerIds: z.array(userId).max(5) })
+      .parse({ userId: formData.get("userId"), managerIds: [...new Set(formData.getAll("managerIds"))] });
+    await setExcuseManagers(user, data.userId, data.managerIds);
+    return { ok: true, message: data.managerIds.length ? "Nadřízení pro omluvy uloženi." : "Omluvy teď nevidí žádný nadřízený." };
   });
 }
 

@@ -74,15 +74,45 @@ export function eventVisibility(): EventVisibility {
   return process.env.EVENT_VISIBILITY?.trim() === "audience" ? "audience" : "all-published";
 }
 
+/** Migrace, bez kterých účast nesmí běžet (tabulka `event_participation` a stav „odhlášeno“). */
+export const PARTICIPATION_MIGRATIONS = ["0016_event_participation", "0017_participation_withdrawn"] as const;
+
+const schemaState = globalThis as unknown as { __zbcAppliedMigrations?: ReadonlySet<string> };
+
+/** Volá `prepareDatabase` po migracích: které migrace databáze skutečně má (funkce podmíněné schématem). */
+export function markParticipationSchema(applied: ReadonlySet<string>): void {
+  const ready = PARTICIPATION_MIGRATIONS.every((id) => applied.has(id));
+  if (!ready && process.env.PARTICIPATION?.trim() === "on") {
+    console.warn(`[ucast] PARTICIPATION=on, ale chybí migrace ${PARTICIPATION_MIGRATIONS.join(", ")}: účast zůstává vypnutá`);
+  }
+  schemaState.__zbcAppliedMigrations = new Set(applied);
+}
+
+const migrationApplied = (id: string) => schemaState.__zbcAppliedMigrations?.has(id) === true;
+
+/** Nadřízení pro omluvy (0018). Bez migrace se vazby nečtou ani neukládají, omluvy vidí jen omluvený. */
+export function excuseManagersEnabled(): boolean {
+  return participationEnabled() && migrationApplied("0018_excuse_managers");
+}
+
+export type ParticipationReadiness = "on" | "off" | "missing-schema";
+
+/** Stav připravenosti účasti pro kontrolu po nasazení (bez tajemství). */
+export function participationReadiness(): ParticipationReadiness {
+  if (process.env.PARTICIPATION?.trim() !== "on") return "off";
+  return PARTICIPATION_MIGRATIONS.every(migrationApplied) ? "on" : "missing-schema";
+}
+
 /**
- * Individuální účast v UI (PR2, F02–F05): štítky, přihlášky, omluvy, Moje/Všechny a hosté pozvánky podle
- * `desiredGuestIds`. Výchozí vypnuto: aplikace se chová jako dřív a tabulku `event_participation` nečte
- * (na vzdálené DB zatím není, migrace 0016 čeká na schválení). `PARTICIPATION=on` zapne ukázku. V ostré
- * Wiki se přepínač ignoruje, dokud uživatel neschválí 0016 a tuto pojistku vědomě neodstraní.
+ * Individuální účast (F02–F05): štítky, přihlášky, omluvy, Moje/Všechny a hosté pozvánky podle účasti.
+ * Zapíná se výslovně `PARTICIPATION=on` v ukázce i v ostré Wiki, ale jen pokud databáze má provedené
+ * migrace 0016 a 0017 (pojistka proti zapnutí nad nepřipravenou databází: bez schématu se aplikace chová
+ * jako dřív a tabulku účasti nečte; změnu účasti server odmítne, nic se tiše nezahodí). Ostrá Wiki
+ * zůstává v produkčním režimu včetně přihlašování a oprávnění, účast nemění nic jiného.
+ * Rollback: odebrat `PARTICIPATION` (záznamy v tabulce zůstanou, jen se nečtou).
  */
 export function participationEnabled(): boolean {
-  if (isLiveWiki()) return false;
-  return process.env.PARTICIPATION?.trim() === "on";
+  return participationReadiness() === "on";
 }
 
 /**

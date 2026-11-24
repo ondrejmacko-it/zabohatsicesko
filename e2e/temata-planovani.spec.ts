@@ -118,22 +118,23 @@ test.describe("Témata: garantovaná a ostatní", () => {
     await expectNoHorizontalScroll(page);
   });
 
-  test("Zavřít dole v okně hlídá rozepsaný návrh, Zrušit úpravy u úprav (C-03)", async ({ page }) => {
+  test("Navrhnout téma má jedno Zavřít, které hlídá rozepsaný návrh; Zrušit úpravy u úprav (C-03)", async ({ page }) => {
     await openTopics(page);
     const propose = page.getByRole("dialog", { name: "Navrhnout téma" });
-    const footerClose = propose.locator(".row").getByRole("button", { name: "Zavřít", exact: true });
+    const closeButton = propose.getByRole("button", { name: "Zavřít", exact: true });
     await page.getByRole("button", { name: "Navrhnout téma" }).click();
-    await footerClose.click();
+    await expect(closeButton).toHaveCount(1);
+    await closeButton.click();
     await expect(propose).toBeHidden();
 
     await page.getByRole("button", { name: "Navrhnout téma" }).click();
     await propose.getByLabel("Téma").fill("Rozepsané téma");
-    await footerClose.click();
+    await closeButton.click();
     const unsaved = page.getByRole("alertdialog", { name: "Neuložené změny" });
     await expect(unsaved).toBeVisible();
     await unsaved.getByRole("button", { name: "Pokračovat v úpravách" }).click();
     await expect(propose.getByLabel("Téma")).toHaveValue("Rozepsané téma");
-    await footerClose.click();
+    await closeButton.click();
     await unsaved.getByRole("button", { name: "Zahodit změny" }).click();
     await expect(propose).toBeHidden();
 
@@ -461,8 +462,12 @@ test.describe("Témata očima účastníka", () => {
     await expect(page.getByRole("button", { name: "Seřadit podle zájmu" })).toHaveCount(0);
     await expect(page.getByText("zatím neproběhlo")).toHaveCount(0);
     await expect(page.getByText(/termín se potvrzuje/i)).toHaveCount(0);
-    // Bez režimu všech zveřejněných vidí kolega jen témata svých rolí, filtr by nic neměnil.
-    await expect(page.getByRole("link", { name: "Pro mou roli", exact: true })).toHaveCount(0);
+    // Všechna nearchivovaná témata jsou dostupná všem; „Pro mou roli“ (výchozí) ukáže jen témata FP.
+    await expect(page.getByRole("link", { name: "Pro mou roli", exact: true })).toHaveAttribute("aria-current", "page");
     await expect(page.getByText("Návaznost po konzultaci")).toHaveCount(0);
+    await page.getByRole("link", { name: "Všechna", exact: true }).click();
+    await expect(page.getByText("Návaznost po konzultaci").first()).toBeVisible();
+    // Jména zájemců ani správu kolega nevidí ani ve „Všechna“.
+    await expect(page.getByRole("button", { name: /^Možnosti tématu/ })).toHaveCount(0);
   });
 });

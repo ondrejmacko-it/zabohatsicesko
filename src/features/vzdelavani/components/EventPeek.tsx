@@ -18,6 +18,8 @@ import { EventMenu } from "./EventMenu";
 import { minutesSectionLabel } from "@/lib/minutes";
 import { ownParticipationDetail } from "@/server/services/participation";
 import { ParticipationPanel } from "./ParticipationPanel";
+import { managedExcusesAt } from "@/server/services/excuse-managers";
+import { ManagedExcuses } from "./ManagedExcuses";
 
 type Props = {
   user: Viewer;
@@ -39,12 +41,14 @@ export async function EventPeek({ user, eventId, preview, closeHref, presetTopic
   const { card } = detail;
   const holiday = card.type === "holiday";
   const managing = isOrganizer(user) && !preview;
+  // Náhled očima kolegy-správce: stav, rady a chybějící údaje jako u něj, ale bez formuláře a oprav.
+  const planView = isOrganizer(preview?.viewer ?? user);
   const editable = managing && !holiday && detail.form && card.planStatus !== "cancelled";
   // Zrušenou akci už nikdo nedoplňuje: chybějící údaj je jen „zatím neurčeno“, ne výzva.
-  const fillable = managing && card.planStatus !== "cancelled";
+  const fillable = planView && card.planStatus !== "cancelled";
   const status = primaryStatus(card);
   // Návrh: pás už říká, že ho kolegové nevidí, a chybějící údaje jsou vidět přímo v prázdných polích.
-  const advice = managing && card.planStatus !== "draft" ? statusAdvice(card) : null;
+  const advice = planView && card.planStatus !== "draft" ? statusAdvice(card) : null;
   const fullHref = `/vzdelavani/akce/${encodeURIComponent(card.id)}`;
   const minutesReady = detail.recording.access === "reader" && Boolean(detail.recording.minutes);
   const handlesRecording = detail.recording.access === "handler" && !preview && card.past;
@@ -62,6 +66,26 @@ export async function EventPeek({ user, eventId, preview, closeHref, presetTopic
       {card.planStatus === "cancelled" && detail.cancelReason && <span>Důvod: {detail.cancelReason}</span>}
     </div>
   );
+
+  // Vlastní účast (jen PARTICIPATION=on): stav a akce přímo v okně, potvrzení v samostatném okně. Správce ji vidí
+  // i nad formulářem úprav, aby se ke své účasti dostal bez technických informací.
+  const participation = holiday ? null : await ownParticipationDetail(user, preview, card.id);
+  const participationPanel = participation && (
+    <ParticipationPanel
+      eventId={card.id}
+      state={participation.state}
+      label={participation.label}
+      actions={participation.actions}
+      excuse={participation.excuse}
+      calendar={participation.calendar}
+      enrollment={participation.enrollment}
+      preview={preview ? (preview.personName ? "person" : "group") : undefined}
+    />
+  );
+
+  // Důvody omluv jen výslovně určenému nadřízenému, nikdy v náhledu (F03/D01).
+  const managed = holiday ? [] : await managedExcusesAt(user, card.id, Boolean(preview));
+  const managedPanel = <ManagedExcuses excuses={managed} />;
 
   if (editable) {
     const [people, topics, template, invite] = await Promise.all([
@@ -83,6 +107,8 @@ export async function EventPeek({ user, eventId, preview, closeHref, presetTopic
           </p>
         )}
         {card.original && <ChangeBanner eventId={card.id} revision={detail.revision} original={card.original} />}
+        {participationPanel}
+        {managedPanel}
       </>
     );
     // Funkční Kalendář se v okně neukazuje. Oprava je odkaz jen při chybě, technické informace jsou v nabídce.
@@ -128,10 +154,8 @@ export async function EventPeek({ user, eventId, preview, closeHref, presetTopic
     // Zrušení do Kalendáře nedošlo: správce dostane opravu. Jinak se technický stav v okně neukazuje.
     ...(managing && !holiday && card.syncStatus === "attention" ? [{ href: `${fullHref}#kalendar`, label: "Opravit v Kalendáři" }] : []),
   ];
-  // Vlastní účast (jen PARTICIPATION=on): stav a akce přímo v okně, potvrzení v samostatném okně.
-  const participation = holiday ? null : await ownParticipationDetail(user, preview, card.id);
   // Technické informace jsou pro správce jen tichý odkaz, nikdy hlavní tlačítko okna.
-  const technical = managing && !holiday && links.length === 0;
+  const technical = planView && !holiday && links.length === 0;
 
   return (
     <RouteModal title={card.label} closeHref={closeHref}>
@@ -161,18 +185,8 @@ export async function EventPeek({ user, eventId, preview, closeHref, presetTopic
         </div>
       </dl>
       {holiday && <p className="hint">Jen pro přehled, do Kalendáře se neposílá.</p>}
-      {participation && (
-        <ParticipationPanel
-          eventId={card.id}
-          state={participation.state}
-          label={participation.label}
-          actions={participation.actions}
-          excuse={participation.excuse}
-          calendar={participation.calendar}
-          enrollment={participation.enrollment}
-          preview={preview ? (preview.personName ? "person" : "group") : undefined}
-        />
-      )}
+      {participationPanel}
+      {managedPanel}
       {technical && (
         <p className="small peek-tech">
           <Link href={fullHref}>Technické informace</Link>

@@ -490,4 +490,25 @@ ALTER TABLE event_participation ADD CONSTRAINT event_participation_kind_check
   CHECK (kind IN ('voluntary_enrolled', 'excused', 'withdrawn'));
 `,
   },
+  {
+    id: "0018_excuse_managers",
+    approval: true,
+    sql: `
+-- F03/D01: důvod a poznámku omluvy smí vidět jen výslovně určený nadřízený, a jen u svých lidí. Řádek je zároveň
+-- vazba i oprávnění. Role správce, vedoucí akce ani pracovní role samy nic neopravňují. Vazby nastavuje správce.
+-- Jen nový objekt, nic se nemaže ani nepřepisuje; IF NOT EXISTS dovolí bezpečné opakování. Smazání účtu vazbu smaže.
+CREATE TABLE IF NOT EXISTS excuse_managers (
+  org_id text NOT NULL,
+  manager_id text NOT NULL,
+  employee_id text NOT NULL,
+  created_by text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (org_id, manager_id, employee_id),
+  CONSTRAINT excuse_managers_not_self CHECK (manager_id <> employee_id),
+  CONSTRAINT excuse_managers_manager_fk FOREIGN KEY (org_id, manager_id) REFERENCES users (org_id, id) ON DELETE CASCADE,
+  CONSTRAINT excuse_managers_employee_fk FOREIGN KEY (org_id, employee_id) REFERENCES users (org_id, id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS excuse_managers_employee_idx ON excuse_managers (org_id, employee_id);
+`,
+  },
 ];

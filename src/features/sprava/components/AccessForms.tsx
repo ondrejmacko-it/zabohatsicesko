@@ -7,7 +7,7 @@ import { Modal } from "@/components/Modal";
 import { submitKeepingValues } from "@/features/shared/keep-values";
 import { GROUP_LABELS, ROLE_LABELS } from "@/lib/labels";
 import { GROUPS, type Group, type Role } from "@/lib/types";
-import { createLoginLinkAction, inviteUserAction, rejectRequestAction, revokeDeviceAction, revokeLoginLinkAction, updateAccessAction } from "../actions";
+import { createLoginLinkAction, inviteUserAction, rejectRequestAction, revokeDeviceAction, revokeLoginLinkAction, setExcuseManagersAction, updateAccessAction } from "../actions";
 
 /** Výběr role a skupin. Nabízí jen role, které smí přihlášený uživatel přidělit (hlídá i server). */
 const PRESETS: Array<{ label: string; role: Role; groups: Group[] }> = [
@@ -108,6 +108,8 @@ type AccountActionsProps = {
   /** Ostrá Wiki: odkazy a zařízení. Úpravy role a přístupu jen u cizího účtu. */
   live?: { inviteWaiting: boolean; devices: Array<{ id: string; label: string }> };
   editable?: boolean;
+  /** Nadřízení pro omluvy (migrace 0018). Bez ní se volba neukáže. */
+  excuse?: ExcuseManagersProps["excuse"];
 };
 
 /** Zvací odkaz s kopírováním. Ukáže se jen jednou, v DB je jen jeho otisk. */
@@ -163,14 +165,61 @@ function NewLink({ account: a, onClose }: { account: AccountActionsProps["accoun
   );
 }
 
+type ExcuseManagersProps = {
+  account: AccountActionsProps["account"];
+  excuse: { managerIds: string[]; candidates: Array<{ id: string; name: string }> };
+  onClose: () => void;
+};
+
+/** Kdo smí číst důvody omluv tohoto člověka. Vazbu určuje firma, Wiki si ji neodvozuje z rolí. */
+function ExcuseManagersForm({ account: a, excuse, onClose }: ExcuseManagersProps) {
+  const [state, action, pending] = useActionState(setExcuseManagersAction, null);
+  useEffect(() => {
+    if (state?.ok) onClose();
+  }, [state, onClose]);
+  const candidates = excuse.candidates.filter((c) => c.id !== a.id);
+  return (
+    <Modal open title="Nadřízený pro omluvy" onRequestClose={onClose}>
+      <p className="small muted">
+        {a.name} · {a.email}
+      </p>
+      <form action={action} onSubmit={submitKeepingValues(action)} className="stack">
+        <input type="hidden" name="userId" value={a.id} />
+        <fieldset className="field">
+          <legend className="field-label">Kdo uvidí důvod omluvy</legend>
+          <div className="stack">
+            {candidates.map((c) => (
+              <label key={c.id} className="check">
+                <input type="checkbox" name="managerIds" value={c.id} defaultChecked={excuse.managerIds.includes(c.id)} />
+                {c.name}
+              </label>
+            ))}
+          </div>
+          <span className="field-hint">Nejvýš 5 lidí. Ostatní kolegové a správci důvod neuvidí, ani v náhledu za jiného uživatele.</span>
+        </fieldset>
+        <ActionMessage state={state} />
+        <div className="row">
+          <button type="submit" className="btn btn-primary" disabled={pending}>
+            {pending ? "Ukládám…" : "Uložit"}
+          </button>
+          <button type="button" className="btn" onClick={onClose}>
+            Zavřít
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
 const MODAL_TITLES = { approve: "Schválit přístup", edit: "Upravit přístup", restore: "Vrátit přístup" } as const;
 
 /**
  * Akce nad účtem ve Správě. Hlavní krok (schválení žádosti) je vidět, ostatní jsou v menu.
  * Úpravy role a skupin běží v okně, odebrání přístupu se potvrzuje.
  */
-export function AccountActions({ account: a, roles, live, editable = true }: AccountActionsProps) {
+export function AccountActions({ account: a, roles, live, editable = true, excuse }: AccountActionsProps) {
   const [mode, setMode] = useState<AccessProps["mode"] | null>(null);
+  const [managers, setManagers] = useState(false);
   const [revoking, setRevoking] = useState(false);
   const [linking, setLinking] = useState(false);
   const close = () => setMode(null);
@@ -198,6 +247,11 @@ export function AccountActions({ account: a, roles, live, editable = true }: Acc
         {editable && a.status === "active" && (
           <button type="button" className="btn" onClick={() => setMode("edit")}>
             Upravit přístup…
+          </button>
+        )}
+        {excuse && a.status === "active" && (
+          <button type="button" className="btn" onClick={() => setManagers(true)}>
+            Nadřízený pro omluvy…
           </button>
         )}
         {live && a.status === "active" && (
@@ -252,6 +306,7 @@ export function AccountActions({ account: a, roles, live, editable = true }: Acc
       )}
       {revoking && <RevokeAccess account={a} onClose={() => setRevoking(false)} />}
       {linking && <NewLink account={a} onClose={() => setLinking(false)} />}
+      {managers && excuse && <ExcuseManagersForm account={a} excuse={excuse} onClose={() => setManagers(false)} />}
     </div>
   );
 }

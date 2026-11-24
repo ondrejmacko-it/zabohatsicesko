@@ -14,7 +14,8 @@ import {
   weekdayShort,
 } from "@/lib/time";
 import type { EventCard } from "@/server/services/events";
-import { badgeClass, cardDetails, participationTone, cardStatus, cardTone, hiddenMissingDetails, isMovable, isPickable, pickBlockReason, primaryStatus } from "../status";
+import { ParticipationBadge } from "./ParticipationBadge";
+import { badgeClass, cardDetails, cardStatus, cardTone, hiddenMissingDetails, isMovable, isPickable, pickBlockReason, primaryStatus } from "../status";
 import { CardMenu, type CardMenuItem } from "./CardMenu";
 import { PickBox } from "./PlanSelection";
 import styles from "./schedule.module.css";
@@ -33,7 +34,11 @@ export type CardHref = (card: EventCard) => string;
 const pageHref: CardHref = (card) => `/vzdelavani/akce/${encodeURIComponent(card.id)}`;
 /** Položky menu ⋯ karty (jen Plán). Server je odvodí z `cardActions` a doplní adresy se zachovaným měsícem a filtry. */
 export type CardMenuFor = (card: EventCard) => CardMenuItem[];
-type Linking = { hrefFor?: CardHref; managing?: boolean; menuFor?: CardMenuFor };
+/**
+ * `managing`: správce smí v Plánu měnit (výběr, přesun, menu úprav). `planView`: karty se ukazují správcovsky
+ * (stavy, „— doplnit“), i když jde jen o náhled očima kolegy-správce. Bez `planView` platí `managing`.
+ */
+type Linking = { hrefFor?: CardHref; managing?: boolean; planView?: boolean; menuFor?: CardMenuFor };
 /** Plánování v mřížce (jen správce): odkaz „+“ pro přidání akce na den a přesun tažením od dneška dál. */
 type Planning = { addHref?: (day: string) => string; movableFrom?: string };
 const dayOf = (card: EventCard) => toDateKey(new Date(card.startsAt));
@@ -88,9 +93,7 @@ function CardMeta({ card, managing }: { card: EventCard; managing: boolean }) {
     <span className={styles.meta}>
       {status && <span className={badgeClass(status.tone)}>{status.label}</span>}
       {own && (
-        <span className={badgeClass(participationTone(card.participation!.state))} data-ucast={card.participation!.state}>
-          {own}
-        </span>
+        <ParticipationBadge state={card.participation!.state} label={own} />
       )}
       {missing.length > 0 && (
         <span className={styles.missing} title={missingText}>
@@ -120,7 +123,7 @@ function CardWrap({
   handle?: boolean;
   menu?: CardMenuItem[];
   menuClass?: string;
-  /** Návrh změny zveřejněné akce: decentní náznak druhé vrstvy bez textu. */
+  /** Karta návrhu změny leží na zveřejněné verzi (`OriginalLayer`). */
   stacked?: boolean;
   children: React.ReactNode;
 }) {
@@ -184,8 +187,35 @@ const toneOf = (card: EventCard) => (card.original ? "draft" : cardTone(card));
 const changesText = (card: EventCard) =>
   card.original?.changes.length ? `Mění ${card.original.changes.join(", ")}` : "Liší se od zveřejněné verze";
 
+/**
+ * Zveřejněná verze za kartou návrhu změny („stoh“). Vykukuje nad kartou jako pruh; při najetí myší se vysune
+ * dopředu a karta návrhu ustoupí. Klik otevře totéž okno akce, kde je originál i rozhodnutí. Pro čtečky
+ * a klávesnici je skrytá: okno akce i řádek „Mění …“ na kartě říkají totéž slovy. V režimu výběru jen
+ * řekne proč (`data-pick-reason`), okno neotevře.
+ */
+function OriginalLayer({ card, href }: { card: EventCard; href: string }) {
+  const original = card.original!;
+  return (
+    <Link
+      href={href}
+      scroll={false}
+      className={`${styles.event} ${styles.original}`}
+      aria-hidden="true"
+      tabIndex={-1}
+      data-original-of={card.id}
+      data-pick-reason="Zveřejněná verze patří zveřejněné akci, vybrat nejde."
+    >
+      <span className={styles.originalTab}>Zveřejněná verze</span>
+      <span className={styles.title}>{original.label}</span>
+      {original.leadName && <span className={styles.topic}>Kdo: {original.leadName}</span>}
+      {original.topicTitle && original.topicTitle !== original.label && <span className={styles.topic}>Téma: {original.topicTitle}</span>}
+      <span className={styles.line}>{formatEventTime(new Date(original.startsAt), new Date(original.endsAt), original.allDay)}</span>
+    </Link>
+  );
+}
+
 // Karta v mřížce: název, Kdo a Téma, čas a jeden stav. Podrobnosti ukáže okno akce po kliknutí.
-function EventBlock({ card, hrefFor = pageHref, managing = false, movable = false, menuFor }: { card: EventCard; movable?: boolean } & Linking) {
+function EventBlock({ card, hrefFor = pageHref, managing = false, planView = managing, movable = false, menuFor }: { card: EventCard; movable?: boolean } & Linking) {
   const tone = toneOf(card);
   const isHoliday = card.type === "holiday";
   const cancelled = card.planStatus === "cancelled";
@@ -197,11 +227,12 @@ function EventBlock({ card, hrefFor = pageHref, managing = false, movable = fals
     <CardWrap card={card} managing={managing} menu={menuFor?.(card)} menuClass={styles.menuGrid} stacked={card.original !== null}>
       <Link href={hrefFor(card)} scroll={false} className={`${styles.event} ${styles[tone]}`} data-ucast={card.participation?.state} {...drag} {...pickAttr(card, managing)}>
         <span className={styles.title}>{card.label}</span>
-        <CardDetails card={card} managing={managing} />
+        <CardDetails card={card} managing={planView} />
         {!isHoliday && !cancelled && <span className={styles.line}>{formatEventTime(new Date(card.startsAt), new Date(card.endsAt), card.allDay)}</span>}
         {card.original && <span className={styles.changes}>{changesText(card)}</span>}
-        <CardMeta card={card} managing={managing} />
+        <CardMeta card={card} managing={planView} />
       </Link>
+      {card.original && <OriginalLayer card={card} href={hrefFor(card)} />}
     </CardWrap>
   );
 }
@@ -213,6 +244,7 @@ export function ScheduleGrid({
   slotTimes,
   hrefFor = pageHref,
   managing = false,
+  planView = managing,
   addHref,
   movableFrom,
   menuFor,
@@ -295,6 +327,7 @@ export function ScheduleGrid({
                           card={card}
                           hrefFor={hrefFor}
                           managing={managing}
+                          planView={planView}
                           movable={plannable && isMovable(card)}
                           menuFor={menuFor}
                         />
@@ -323,6 +356,7 @@ export function Agenda({
   emptyText,
   hrefFor = pageHref,
   managing = false,
+  planView = managing,
   addHref,
   movableFrom,
   menuFor,
@@ -399,10 +433,10 @@ export function Agenda({
                             </span>
                             <span className={styles.agendaMain}>
                               <span className={styles.title}>{card.label}</span>
-                              <CardDetails card={card} managing={managing} />
+                              <CardDetails card={card} managing={planView} />
                               {card.original && <span className={styles.changes}>{changesText(card)}</span>}
                             </span>
-                            <CardMeta card={card} managing={managing} />
+                            <CardMeta card={card} managing={planView} />
                           </Link>
                         </CardWrap>
                       </li>
@@ -468,9 +502,7 @@ export function NextEventsList({ cards, todayKey, hrefFor = pageHref, emptyText 
                   {card.leadName ? ` · Vede: ${card.leadName}` : ""}
                 </span>
                 {card.participation?.label && (
-                  <span className={badgeClass(participationTone(card.participation.state))} data-ucast={card.participation.state}>
-                    {card.participation.label}
-                  </span>
+                  <ParticipationBadge state={card.participation.state} label={card.participation.label} />
                 )}
               </span>
             </Link>

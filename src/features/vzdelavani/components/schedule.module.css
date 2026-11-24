@@ -204,43 +204,11 @@
 
 /* Účast odlišujeme zároveň textovým štítkem i barvou a boční linkou; v náhledu stejně.
    Stav návrhu, svátku a zrušené akce má přednost před dekoračním zvýrazněním účasti. */
-:is(.event, .agendaEvent)[data-ucast="required"] {
-  border-left: 4px solid #a3651b;
+:is(.event, .agendaEvent)[data-ucast] {
+  border-left: 4px solid var(--ucast);
 }
-:is(.event, .agendaEvent)[data-ucast="optional"] {
-  border-left: 4px solid #7b8990;
-}
-:is(.event, .agendaEvent)[data-ucast="voluntary_enrolled"] {
-  border-left: 4px solid #267c64;
-}
-:is(.event, .agendaEvent)[data-ucast="excused"] {
-  border-left: 4px solid #8761a5;
-}
-:is(.event, .agendaEvent)[data-ucast="withdrawn"] {
-  border-left: 4px solid #9b8d84;
-}
-.meta [data-ucast="required"] {
-  background: #f7e8d3;
-  color: #75400a;
-}
-.meta [data-ucast="optional"] {
-  background: #edf2f3;
-  color: #334f60;
-  border-color: #bfced4;
-}
-.meta [data-ucast="voluntary_enrolled"] {
-  background: #e1f1e8;
-  color: #195a46;
-}
-.meta [data-ucast="excused"] {
-  background: #eee6f5;
-  color: #603f7f;
-  border-color: #d4c3e4;
-}
-.meta [data-ucast="withdrawn"] {
-  background: #f0ece9;
-  color: #55443d;
-  border-color: #d0c4bb;
+:is(.event, .agendaEvent)[data-ucast="cancelled"] {
+  border-left-color: var(--line-strong);
 }
 
 /* Stav karty: jeden štítek a vedle něj decentní indikátor chybějících údajů. */
@@ -673,19 +641,78 @@
   padding-right: 36px;
 }
 
-/* ——— Návrh změny zveřejněné akce (jen správce) ———
-   Jedna čitelná karta: štítek „Návrh změny“ a řádek, co se mění. Zveřejněnou verzi naznačuje jen list papíru
-   za kartou (bez textu, nic nepřekrývá). Porovnání obou verzí je v okně akce. */
+/* ——— Návrh změny zveřejněné akce jako „stoh“ (jen správce) ———
+   Okrová karta návrhu leží na zveřejněné verzi, která nad ní vykukuje pruhem „Zveřejněná verze“. Při najetí myší
+   na pruh se originál vysune dopředu (stejná plocha jako karta, nic nepřesahuje buňku, mřížka má vodorovné
+   posouvání) a návrh ustoupí. Originál je jen pro myš; okno akce ho ukazuje i klávesnici a čtečkám. */
 .stacked {
-  margin-top: 4px;
+  padding-top: 20px;
 }
 
-.stacked > .event {
-  box-shadow:
-    3px -3px 0 -1px var(--surface),
-    3px -3px 0 0 var(--line-strong);
+.stacked > .event:not(.original) {
+  z-index: 1;
+  transition: opacity 0.18s ease;
 }
 
+.original {
+  position: absolute;
+  inset: 0 0 20px;
+  z-index: 0;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  background: var(--surface, #fff);
+  color: var(--muted);
+  /* Vysunutí = pruh se roztáhne přes kartu návrhu; myš zůstává nad originálem, takže stav nebliká. */
+  transition:
+    bottom 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.originalTab {
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 14px;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* Pruh zabírá horních 20 px; obsah originálu začíná pod ním, aby byl ve vysunutém stavu celý vidět. */
+.stacked > .original {
+  padding-top: 1px;
+}
+
+.original .originalTab {
+  margin: 0 0 6px;
+}
+
+.stacked > .original:hover {
+  z-index: 2;
+  bottom: 0;
+  color: var(--ink);
+  box-shadow: 0 6px 16px rgb(0 0 0 / 0.12);
+}
+
+.stacked:has(> .original:hover) > .event:not(.original) {
+  opacity: 0.35;
+}
+
+/* ⋯ a checkbox patří návrhu: nad vysunutým originálem by mátly. */
+.stacked:has(> .original:hover) > .menuGrid,
+.stacked:has(> .original:hover) > :global(.pick-box) {
+  visibility: hidden;
+}
+
+/* Úchyty karty (⋯, checkbox výběru) zůstávají na kartě návrhu, ne na pruhu. */
+.stacked > .menuGrid {
+  top: 24px;
+}
+
+.stacked > :global(.pick-box) {
+  top: 28px;
+}
+
+/* Řádek, co návrh mění: v mřížce pod časem, v agendě (telefon, bez stohu) jediná zmínka. */
 .changes {
   display: block;
   color: var(--ochre-dark);
@@ -693,10 +720,17 @@
   line-height: 1.35;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .original,
+  .stacked > .event:not(.original) {
+    transition: none;
+  }
+}
+
 /* Hover interaktivních karet: jemný stín a posun o 1 px. Jen samostatné karty, ne stoh (má vlastní vysouvání)
    ani zvednutá karta při přesunu; obal karty se nehýbe, aby ⋯ a pevně ukotvené menu zůstaly na místě. */
 @media (hover: hover) and (prefers-reduced-motion: no-preference) {
-  .cardWrap:not([data-lifted]) > .event,
+  .cardWrap:not(.stacked):not([data-lifted]) > .event,
   .agendaEvent {
     transition:
       transform 0.15s ease,
@@ -704,7 +738,7 @@
       border-color 0.15s ease;
   }
 
-  .cardWrap:not([data-lifted]) > .event:hover,
+  .cardWrap:not(.stacked):not([data-lifted]) > .event:hover,
   .agendaEvent:hover {
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgb(0 0 0 / 0.08);

@@ -26,6 +26,7 @@ import { requireUser } from "@/server/auth/session";
 import { isLiveWiki, now, personalSelfInvite } from "@/server/config";
 import { canManageUsers } from "@/server/policy";
 import { listAccounts, type Account } from "@/server/services/users";
+import { listExcuseManagers } from "@/server/services/excuse-managers";
 
 export const metadata: Metadata = { title: "Správa systému" };
 
@@ -33,18 +34,24 @@ export default async function AdminPage() {
   const user = await requireUser();
   // Stejná odpověď jako neexistující stránka: bez oprávnění se o správě nic nedozví.
   if (!canManageUsers(user)) notFound();
-  const [accounts, calendar, personal, legacyInvites, worker] = await Promise.all([
+  const [accounts, calendar, personal, legacyInvites, worker, excuseManagers] = await Promise.all([
     listAccounts(user),
     loadCalendarStatus(user),
     loadPersonalCalendars(user),
     legacyInviteCount(user),
     getDb().then(workerHealth),
+    listExcuseManagers(user),
   ]);
   // Jedna role pro plánování a správu. Starší hodnota „organizer“ se už nepřiděluje, pravidla ji berou stejně.
   const roles: Role[] = ["admin", "member"];
   const pending = accounts.filter((a) => a.status === "pending");
   const others = accounts.filter((a) => a.status !== "pending");
   const live = isLiveWiki();
+  // Nadřízení pro omluvy jen nad migrací 0018. Vybírá se z aktivních účtů, vazbu určuje firma.
+  const candidates = others.filter((a) => a.status === "active").map((a) => ({ id: a.id, name: a.name }));
+  const nameOf = new Map(accounts.map((a) => [a.id, a.name]));
+  const excuseOf = (a: Account) =>
+    excuseManagers ? { managerIds: excuseManagers.get(a.id) ?? [], candidates } : undefined;
   // Integrace a diagnostika jsou sbalené. Otevřou se samy, jen když něco vyžaduje zásah správce.
   const ownCalendar = personal?.get(user.id);
   const attention = personal
@@ -91,12 +98,14 @@ export default async function AdminPage() {
               account={a}
               live={live}
               personal={personal}
+              excuseManagers={excuseManagers?.get(a.id)?.map((id) => nameOf.get(id) ?? "").filter(Boolean)}
               actions={
                 live && a.ownPrimary ? (
                   // Hlavní správce u sebe: jen odkaz pro další zařízení. Zařízení ani účet tu nemění.
                   <AccountActions
                     account={a}
                     roles={roles}
+                    excuse={excuseOf(a)}
                     editable={false}
                     live={{ inviteWaiting: a.access.invite.kind === "waiting", devices: [] }}
                   />
@@ -105,6 +114,7 @@ export default async function AdminPage() {
                     account={a}
                     roles={roles}
                     editable={a.editable}
+                    excuse={excuseOf(a)}
                     {...(live
                       ? {
                           live: {
@@ -203,12 +213,15 @@ function AccountHead({
   actions,
   live = false,
   personal = null,
+  excuseManagers,
 }: {
   account: Account;
   actions: React.ReactNode;
   live?: boolean;
   /** Stav osobních kalendářů, jen v režimu `CALENDAR_DELIVERY=personal`. */
   personal?: Map<string, PersonalCalendarState> | null;
+  /** Jména nadřízených pro omluvy (0018); bez migrace undefined. */
+  excuseManagers?: string[];
 }) {
   return (
     <div className="spread account-head">
@@ -245,6 +258,9 @@ function AccountHead({
           </p>
         )}
         {personal && a.status === "active" && <p className="item-meta">{personalCalendarLabel(personal.get(a.id))}</p>}
+        {excuseManagers && excuseManagers.length > 0 && (
+          <p className="item-meta" data-testid="nadrizeni-omluvy">Omluvy čte: {excuseManagers.join(", ")}</p>
+        )}
       </div>
       <div className="account-side">
         {a.status === "active" && a.origin !== "demo" && !a.googleLinked ? (
