@@ -38,18 +38,21 @@ vzdálené migrace ani změny Vercel proměnných bez schválení.
   vlastník lokálně nebo jde ověřit přes Vercel Preview s DATABASE_URL branche (vyžaduje schválení změny proměnných).
   Branch nechán pro Preview test; smazat po ověření (free limit 10 branchí).
 
+## Hotovo v relaci 3 (commit 3972475)
+- Náhled 1:1 očima kolegy-správce: `planView = isOrganizer(viewer)` v `harmonogram/page.tsx` (filtr stavů,
+  `monthSummary`/štítky, `nextEvent`), `Schedule.tsx` (prop `planView` pro `CardMeta`/`CardDetails`), `EventPeek`
+  a `akce/[id]` (advice, `fillable`, technický odkaz). Zápisové prvky dál na `managing`. E2E `nahled.spec.ts`
+  „náhled kolegy-správce 1:1“: celý soubor 60/60 prošel (všechny projekty). vitest nahled + audit-ucast-nahledy OK.
+- `ucast.spec.ts` (verze z relace 2) celý prošel 1280+390 (22 passed, 1 skip) – ověřeno v relaci 3 před resetem
+  na vzdálenou větev; po něm neověřeno znovu, spustit v kroku 2.
+
 ## Další kroky (pořadí)
-1. Náhled 1:1 pro správce-kolegu (analýza hotová): v `harmonogram/page.tsx` je `managing = organizer && !preview`,
-   `viewer = preview?.viewer ?? user`. Zavést `planView = isOrganizer(viewer)` pro čtecí části (listMonthDrafts,
-   filtr stavů, `monthSummary`/štítky, `CardMeta`/`CardDetails` chybějící údaje), zápisové prvky (add, kopie, tema,
-   movable, MoveDropZone, PickBox, syncPublished, menu úprav) nechat na `managing`. Totéž v `EventPeek`
-   (advice, Todo `fillable`, technický odkaz jen ke čtení, bez formuláře) a `akce/[id]`. E2E do `nahled.spec.ts`:
-   náhled „Druhý správce ukázky“ ukáže návrhy a štítky stavů, žádné tlačítko zápisu.
-2. Animace původní verze návrhu změny (bod 8), hromadný výběr počítadla (bod 9), Zápisy k dokončení UX (bod 11),
-   Topbar jméno (bod 13), dvakrát Zavřít v Navrhnout téma.
-3. Celá sada: lint, tsc, vitest, build, e2e všech projektů.
-4. Release návod (bod 17: ověřit Vercel Git integraci – nasazuje merge do main produkci?; existuje
-   `docs/navod-merge-f01-f18.md`, aktualizovat), report F01–F18 (18 řádků, bod 19), draft PR do main, screenshoty.
+1. UX body: animace původní verze návrhu změny (bod 8), hromadný výběr počítadla (bod 9), Zápisy k dokončení UX
+   (bod 11), Topbar jméno (bod 13), dvakrát Zavřít v Navrhnout téma. Přesné znění bodů je jen v zadání – pokud
+   v docs (`pozadavky-f01-f18.md`, `audit-2026-11-23/`) chybí, zeptat se uživatele, nedomýšlet.
+2. Celá sada: lint, tsc, vitest, build, e2e všech projektů.
+3. Release návod (bod 17: ověřit Vercel Git integraci – nasazuje merge do main produkci?; aktualizovat
+   `docs/navod-merge-f01-f18.md`), report F01–F18 (18 řádků, bod 19), draft PR do main, screenshoty.
 
 ## Otevřené otázky pro vlastníka
 - Schválení migrací 0015–0018 na `zbc-wiki-produkce` a `PARTICIPATION=on` na produkci (až po Preview testu).
