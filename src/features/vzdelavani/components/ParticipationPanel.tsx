@@ -6,9 +6,9 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { changeParticipationAction, type ActionResult } from "@/features/vzdelavani/actions";
 import { calendarNote, type OwnCalendar } from "@/lib/calendar-note";
 import { ParticipationBadge } from "./ParticipationBadge";
+import { EXCUSE_REASON_LABELS } from "@/lib/labels";
 import { EXCUSE_NOTE_MAX, EXCUSE_REASONS, type ExcuseReason, type ParticipationState } from "@/lib/types";
 
-export const EXCUSE_REASON_LABELS: Record<ExcuseReason, string> = { illness: "Nemoc", vacation: "Dovolená", other: "Jiné" };
 
 type Action = "enroll" | "withdraw" | "excuse" | "revoke_excuse";
 

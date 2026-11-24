@@ -145,3 +145,5 @@ export function eventContext(title: string, type: EventType, audience?: Group): 
 
 /** Vysvětlení u zamčeného ovládání v náhledu „Zobrazit jako“ (stejné ovládání jako kolega, jen nejde použít). */
 export const PREVIEW_READ_ONLY = "Náhled je jen ke čtení";
+
+export const EXCUSE_REASON_LABELS: Record<import("@/lib/types").ExcuseReason, string> = { illness: "Nemoc", vacation: "Dovolená", other: "Jiné" };

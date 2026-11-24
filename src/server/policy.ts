@@ -98,10 +98,10 @@ export function canSeeTopic(viewer: Viewer, audience: string, mode: EventVisibil
 }
 
 /**
- * Důvod a poznámka omluvy jsou soukromé (u nemoci jde o údaj související se zdravím). Zatím je smí číst
- * jen sám omluvený. Správce ani pracovní role „vedoucí týmu“ je automaticky nevidí: oprávněného manažera
- * doplní PR2 podle schváleného mapování (O03).
+ * Důvod a poznámka omluvy jsou soukromé (u nemoci jde o údaj související se zdravím). Smí je číst sám omluvený
+ * a výslovně určený nadřízený (`excuse_managers`, nastavuje správce). Role správce, vedení akce ani pracovní
+ * role „vedoucí týmu“ samy přístup nedávají. Náhled „Zobrazit jako“ je nikdy neukazuje (řeší volající).
  */
-export function canReadExcuseDetails(viewer: Viewer, subjectUserId: string): boolean {
-  return viewer.id === subjectUserId;
+export function canReadExcuseDetails(viewer: Viewer, subjectUserId: string, managedIds: ReadonlySet<string> = new Set()): boolean {
+  return viewer.id === subjectUserId || managedIds.has(subjectUserId);
 }

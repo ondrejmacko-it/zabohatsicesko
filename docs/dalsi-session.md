@@ -1,45 +1,43 @@
-# Navazující relace (stav 24. 11. 2026, UX rework)
+# Navazující relace (stav 24. 11. 2026, finální dokončení F01–F18 po PR #91)
 
-Limit relace: **200 tis. tokenů tvrdě** (pokyn vlastníka). Při přiblížení commit, push, předávka, nová relace.
+Limit relace: **200 tis. tokenů tvrdě**. Zadání: prompt „ZBČ – FINÁLNÍ DOKONČENÍ F01–F18, AKTIVACE ÚČASTI A SJEDNOCENÍ UI
+PO PR #91“ (body 0–19). Větev `claude/nice-lamport-vjfy87` (z main a30605c). Nic nemergovat/nenasazovat, žádné
+vzdálené migrace ani změny Vercel proměnných bez schválení.
 
-## Stav
-- Větev `claude/oprava-ux-vyber-ucast-nahled` (z `main` po merge PR #87). Zadání: prompt „ZBČ – cílený UX/UI rework“
-  (P0 výběr návrhů, účast, náhled 1:1; P1 záhlaví, Topbar, témata, výzvy, formuláře, mobil). Nic nemergovat/nenasazovat.
-- **Hotovo P0-1 (výběr návrhů, commit 791840a):** jedna karta návrhu změny, `data-pick-reason`, lišta „Vybráno N z M“,
-  e2e `vyber-navrhu.spec.ts`.
-- **Hotovo P0-3 (náhled 1:1, commit 0be4d99):** `withOwnParticipation`/`ownParticipationDetail` v náhledu počítají
-  `actions` jako pro kolegu (`readOnly: !enrollment`); `ParticipationPanel preview: "person"|"group"` vykreslí stejná
-  tlačítka `disabled` + „Náhled je jen ke čtení…“ (`data-testid=ucast-zamcena`), skupina má poznámku „bez individuálních
-  přihlášek a omluv“. Témata: `InterestButton`/`ProposeTopicDialog` `locked` (disabled, title `PREVIEW_READ_ONLY` z
-  `lib/labels.ts`). Zápisy: `listMissingMinutes(viewer)`, K dokončení disabled. `TasksCard readOnly` = disabled tlačítka.
-  **Serverová pojistka centrálně v `runAction`**: při `currentPreview(user)` vrací `preview_read_only` (nový DomainErrorCode).
-  Testy, které volají akce, mockují `next/headers` cookies. Vědomý rozdíl 1:1: osobní pozvánky (Gmail/Kalendář kolegy)
-  náhled nenačítá. Ověřeno: eslint 0, tsc OK, vitest 582/582, e2e nahled+ucast (1280, 390) 31+19 passed.
+## Ověřený stav databází (jen čtení, 24. 11.)
+- Demo `zbc-vzdelavani-demo.vercel.app` → Neon `zbc-wiki-produkce` (bitter-breeze-02749976): migrace 0001–0014,
+  **chybí 0015, 0016, 0017** (+ nová 0018). 12 uživatelů, 143 akcí. Běží `WIKI_MODE=production`.
+- Neon `neon-zbz-vzdelavani-demo` (still-shadow-86247101, fiktivní data, Preview): 0001–0015 (+ cizí 0007_invite_hold,
+  0008_access_links z jiných větví), chybí 0016–0018.
 
-## Zjištěné příčiny (ověřeno)
-- Demo `zbc-vzdelavani-demo.vercel.app` = Vercel **production** s `WIKI_MODE=production` → `participationEnabled()`
-  vždy false (záměrná pojistka), proto chybí Přihlásit/Omluvit. Preview: `WIKI_MODE=demo`, `PARTICIPATION` nenastaveno,
-  migrace 0016/0017 (a 0015 neomezená garance) mají `approval: true`, na vzdálené DB se spustí jen přes `APPROVED_MIGRATIONS`.
-  Lokálně/E2E (`PARTICIPATION=on`, PGlite) účast funguje (e2e/ucast.spec.ts). Nic na Vercelu/Neonu neměněno.
+## Hotovo v této relaci (commit 1 pushnutý, commit 2 viz git log)
+- `participationEnabled()`: `PARTICIPATION=on` platí i v ostré Wiki, ale jen když DB má 0016+0017
+  (`markParticipationSchema` v `prepareDatabase`, `participationReadiness()` = on/off/missing-schema, varování v logu).
+  Integrace (správce) ukazují stav „Přihlášky a omluvy“. Test `tests/ucast-aktivace.test.ts`.
+- `ParticipationBadge` + tokeny `--ucast-*` v globals.css; Plán, seznam, Úvod (NextEventsList), panel účasti, filtry
+  Povinné/Dobrovolné (`.pill[data-ucast]`). `participationTone` odstraněn.
+- `EventPeek`: panel Tvoje účast i v editačním okně správce (v `intro` nad formulářem).
+- E2E `stranky.spec.ts` + `temata-planovani.spec.ts:455` upraveny podle rozhodnutí vlastníka (zveřejněné akce/témata
+  všem), přidán negativní případ „Nezveřejněný návrh“ (`ev-11-13`) jen pro správce.
+- Manažer a omluvy (rozpracováno, commit 2): migrace `0018_excuse_managers` (approval), schéma `excuseManagers`,
+  `src/server/services/excuse-managers.ts` (managedEmployeeIds, list/setExcuseManagers jen správce, managedExcusesAt
+  nikdy v náhledu), `canReadExcuseDetails(viewer, subject, managedIds)`, `ManagedExcuses` v detailu akce,
+  `EXCUSE_REASON_LABELS` přesunuto do `lib/labels.ts`. tsc + eslint OK.
 
-## Hotovo v relaci 3 (24. 11.)
-- Krok 2 záhlaví harmonogramu (2a020c6): Měsíc/Seznam = `.segmented` s ikonami `calendar`/`list`; filtr účasti
-  je `lead` v `PlanFilters` (jeden řádek s Filtry/štítky). Test geometrie zahrnuje i `.plan-filters`, nový test účastníka.
-- Krok 3 Topbar (ea343ff): mřížka značka | Pohled | účet (≥641 px), <1440 kratší tlačítko role, <1200 bez podtitulu,
-  641–999 Pohled na 2. řádku. Optgroupy Skupina/Kolega už existovaly. Test `nahled.spec.ts` „lišta s pohledem na počítači“.
-- Krok 4+6 (c8538ae): `PageCall` tokeny `--call*` (zelenošedý). Kolize v Připravit měsíc jmenuje akci a čas
-  (`slotConflictWith`, `MonthDraft.clashWith`) + rada. Krok 5: pokryto vitestem `temata-priority.test.ts:226` (4 garantovaná).
-- Lint 0, tsc OK, vitest 583/583, cílené E2E (rozložení, účast, náhled, příprava měsíce) prošly.
+## Další kroky (pořadí)
+1. Výsledek E2E běhu (stranky, temata-planovani, ucast, nahled; 1280+390) – log byl ve scratchpadu, spustit znovu.
+2. Dokončit 0018: UI ve Správě (u účtu „Nadřízený pro omluvy“, checkboxy aktivních účtů, akce `setExcuseManagersAction`
+   v `features/sprava/actions.ts` přes `runAction`), ManagedExcuses i v `EventPeek`; vitest: nadřízený vidí důvod,
+   jiný kolega/správce/náhled ne, bez 0018 nic; e2e scénář 4.
+3. Izolovaný Neon branch z `neon-zbz-vzdelavani-demo` (fiktivní data) → lokální build s `DATABASE_URL` branche,
+   `APPROVED_MIGRATIONS=0016_event_participation,0017_participation_withdrawn,0018_excuse_managers`, `PARTICIPATION=on`
+   → ověřit účast a 0015 (4/5/10/20 garantovaných) na skutečném Postgresu. Connection string nevypisovat.
+4. Náhled 1:1 pro správce-kolegu (`managing = organizer && !preview` v EventPeek/harmonogram/akce) – read-only správa.
+5. Animace původní verze návrhu změny (bod 8), hromadný výběr počítadla (bod 9), Zápisy k dokončení UX (bod 11),
+   Topbar jméno (bod 13), dvakrát Zavřít v Navrhnout téma.
+6. Release návod (bod 17: ověřit, zda merge do main nasazuje produkci – Vercel Git integrace), report F01–F18 (bod 19),
+   draft PR, screenshoty (lokální/Preview označit).
 
-## Další krok
-- Draft PR #91 do main založen (report A–G). Celá E2E sada: 1362 passed, 244 skipped, 28 failed = 4 testy ×7 projektů,
-  padaly už na main: `stranky.spec.ts:32` (FP/RM vidí detail akce cizí skupiny) a `temata-planovani.spec.ts:455`
-  („Pro mou roli“ u účastníka). Příčina: viditelnost v režimu PARTICIPATION=on. Otevřená otázka pro vlastníka:
-  opravit testy, nebo viditelnost? Po rozhodnutí upravit a doplnit výsledek do PR.
-
-## Pozn.
-- Nový kontejner: nejdřív `npm ci`. Snímky: dočasný spec v `e2e/` (necommitovat) s `authFile(role)`, `settle(page)`,
-  `page.screenshot` do scratchpadu; běh `npx playwright test <spec> --project=windows-1280 --project=telefon-390
-  --reporter=line --trace off` (webServer si udělá build sám, ~1 min).
-- Snímky obrázků stojí hodně kontextu: číst jen nezbytné, nejlépe 1–2 na krok.
-- Ve stávající sadě dříve padaly 4 testy (stranky.spec.ts:32, temata-planovani.spec.ts:455) – nezkontrolováno znovu.
+## Otevřené otázky pro vlastníka
+- Schválení migrací 0015–0018 na `zbc-wiki-produkce` a `PARTICIPATION=on` na produkci (až po Preview testu).
+- Skutečné mapování nadřízených a doba uchování omluv (firma).

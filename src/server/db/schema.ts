@@ -406,3 +406,16 @@ export const eventParticipation = pgTable(
   },
   (t) => [primaryKey({ columns: [t.orgId, t.eventId, t.userId] })],
 );
+
+/** Výslovně určený nadřízený, který smí číst důvod a poznámku omluvy svého člověka (0018, F03/D01). */
+export const excuseManagers = pgTable(
+  "excuse_managers",
+  {
+    orgId: text("org_id").notNull(),
+    managerId: text("manager_id").notNull(),
+    employeeId: text("employee_id").notNull(),
+    createdBy: text("created_by"),
+    createdAt: ts("created_at").notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.orgId, t.managerId, t.employeeId] })],
+);

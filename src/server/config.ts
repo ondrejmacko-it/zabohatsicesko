@@ -77,15 +77,22 @@ export function eventVisibility(): EventVisibility {
 /** Migrace, bez kterých účast nesmí běžet (tabulka `event_participation` a stav „odhlášeno“). */
 export const PARTICIPATION_MIGRATIONS = ["0016_event_participation", "0017_participation_withdrawn"] as const;
 
-const participationSchema = globalThis as unknown as { __zbcParticipationSchema?: boolean };
+const schemaState = globalThis as unknown as { __zbcAppliedMigrations?: ReadonlySet<string> };
 
-/** Volá `prepareDatabase` po migracích: zda databáze obsahuje schéma účasti. */
+/** Volá `prepareDatabase` po migracích: které migrace databáze skutečně má (funkce podmíněné schématem). */
 export function markParticipationSchema(applied: ReadonlySet<string>): void {
   const ready = PARTICIPATION_MIGRATIONS.every((id) => applied.has(id));
   if (!ready && process.env.PARTICIPATION?.trim() === "on") {
     console.warn(`[ucast] PARTICIPATION=on, ale chybí migrace ${PARTICIPATION_MIGRATIONS.join(", ")}: účast zůstává vypnutá`);
   }
-  participationSchema.__zbcParticipationSchema = ready;
+  schemaState.__zbcAppliedMigrations = new Set(applied);
+}
+
+const migrationApplied = (id: string) => schemaState.__zbcAppliedMigrations?.has(id) === true;
+
+/** Nadřízení pro omluvy (0018). Bez migrace se vazby nečtou ani neukládají, omluvy vidí jen omluvený. */
+export function excuseManagersEnabled(): boolean {
+  return participationEnabled() && migrationApplied("0018_excuse_managers");
 }
 
 export type ParticipationReadiness = "on" | "off" | "missing-schema";
@@ -93,7 +100,7 @@ export type ParticipationReadiness = "on" | "off" | "missing-schema";
 /** Stav připravenosti účasti pro kontrolu po nasazení (bez tajemství). */
 export function participationReadiness(): ParticipationReadiness {
   if (process.env.PARTICIPATION?.trim() !== "on") return "off";
-  return participationSchema.__zbcParticipationSchema === true ? "on" : "missing-schema";
+  return PARTICIPATION_MIGRATIONS.every(migrationApplied) ? "on" : "missing-schema";
 }
 
 /**

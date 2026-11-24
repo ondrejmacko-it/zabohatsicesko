@@ -1,3 +1,5 @@
+import { ManagedExcuses } from "@/features/vzdelavani/components/ManagedExcuses";
+import { managedExcusesAt } from "@/server/services/excuse-managers";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -43,6 +45,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
   const { card } = detail;
   // Vlastní účast (jen PARTICIPATION=on). Identita vždy ze session; v náhledu jen podle rolí, bez akcí.
   const participation = card.type === "holiday" ? null : await ownParticipationDetail(user, preview, card.id);
+  const managedExcuses = card.type === "holiday" ? [] : await managedExcusesAt(user, card.id, Boolean(preview));
   const organizer = isOrganizer(user) && !preview;
   const start = new Date(card.startsAt);
   const dayKey = toDateKey(start);
@@ -173,6 +176,8 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
           preview={preview ? (preview.personName ? "person" : "group") : undefined}
         />
       )}
+
+      <ManagedExcuses excuses={managedExcuses} />
 
       {detail.sync && <SyncPanelView eventId={card.id} sync={detail.sync} />}
       {handlerPreview ? (
