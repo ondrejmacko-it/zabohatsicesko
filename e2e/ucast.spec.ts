@@ -152,7 +152,6 @@ test.describe("soukromí omluvy", () => {
     await dialog.getByLabel("Poznámka (nepovinná)").fill(note);
     await dialog.getByRole("button", { name: "Omluvit se" }).click();
     await expect(page.locator('[data-ucast-panel="excused"]')).toBeVisible();
-    await own.close();
 
     const other = await browser.newContext({ storageState: authFile("vedouci") });
     const view = await other.newPage();
@@ -161,6 +160,12 @@ test.describe("soukromí omluvy", () => {
       expect(html).not.toContain(note);
     }
     await other.close();
+
+    // Úklid: bez zrušení omluvy by další testy vybraly dřívější, už proběhlou povinnou akci.
+    await page.locator("[data-ucast-panel]").getByRole("button", { name: "Zrušit omluvu" }).click();
+    await page.getByRole("dialog", { name: "Zrušit omluvu?" }).getByRole("button", { name: "Zrušit omluvu" }).click();
+    await expect(page.locator('[data-ucast-panel="required"]')).toBeVisible();
+    await own.close();
   });
 });
 
