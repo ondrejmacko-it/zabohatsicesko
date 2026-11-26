@@ -46,7 +46,7 @@ describe("štítky stavu akce v detailu", () => {
       const base = { syncStatus: role.syncStatus, unpublishedChanges: role.unpublishedChanges };
       expect(labels(card({ ...base, planStatus: "draft", syncStatus: null, unpublishedChanges: false }))[0]).toBe("Návrh");
       expect(labels(card({ ...base, planStatus: "published" }))[0]).toBe("Zveřejněno");
-      expect(labels(card({ ...base, planStatus: "published", past: true }))[0]).toBe("Proběhlo");
+      expect(labels(card({ ...base, planStatus: "published", past: true }))[0]).toBe("Zveřejněno · proběhlo");
       expect(labels(card({ ...base, planStatus: "cancelled" }))).toEqual(["Zrušeno"]);
       expect(labels(card({ ...base, planStatus: "cancelled", past: true }))).toEqual(["Zrušeno"]);
       expect(labels(card({ ...base, planStatus: "draft", past: true, syncStatus: null, unpublishedChanges: false }))[0]).toBe("Návrh");
@@ -115,10 +115,10 @@ describe("zrušená akce pro jednotlivé role", () => {
     await expect(updateEvent(organizer, PUBLISHED_RM, after.revision, input, "draft")).rejects.toThrow();
   });
 
-  test("proběhlá zveřejněná akce má štítek Proběhlo u všech rolí", async () => {
+  test("proběhlá zveřejněná akce má štítek Zveřejněno · proběhlo u všech rolí", async () => {
     for (const viewer of [organizer, admin, lead, participant]) {
       const detail = await getEventDetail(viewer, PAST_FP);
-      expect(labels(detail!.card)[0]).toBe("Proběhlo");
+      expect(labels(detail!.card)[0]).toBe("Zveřejněno · proběhlo");
     }
   });
 });

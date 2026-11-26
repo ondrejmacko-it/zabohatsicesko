@@ -45,7 +45,7 @@ export function lifecycleStatus(card: EventCard): { label: string; tone: Tone } 
   if (card.planStatus === "cancelled") return { label: "Zrušeno", tone: "danger" };
   if (card.type === "holiday") return { label: "Svátek", tone: "neutral" };
   if (card.planStatus === "draft") return { label: "Návrh", tone: "draft" };
-  if (card.past) return { label: "Proběhlo", tone: "neutral" };
+  if (card.past) return { label: "Zveřejněno · proběhlo", tone: "neutral" };
   return { label: "Zveřejněno", tone: "ok" };
 }
 
