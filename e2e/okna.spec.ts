@@ -250,7 +250,7 @@ test.describe("okna správce", () => {
   test("Zápisy k dokončení s odpovědnou osobou", async ({ page }) => {
     await page.goto("/vzdelavani/zapisy");
     await settle(page);
-    await page.getByRole("link", { name: /Zápisy k dokončení/ }).click();
+    await page.getByRole("link", { name: /^K dokončení/ }).click();
     const picker = dialog(page, "Zápisy k dokončení");
     await expect(picker).toBeVisible();
     await expect(picker.getByText(/Vede: |Vedoucí neurčen/).first()).toBeVisible();
