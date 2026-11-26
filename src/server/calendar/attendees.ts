@@ -69,20 +69,28 @@ export async function eventAttendees(db: Executor, eventId: string, snapshot: Ev
   // jak byli. Jinak by další úprava akce znovu pozvala omluvené a odebrala dobrovolně přihlášené (zadání I).
   const frozen = !participationEnabled() && participationSchemaReady();
   if ((!participationEnabled() && !frozen) || (cfg && source === "allowlist")) return audienceAttendees(db, snapshot.audience, source);
-  const recipients = await listRecipients(db, cfg !== null);
-  const rows = await db
-    .select({ userId: eventParticipation.userId, kind: eventParticipation.kind, excuseReason: eventParticipation.excuseReason })
-    .from(eventParticipation)
-    .where(and(eq(eventParticipation.orgId, config.orgId), eq(eventParticipation.eventId, eventId)));
-  if (frozen && rows.length === 0) return audienceAttendees(db, snapshot.audience, source);
-  // Do výpočtu jde jen druh záznamu. Důvod se tu nepoužívá a dál se nepředává.
-  const records = new Map<string, ParticipationRecord>(rows.map((r) => [r.userId, { kind: r.kind, excuseReason: null }]));
+  const { recipients, records } = await participationInputs(db, eventId);
+  if (frozen && records.size === 0) return audienceAttendees(db, snapshot.audience, source);
   const wanted = new Set(desiredGuestIds(recipients.map((r) => ({ id: r.id, status: "active" as const, groups: r.groups })), snapshot, records));
   const attendees = recipients
     .filter((r) => wanted.has(r.id))
     .map((r) => ({ email: r.email, name: r.name, responseStatus: "needsAction" as const }));
   if (cfg ? attendees.some(fictional) : !attendees.every(fictional)) throw new CalendarError("attendee_not_allowed", false);
   return attendees;
+}
+
+/**
+ * Příjemci a záznamy účasti akce pro výpočet hostů podle účasti. Bez tabulky účasti (migrace 0016) se nic
+ * nečte a záznamy jsou prázdné. Do výpočtu jde jen druh záznamu, důvod omluvy se nečte ani nepředává.
+ */
+export async function participationInputs(db: Executor, eventId: string): Promise<{ recipients: Recipient[]; records: Map<string, ParticipationRecord> }> {
+  const recipients = await listRecipients(db, googleCalendarConfig() !== null);
+  if (!participationSchemaReady()) return { recipients, records: new Map() };
+  const rows = await db
+    .select({ userId: eventParticipation.userId, kind: eventParticipation.kind })
+    .from(eventParticipation)
+    .where(and(eq(eventParticipation.orgId, config.orgId), eq(eventParticipation.eventId, eventId)));
+  return { recipients, records: new Map(rows.map((r) => [r.userId, { kind: r.kind, excuseReason: null }])) };
 }
 
 /**
