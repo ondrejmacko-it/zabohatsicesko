@@ -1,44 +1,42 @@
-# Navazující relace (stav 26. 11. 2026, relace 24 zadání „Finální dokončení po PR #92“)
+# Navazující relace (stav 26. 11. 2026, relace 25 zadání „Finální dokončení po PR #92“)
 
 Větev `claude/festive-sagan-lilorz` z main 2703a0b (PR #92 v main). Limit relace 170 tis. (start v cloudu zabere
 ~120 tis., na práci zbývá málo: čti cíleně, výstupy zkracuj). Nic nemergovat/nenasazovat, žádné vzdálené migrace,
-změny produkčního Vercelu/Neonu ani Google pozvánky bez schválení vlastníka. Před testy `npm ci` (node_modules chybí).
+změny produkčního Vercelu/Neonu ani Google pozvánky bez schválení vlastníka. Před testy `npm ci`.
 
 ## Zadání
 Plné znění: první zpráva uživatele „ZBČ – FINÁLNÍ DOKONČENÍ PROJEKTU PO PR #92“ v relaci
 session_01HpUiryLcisq3sp1bDNE1U2: `list_events` kinds=["user"], limit 100,
-`before_id=ce15ad91-6fd8-49f9-b71c-5b737056552a` (výsledek jde do souboru; JSON za úvodní hlavičkou, najdi řetězec
-obsahující „PO PR #92“ a „Fáze“, ulož do scratchpadu a čti jen řádky své fáze: E ř. 302–349, F 350–407,
-G 408–484, H 485–535, I 536–556, J 557–583, K 584–637, L 638–656, výstup 657+).
-Fáze: A audit · B účast na izolovaném Preview · C hotovo · D náhled 1:1 hotovo · E hromadný výběr (bod 9) ·
-F Zápisy (bod 11) · G celkové UI (bod 13) · H Témata a barvy · I Google Kalendář F04 · J matice F01–F18, D01–D07 ·
-K UX/regresní audit + smoke E2E v CI · L release checklist · výstup: report + draft PR.
+`before_id=ce15ad91-6fd8-49f9-b71c-5b737056552a` (výsledek jde do souboru; Python `raw_decode` od prvního `{`,
+rekurzivně najdi nejdelší řetězec s „PO PR #92“ a „Fáze“, ulož do scratchpadu). Čti jen řádky:
+K 584–637, L 638–656, výstup 657–727. (J 557–583 už přečteno, shrnutí níže.)
 
 ## Hotovo
-- A, B (Preview čeká na vlastníka: Preview `DATABASE_URL` = Neon branch br-wandering-paper-b9ef86og, pak redeploy),
-  C01–C06, D1–D4, E1–E4, F1–F4 hotovo (viz git log).
-- F, G (G1–G5), H (H1, H2, snímky) hotovo – detaily v git logu (82be4a1 … d7fe624).
-  Pozor: dočasný snímkový spec, který uloží návrh na ev-11-26, rozbije teardown `vyber-navrhu`.
-- I1 (0889e6a): rollback `PARTICIPATION` – `participationSchemaReady()` (config.ts), `eventAttendees` při
-  vypnutém přepínači a existujících záznamech akce počítá hosty dál ze záznamů. Test v `kalendar-ucast`
-  („rollback přepínače…“). Kalendářové testy 61 OK, tsc+eslint OK.
-- I pokrytí ověřeno čtením testů: pozvánka povinné (f04), omluva ihned + odebrání bez declined (f04, ucast),
-  dobrovolný po přihlášení/odhlášení (f04, ucast), zrušení omluvy obnoví (ucast), role/deaktivace (ucast),
-  bez duplicit (f04 souběh, ucast), ruční hosté+RSVP (ucast, google-calendar), chyba Googlu (f04).
+- A–I hotovo (git log 2703a0b..HEAD). Preview čeká na vlastníka (Preview `DATABASE_URL` = Neon branch
+  br-wandering-paper-b9ef86og, pak redeploy). I2: `src/server/calendar/activation.ts`, `docs/kalendar-migrace.md`.
+- J ověřeno na d453aca: vitest 69 souborů / 621 OK, `npm run lint` OK, `npm run typecheck` OK.
+  Mapování bod → test je v `docs/pozadavky-f01-f18.md` (tabulka „Bod → konkrétní testy“). Matice F01–F18 se píše
+  do finálního reportu (sekce B, přesně 18 řádků: implementace, lokální ověření, Preview, produkce, omezení,
+  schválení). Zásady pro matici: F04 = hotovo v simulaci, živý Google čeká na schválení (D06); F15 = lokální
+  heuristika, budoucí AI bez trénování je firemní rozhodnutí/integrace; Preview u všech „neověřeno, čeká na
+  Preview DATABASE_URL“; produkce = main má PR #92, změny této větve nejsou nasazené; F10 nově bez limitu
+  garantovaných (e2e `temata-planovani` › „garantovaných témat je neomezeně…“, migrace 0015). D01–D07 doplnit
+  do reportu stejným způsobem (D05 integrace do Moje ZBČ nezačala, D06 dodrženo).
+- Celá e2e sada (1725 testů, 3 workery) spuštěná, po ~40 testech 3× F (pravděpodobně okna/harmonogram, neověřeno),
+  běh zastaven kvůli limitu relace. Výsledek zatím není.
 
-- I2 (3463545): `src/server/calendar/activation.ts` – `activationInventory` (jen čte, počty bez adres: přidání
-  povinní/přihlášení, odebrání omluvení/nepřihlášení/neaktivní, starší vazby, otisk) a `queueActivationSync`
-  (dry-run bez otisku; jinak jen s `PARTICIPATION=on` a shodným otiskem, po dávkách, audit). CLI
-  `scripts/kalendar-migrace.ts aktivace-ucasti | synchronizovat-ucast`, postup v `docs/kalendar-migrace.md`.
-  `participationInputs` sdílené s `eventAttendees`. Test v `kalendar-ucast` (aktivace…). Kalendář 35 OK, tsc+eslint OK.
-  Fáze I hotová (živý test jen po schválení vlastníka).
-
-## Další krok
-- J (zadání ř. 557–583): matice F01–F18 + D01–D07 proti `docs/pozadavky-f01-f18.md`, integrace/firemní
-  rozhodnutí označit, ne Hotovo. Pak K (584–637), L (638–656), výstup (657+): report + draft PR.
-- Zadání: `list_events` výsledek → Python (`raw_decode` po `{`, rekurzivně řetězec s „PO PR #92“ a „Fáze“) do
-  scratchpadu, pak `sed -n` jen řádky fáze.
-- Celou vitest sadu spustit jednou před předáním (naposledy celá na 8546138: 611 OK).
+## Další krok (K)
+1. `npx playwright test --trace off --reporter=dot > scratchpad/e2e.txt` na pozadí (run_in_background), pak
+   `grep -n "✘\|failed\|flaky\|skipped" | head`. Selhání reprodukovat samostatně (`--project=windows-1280 -g …`),
+   příčinu opravit (izolace dat mezi projekty/workery), ne retry/timeouty. Skipy zdokumentovat.
+2. CI smoke E2E (nový job v `.github/workflows/ci.yml`, `npx playwright install` NE – v CI `npx playwright install
+   --with-deps chromium`): přidat tag ` @smoke` do titulů a spouštět
+   `npx playwright test --grep @smoke --project=windows-1280 --project=telefon-390 --project=zapis-temat`.
+   Ověřit `--list`, že teardown projekt `zapis-temat` s CLI grep běží jen @smoke. Kandidáti:
+   stranky.spec (obsah a bez vodorovného posunu; chráněné stránky vedou na vstup; vstup do ukázky; špatný kód),
+   ucast.spec ř. 40, 143, 262; nahled.spec ř. 12, 164; temata-planovani ř. 444; rychle-akce scénář 1 (Zveřejnit
+   návrh); zapisy-schvaleni ř. 12; ostra-wiki ř. 26.
+3. Pak L (release checklist, bez spouštění) a výstup: report `docs/report-finalni-dokonceni.md` (A–E) + draft PR.
 
 ## Otevřené otázky pro vlastníka
 - C04: správce si může nastavit sebe jako nadřízeného kohokoli a číst jeho důvody omluv (audit to zapíše).
