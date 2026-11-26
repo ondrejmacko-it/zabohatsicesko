@@ -1,4 +1,4 @@
-# Navazující relace (stav 26. 11. 2026, relace 13 zadání „Finální dokončení po PR #92“)
+# Navazující relace (stav 26. 11. 2026, relace 14 zadání „Finální dokončení po PR #92“)
 
 Větev `claude/festive-sagan-lilorz` z main 2703a0b (PR #92 v main). Limit relace 170 tis. (start v cloudu zabere
 ~120 tis., na práci zbývá málo: čti cíleně, výstupy zkracuj). Nic nemergovat/nenasazovat, žádné vzdálené migrace,
@@ -15,29 +15,25 @@ F Zápisy (bod 11) · G celkové UI (bod 13) · H Témata a barvy · I Google Ka
 K UX/regresní audit + smoke E2E v CI · L release checklist · výstup: report + draft PR.
 
 ## Hotovo
-- A (jen čtení): produkce = main 2703a0b, Neon produkce migrace 0001–0014 (chybí 0015–0018); Neon branch
-  br-wandering-paper-b9ef86og (projekt still-shadow-86247101) 0001–0018 s demo účty.
-- B: Vercel env `PARTICIPATION=on` jen preview + gitBranch této větve. `e2e/ucast.spec.ts` lokálně OK. Živé Preview
-  čeká na vlastníka (Preview `DATABASE_URL` = branch výše, pak redeploy).
-- C01–C06 hotovo (a029755…e4b6a8f).
-- D hotovo: D1 `PreviewLock`/`LockedLink`, D2 zamčené nástroje v detailu/Plánu/Tématech/Zápisech, D3 Správa podle
-  oprávnění zobrazeného, D4 (relace 13, commit po 547efc9): `cardActions` už nebere `preview` (zápis v menu
-  vedoucího zůstává, zamyká `CardMenu`), „Přidat akci“ v `EventDialog` zamčené, v náhledu bez úchytů přesunu
-  (`movableFrom` jen mimo náhled; tím v náhledu chybí i „+“ na dni v mřížce – drobná odchylka 1:1, případně vrátit
-  jako zamčené). Serverová pojistka `tests/nahled-mutace.test.ts`.
-- Ověřeno na D4: vitest 609/609, tsc, eslint čisté; `e2e/nahled-role.spec.ts` + `e2e/nahled.spec.ts` 19/19
-  (windows-1280). Celá e2e windows-1280 (commit D4): 281 passed, 13 skipped, 1 failed:
-  `e2e/ucast.spec.ts:262` (nadřízený pro omluvy) – `locator.click: Test ended` na „Omluvit se“ (ř. 285), nejspíš
-  timeout pod zátěží; samostatně zatím neověřeno.
+- A, B (Preview čeká na vlastníka: Preview `DATABASE_URL` = Neon branch br-wandering-paper-b9ef86og, pak redeploy),
+  C01–C06, D1–D4 hotovo (viz git log). `e2e/ucast.spec.ts:262` samostatně OK (v celé sadě jen timeout pod zátěží).
+- E1 (abb7f96): `draftBreakdown`/`draftHint` v `status.ts`, štítek Návrhy má nápovědu s rozpadem
+  (nové / změny zveřejněných / v minulosti jen smazat / bez tématu či vedoucího); počet = filtr „navrhy“
+  (konzistentní). Test `tests/navrhy-rozpad.test.ts`. tsc + eslint čisté.
 
-## Další krok
-0. `npx playwright test e2e/ucast.spec.ts:262 --project=windows-1280 --trace off` samostatně; když padá i tak, opravit.
-1. Fáze E (hromadný výběr): soubory `PlanSelection.tsx`, `Schedule.tsx`, `PlanFilters.tsx`, `harmonogram/page.tsx`,
-   `status.ts` (`monthSummary`/`awaitsPublishing` vs `isPickable` – počítadlo „Návrhy“ nesedí s výběrem).
-   Nejdřív krátký návrh prezentace typů návrhů + texty výběrové lišty uživateli (CLAUDE.md: větší změny schválit),
-   pak po jednotkách. Testy: změna měsíce, Měsíc/Seznam, filtry, reload, Esc, hromadné smazání/zveřejnění,
-   chyba, změna dat na serveru, potvrzení; lišta nesmí zakrývat karty ani zpětnou vazbu (i mobil).
-2. Pak F–L podle zadání.
+## Další krok – fáze E (zadání ř. 302–349), návrh zvolený jako nejméně invazivní
+Názvy tlačítek „Smazat vybrané“/„Zveřejnit vybrané“, „Vybrat všechny dostupné“ a text „Vybráno N“ ponechat
+(e2e okna, priprava-mesice, vyber-navrhu na ně spoléhají).
+- E2 `PlanSelection.tsx` lišta: „Vybráno Y z X nových návrhů“; při Y>0 řádek „Zveřejnit jde Z.“ + „N v minulosti
+  jde jen smazat.“ + „M bez tématu nebo vedoucího, potvrzení to připomene.“; info o návrzích změn počítat
+  z viditelných karet (dnes `monthDrafts.changeDrafts` za celý měsíc i při filtru) – page.tsx ř. ~311.
+- E3 reset kontextu: `SelectionZone key={monthKey|typ|stav|ucast}` v page.tsx (pohled Měsíc/Seznam výběr
+  zachová, karty s PickBox jsou v obou). Po `router.refresh` prořezat `picked` na aktuální `items`
+  (render-time porovnání id) a ukázat hint „N vybraných se mezitím změnilo, z výběru zmizely.“
+- E4 e2e (nový `e2e/vyber-kontext.spec.ts`, projekt zapis-temat kvůli zápisům): změna měsíce, Měsíc/Seznam,
+  filtr, reload, Esc, smazání s potvrzením, zveřejnění, chyba (souběh: změna dat jiným kontextem), mobil 390 px:
+  lišta (sticky v toku, globals.css ~3306) nepřekrývá poslední kartu ani `.bug-dock`.
+- Pak F (ř. 350–407) … L, výstup (657+) podle zadání.
 
 ## Otevřené otázky pro vlastníka
 - C04: správce si může nastavit sebe jako nadřízeného kohokoli a číst jeho důvody omluv (audit to zapíše).
