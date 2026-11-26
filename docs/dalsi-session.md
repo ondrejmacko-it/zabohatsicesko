@@ -1,4 +1,4 @@
-# Navazující relace (stav 26. 11. 2026, relace 15 zadání „Finální dokončení po PR #92“)
+# Navazující relace (stav 26. 11. 2026, relace 16 zadání „Finální dokončení po PR #92“)
 
 Větev `claude/festive-sagan-lilorz` z main 2703a0b (PR #92 v main). Limit relace 170 tis. (start v cloudu zabere
 ~120 tis., na práci zbývá málo: čti cíleně, výstupy zkracuj). Nic nemergovat/nenasazovat, žádné vzdálené migrace,
@@ -29,8 +29,26 @@ K UX/regresní audit + smoke E2E v CI · L release checklist · výstup: report 
   Zveřejnění z výběru e2e v tomto souboru není (kryjí ho okna/priprava-mesice).
 
 ## Další krok
-1. `npx vitest run --reporter=dot | tail -5` (kontrola po E2–E4).
-2. Fáze F Zápisy (zadání ř. 350–407), pak G (408–484), H, I, J, K, L a výstup (657+) podle zadání.
+Relace 16 jen načetla zadání F a kód (start cloudu spotřeboval ~140 tis.), nic nezměnila. Vitest po E2–E4
+stále neověřen: `npx vitest run --reporter=dot 2>&1 | tail -5` spusť na pozadí hned po `npm ci`.
+Fáze F (zadání ř. 350–407) – rozbor hotový, navrhovaný postup po jednotkách:
+- F1 `journey.ts:65` `MissingMinutesItem` + `mine` (= `minutesTaskRole` write, nebo review a stav draft; stejně jako
+  `listTasks` ř. 207). Okno K dokončení (`MinutesPeek.tsx` `AddMinutesPicker`, volá `zapisy/page.tsx:57`): `RouteModal
+  wide`, řádky mřížkou Název · Datum · Vedoucí · Stav (badge) · jedna akce; stavy: bez vedoucího → „Chybí vedoucí“
+  (akce Přiřadit vedoucího u správce), none → „Chybí zápis“, processing/failed/unsupported/started → „Rozpracováno“
+  (+ podtext), draft → „Čeká na schválení“. Skupiny „Moje úkoly“ / „Ostatní (správcovský přehled)“. Hledání + filtr
+  stavu v klientské komponentě od >6 položek (hrefy spočítat na serveru, funkce do klienta nejdou). Zachovat text
+  „Vede: |Vedoucí neurčen“ a název okna (e2e `okna.spec.ts:250`, `nahled.spec.ts:47`).
+- F2 tlačítko K dokončení (`zapisy/page.tsx:63`): u správce badge = moje, text „· všech N“; aria-label obojí.
+  Domů/Plán (`TasksCard`, `harmonogram/page.tsx:227`) už ukazují jen vlastní „Čeká na tebe“ (max 4 zápisové úkoly,
+  `MAX_MINUTES_TASKS`) – zvážit popisek.
+- F3 `MinutesSourceForm.tsx`: krátké bezpečnostní upozornění (notice) NAD polem, dlouhý technický text do `<details>`
+  (ponechat `data-testid=citliva-data` a fráze z `e2e/zapisy-schvaleni.spec.ts:24-27`). Oddělit Kontext / Stav a
+  odpovědná osoba (`RecordingSection` hlavička + `ApproverNote`) / Vstup / Bezpečnost / Akce.
+- F4 schvalování: ověřit testy (`tests/zapisy-f13-f15.test.ts`, re-approval `approvedVersion` v `RecordingSection`).
+CSS: `globals.css` `.brief-row` ř. 2216, `.picker-list` 2895, mobil 2296, `.badge*` 612–640, `.filter-bar` 1967.
+Pak G (408–484), H, I, J, K, L a výstup (657+). Zadání: uložit do scratchpadu Pythonem `json.JSONDecoder().raw_decode`
+(soubor má víc JSON řádků), hledat řetězec s „PO PR #92“ a „Fáze“.
 
 ## Otevřené otázky pro vlastníka
 - C04: správce si může nastavit sebe jako nadřízeného kohokoli a číst jeho důvody omluv (audit to zapíše).
