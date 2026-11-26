@@ -15,7 +15,11 @@ Bez souhlasu vlastníka: žádné změny produkčního Vercelu/Neonu, migrace an
 - Test: branch `test-migrace-0015-0019` (br-shy-pine-ba0v9yl8) – SQL 0015–0019 prošlo v jedné transakci na kopii
   produkce (PG 18), data zachována. Branch po aktivaci smazat (jen se souhlasem).
 
-## Další krok (čeká na souhlas vlastníka)
+## Provedeno se souhlasem vlastníka (26. 11. 22:50)
+- Production env nastaveny (plain): APPROVED_MIGRATIONS (0015–0019, id ton2NWscqNL29ghb), PARTICIPATION=on (id UCl2FoBPrXxvh1BP).
+- Redeploy produkce spuštěn: dpl_AeCfSDi5d1pbvoiSEgjFFCqoAdWg (commit 76c2011).
+
+## Další krok (body 1–2 hotové, pokračuj od 3)
 1. Production env: `APPROVED_MIGRATIONS=0015_topic_priority_unlimited,0016_event_participation,0017_participation_withdrawn,0018_excuse_managers,0019_user_salutation`, `PARTICIPATION=on` (plain, target production).
 2. Redeploy produkce (deploymentId dpl_4p6kxUp6RSEEdXkFs5hihD8auDwz) → migrace se provedou při prvním dotazu do DB.
 3. Ověřit schema_migrations (0015–0019), runtime logy bez `[db]`/`[ucast]` varování, průchody FP/RM/více rolí,
