@@ -70,68 +70,81 @@ export function ParticipationPanel({ eventId, state, label, actions, excuse, cal
   const note = preview || closed ? null : calendarNote(state, calendar);
   const stateText = !enrollment ? READ_ONLY_TEXT[state] : (closed && CLOSED_TEXT[state]) || STATE_TEXT[state];
   return (
-    <section className="section participation-panel" aria-labelledby="ucast" data-ucast-panel={state} data-kalendar-stav={calendar ? `${calendar.link}:${calendar.inCalendar}` : "neznamy"}>
-      {/* V náhledu nejde o účast přihlášeného, proto ani „Tvoje“, ani vysvětlení vlastní omluvy. */}
-      <h2 id="ucast">{preview ? "Účast v náhledu" : "Tvoje účast"}</h2>
-      {label && <p className="participation-state"><StatusBadge ucast={state} label={label} /></p>}
-      {/* Náhled ukáže stejný text jako kolegovi; „tebe“ v něm znamená kolegu, za kterého se správce dívá. */}
-      <p className="participation-text">{stateText}</p>
-      {preview === "group" && <p className="small muted">Jen podle rolí, bez přihlášek a omluv.</p>}
-      {note && <p className="small" data-kalendar={calendar?.inCalendar ? "v-kalendari" : "mimo-kalendar"}>{note}</p>}
-      {/* Důvod jen omluvenému samotnému; že ho nikdo jiný nevidí, říká už okno omluvy. */}
-      {state === "excused" && !preview && excuse && (
-        <p className="small muted">
-          <span data-feedback-redact="">{`Důvod: ${EXCUSE_REASON_LABELS[excuse.reason]}${excuse.note ? ` · ${excuse.note}` : ""}`}</span>
-        </p>
-      )}
-      {closed && <p className="small muted">Akce už začala, účast nejde změnit.</p>}
-      {preview && enrollment && actions.length > 0 && (
-        <div className="participation-locked" data-testid="ucast-zamcena">
-          <div className="row participation-actions">
-            {actions.map((action) => (
-              <button key={action} type="button" className={`btn${action === "enroll" ? " btn-primary" : ""}`} disabled aria-describedby={`ucast-zamek-${eventId}`}>
-                {ACTION_LABELS[action]}
-              </button>
-            ))}
+    <section
+      className="section participation-panel"
+      aria-labelledby="ucast"
+      data-ucast-panel={state}
+      data-ucast-closed={closed || undefined}
+      data-kalendar-stav={calendar ? `${calendar.link}:${calendar.inCalendar}` : "neznamy"}
+    >
+      {/* Hlavička: nadpis a jeden stavový štítek vedle sebe (na mobilu se zalomí). */}
+      <div className="participation-head">
+        {/* V náhledu nejde o účast přihlášeného, proto ani „Tvoje“, ani vysvětlení vlastní omluvy. */}
+        <h2 id="ucast">{preview ? "Účast v náhledu" : "Tvoje účast"}</h2>
+        {label && <StatusBadge ucast={state} label={label} />}
+      </div>
+      <div className="participation-body">
+        <div className="participation-info">
+          {/* Náhled ukáže stejný text jako kolegovi; „tebe“ v něm znamená kolegu, za kterého se správce dívá. */}
+          <p className="participation-text">{stateText}</p>
+          {preview === "group" && <p className="small muted">Jen podle rolí, bez přihlášek a omluv.</p>}
+          {note && <p className="small" data-kalendar={calendar?.inCalendar ? "v-kalendari" : "mimo-kalendar"}>{note}</p>}
+          {/* Důvod jen omluvenému samotnému; kdo další ho smí vidět, říká okno omluvy. */}
+          {state === "excused" && !preview && excuse && (
+            <p className="small muted">
+              <span data-feedback-redact="">{`Důvod: ${EXCUSE_REASON_LABELS[excuse.reason]}${excuse.note ? ` · ${excuse.note}` : ""}`}</span>
+            </p>
+          )}
+          {closed && <p className="small muted">Akce už začala, účast nejde změnit.</p>}
+        </div>
+        {preview && enrollment && actions.length > 0 && (
+          <div className="participation-locked" data-testid="ucast-zamcena">
+            <div className="row participation-actions">
+              {actions.map((action) => (
+                <button key={action} type="button" className={`btn${action === "enroll" ? " btn-primary" : ""}`} disabled aria-describedby={`ucast-zamek-${eventId}`}>
+                  {ACTION_LABELS[action]}
+                </button>
+              ))}
+            </div>
+            <p className="small muted" id={`ucast-zamek-${eventId}`}>
+              Náhled je jen ke čtení.
+            </p>
           </div>
-          <p className="small muted" id={`ucast-zamek-${eventId}`}>
-            Náhled je jen ke čtení.
-          </p>
-        </div>
-      )}
-      {!preview && enrollment && actions.length > 0 && (
-        <div className="row participation-actions">
-          {actions.includes("enroll") && (
-            <ActionForm
-              action={changeParticipationAction}
-              fields={{ id: eventId, change: "enroll" }}
-              label={ACTION_LABELS.enroll}
-              pendingLabel="Přihlašuji…"
-              variant="primary"
-              confirm={{ title: "Přihlásit se na akci?", text: "Přihláška se uloží ve Wiki a akce se ti objeví v Moje. Kalendář se synchronizuje automaticky.", confirmLabel: "Přihlásit se" }}
-            />
-          )}
-          {actions.includes("withdraw") && (
-            <ActionForm
-              action={changeParticipationAction}
-              fields={{ id: eventId, change: "withdraw" }}
-              label={ACTION_LABELS.withdraw}
-              pendingLabel="Odhlašuji…"
-              confirm={{ title: "Odhlásit se z akce?", text: "Odhlášení se uloží ve Wiki a Kalendář se synchronizuje automaticky. Přihlásit se můžeš znovu až do začátku akce.", confirmLabel: "Odhlásit se" }}
-            />
-          )}
-          {actions.includes("excuse") && <ExcuseButton eventId={eventId} />}
-          {actions.includes("revoke_excuse") && (
-            <ActionForm
-              action={changeParticipationAction}
-              fields={{ id: eventId, change: "revoke_excuse" }}
-              label={ACTION_LABELS.revoke_excuse}
-              pendingLabel="Ruším…"
-              confirm={{ title: "Zrušit omluvu?", text: "Akce pro tebe bude zase povinná. Změna se uloží ve Wiki a Kalendář se synchronizuje automaticky.", confirmLabel: "Zrušit omluvu" }}
-            />
-          )}
-        </div>
-      )}
+        )}
+        {!preview && enrollment && actions.length > 0 && (
+          <div className="row participation-actions">
+            {actions.includes("enroll") && (
+              <ActionForm
+                action={changeParticipationAction}
+                fields={{ id: eventId, change: "enroll" }}
+                label={ACTION_LABELS.enroll}
+                pendingLabel="Přihlašuji…"
+                variant="primary"
+                confirm={{ title: "Přihlásit se na akci?", text: "Přihláška se uloží ve Wiki a akce se ti objeví v Moje. Kalendář se synchronizuje automaticky.", confirmLabel: "Přihlásit se" }}
+              />
+            )}
+            {actions.includes("withdraw") && (
+              <ActionForm
+                action={changeParticipationAction}
+                fields={{ id: eventId, change: "withdraw" }}
+                label={ACTION_LABELS.withdraw}
+                pendingLabel="Odhlašuji…"
+                confirm={{ title: "Odhlásit se z akce?", text: "Odhlášení se uloží ve Wiki a Kalendář se synchronizuje automaticky. Přihlásit se můžeš znovu až do začátku akce.", confirmLabel: "Odhlásit se" }}
+              />
+            )}
+            {actions.includes("excuse") && <ExcuseButton eventId={eventId} />}
+            {actions.includes("revoke_excuse") && (
+              <ActionForm
+                action={changeParticipationAction}
+                fields={{ id: eventId, change: "revoke_excuse" }}
+                label={ACTION_LABELS.revoke_excuse}
+                pendingLabel="Ruším…"
+                confirm={{ title: "Zrušit omluvu?", text: "Akce pro tebe bude zase povinná. Změna se uloží ve Wiki a Kalendář se synchronizuje automaticky.", confirmLabel: "Zrušit omluvu" }}
+              />
+            )}
+          </div>
+        )}
+      </div>
     </section>
   );
 }
