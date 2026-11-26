@@ -1,4 +1,4 @@
-# Navazující relace (stav 26. 11. 2026, relace 1 zadání „Finální dokončení po PR #92“)
+# Navazující relace (stav 26. 11. 2026, relace 2 zadání „Finální dokončení po PR #92“)
 
 Větev `claude/festive-sagan-lilorz` z main 2703a0b (PR #92 v main). Limit relace 170 tis. (start v cloudu zabere
 ~120 tis., na práci zbývá málo: čti cíleně, výstupy zkracuj). Nic nemergovat/nenasazovat, žádné vzdálené migrace,
@@ -13,23 +13,28 @@ F Zápisy (bod 11) · G celkové UI (bod 13) · H Témata a barvy účasti · I 
 D01–D07 · K UX/regresní audit + smoke E2E v CI · L release checklist · výstup: report + draft PR.
 
 ## Hotovo
-- a029755 C01: `requeueAttendeeSync` (`src/server/calendar/attendees.ts`) četl `event_participation` i bez 0016,
-  na DB 0001–0014 (produkce) padalo uložení účtu. Oprava + `tests/c01-ucast-bez-schematu.test.ts`
-  (+ kalendar-ucast, kalendar-uklid: 15/15). tsc a eslint OK.
-- Zbylé přístupy k tabulkám 0016/0018 (`participation.ts`, `excuse-managers.ts`, `detail.ts`, `eventAttendees`) jsou
-  podmíněné `participationEnabled()`/`excuseManagersEnabled()`. Neověřeno: 0015 (`topic_priority`), schéma
-  `prepareDatabase` při cold startu/souběhu (C02).
+- a029755 C01: `requeueAttendeeSync` nečte `event_participation` bez 0016 (`tests/c01-ucast-bez-schematu.test.ts`).
+- e1f654d C02: `prepareDatabase` (`src/server/db/client.ts`) volá `markParticipationSchema` až po commitu; dřív
+  při selhání seedu zůstala účast zapnutá nad vrácenými migracemi (`tests/c02-schema-po-commitu.test.ts`).
+  Ověřeno: `participationEnabled()` se všude volá až po `getDb()` (integrace page, `run` akce, služby).
+  0015 bez migrace: `setTopicPriority` mapuje 23514 na `priority_pending_migration` (OK).
+- 910e0dc C03: `data-feedback-redact` na důvodu omluvy (`ParticipationPanel.tsx`) a seznamu `ManagedExcuses.tsx`
+  (`tests/c03-redakce-omluv.test.ts`).
+- C05 zjištěno (kód beze změny): `vedouci-tymu` je ve `WORK_ROLES`, ne v `GROUPS`; Správa validuje jen `GROUPS`
+  (`src/features/sprava/actions.ts:21`) a `updateAccess` (`src/server/services/users.ts:176`) přepíše `groups`,
+  takže uložený `vedouci-tymu` by se při uložení účtu tiše smazal. Dnes ho nic nepřiděluje (latentní).
+- Ověřeno na e1f654d/910e0dc: cílené testy c01, c02, c03, ucast-aktivace, omluvy-nadrizeny, produkce, migrace-0015
+  (29/29), tsc a eslint OK. Celá sada zatím ne.
 
 ## Další krok (pořadí, každá jednotka = změna + test + commit + push)
-1. Push a029755 (`git push -u origin claude/festive-sagan-lilorz`), pokud ještě není venku.
-2. C02 (`src/server/config.ts` markParticipationSchema/migrationApplied, `src/server/db/client.ts` getDb):
-   co volá `participationEnabled()` před `getDb()`; zkontrolovat přístupy na 0015.
-3. C03 (`ManagedExcuses.tsx`, `ParticipationPanel.tsx`, `src/components/feedback/screenshot.ts`, `data-feedback-redact`).
-4. C05 `vedouci-tymu` ve `WORK_ROLES` vs `GROUPS` (`src/lib/types.ts`): zjistit, pak varianty vlastníkovi.
-5. Fáze A audit přes Vercel/Neon MCP jen čtením, pak B (Preview proti branchi `overeni-ucast-0016-0018`,
-   br-wandering-paper-b9ef86og v still-shadow-86247101; DATABASE_URL je tajemství = schválení vlastníka).
+1. C04/C06 podle zadání (fáze C, přečti jen její body), pokud nejsou pokryté C01–C03.
+2. Fáze A audit přes Vercel/Neon MCP jen čtením (deploymenty, migrace v `schema_migrations`, názvy proměnných),
+   pak B (Preview proti branchi `overeni-ucast-0016-0018`, br-wandering-paper-b9ef86og v still-shadow-86247101;
+   DATABASE_URL je tajemství = schválení vlastníka).
 
 ## Otevřené otázky pro vlastníka
+- C05 varianty: (a) nechat a jen zachovat `vedouci-tymu` při uložení účtu (sloučit s uloženými pracovními rolemi),
+  (b) přidat roli do Správy jako přidělitelnou kvalifikaci, (c) roli zatím odstranit z `WORK_ROLES`. Doporučení: (a).
 - Limit 170 tis. při startu ~120 tis. dává ~50 tis. na práci. Zvýšení hooku na 200 tis. (podle zadání) musí
   udělat vlastník: v `scripts/limit-kontextu.py` SOFT_LIMIT 170_000, HARD_LIMIT 200_000 a text v `CLAUDE.md`.
 - Preview s DB izolovaného branche (tajemství) a schválení migrací 0015–0018 na `zbc-wiki-produkce`.
