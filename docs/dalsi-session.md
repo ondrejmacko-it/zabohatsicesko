@@ -1,4 +1,4 @@
-# Navazující relace (stav 26. 11. 2026, relace 22 zadání „Finální dokončení po PR #92“)
+# Navazující relace (stav 26. 11. 2026, relace 23 zadání „Finální dokončení po PR #92“)
 
 Větev `claude/festive-sagan-lilorz` z main 2703a0b (PR #92 v main). Limit relace 170 tis. (start v cloudu zabere
 ~120 tis., na práci zbývá málo: čti cíleně, výstupy zkracuj). Nic nemergovat/nenasazovat, žádné vzdálené migrace,
@@ -49,12 +49,22 @@ K UX/regresní audit + smoke E2E v CI · L release checklist · výstup: report 
   Harmonogramu (`PageCall` bez tlačítka, `children` volitelné). e2e priprava-mesice-f06-f09 51 OK, tsc+eslint OK.
   Správa (`InviteButton` v page-head) ponechána – není to výzva, ale akce stránky.
 
+- H hotovo (relace 23): snímky Témata 390 px OK (dlouhé názvy se zalamují, PageCall odlišený), stoh návrhu
+  vizuálně OK (vysunutí přes celou kartu, neprůhledný, bez kolize s buňkou, reduced-motion pokrývá
+  `priprava-mesice.spec`; klávesnice/čtečky a dotyk přes okno akce). Bez změny kódu.
+  Pozor: dočasný snímkový spec, který uloží návrh na ev-11-26, rozbije teardown `vyber-navrhu` (sám prochází).
+- I1 (0889e6a): rollback `PARTICIPATION` – `participationSchemaReady()` (config.ts), `eventAttendees` při
+  vypnutém přepínači a existujících záznamech akce počítá hosty dál ze záznamů. Test v `kalendar-ucast`
+  („rollback přepínače…“). Kalendářové testy 61 OK, tsc+eslint OK.
+- I pokrytí ověřeno čtením testů: pozvánka povinné (f04), omluva ihned + odebrání bez declined (f04, ucast),
+  dobrovolný po přihlášení/odhlášení (f04, ucast), zrušení omluvy obnoví (ucast), role/deaktivace (ucast),
+  bez duplicit (f04 souběh, ucast), ruční hosté+RSVP (ucast, google-calendar), chyba Googlu (f04).
+
 ## Další krok
-- Zbytek H: snímky Témata na telefonu 390 (dlouhé názvy); animovaný stoh návrhu změny vizuálně ověřit
-  (hover, z-index, reduced-motion, klávesnice, dotyk; `grep -n "ChangeBanner\|change-stack" src -r`).
-- Snímky: dočasný `e2e/zz-snimky.spec.ts` (necommitovat, `storageState: authFile("spravce"|"ucastnikRm")`),
-  `--project=prihlaseni --project=windows-1280 --project=telefon-390 --trace off --reporter=dot`.
-- Pak I (536–556), J (557–583), K (584–637), L (638–656), výstup (657+).
+- Zbytek I (zadání ř. 536–556): řízený postup synchronizace existujících akcí po aktivaci + vyhodnocení počtu
+  a typu dotčených pozvánek před aktivací (inventura jen čte – inspirace `calendar/migration.ts` inventura;
+  případně doplnit do docs release postupu). Živý test jen po schválení vlastníka (do otázek).
+- Pak J (557–583), K (584–637), L (638–656), výstup (657+).
 - Zadání: `list_events` výsledek → Python (`raw_decode` po `{`, rekurzivně řetězec s „PO PR #92“ a „Fáze“) do
   scratchpadu, pak `sed -n` jen řádky fáze.
 - Celou vitest sadu spustit jednou před předáním (naposledy celá na 8546138: 611 OK).
