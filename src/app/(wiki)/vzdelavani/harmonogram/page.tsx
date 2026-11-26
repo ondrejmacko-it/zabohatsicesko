@@ -1,3 +1,4 @@
+import { PageCall } from "@/components/PageCall";
 import type { Metadata } from "next";
 import type { EventCard } from "@/server/services/events";
 import Link from "next/link";
@@ -326,8 +327,8 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
           />
 
           {emptyMonth && (
-            <div className="notice month-summary-empty">
-              <p>V tomto měsíci zatím nejsou žádné akce. Začni tlačítkem Připravit měsíc, doplní termíny podle rozvrhu.</p>
+            <div className="month-summary-empty">
+              <PageCall text="V tomto měsíci zatím nejsou žádné akce. Začni tlačítkem Připravit měsíc, doplní termíny podle rozvrhu." />
             </div>
           )}
 

@@ -1,4 +1,4 @@
-# Navazující relace (stav 26. 11. 2026, relace 21 zadání „Finální dokončení po PR #92“)
+# Navazující relace (stav 26. 11. 2026, relace 22 zadání „Finální dokončení po PR #92“)
 
 Větev `claude/festive-sagan-lilorz` z main 2703a0b (PR #92 v main). Limit relace 170 tis. (start v cloudu zabere
 ~120 tis., na práci zbývá málo: čti cíleně, výstupy zkracuj). Nic nemergovat/nenasazovat, žádné vzdálené migrace,
@@ -43,12 +43,15 @@ K UX/regresní audit + smoke E2E v CI · L release checklist · výstup: report 
 - H1 (d7fe624): Témata – hledání podle názvu v `TopicBoard` (`normalizeName`, bez diakritiky, při hledání
   řazení vypnuté), aktivní zájem `.interest-on` plný zelený. e2e `temata-hledani` + `temata-planovani` OK.
 
+- H2 (relace 22): barvy účasti ověřeny čtením – tokeny `--ucast-*` (globals.css ~645–715) pokrývají všech 6 stavů,
+  štítky jen přes `ParticipationBadge` (Schedule, ParticipationPanel, brief), filtry Povinné/Dobrovolné přes
+  `data-ucast-filter` v harmonogramu; jiný paralelní systém není. PageCall: Témata, Zápisy a nově prázdný měsíc
+  Harmonogramu (`PageCall` bez tlačítka, `children` volitelné). e2e priprava-mesice-f06-f09 51 OK, tsc+eslint OK.
+  Správa (`InviteButton` v page-head) ponechána – není to výzva, ale akce stránky.
+
 ## Další krok
-- Zbytek H (zadání ř. 485–535): ověřit snímky Témata na telefonu 390 (dlouhé názvy); PageCall princip
-  u dalších výzev napříč Wiki (`grep -rn page-call src`); barvy účasti `--ucast-*`/`ParticipationBadge` –
-  ověřit použití ve štítcích i filtrech (Povinné okrová, Dobrovolné modrošedá, Přihlášeno zelená, Omluveno
-  fialová, Odhlášeno šedá, Zrušeno červená), oddělení stavu akce od účasti; animovaný stoh návrhu změny
-  vizuálně ověřit (hover, z-index, reduced-motion, klávesnice, dotyk).
+- Zbytek H: snímky Témata na telefonu 390 (dlouhé názvy); animovaný stoh návrhu změny vizuálně ověřit
+  (hover, z-index, reduced-motion, klávesnice, dotyk; `grep -n "ChangeBanner\|change-stack" src -r`).
 - Snímky: dočasný `e2e/zz-snimky.spec.ts` (necommitovat, `storageState: authFile("spravce"|"ucastnikRm")`),
   `--project=prihlaseni --project=windows-1280 --project=telefon-390 --trace off --reporter=dot`.
 - Pak I (536–556), J (557–583), K (584–637), L (638–656), výstup (657+).
