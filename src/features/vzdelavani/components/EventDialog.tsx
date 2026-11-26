@@ -93,6 +93,7 @@ export function EventDialog(props: CreateProps) {
   const [open, setOpen] = useState(Boolean(props.openOnMount));
   const [session, setSession] = useState(0);
   const edited = useRef(false);
+  const lock = lockedProps(usePreviewLock());
   const close = () => {
     setOpen(false);
     if (props.closeHref) router.replace(props.closeHref, { scroll: false });
@@ -106,6 +107,7 @@ export function EventDialog(props: CreateProps) {
           setSession((s) => s + 1);
           setOpen(true);
         }}
+        {...lock}
       >
         <Icon name="plus" />
         Přidat akci

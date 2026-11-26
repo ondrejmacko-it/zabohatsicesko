@@ -132,7 +132,6 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   const menuFor: CardMenuFor = (card) =>
     cardActions(card, {
       managing,
-      preview: Boolean(preview),
       movable: managing && monthOf(toDateKey(new Date(card.startsAt))) === monthKey && toDateKey(new Date(card.startsAt)) >= todayKey,
       now: menuNow,
     }).map((action) => {
@@ -163,7 +162,8 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   const nextEvent = !planView && tasks.length === 0 ? await nearestEvent(viewer, monthKey === monthOf(todayKey) ? monthCards : []) : null;
   const thisMonth = monthOf(todayKey);
   // Přesun (mřížka myší, agenda úchytem na telefonu) i „+“ u dne jen pro správce, od dneška dál.
-  const planning = managing ? { addHref, movableFrom: todayKey } : {};
+  // V náhledu se tažením nepřesouvá (bez úchytů); „Přesunout termín…“ v menu zůstane zamčené.
+  const planning = managing ? { addHref, ...(preview ? {} : { movableFrom: todayKey }) } : {};
   const schedule = listView ? (
     <Agenda monthKey={monthKey} cards={cards} todayKey={todayKey} emptyText={scheduleEmpty} hrefFor={peekHref} managing={managing} planView={planView} menuFor={menuFor} {...planning} />
   ) : (

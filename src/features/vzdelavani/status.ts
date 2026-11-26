@@ -259,7 +259,7 @@ export type CardAction = { kind: CardActionKind; label: string; danger?: boolean
  * Kdo se dívá: `managing` = správce ve svém pohledu (ne náhled očima skupiny nebo kolegy), `movable` = přesun
  * je v tomto zobrazení dostupný (od dneška dál), `now` = okamžik pro rozlišení budoucího návrhu.
  */
-export type CardActionContext = { managing: boolean; preview: boolean; movable: boolean; now: Date };
+export type CardActionContext = { managing: boolean; movable: boolean; now: Date };
 
 /**
  * Rychlé akce v menu ⋯ karty harmonogramu podle stavu akce a role. Pořadí: hlavní akce, úpravy, méně časté
@@ -287,8 +287,9 @@ export function cardActions(card: EventCard, ctx: CardActionContext): CardAction
   add("details", "Otevřít podrobnosti");
   if (!cancelled && card.past) {
     if (card.minutesPublished) add("minutes", "Zobrazit zápis");
-    // Zápis (a případnou nahrávku) obsluhuje vedoucí, kontrolor a správce, nikdy v náhledu očima jiného.
-    if (card.handler && !ctx.preview) add("recording", card.minutesPublished ? "Upravit zápis" : "Doplnit zápis");
+    // Zápis (a případnou nahrávku) obsluhuje vedoucí, kontrolor a správce. V náhledu očima vedoucího položka
+    // zůstane na místě a zamkne ji `CardMenu`, nahrávku ani přepis náhled neukáže.
+    if (card.handler) add("recording", card.minutesPublished ? "Upravit zápis" : "Doplnit zápis");
   }
   if (manage) add("duplicate", "Duplikovat jako novou");
   return manage || actions.length >= 2 ? actions : [];
