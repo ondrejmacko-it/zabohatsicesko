@@ -9,10 +9,9 @@ schválení vlastníka. Před testy `npm ci`. Lint souboru: `npx eslint <soubor>
 - Relace 29: 151ec31 návod merge (main 2703a0b, 0019, aktivace účasti). `docs/report-finalni-dokonceni.md`
   napsán: A nálezy (C01–K5), B matice F01–F18, E zbývá, L checklist 10 bodů. Zástupné hodnoty k doplnění:
   `E2E_LINT`, `BUILD_RESULT`, `VITEST_RESULT`, `E2E_RESULT`, `E2E_COMMIT`, `AUDIT_RESULT`, `SCREENSHOTS`.
-- Celá e2e na 7dc9c8c (předchozí relace): 1462 passed/256 skipped/7 failed, vše `e2e/okna.spec.ts:250` (odkaz
-  K dokončení má po 51b2195 název podle viditelného textu). Oprava lokátoru `/^K dokončení/` v commitu po 3733419,
-  **neověřena** – nejdřív `npx playwright test --trace off --project=windows-1280 e2e/okna.spec.ts -g "odpovědnou"`.
-- E2E_STAV
+- Celá e2e na 3733419 (13,8 min): 1462 passed/256 skipped/7 failed, vše `e2e/okna.spec.ts:250` (odkaz K dokončení
+  má po 51b2195 název podle viditelného textu). Opraveno c5ce055, ověřeno cíleně: windows-1280 + telefon-320 11 passed.
+  Celou sadu pustit ještě jednou (~15 min, na pozadí) → cíl 0 failed, výsledek do reportu C (E2E_RESULT).
 
 ## Další krok
 1. `npm run lint && npm run typecheck && npx vitest run --reporter=dot | tail -5 && npm run build | tail -5`,
