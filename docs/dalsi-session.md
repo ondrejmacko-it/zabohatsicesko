@@ -19,7 +19,29 @@ Bez souhlasu vlastníka: žádné změny produkčního Vercelu/Neonu, migrace an
 - C05: `updateAccess` zachová `vedouci-tymu`, které formulář správy neukazuje (`keepUnmanagedGroups`).
 - Testy: celá sada 623/623 OK, typecheck a lint OK na 807c822.
 
-## Další krok
+## AKTUÁLNÍ ÚKOL (zadání vlastníka 26. 11., relace 34) – UI/UX rework sekce účasti, logiku NEMĚNIT
+Účast funguje (dobrovolné přihlásit/odhlásit, povinné omluvit/zrušit omluvu, náhled read-only). Neměnit služby
+participation/excuse-managers ani server actions; měnit layout, komponenty, texty, badge/chip systém, spacing.
+1. Detail zveřejněné akce: (a) stav nahoře (Zveřejněno / Zveřejněno · proběhlo / Zrušeno), (b) info blok Kdy /
+   Téma / Vede / Pro koho, (c) samostatná karta „Účast“ POD obsahem akce, oddělená jako jiné boxy ve Wiki.
+   Vzor čistoty: vzhled zrušené akce.
+2. Každý stav účasti: 1 badge + 1 krátká věta + 1 hlavní tlačítko (+ v náhledu 1 krátká věta). Texty:
+   Dobrovolné „Akce není povinná, můžeš se přihlásit.“ · Přihlášeno „Jsi přihlášený na dobrovolnou účast.“ ·
+   Povinné „Akce je pro tebe povinná.“ · Omluven/a „Na této akci jsi omluvený.“ · Náhled „Náhled je jen ke čtení.“
+   (respektovat oslovení D03/rod, pokud ho kód už používá). Odstranit dlouhé odstavce a opakování.
+3. Jednotný systém stavů v celé Wiki (karty akcí, detail, filtry – stejné barvy, názvy, pozice badge):
+   Povinné pro tebe, Dobrovolné, Můžeš se přihlásit, Přihlášeno, Omluven/a, Zrušeno, Proběhlo, Jen ke čtení/Náhled.
+   Ideálně jedna mapa stav → label + CSS třída (tokeny) a jedna komponenta badge.
+4. Náhled za jiného uživatele: stejná karta, správný stav, tlačítka disabled, nevypadá rozbitě, bez románů.
+5. Stručná revize: kód + poslední změny participation + původních 18 bodů zadání firmy (viz docs/report-finalni-
+   dokonceni.md, čti cíleně) → co hotové / funkční / funkční ale vizuálně nedotažené / chybí.
+6. Ověřit (testy + ideálně Playwright screenshoty lokálního dema): přihlášení/odhlášení, omluva/zrušení,
+   read-only náhled, >3 garantovaná témata. Pak draft PR (zahrnuje i C04/C05 z 807c822).
+7. Výstup uživateli: stručný report, přesný seznam dotčených souborů, potvrzení 4 funkcí, odkaz na draft PR.
+Postup: nejdřív grep komponent detailu akce (`src/features/**`, „Tvoje účast“), návrh struktury krátce do zprávy,
+pak implementace po jednotkách s commitem a pushem.
+
+## Další krok (po UI reworku)
 1. Vlastník projde klikací test na produkci; případné chyby opravit.
 2. Se souhlasem vlastníka draft PR z této větve (C04/C05) → ruční merge vlastníkem.
 3. Úklid se souhlasem: Neon branch `test-migrace-0015-0019` (br-shy-pine-ba0v9yl8) smazat; záloha
