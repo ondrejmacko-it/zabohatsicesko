@@ -43,7 +43,7 @@ const projects: Project[] = [
 projects.push({
   ...desktop("zapis-temat", 1280, 800),
   dependencies: [],
-  testMatch: /(temata-planovani|vyber-navrhu)\.spec\.ts/,
+  testMatch: /(temata-planovani|vyber-navrhu|vyber-kontext)\.spec\.ts/,
   grep: TOPIC_WRITES,
   grepInvert: undefined,
 });
