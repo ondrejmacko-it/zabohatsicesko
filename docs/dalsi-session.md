@@ -1,50 +1,48 @@
-# Navazující relace (stav 26. 11. 2026, relace 27 zadání „Finální dokončení po PR #92“)
+# Navazující relace (stav 26. 11. 2026, relace 28 zadání „Finální dokončení po PR #92“)
 
-Větev `claude/festive-sagan-lilorz` z main 2703a0b (PR #92 v main). Limit relace 170 tis. (start ~120 tis.: čti
-cíleně, výstupy zkracuj). Nic nemergovat/nenasazovat, žádné vzdálené migrace, změny produkčního Vercelu/Neonu ani
-Google pozvánky bez schválení vlastníka. Před testy `npm ci`. Lint souboru: `npx eslint <soubor>` (bez `-q`).
-
-## Zadání
-Plné znění: první zpráva uživatele „ZBČ – FINÁLNÍ DOKONČENÍ PROJEKTU PO PR #92“ v relaci
-session_01HpUiryLcisq3sp1bDNE1U2: `list_events` kinds=["user"], limit 100,
-`before_id=ce15ad91-6fd8-49f9-b71c-5b737056552a` (výsledek jde do souboru; Python `raw_decode` od prvního `{`,
-rekurzivně najdi nejdelší řetězec s „PO PR #92“ a „Fáze“). Řádky: L 638–656, výstup 657–727 (report A–E:
-A nálezy s příčinou/souborem/závažností/opravou/důkazem; B matice F01–F18 přesně 18 řádků; C lint/typy/build/unit/
-e2e/bezpečnost/migrace/PostgreSQL/Google; D screenshoty s prostředím a commitem; E co zbývá; L schvalovací
-checklist 10 bodů – nic nespouštět).
+Větev `claude/festive-sagan-lilorz` z main 2703a0b. Limit relace 170 tis. (start ~120 tis.: čti cíleně, výstupy
+zkracuj). Nic nemergovat/nenasazovat, žádné vzdálené migrace, změny produkčního Vercelu/Neonu ani Google bez
+schválení vlastníka. Před testy `npm ci`. Lint souboru: `npx eslint <soubor>`.
 
 ## Hotovo
-- A–J hotovo (git log 2703a0b..HEAD). J: vitest 621 OK, lint, typy (d453aca). Zásady matice F01–F18 viz
-  `docs/pozadavky-f01-f18.md` (F04 simulace, F15 heuristika, Preview „čeká na DATABASE_URL“, produkce = PR #92).
-- K: smoke E2E v CI (job `e2e-smoke` v `.github/workflows/ci.yml`, tagy `@smoke`, 125 testů v
-  windows-1280 + telefon-390 + zapis-temat; `--list` ověřeno, teardown běží jen @smoke). Skipy mají důvod (36×,
-  hlavně „zápis jen jednou“ / jen telefon / jen Chromium).
-- Celá e2e sada na 5f8080f: 1444 passed, 256 skipped, 25 failed (deterministická, desktop projekty). Stav oprav:
-  1. OPRAVENO 51b2195: Zápisy axe (`.btn-note` kontrast, aria-label „K dokončení“).
-  2. OPRAVENO 3d4967a: náhled Domů skrýval formulář oslovení („Uložit“). Nyní zamčený (`SalutationForm` `locked`),
-     `saveSalutation` v náhledu nic nezapíše. nahled-role + osloveni 13/13 (windows-1280).
-  3. OPRAVENO b1b8f24: `SelectionZone` měl `key` s filtry → přemontování zavřelo nabídku Filtry. Teď prop
-     `contextKey` + reset stavu při vykreslení, hlášení akce se po změně kontextu neukáže. plan-planovani +
-     vyber-* 20 passed (windows-1280, zapis-temat).
-  4. OTEVŘENÉ `e2e/ucast.spec.ts:262`: samotný (`-g nadřízeného`) projde, celý `ucast.spec.ts` na windows-1280
-     selže (16 passed, 1 failed): `locator.click: Test ended` na „Omluvit se“ (ř. 285) v ownPage (FP). Tedy
-     závislost na pořadí: dřívější test v souboru (ř. 40 smoke účast, ř. 93 F04, ř. 143 soukromí) nechá na
-     poslední povinné kartě listopadu FP stav, kde panel nemá „Omluvit se“ (pravděpodobně omluvená/přihlášená
-     akce bez úklidu, nebo `openCard` vybere jinou kartu). Postup: v testu 262 vypsat `data-ucast-panel` atribut
-     a tlačítka ownPage; najít test bez úklidu; opravit úklid nebo `openCard(…, except)`. Timeout nezvyšovat.
+- A–J hotovo (`git log 2703a0b..HEAD`, těla commitů C01–I2 = podklad pro report A). J: vitest 621 OK, lint, typy.
+- K: smoke E2E v CI (`e2e-smoke`, @smoke). Všechny 4 deterministické chyby z běhu na 5f8080f opraveny:
+  51b2195 (axe Zápisů), 3d4967a (náhled Domů, oslovení), b1b8f24 (nabídka Filtry), 7dc9c8c (`ucast.spec`: test
+  „soukromí omluvy“ nechal omluvu bez úklidu → test 262 vybral proběhlou akci). `ucast.spec` 24 passed/1 skip.
+- Celá sada po 7dc9c8c NEDOBĚHLA (relace skončila) – spustit znovu.
 
 ## Další krok
-1. Opravit bod 4 (běh: `npx playwright test --trace off --project=windows-1280 e2e/ucast.spec.ts`, ~3 min,
-   spouštět na pozadí), commit + push.
-2. Celá sada znovu na pozadí (`--reporter=dot > scratchpad/e2e.txt`), cíl 0 failed.
-3. L checklist (10 bodů ze zadání, nic nespouštět; env: PARTICIPATION, CALENDAR_MODE/DELIVERY/ATTENDEES,
-   APPROVED_MIGRATIONS, migrace 0015–0019) + report `docs/report-finalni-dokonceni.md` (A–E) + screenshoty D
-   (malá sada, s prostředím a commitem) + draft PR do main. Zadání L/výstup: viz výše (řádky 638–727).
+1. Celá e2e na pozadí: `npx playwright test --trace off --reporter=dot > <scratchpad>/e2e.txt 2>&1` (~1–1,5 h,
+   předchozí: 1444 passed/256 skipped/25 failed). Cíl 0 failed; nové chyby opravit po jednotkách.
+2. Mezitím `docs/report-finalni-dokonceni.md` (zadání „Finální výstup“):
+   A nálezy: problém, příčina, soubor, závažnost, oprava, důkaz (z commitů C01–K4).
+   B matice F01–F18 přesně 18 řádků: stav implementace, lokální ověření, Preview ověření, produkční stav, omezení,
+     chybějící schválení (zdroj `docs/pozadavky-f01-f18.md`; F04 simulace, F15 heuristika, Preview „čeká na
+     DATABASE_URL“, produkce = PR #92 bez PARTICIPATION).
+   C lint, typy, build, unit, e2e, bezpečnost, migrace, skutečný PostgreSQL (Neon branch
+     `overeni-ucast-0016-0018`), Google (simulace, živý test neschválen).
+   D screenshoty (malá sada, každý s prostředím + commitem): Domů účastník a správce; budoucí povinná s Omluvit se;
+     formulář omluvy; omluveno; dobrovolná s Přihlásit se; přihlášeno; odhlášeno; totéž v náhledu osoby (cookie
+     `zbc_nahled=demo-spravce|kolega-demo-ucastnik`, viz `e2e/nahled-role.spec.ts`); ≥5 garantovaných témat (postup
+     v `e2e/temata-planovani.spec.ts:444`); hromadný výběr („Vybrat návrhy“); návrh změny + vysunutí originálu
+     (`e2e/priprava-mesice.spec.ts:285`, hover `[data-original-of]`); Zápisy; horní lišta; mobil 390.
+     Účast běží na ukázce s PARTICIPATION=on (port 3313, `e2e/ucast.spec.ts` `plan`/`openCard`). Postup: dočasný
+     necommitovaný spec v `e2e/` (fixtures `authFile`, `settle`), spustit PO celé sadě, PNG do
+     `docs/screenshots/finalni-dokonceni/`, spec smazat.
+   E co zbývá: jen schválení, rozhodnutí firmy, chybějící integrace, neověřená produkce, rizika.
+3. L schvalovací checklist (do reportu, nic nespouštět), 10 bodů: ověření deploymentu (rollback `a30605c`, PR #91;
+   po merge nový), DB + záloha (Neon `zbc-wiki-produkce`, branch snapshot; má 0001–0014), čekající migrace
+   0015–0019 (všechny `approval: true`, `src/server/db/migrations.ts`), pořadí: záloha → merge → APPROVED_MIGRATIONS
+   (0015…0019) + redeploy → `SELECT id FROM schema_migrations` → `kalendar-migrace.ts aktivace-ucasti` (otisk) →
+   PARTICIPATION=on → nadřízení ve Správě → `synchronizovat-ucast --provest <otisk> --davka 20` → smoke →
+   rollback (Instant Rollback; PARTICIPATION smazat; migrace jen přidávají; hosté s uloženou účastí se nemění, I1).
+   Ke každému: změna, účel, riziko, následek. Podklady `docs/navod-merge-f01-f18.md`, `docs/kalendar-migrace.md`
+   (sekce Aktivace účasti). Aktualizovat návod o 0019.
+4. Draft PR do main (šablona PR v repu, pokud je) + subscribe; pak report uživateli (až vše hotovo).
 
 ## Otevřené otázky pro vlastníka
 - C04: správce si může nastavit sebe jako nadřízeného kohokoli a číst důvody omluv (audit to zapíše). Doporučení:
-  zakázat nastavení sebe. Deaktivace nadřízeného vazby nemaže – mazat?
+  zakázat. Deaktivace nadřízeného vazby nemaže – mazat?
 - C05 `vedouci-tymu`: doporučení zachovat při uložení účtu.
 - Preview `DATABASE_URL` izolovaného branche (tajemství), schválení migrací 0015–0019 na produkci.
 - Živý test F04 / aktivace účasti na testovacím kalendáři: schválení + testovací účty.
-- Zvýšení limitu relace (hook `scripts/limit-kontextu.py`) jen vlastník.
