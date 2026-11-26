@@ -84,7 +84,7 @@ describe("nadřízený pro omluvy (0018)", () => {
     expect(await managedExcusesAt(lead, id, false)).toHaveLength(1);
     const [row] = await db.select({ published: events.published }).from(events).where(eq(events.id, id));
     const setPublished = (patch: object) =>
-      db.update(events).set({ published: { ...row.published!, ...patch } }).where(eq(events.id, id));
+      db.update(events).set({ published: { ...row!.published!, ...patch } }).where(eq(events.id, id));
 
     // Změna rolí: povinnost zanikne, záznam zůstane, ale neplatí. Po návratu role platí znovu.
     await db.update(users).set({ groups: ["vsichni", "rm"] }).where(eq(users.id, participant.id));
