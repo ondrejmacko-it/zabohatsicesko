@@ -1,4 +1,4 @@
-# Navazující relace (stav 26. 11. 2026, relace 7 zadání „Finální dokončení po PR #92“)
+# Navazující relace (stav 26. 11. 2026, relace 8 zadání „Finální dokončení po PR #92“)
 
 Větev `claude/festive-sagan-lilorz` z main 2703a0b (PR #92 v main). Limit relace 170 tis. (start v cloudu zabere
 ~120 tis., na práci zbývá málo: čti cíleně, výstupy zkracuj). Nic nemergovat/nenasazovat, žádné vzdálené migrace,
@@ -54,9 +54,24 @@ J matice F01–F18, D01–D07 · K UX/regresní audit + smoke E2E v CI · L rele
      = zástupný stav bez Google dat.
   4. E2E: pro 7 rolí porovnat sadu nadpisů/tlačítek reálného účtu a náhledu (stejná data, 1280).
 
+## Fáze D – průběh (relace 8)
+- 4a754a1 D1 hotovo: `src/components/PreviewLock.tsx` (`PreviewLockProvider` v `app/(wiki)/layout.tsx`, platí jen kde
+  `previewApplies(pathname)`; `usePreviewLock`, `lockedProps`). Zamčené: ActionForm (spouštěč i submit), InterestButton,
+  všechny submit tlačítka v EventDialog, EventMenu, MinutesEditor, MinutesSourceForm, UploadForm, ParticipationPanel,
+  PrepareMonthDialog, TemplateDialog, TopicActions, AccessForms. Test `tests/nahled-zamek.test.ts` 3/3.
+- b93bd2f D2 částečně: detail akce `organizer = isOrganizer(viewer)`, „Upravit akci“ v náhledu zamčené tlačítko.
+  Zbývá v detailu: odkaz „Zveřejnit“ v `ChangeBanner.tsx:33` (Link) v náhledu zamknout; `handler` (nahrávka) nechat
+  zástupným stavem. Pak Plán `managing` (`harmonogram/page.tsx:58`), Zápisy `canAdd` (`zapisy/page.tsx:44`),
+  `TopicsSection` readOnly; spouštěcí type="button" tlačítka nástrojů (EventMenu, TopicManage) zamknout přes `lockedProps`.
+- Předem existující pád: `tests/audit-ucast-nahledy.test.ts` „náhled skupiny (production)…“ padá i bez změn
+  (`futurePublishedId` nenajde budoucí akci v seedu k dnešnímu datu). Zjistit a opravit (datum v testu / seed).
+- tsc OK po b93bd2f; eslint změněných souborů OK; celá sada a e2e ne.
+
 ## Další krok
-1. Provést schválený návrh po jednotkách (1 → 2 po stránkách → 3 → 4), každá s testem a pushem.
-2. Až vlastník nastaví DATABASE_URL: Playwright proti Preview URL větve (scénáře účasti z fáze B).
+1. Dokončit D2 (body výše) po stránkách, každá s testem a pushem; pak D3 (`previewApplies` Moje role, Správa,
+   Integrace zástupný stav) a D4 (e2e 7 rolí, 1280).
+2. Opravit pád audit-ucast-nahledy (datum).
+3. Až vlastník nastaví DATABASE_URL: Playwright proti Preview URL větve (scénáře účasti z fáze B).
 
 ## Otevřené otázky pro vlastníka
 - C04: správce si může nastavit sám sebe jako nadřízeného kohokoli a pak číst jeho důvody omluv (audit
