@@ -1,6 +1,6 @@
-# Navazující relace (stav 26. 11. 2026, relace 34 „UI rework účasti, krok 1“)
+# Navazující relace (stav 26. 11. 2026, relace 35 „UI rework účasti, kroky 1–3“)
 
-Větev `claude/gallant-bohr-m1lyna` (main 76c2011 + 807c822 C04/C05 + 5a0db07 UI krok 1). PR zatím nezaložen. Limit 170 tis.; čti cíleně.
+Větev `claude/gallant-bohr-m1lyna` (main 76c2011 + 807c822 C04/C05 + UI rework do 2ab8033). PR zatím nezaložen. Limit 170 tis.; čti cíleně.
 Bez souhlasu vlastníka: žádné změny produkčního Vercelu/Neonu, migrace ani Google pozvánky, žádný merge do main.
 
 ## Ověřeno na produkci (relace 33, 23:00)
@@ -23,25 +23,26 @@ Bez souhlasu vlastníka: žádné změny produkčního Vercelu/Neonu, migrace an
 Neměnit služby participation/excuse-managers ani server actions; jen layout, komponenty, texty, badge, spacing.
 Celé zadání (body 1–7) je v historii tohoto souboru: `git show 375879d:docs/dalsi-session.md`.
 
-### Hotovo (relace 34, commit 5a0db07)
-- `ParticipationPanel.tsx`: krátké věty podle zadání (Povinné/Dobrovolné/Přihlášeno/Omluven/Náhled), bez dlouhých
-  vysvětlení; důvod omluvy zůstal (redakce C03), v náhledu zamčená tlačítka + „Náhled je jen ke čtení.“
-- `globals.css`: spacing karty účasti. `e2e/ucast.spec.ts`: nová věta omluvy.
-- Ověřeno na 5a0db07: vitest c03/nahled-zamek/kalendar-f04/audit-ucast-nahledy 40/40, tsc + eslint OK.
-  Playwright neběžel.
+### Hotovo (relace 34–35)
+- 5a0db07 krok 0: krátké texty `ParticipationPanel.tsx`, spacing v `globals.css`, e2e věta omluvy.
+- fed7f10 kroky 1–2: nová `components/StatusBadge.tsx` (props `label`, `title?`, `tone` | `ucast`),
+  `ParticipationBadge.tsx` smazán; použito v `Schedule.tsx` (CardMeta, seznam, „Návrh“), `ParticipationPanel.tsx`,
+  hlavičce `akce/[id]/page.tsx`. `PARTICIPATION_LABELS.excused` = „Omluven/a“ (testy ucast-prihlasky, e2e ucast:198).
+  EventPeek má status-band, ne badge (beze změny). Štítky témat (Garantované/Doporučené) nejsou stav akce, beze změny.
+- 2ab8033 krok 3: `lifecycleStatus` past → „Zveřejněno · proběhlo“ (tests/stav-akce); `key-facts` v detailu
+  Kdy / Téma / Vede / Pro koho (Téma = topicTitle nebo Todo), staré `dl` s Tématem odstraněno.
+- Rozhodnutí: badge „Náhled“ se nepřidává, náhled nese nadpis „Účast v náhledu“ + věta „Náhled je jen ke čtení.“
+  (pravidlo 1 badge na stav).
+- Ověřeno na 2ab8033: tsc OK, eslint změněných souborů OK, vitest audit-ucast-nahledy + ucast-prihlasky 24/24,
+  stav-akce 8/8. Celá sada, build ani Playwright zatím neběžely. (V nové relaci nejdřív `npm ci`.)
 
-### Navržená struktura (zbývá, po jednotkách s commitem)
-1. Jedna komponenta `StatusBadge` (nahradí `ParticipationBadge` + ruční `badgeClass` spany v `Schedule.tsx`
-   CardMeta a seznamu ~ř. 495, v hlavičce detailu `akce/[id]/page.tsx`, `EventPeek.tsx`): props `label` +
-   `tone` (životní stav, `status.ts`) nebo `ucast` (ParticipationState, tokeny `--ucast-*` v globals.css).
-2. Štítek „Omluveno“ → „Omluven/a“ (`PARTICIPATION_LABELS` v `src/server/domain/participation.ts`, jen text;
-   upravit testy ucast-prihlasky.test.ts:77 a e2e/ucast.spec.ts:198). Odhlášeno ponechat.
-3. Detail: `lifecycleStatus` past → „Zveřejněno · proběhlo“ (upravit tests/stav-akce.test.ts:49,121);
-   v `key-facts` přidat Téma (Kdy / Téma / Vede / Pro koho), Téma z `dl` pod tím odstranit.
-   Karta Účast zůstává hned pod info blokem jako samostatná `.section`.
-4. Náhled skupiny/kolegy: zkontrolovat vzhled zamčené karty (Playwright screenshot lokálního dema).
-5. Revize 18 bodů (`docs/report-finalni-dokonceni.md`, čti cíleně grep), celá sada testů, lint, build,
-   e2e ucast/nahled, pak draft PR (vč. C04/C05 z 807c822) a report vlastníkovi (soubory, 4 funkce, PR).
+### Zbývá
+4. Náhled skupiny/kolegy: Playwright screenshot lokálního dema (detail povinné/dobrovolné/omluvené akce, náhled 1:1
+   a skupiny), zkontrolovat zamčenou kartu a 4 položky key-facts na mobilu.
+5. Revize 18 bodů (`docs/report-finalni-dokonceni.md`, čti cíleně grep), celá sada testů (`npm test`), lint,
+   build, e2e ucast/nahled (pozor: e2e mohou hledat „Proběhlo“/Téma v `dl` – opravit, pokud spadnou), pak draft PR
+   (vč. C04/C05 z 807c822, bez merge) a report vlastníkovi: soubory, 4 funkce (přihlášení/odhlášení,
+   omluva/zrušení, read-only náhled, >3 garantovaná témata), revize 18 bodů, odkaz na PR.
 
 ## Další krok (po UI reworku)
 1. Vlastník projde klikací test na produkci; případné chyby opravit.
