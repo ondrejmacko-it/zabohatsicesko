@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { ActionForm, ActionMessage } from "@/components/ActionForm";
+import { ActionForm, ActionMessage, callAction } from "@/components/ActionForm";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { changeParticipationAction, type ActionResult } from "@/features/vzdelavani/actions";
 import { calendarNote, type OwnCalendar } from "@/lib/calendar-note";
@@ -139,7 +139,7 @@ export function ParticipationPanel({ eventId, state, label, actions, excuse, cal
 function ExcuseButton({ eventId }: { eventId: string }) {
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState(async (prev: ActionResult | null, formData: FormData) => {
-    const result = await changeParticipationAction(prev, formData);
+    const result = await callAction(changeParticipationAction, prev, formData);
     if (result.ok) setOpen(false);
     return result;
   }, null);

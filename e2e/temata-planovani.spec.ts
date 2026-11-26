@@ -444,14 +444,16 @@ test.describe("Témata: zápis priority, pořadí a návrhu @desktop @zapis-tema
   test("garantovaných témat je neomezeně: 3. až 6. téma, pořadí, odebrání a přetrvání po obnovení (0015)", async ({ page }) => {
     await openTopics(page);
     const guaranteed = () => names(guaranteedOf(page));
-    // Ostatních témat musí být aspoň čtyři: chybějící navrhne správce pro Tým A.
+    // Ostatních témat musí být aspoň čtyři: chybějící navrhne správce pro Tým A. Nové téma se může zařadit
+    // i mezi Nejžádanější a vytlačit jiné do Ostatních, proto se počet ověřuje znovu po každém návrhu.
     const propose = page.getByRole("dialog", { name: "Navrhnout téma" });
-    for (let i = (await names(othersOf(page))).length; i < 4; i++) {
+    for (let i = 1; (await names(othersOf(page))).length < 4 && i <= 8; i++) {
       await page.getByRole("button", { name: "Navrhnout téma" }).click();
-      await propose.getByLabel("Téma").fill(`Garance téma ${i + 1}`);
+      await propose.getByLabel("Téma").fill(`Garance téma ${i}`);
       await propose.getByLabel("Pro skupinu").selectOption("tym-a");
       await propose.getByRole("button", { name: "Navrhnout téma" }).click();
       await expect(propose).toBeHidden();
+      await expect(page.locator(".item-title > span[id]", { hasText: `Garance téma ${i}` })).toBeVisible();
     }
     const extra = (await names(othersOf(page))).slice(0, 4);
     expect(extra).toHaveLength(4);

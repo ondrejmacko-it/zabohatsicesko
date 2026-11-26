@@ -21,11 +21,23 @@ type Props = {
   buttonClassName?: string;
 };
 
+/** Výpadek spojení: požadavek mohl, ale nemusel dojít na server, proto zpráva nic neslibuje. */
+export const NETWORK_ERROR = "Spojení se serverem selhalo. Obnov stránku a zkontroluj, jestli se změna uložila.";
+
+/** Serverová akce, jejíž síťová chyba skončí zprávou u tlačítka místo chybové stránky. */
+export async function callAction(action: Props["action"], prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
+  try {
+    return await action(prev, formData);
+  } catch {
+    return { ok: false, error: NETWORK_ERROR };
+  }
+}
+
 /** Jednotlačítková serverová akce se stavem odeslání, výsledkem a volitelným potvrzením. */
 export function ActionForm({ action, fields = {}, label, pendingLabel, variant = "default", small, confirm, icon, buttonClassName }: Props) {
   const [confirming, setConfirming] = useState(false);
   const [state, formAction, pending] = useActionState(async (prev: ActionResult | null, formData: FormData) => {
-    const result = await action(prev, formData);
+    const result = await callAction(action, prev, formData);
     // Chyba zůstane v potvrzovacím okně (spouštěcí tlačítko může být ve skrytém menu), úspěch ho zavře.
     if (result.ok) setConfirming(false);
     return result;
