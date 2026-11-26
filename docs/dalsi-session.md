@@ -1,4 +1,4 @@
-# Navazující relace (stav 26. 11. 2026, relace 9 zadání „Finální dokončení po PR #92“)
+# Navazující relace (stav 26. 11. 2026, relace 10 zadání „Finální dokončení po PR #92“)
 
 Větev `claude/festive-sagan-lilorz` z main 2703a0b (PR #92 v main). Limit relace 170 tis. (start v cloudu zabere
 ~120 tis., na práci zbývá málo: čti cíleně, výstupy zkracuj). Nic nemergovat/nenasazovat, žádné vzdálené migrace,
@@ -62,16 +62,17 @@ J matice F01–F18, D01–D07 · K UX/regresní audit + smoke E2E v CI · L rele
   (`status.ts`, nahrávka dál ne), `CardMenu` akční položky zamčené (čtecí jen details/minutes),
   `loadPreviewCalendarStatus` (simulace, bez Googlu), v náhledu bez `MoveDropZone` a bez `syncPublished`.
   Testy: nahled-zamek 4/4, rychle-akce OK, tsc + eslint změněných OK.
-- Zbývá D2: Zápisy `canAdd` (`zapisy/page.tsx:44`), `TopicsSection` readOnly → zamčené nástroje; spouštěcí
-  type="button" tlačítka (EventMenu trigger, TopicManage, „Vybrat návrhy“ SelectToggle) přes `lockedProps`.
-  Ověřit v Plánu náhledu: CancelDialog volá `previewCancelAction` (v náhledu blokované) – nedostupné, trigger zamčen.
-- Předem existující pád: `tests/audit-ucast-nahledy.test.ts` „náhled skupiny (production)…“ (`futurePublishedId`
-  nenajde budoucí akci v seedu k dnešnímu datu). Opravit (datum v testu / seed).
+- Relace 10: 302eff3 D2 hotovo: Témata v náhledu správce ukazují nabídku tématu, úchyty pořadí, Seřadit podle
+  zájmu a archiv (vše zamčené; Upravit téma otevře okno se zamčeným uložením, Naplánovat téma zamčené). Zápisy:
+  K dokončení otevře přehled i v náhledu (informační okno), `assignHref` podle zobrazeného. Zamčené: EventMenu
+  Zrušit/Smazat, Vybrat návrhy (SelectToggle i menu QuickActions). Test nahled-zamek 5/5.
+- Oprava audit-ucast-nahledy: v production módu test zastaví Date na `config.referenceNow` (jen Date). Celá sada
+  vitest 66 souborů / 609 testů OK, tsc OK. E2E po D2 nespouštěno (ověřit v D4, hlavně `e2e/nahled.spec.ts`).
 
 ## Další krok
-1. Dokončit D2 (Zápisy, Témata, spouštěcí tlačítka), každá jednotka s testem a pushem; pak D3 (`previewApplies`
-   Moje role, Správa, Integrace zástupný stav) a D4 (e2e 7 rolí, 1280).
-2. Opravit pád audit-ucast-nahledy (datum).
+1. D3 (`previewApplies` v `src/components/PreviewSwitch.tsx`: Moje role, Správa podle oprávnění zobrazeného,
+   Integrace zástupný stav bez Google dat), pak D4 (e2e 7 rolí, 1280, + spustit `e2e/nahled.spec.ts`).
+2. Pokračovat fázemi E–L podle zadání.
 3. Až vlastník nastaví DATABASE_URL: Playwright proti Preview URL větve (scénáře účasti z fáze B).
 
 ## Otevřené otázky pro vlastníka
