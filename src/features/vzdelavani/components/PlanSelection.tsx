@@ -55,6 +55,7 @@ const events = (n: number) => `${n} ${n >= 1 && n <= 4 ? "akce" : "akcí"}`;
  */
 export function SelectionZone({
   monthKey,
+  contextKey,
   items,
   publishable,
   changeDrafts,
@@ -62,6 +63,8 @@ export function SelectionZone({
   children,
 }: {
   monthKey: string;
+  /** Měsíc a filtry. Při změně se výběr zruší; podstrom se nepřemontuje, aby otevřená nabídka Filtry zůstala otevřená. */
+  contextKey: string;
   invite?: PublishInvite | null;
   items: PickItem[];
   publishable: MonthDraft[];
@@ -77,6 +80,17 @@ export function SelectionZone({
   // Proč naposledy kliknutou kartu vybrat nejde. Ukáže se v liště místo otevření okna akce.
   const [hint, setHint] = useState<string | null>(null);
   const bar = useRef<HTMLDivElement>(null);
+  // Kontext poslední hromadné akce: její hlášení se po změně měsíce nebo filtru už neukáže.
+  const [actionContext, setActionContext] = useState(contextKey);
+  const [seenContext, setSeenContext] = useState(contextKey);
+  if (seenContext !== contextKey) {
+    setSeenContext(contextKey);
+    setActive(false);
+    setPicked(new Map());
+    setAsk(null);
+    setSingle(null);
+    setHint(null);
+  }
 
   const byId = new Map(items.map((i) => [i.id, i]));
   const publishableById = new Map(publishable.map((d) => [d.id, d]));
@@ -143,6 +157,7 @@ export function SelectionZone({
   const busy = publishing || deleting;
 
   const submit = (intent: "publish" | "delete") => {
+    setActionContext(contextKey);
     const fd = new FormData();
     fd.set("month", monthKey);
     if (intent === "publish") {
@@ -192,7 +207,7 @@ export function SelectionZone({
         {single && <PublishOneDialog key={single.id} draft={single} monthKey={monthKey} invite={invite} onClose={() => setSingle(null)} />}
         {active && (
           <div ref={bar} className="select-bar" role="region" aria-label="Hromadný výběr návrhů">
-            <ActionMessage state={deleteState ?? publishState} />
+            <ActionMessage state={actionContext === contextKey ? (deleteState ?? publishState) : null} />
             <ConfirmDialog
               open={ask === "publish"}
               title={`Zveřejnit ${events(toPublish.length)}?`}

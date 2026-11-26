@@ -307,7 +307,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
         </div>
         {/* Výběr platí jen pro jeden měsíc a stejné filtry. Pohled Měsíc/Seznam ho zachová, karty jsou v obou. */}
         <SelectionZone
-          key={[monthKey, selectedTypes.join(","), states.join(","), attendanceFilter ?? ""].join("|")}
+          contextKey={[monthKey, selectedTypes.join(","), states.join(","), attendanceFilter ?? ""].join("|")}
           monthKey={monthKey}
           items={managing ? cards.filter(isPickable).map((c) => ({ id: c.id, revision: c.revision! })) : []}
           publishable={monthDrafts?.drafts ?? []}
