@@ -1,4 +1,4 @@
-# Navazující relace (stav 26. 11. 2026, relace 5 zadání „Finální dokončení po PR #92“)
+# Navazující relace (stav 26. 11. 2026, relace 6 zadání „Finální dokončení po PR #92“)
 
 Větev `claude/festive-sagan-lilorz` z main 2703a0b (PR #92 v main). Limit relace 170 tis. (start v cloudu zabere
 ~120 tis., na práci zbývá málo: čti cíleně, výstupy zkracuj). Nic nemergovat/nenasazovat, žádné vzdálené migrace,
@@ -30,19 +30,28 @@ J matice F01–F18, D01–D07 · K UX/regresní audit + smoke E2E v CI · L rele
   5 demo účtů (1 admin, 1 organizer, 3 member). Otevřená PR: žádná. Preview DATABASE_URL: sdílená, cíl neověřen.
 
 ## Fáze B (rozpracováno)
-- Nastaveno: Vercel env `PARTICIPATION=on` jen preview + gitBranch `claude/festive-sagan-lilorz` (id 0jS10jzE1PjjGqaB).
-  Bezpečné: bez migrací 0016/0017 zůstane účast vypnutá (`participationReadiness`).
-- Nový e2e test (zapis-temat) „garantovaných témat je neomezeně…“ v `e2e/temata-planovani.spec.ts`: 3.–6. téma,
-  posun, odebrání, reload, úklid. Projekt zapis-temat 4/4 OK lokálně (PGlite). Účast lokálně kryje `e2e/ucast.spec.ts`
-  (nespuštěno v této relaci).
+- Vercel env `PARTICIPATION=on` jen preview + gitBranch `claude/festive-sagan-lilorz` (id 0jS10jzE1PjjGqaB).
+- Relace 6 (0db222c): lokálně `e2e/ucast.spec.ts` windows-1280 9/9 OK (+ zapis-temat). `callAction` v
+  `src/components/ActionForm.tsx`: síťová chyba akce = zpráva u tlačítka místo chybové stránky (ActionForm,
+  omluva v ParticipationPanel), test `tests/sit-akce.test.ts`. E2E garantovaných témat stabilizován (počet Ostatních
+  se ověřuje po každém návrhu). Doménu (zrušená/proběhlá akce, změna publika, souběh) kryjí unit testy
+  `ucast-prihlasky`, `dopad-zmeny-ucast`. V e2e chybí: opětovné přihlášení po odhlášení (jen tlačítko), reload,
+  Úvod, proběhlá/zrušená akce v UI, výpadek sítě v prohlížeči (`page.route` abort) – doplnit, pokud zbude kapacita.
 - Čeká na vlastníka: Preview env `DATABASE_URL` (sensitive, preview, gitBranch claude/festive-sagan-lilorz) =
   connection string branche br-wandering-paper-b9ef86og; pak redeploy větve. Bez toho nejde živé Preview ověření.
 
+## Fáze D – text zadání (shrnutí)
+Náhled 1:1: stejné rozložení, data, navigace, tlačítka, štítky, filtry, formuláře, úkoly, stavy účasti a oprávněné
+admin možnosti; jediný rozdíl = mutace zamčené (tlačítko na stejném místě, zamčené; procházení a informační
+dialogy povolené). Známé mezery: editační formulář akce správce v náhledu chybí, `TopicsSection.tsx` read-only
+skrývá správcovské nástroje, náhled Zápisů neprojde všechny obrazovky, `PreviewSwitch.tsx` omezuje stránky.
+Bez soukromých důvodů omluv, Google dat, tajemství. Náhled skupiny modelový. Testy pro FP, RM, FP+RM, vedoucí akce,
+kontrolor, nadřízený, správce; všechny mutace odmítne server (i cesty mimo `runAction`).
+
 ## Další krok
-1. `npx playwright test e2e/ucast.spec.ts --project=windows-1280` (před tím `npm ci` a projekt `prihlaseni`) a doplnit
-   chybějící scénáře z fáze B (zrušená/proběhlá akce, změna publika, chyba sítě), pokud je spec nekryje.
+1. Fáze D: začít `PreviewSwitch.tsx` (omezení stránek) a `TopicsSection.tsx` read-only; grep mutací mimo `runAction`
+   (`"use server"` soubory, route handlery `src/app/api`) a test, že je náhled odmítne. Větší změny nejdřív navrhnout.
 2. Až vlastník nastaví DATABASE_URL: Playwright proti Preview URL větve (scénáře účasti z fáze B).
-3. Fáze D (náhled 1:1). Text fází: list_events (viz Zadání) → soubor → python, fáze D od „Fáze D“.
 
 ## Otevřené otázky pro vlastníka
 - C04: správce si může nastavit sám sebe jako nadřízeného kohokoli a pak číst jeho důvody omluv (audit
