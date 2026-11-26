@@ -1,4 +1,4 @@
-# Navazující relace (stav 26. 11. 2026, relace 10 zadání „Finální dokončení po PR #92“)
+# Navazující relace (stav 26. 11. 2026, relace 11 zadání „Finální dokončení po PR #92“)
 
 Větev `claude/festive-sagan-lilorz` z main 2703a0b (PR #92 v main). Limit relace 170 tis. (start v cloudu zabere
 ~120 tis., na práci zbývá málo: čti cíleně, výstupy zkracuj). Nic nemergovat/nenasazovat, žádné vzdálené migrace,
@@ -69,9 +69,15 @@ J matice F01–F18, D01–D07 · K UX/regresní audit + smoke E2E v CI · L rele
 - Oprava audit-ucast-nahledy: v production módu test zastaví Date na `config.referenceNow` (jen Date). Celá sada
   vitest 66 souborů / 609 testů OK, tsc OK. E2E po D2 nespouštěno (ověřit v D4, hlavně `e2e/nahled.spec.ts`).
 
+- Relace 11: a42705c D3 hotovo: `previewApplies` zahrnuje `/sprava` a `/vzdelavani/integrace`. Správa v náhledu:
+  zobrazený bez Správy → zástupný stav (`data-testid="sprava-nahled"`); zobrazený správce → `listAccounts(viewer)`,
+  akce zamčené, bez přístupů zařízení (`hideAccess`, devices []), sekce Kalendáře nahrazená zástupným stavem
+  (bez Google dat). Integrace v náhledu = jen zástupný stav (`data-testid="integrace-nahled"`). Moje role nemá
+  stránku (položka shellu bez href), beze změny. Testy nahled-zamek 6/6 + nahled OK, tsc + eslint změněných OK.
+
 ## Další krok
-1. D3 (`previewApplies` v `src/components/PreviewSwitch.tsx`: Moje role, Správa podle oprávnění zobrazeného,
-   Integrace zástupný stav bez Google dat), pak D4 (e2e 7 rolí, 1280, + spustit `e2e/nahled.spec.ts`).
+1. D4: e2e 7 rolí na 1280 (sada nadpisů/tlačítek reálného účtu vs. náhled) + spustit `e2e/nahled.spec.ts`
+   (po D2 i D3 nespuštěno; může čekat text pruhu „· Domů, Plán, Témata, Zápisy, detail akce, Správa a Integrace“).
 2. Pokračovat fázemi E–L podle zadání.
 3. Až vlastník nastaví DATABASE_URL: Playwright proti Preview URL větve (scénáře účasti z fáze B).
 
