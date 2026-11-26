@@ -88,7 +88,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       {invite && <RefreshOnReturn />}
       <div className={tasks.length > 0 ? "home-columns" : undefined}>
         <section className="section" aria-labelledby="nejblizsi">
-          <h2 id="nejblizsi">{preview ? "Nejbližší akce" : "Co tě čeká"}</h2>
+          <h2 id="nejblizsi">Co tě čeká</h2>
           <NextEventsList cards={upcoming} todayKey={toDateKey(now())} hrefFor={(card) => `/?akce=${encodeURIComponent(card.id)}`} />
           <p className="section-actions">
             <Link className="btn" href="/vzdelavani/harmonogram">
@@ -96,7 +96,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             </Link>
           </p>
         </section>
-        <TasksCard tasks={tasks} title={preview ? "Úkoly v náhledu" : undefined} readOnly={Boolean(preview)} />
+        {/* Náhled 1:1: stejné nadpisy jako u zobrazeného, „jen ke čtení“ říká pruh náhledu. */}
+        <TasksCard tasks={tasks} readOnly={Boolean(preview)} />
       </div>
     </>
   );

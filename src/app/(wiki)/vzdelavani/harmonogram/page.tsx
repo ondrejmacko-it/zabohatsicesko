@@ -227,10 +227,10 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
       {tasks.length > 0 && (
         <details className="plan-tasks">
           <summary>
-            {preview ? "Úkoly v náhledu" : "Čeká na tebe"}
+            Čeká na tebe
             <span className="count-badge">{tasks.length}</span>
           </summary>
-          <TasksCard tasks={tasks} title={preview ? "Úkoly v náhledu" : undefined} readOnly={Boolean(preview)} className="tasks-card" />
+          <TasksCard tasks={tasks} readOnly={Boolean(preview)} className="tasks-card" />
         </details>
       )}
 

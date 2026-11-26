@@ -23,8 +23,7 @@ test.describe("správce: pohled skupiny", () => {
 
     await page.goto("/");
     await expect(bar(page)).toContainText("jen ke čtení");
-    await expect(page.getByRole("heading", { name: "Nejbližší akce" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Čeká na tebe" })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "Co tě čeká" })).toBeVisible();
     // F16: pozdrav nepatří správci a navigace odpovídá pohledu poradce (bez Správy systému).
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Ahoj.");
     const nav = page.getByRole("complementary", { name: "Hlavní navigace" });
