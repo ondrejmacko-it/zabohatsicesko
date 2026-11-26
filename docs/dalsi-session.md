@@ -1,4 +1,4 @@
-# Navazující relace (stav 26. 11. 2026, relace 8 zadání „Finální dokončení po PR #92“)
+# Navazující relace (stav 26. 11. 2026, relace 9 zadání „Finální dokončení po PR #92“)
 
 Větev `claude/festive-sagan-lilorz` z main 2703a0b (PR #92 v main). Limit relace 170 tis. (start v cloudu zabere
 ~120 tis., na práci zbývá málo: čti cíleně, výstupy zkracuj). Nic nemergovat/nenasazovat, žádné vzdálené migrace,
@@ -54,22 +54,23 @@ J matice F01–F18, D01–D07 · K UX/regresní audit + smoke E2E v CI · L rele
      = zástupný stav bez Google dat.
   4. E2E: pro 7 rolí porovnat sadu nadpisů/tlačítek reálného účtu a náhledu (stejná data, 1280).
 
-## Fáze D – průběh (relace 8)
-- 4a754a1 D1 hotovo: `src/components/PreviewLock.tsx` (`PreviewLockProvider` v `app/(wiki)/layout.tsx`, platí jen kde
-  `previewApplies(pathname)`; `usePreviewLock`, `lockedProps`). Zamčené: ActionForm (spouštěč i submit), InterestButton,
-  všechny submit tlačítka v EventDialog, EventMenu, MinutesEditor, MinutesSourceForm, UploadForm, ParticipationPanel,
-  PrepareMonthDialog, TemplateDialog, TopicActions, AccessForms. Test `tests/nahled-zamek.test.ts` 3/3.
-- b93bd2f D2 částečně: detail akce `organizer = isOrganizer(viewer)`, „Upravit akci“ v náhledu zamčené tlačítko.
-  Zbývá v detailu: odkaz „Zveřejnit“ v `ChangeBanner.tsx:33` (Link) v náhledu zamknout; `handler` (nahrávka) nechat
-  zástupným stavem. Pak Plán `managing` (`harmonogram/page.tsx:58`), Zápisy `canAdd` (`zapisy/page.tsx:44`),
-  `TopicsSection` readOnly; spouštěcí type="button" tlačítka nástrojů (EventMenu, TopicManage) zamknout přes `lockedProps`.
-- Předem existující pád: `tests/audit-ucast-nahledy.test.ts` „náhled skupiny (production)…“ padá i bez změn
-  (`futurePublishedId` nenajde budoucí akci v seedu k dnešnímu datu). Zjistit a opravit (datum v testu / seed).
-- tsc OK po b93bd2f; eslint změněných souborů OK; celá sada a e2e ne.
+## Fáze D – průběh (relace 8–9)
+- 4a754a1 D1 hotovo: `src/components/PreviewLock.tsx` (`PreviewLockProvider`, `usePreviewLock`, `lockedProps`,
+  nově `LockedLink` = odkaz-akce jako zamčené tlačítko). Test `tests/nahled-zamek.test.ts` 4/4.
+- b93bd2f D2 detail akce: „Upravit akci“ zamčené. 9ddf21b D2 Plán: `managing = organizer && (!preview || planView)`,
+  `ChangeBanner` „Zveřejnit změny…“ přes `LockedLink`, `cardActions` v náhledu správce stejné položky
+  (`status.ts`, nahrávka dál ne), `CardMenu` akční položky zamčené (čtecí jen details/minutes),
+  `loadPreviewCalendarStatus` (simulace, bez Googlu), v náhledu bez `MoveDropZone` a bez `syncPublished`.
+  Testy: nahled-zamek 4/4, rychle-akce OK, tsc + eslint změněných OK.
+- Zbývá D2: Zápisy `canAdd` (`zapisy/page.tsx:44`), `TopicsSection` readOnly → zamčené nástroje; spouštěcí
+  type="button" tlačítka (EventMenu trigger, TopicManage, „Vybrat návrhy“ SelectToggle) přes `lockedProps`.
+  Ověřit v Plánu náhledu: CancelDialog volá `previewCancelAction` (v náhledu blokované) – nedostupné, trigger zamčen.
+- Předem existující pád: `tests/audit-ucast-nahledy.test.ts` „náhled skupiny (production)…“ (`futurePublishedId`
+  nenajde budoucí akci v seedu k dnešnímu datu). Opravit (datum v testu / seed).
 
 ## Další krok
-1. Dokončit D2 (body výše) po stránkách, každá s testem a pushem; pak D3 (`previewApplies` Moje role, Správa,
-   Integrace zástupný stav) a D4 (e2e 7 rolí, 1280).
+1. Dokončit D2 (Zápisy, Témata, spouštěcí tlačítka), každá jednotka s testem a pushem; pak D3 (`previewApplies`
+   Moje role, Správa, Integrace zástupný stav) a D4 (e2e 7 rolí, 1280).
 2. Opravit pád audit-ucast-nahledy (datum).
 3. Až vlastník nastaví DATABASE_URL: Playwright proti Preview URL větve (scénáře účasti z fáze B).
 
