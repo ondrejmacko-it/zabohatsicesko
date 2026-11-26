@@ -32,19 +32,19 @@ type Props = {
 };
 
 const STATE_TEXT: Partial<Record<ParticipationState, string>> = {
-  required: "Akce je pro tebe povinná podle tvé role.",
-  optional: "Akce pro tebe není povinná. Pokud chceš, můžeš se přihlásit.",
-  voluntary_enrolled: "Jsi přihlášený dobrovolně.",
-  excused: "Omluveno ve Wiki, platí hned.",
-  withdrawn: "Z dobrovolné akce ses odhlásil. Můžeš se znovu přihlásit.",
-  cancelled: "Akce je zrušená, účast se u ní neeviduje.",
+  required: "Akce je pro tebe povinná.",
+  optional: "Akce není povinná, můžeš se přihlásit.",
+  voluntary_enrolled: "Jsi přihlášený na dobrovolnou účast.",
+  excused: "Na této akci jsi omluvený.",
+  withdrawn: "Odhlásil ses, můžeš se znovu přihlásit.",
+  cancelled: "Akce je zrušená.",
 };
 
 /** Přihlášky ve Wiki vypnuté: jen co vyplývá z rolí, nic se nenabízí. */
 const READ_ONLY_TEXT: Partial<Record<ParticipationState, string>> = {
-  required: "Akce je pro tebe povinná podle tvé role.",
-  optional: "Akce pro tebe není povinná.",
-  cancelled: "Akce je zrušená, účast se u ní neeviduje.",
+  required: "Akce je pro tebe povinná.",
+  optional: "Akce není povinná.",
+  cancelled: "Akce je zrušená.",
 };
 
 const ACTION_LABELS: Record<Action, string> = {
@@ -56,8 +56,8 @@ const ACTION_LABELS: Record<Action, string> = {
 
 /** Akce už začala: žádné nabídky ani sliby o Kalendáři, jen jak to s účastí bylo. */
 const CLOSED_TEXT: Partial<Record<ParticipationState, string>> = {
-  optional: "Akce pro tebe nebyla povinná.",
-  withdrawn: "Z dobrovolné akce ses odhlásil.",
+  optional: "Akce nebyla povinná.",
+  withdrawn: "Z akce ses odhlásil.",
 };
 
 /**
@@ -75,16 +75,16 @@ export function ParticipationPanel({ eventId, state, label, actions, excuse, cal
       <h2 id="ucast">{preview ? "Účast v náhledu" : "Tvoje účast"}</h2>
       {label && <p className="participation-state"><ParticipationBadge state={state} label={label} /></p>}
       {/* Náhled ukáže stejný text jako kolegovi; „tebe“ v něm znamená kolegu, za kterého se správce dívá. */}
-      <p className="small">{stateText}</p>
-      {preview === "group" && <p className="small muted">Náhled skupiny ukazuje účast podle rolí, bez individuálních přihlášek a omluv.</p>}
+      <p className="participation-text">{stateText}</p>
+      {preview === "group" && <p className="small muted">Jen podle rolí, bez přihlášek a omluv.</p>}
       {note && <p className="small" data-kalendar={calendar?.inCalendar ? "v-kalendari" : "mimo-kalendar"}>{note}</p>}
-      {state === "excused" && !preview && (
+      {/* Důvod jen omluvenému samotnému; že ho nikdo jiný nevidí, říká už okno omluvy. */}
+      {state === "excused" && !preview && excuse && (
         <p className="small muted">
-          {excuse && <span data-feedback-redact="">{`Důvod: ${EXCUSE_REASON_LABELS[excuse.reason]}${excuse.note ? ` · ${excuse.note}` : ""}. `}</span>}
-          Důvod vidíš jen ty. Wiki tě z pozvánky odebere, odpověď v Google Kalendáři za tebe ale nemění.
+          <span data-feedback-redact="">{`Důvod: ${EXCUSE_REASON_LABELS[excuse.reason]}${excuse.note ? ` · ${excuse.note}` : ""}`}</span>
         </p>
       )}
-      {closed && <p className="small muted">Akce už začala, účast teď nejde změnit.</p>}
+      {closed && <p className="small muted">Akce už začala, účast nejde změnit.</p>}
       {preview && enrollment && actions.length > 0 && (
         <div className="participation-locked" data-testid="ucast-zamcena">
           <div className="row participation-actions">
@@ -95,7 +95,7 @@ export function ParticipationPanel({ eventId, state, label, actions, excuse, cal
             ))}
           </div>
           <p className="small muted" id={`ucast-zamek-${eventId}`}>
-            Náhled je jen ke čtení. Tato tlačítka vidí {preview === "person" ? "kolega" : "člen skupiny"}, tady je nejde použít.
+            Náhled je jen ke čtení.
           </p>
         </div>
       )}

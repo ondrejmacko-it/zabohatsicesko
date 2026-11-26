@@ -5212,3 +5212,14 @@ body[data-moving] .quick-actions,
   border-color: var(--ok);
   color: #fff;
 }
+
+/* Karta účasti v detailu: štítek, jedna věta, hlavní tlačítko. Bez dlouhých odstavců. */
+.participation-panel .participation-state {
+  margin: 0 0 8px;
+}
+.participation-panel .participation-text {
+  margin: 0 0 4px;
+}
+.participation-panel .participation-actions {
+  margin-top: 12px;
+}
