@@ -1,6 +1,6 @@
-# Navazující relace (stav 26. 11. 2026, relace 33 „Ověření účasti na produkci + C04/C05“)
+# Navazující relace (stav 26. 11. 2026, relace 34 „UI rework účasti, krok 1“)
 
-Větev `claude/gallant-bohr-m1lyna` (main 76c2011 + předávky + 807c822). PR zatím nezaložen. Limit 170 tis.; čti cíleně.
+Větev `claude/gallant-bohr-m1lyna` (main 76c2011 + 807c822 C04/C05 + 5a0db07 UI krok 1). PR zatím nezaložen. Limit 170 tis.; čti cíleně.
 Bez souhlasu vlastníka: žádné změny produkčního Vercelu/Neonu, migrace ani Google pozvánky, žádný merge do main.
 
 ## Ověřeno na produkci (relace 33, 23:00)
@@ -19,27 +19,29 @@ Bez souhlasu vlastníka: žádné změny produkčního Vercelu/Neonu, migrace an
 - C05: `updateAccess` zachová `vedouci-tymu`, které formulář správy neukazuje (`keepUnmanagedGroups`).
 - Testy: celá sada 623/623 OK, typecheck a lint OK na 807c822.
 
-## AKTUÁLNÍ ÚKOL (zadání vlastníka 26. 11., relace 34) – UI/UX rework sekce účasti, logiku NEMĚNIT
-Účast funguje (dobrovolné přihlásit/odhlásit, povinné omluvit/zrušit omluvu, náhled read-only). Neměnit služby
-participation/excuse-managers ani server actions; měnit layout, komponenty, texty, badge/chip systém, spacing.
-1. Detail zveřejněné akce: (a) stav nahoře (Zveřejněno / Zveřejněno · proběhlo / Zrušeno), (b) info blok Kdy /
-   Téma / Vede / Pro koho, (c) samostatná karta „Účast“ POD obsahem akce, oddělená jako jiné boxy ve Wiki.
-   Vzor čistoty: vzhled zrušené akce.
-2. Každý stav účasti: 1 badge + 1 krátká věta + 1 hlavní tlačítko (+ v náhledu 1 krátká věta). Texty:
-   Dobrovolné „Akce není povinná, můžeš se přihlásit.“ · Přihlášeno „Jsi přihlášený na dobrovolnou účast.“ ·
-   Povinné „Akce je pro tebe povinná.“ · Omluven/a „Na této akci jsi omluvený.“ · Náhled „Náhled je jen ke čtení.“
-   (respektovat oslovení D03/rod, pokud ho kód už používá). Odstranit dlouhé odstavce a opakování.
-3. Jednotný systém stavů v celé Wiki (karty akcí, detail, filtry – stejné barvy, názvy, pozice badge):
-   Povinné pro tebe, Dobrovolné, Můžeš se přihlásit, Přihlášeno, Omluven/a, Zrušeno, Proběhlo, Jen ke čtení/Náhled.
-   Ideálně jedna mapa stav → label + CSS třída (tokeny) a jedna komponenta badge.
-4. Náhled za jiného uživatele: stejná karta, správný stav, tlačítka disabled, nevypadá rozbitě, bez románů.
-5. Stručná revize: kód + poslední změny participation + původních 18 bodů zadání firmy (viz docs/report-finalni-
-   dokonceni.md, čti cíleně) → co hotové / funkční / funkční ale vizuálně nedotažené / chybí.
-6. Ověřit (testy + ideálně Playwright screenshoty lokálního dema): přihlášení/odhlášení, omluva/zrušení,
-   read-only náhled, >3 garantovaná témata. Pak draft PR (zahrnuje i C04/C05 z 807c822).
-7. Výstup uživateli: stručný report, přesný seznam dotčených souborů, potvrzení 4 funkcí, odkaz na draft PR.
-Postup: nejdřív grep komponent detailu akce (`src/features/**`, „Tvoje účast“), návrh struktury krátce do zprávy,
-pak implementace po jednotkách s commitem a pushem.
+## AKTUÁLNÍ ÚKOL (zadání vlastníka 26. 11.) – UI/UX rework sekce účasti, logiku NEMĚNIT
+Neměnit služby participation/excuse-managers ani server actions; jen layout, komponenty, texty, badge, spacing.
+Celé zadání (body 1–7) je v historii tohoto souboru: `git show 375879d:docs/dalsi-session.md`.
+
+### Hotovo (relace 34, commit 5a0db07)
+- `ParticipationPanel.tsx`: krátké věty podle zadání (Povinné/Dobrovolné/Přihlášeno/Omluven/Náhled), bez dlouhých
+  vysvětlení; důvod omluvy zůstal (redakce C03), v náhledu zamčená tlačítka + „Náhled je jen ke čtení.“
+- `globals.css`: spacing karty účasti. `e2e/ucast.spec.ts`: nová věta omluvy.
+- Ověřeno na 5a0db07: vitest c03/nahled-zamek/kalendar-f04/audit-ucast-nahledy 40/40, tsc + eslint OK.
+  Playwright neběžel.
+
+### Navržená struktura (zbývá, po jednotkách s commitem)
+1. Jedna komponenta `StatusBadge` (nahradí `ParticipationBadge` + ruční `badgeClass` spany v `Schedule.tsx`
+   CardMeta a seznamu ~ř. 495, v hlavičce detailu `akce/[id]/page.tsx`, `EventPeek.tsx`): props `label` +
+   `tone` (životní stav, `status.ts`) nebo `ucast` (ParticipationState, tokeny `--ucast-*` v globals.css).
+2. Štítek „Omluveno“ → „Omluven/a“ (`PARTICIPATION_LABELS` v `src/server/domain/participation.ts`, jen text;
+   upravit testy ucast-prihlasky.test.ts:77 a e2e/ucast.spec.ts:198). Odhlášeno ponechat.
+3. Detail: `lifecycleStatus` past → „Zveřejněno · proběhlo“ (upravit tests/stav-akce.test.ts:49,121);
+   v `key-facts` přidat Téma (Kdy / Téma / Vede / Pro koho), Téma z `dl` pod tím odstranit.
+   Karta Účast zůstává hned pod info blokem jako samostatná `.section`.
+4. Náhled skupiny/kolegy: zkontrolovat vzhled zamčené karty (Playwright screenshot lokálního dema).
+5. Revize 18 bodů (`docs/report-finalni-dokonceni.md`, čti cíleně grep), celá sada testů, lint, build,
+   e2e ucast/nahled, pak draft PR (vč. C04/C05 z 807c822) a report vlastníkovi (soubory, 4 funkce, PR).
 
 ## Další krok (po UI reworku)
 1. Vlastník projde klikací test na produkci; případné chyby opravit.
