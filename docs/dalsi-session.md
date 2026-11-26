@@ -37,24 +37,20 @@ Větev `claude/gallant-bohr-m1lyna`, draft PR #94 (nezakládat další, nemergov
     výsledky testů vč. přeskočených, překážky se závažností, postup kontroly Preview před merge.
 Další související chybu opravit a doložit regresním testem. Cíl: funkční, bezpečné, sjednocené, ne jen zelené CI.
 
-## Stav (relace 40, HEAD a781ae0)
+## Stav (relace 41, HEAD 2551b00)
 - PR #94 draft; nová relace: subscribe_pr_activity #94, `npm ci`. Úvodní kontext ~120 tis. → 2–3 malé jednotky/relace.
-- Hotovo v kódu (tsc, eslint, vitest 623/623 na a781ae0; e2e NEspuštěno):
-  - Bod 1 (EventForm `afterFields`, karta účasti mimo <form>) – ověřit e2e v bodu 8.
-  - Bod 4: `src/lib/calendar-note.ts` věty „Kalendář: synchronizováno / synchronizace čeká / synchronizace selhala,
-    Wiki ji zkusí znovu / Wiki tě na akci nezve / zatím tě Wiki nezve. Po přihlášení se synchronizuje / stav neznámý
-    (, Wiki tvoji pozvánku nespravuje)“; bez vazby → „Kalendář: stav neznámý.“; confirm texty v ParticipationPanel a
-    `PARTICIPATION_MESSAGES` (actions.ts ~723) = „… uložená ve Wiki. Kalendář se synchronizuje automaticky.“
-    Upraveny `tests/kalendar-f04.test.ts` a `e2e/ucast.spec.ts` (e2e zatím neběželo).
-  - Bod 3: hint v dialogu omluvy = přesný text vlastníka. Dialog už měl Nemoc/Dovolená/Jiné, poznámku, Zpět+Omluvit se.
-    Soukromí důvodu na serveru kryje `tests/omluvy-nadrizeny.test.ts:51` a `tests/c03-redakce-omluv.test.ts`;
-    v bodu 8 doplnit e2e: správce bez vazby nevidí důvod v HTML detailu/okna (`page.content()` neobsahuje poznámku).
-  - Bod 2: panel = `.participation-head` (h2 + StatusBadge) + `.participation-body` (`.participation-info` vlevo,
-    akce vpravo, flex-wrap); podbarvení `.participation-panel[data-ucast-panel]:not([data-ucast-closed])` z tokenů
-    `--ucast-*` (selektory tokenů rozšířeny o `data-ucast-panel`), proběhlá akce `data-ucast-closed` = neutrál.
-    Vizuálně NEověřeno → screenshoty v bodu 8 (pozor na zamčená tlačítka v náhledu a mobil 320).
-- Další krok: bod 5 (StatusBadge konzistence: grep `StatusBadge`/`badge-ucast` v komponentách, sjednotit názvy),
-  pak 6, 8 (nový `e2e/ucast-karta.spec.ts`, viz níže), 7 (matice), 10 (PR #94 popis + report vlastníkovi).
+- Body 1–4 hotové v kódu (viz Zjištěno), e2e NEspuštěno. tsc OK; vitest cíleně (stav-akce, audit-ucast-nahledy) OK.
+- Bod 5 HOTOVO (2551b00): `primaryStatus` má názvy z `cardStatus` (Kalendář k opravě / Návrh změny / Mimořádná);
+  pás okna akce (EventPeek statusBand) ukazuje `detailBadges` jako StatusBadge (stejně jako hlavička detailu),
+  u návrhu text „Kolegové ho zatím nevidí.“ (upraven `e2e/rychle-akce.spec.ts:127`); `.status-band > span`
+  (jinak by přebarvil štítky); Úvod (`NextEventsList`) ukazuje `cardStatus` (i Zrušeno). Test shody v
+  `tests/stav-akce.test.ts`. Účast: jediný zdroj `PARTICIPATION_LABELS` (domain/participation.ts:189).
+- Bod 6 prověřen v kódu, beze změn: náhled používá stejný `ParticipationPanel` (h2 „Účast v náhledu“, zamčená
+  tlačítka `data-testid=ucast-zamcena` ve stejném pořadí, skupina = stav z rolí + „Jen podle rolí…“, bez důvodu
+  omluvy a Kalendáře); server: `ownParticipationDetail` preview větev, testy nahled-mutace/nahled-zamek/
+  audit-ucast-nahledy. Vizuálně ověřit v bodu 8 (náhled kolegy + skupiny).
+- Další krok: bod 8 (nový `e2e/ucast-karta.spec.ts`, viz níže; nejdřív spustit `e2e/ucast.spec.ts`,
+  `e2e/rychle-akce.spec.ts`, `e2e/nahled.spec.ts`), pak 7 (matice), 10 (PR #94 popis + report vlastníkovi).
 
 ## Zjištěno (nemusíš znovu číst)
 - (HOTOVO bod 1) `EventPeek.tsx`: správce → `EventWindow` (EventDialog.tsx:142) s `intro` = statusBand, preset, ChangeBanner,
