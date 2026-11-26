@@ -69,7 +69,6 @@ export default async function MinutesPage({ searchParams }: { searchParams: Sear
             className="btn btn-primary"
             href={link({ pridat: "1" })}
             scroll={false}
-            aria-label={`${missingTitle}: moje ${mineCount}${showAll ? `, všech ${allCount}` : ""}`}
           >
             K dokončení
             {mineCount > 0 && <span className="count-badge">{mineCount}</span>}

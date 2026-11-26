@@ -2923,8 +2923,8 @@ a.brief-link:hover {
 }
 
 .btn-note {
+  /* Bez průhlednosti: na tlačítku by klesl kontrast pod 4,5 : 1. */
   font-weight: 500;
-  opacity: 0.85;
 }
 
 /* Okno K dokončení: řádky mřížkou Název · Datum · Vedoucí · Stav · Akce, na telefonu pod sebou. */
