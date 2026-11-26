@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { PREVIEW_READ_ONLY } from "@/lib/labels";
 import { formatMonth } from "@/lib/time";
-import type { JourneyTask } from "@/server/services/journey";
+import { taskCount, type JourneyTask } from "@/server/services/journey";
 import { monthTasks, type MonthSummary, type PlanState } from "../status";
 
 /** Kolik úkolů se vejde bez rozbalení. */
@@ -81,7 +81,7 @@ export function TasksCard({
       <div className="spread section-head">
         <h2 id="ceka">
           {title}
-          {tasks.length > 0 && <span className="count-badge">{tasks.length}</span>}
+          {tasks.length > 0 && <span className="count-badge">{taskCount(tasks)}</span>}
         </h2>
       </div>
       {tasks.length === 0 ? (

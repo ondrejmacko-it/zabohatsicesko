@@ -28,7 +28,7 @@ import { defaultAudience } from "@/server/domain/generation";
 import { isOrganizer } from "@/server/policy";
 import { listMonth, listMonthDrafts, listPeople, loadTemplate, nextEventFor } from "@/server/services/events";
 import { loadCalendarStatus, loadPersonalCalendar, loadPreviewCalendarStatus } from "@/server/services/calendar-status";
-import { listTasks } from "@/server/services/journey";
+import { listTasks, taskCount } from "@/server/services/journey";
 import { currentPreview } from "@/server/services/preview-context";
 import { duplicateFormValues, topicFormValues } from "@/server/services/detail";
 import { listTopics } from "@/server/services/topics";
@@ -228,7 +228,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
         <details className="plan-tasks">
           <summary>
             Čeká na tebe
-            <span className="count-badge">{tasks.length}</span>
+            <span className="count-badge">{taskCount(tasks)}</span>
           </summary>
           <TasksCard tasks={tasks} readOnly={Boolean(preview)} className="tasks-card" />
         </details>
