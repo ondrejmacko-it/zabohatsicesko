@@ -52,6 +52,11 @@ export async function loadInviteRecipients(viewer: Viewer): Promise<InviteRecipi
   return { attendeeSource: source, recipients, audienceRecipients };
 }
 
+/** Stav Kalendáře pro náhled očima kolegy: simulace bez propojení a bez dotazu na Google, příjemci podle skupin. */
+export async function loadPreviewCalendarStatus(viewer: Viewer): Promise<CalendarStatus> {
+  return { mode: "simulation", connection: null, problem: null, calendarId: null, ...(await loadInviteRecipients(viewer)) };
+}
+
 export async function loadCalendarStatus(viewer: Viewer): Promise<CalendarStatus> {
   const base = await loadInviteRecipients(viewer);
   const db = await getDb();

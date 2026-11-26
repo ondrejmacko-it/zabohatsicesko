@@ -268,7 +268,8 @@ export type CardActionContext = { managing: boolean; preview: boolean; movable: 
  */
 export function cardActions(card: EventCard, ctx: CardActionContext): CardAction[] {
   if (card.type === "holiday") return [];
-  const manage = ctx.managing && !ctx.preview;
+  // V náhledu očima správce menu nabídne totéž co u něj, zamčené položky vykreslí `CardMenu` (`PreviewLock`).
+  const manage = ctx.managing;
   const actions: CardAction[] = [];
   const add = (kind: CardActionKind, label: string, danger = false) => actions.push(danger ? { kind, label, danger } : { kind, label });
   const cancelled = card.planStatus === "cancelled";

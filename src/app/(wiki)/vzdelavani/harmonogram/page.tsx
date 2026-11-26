@@ -27,7 +27,7 @@ import { withOwnParticipation } from "@/server/services/participation";
 import { defaultAudience } from "@/server/domain/generation";
 import { isOrganizer } from "@/server/policy";
 import { listMonth, listMonthDrafts, listPeople, loadTemplate, nextEventFor } from "@/server/services/events";
-import { loadCalendarStatus, loadPersonalCalendar } from "@/server/services/calendar-status";
+import { loadCalendarStatus, loadPersonalCalendar, loadPreviewCalendarStatus } from "@/server/services/calendar-status";
 import { listTasks } from "@/server/services/journey";
 import { currentPreview } from "@/server/services/preview-context";
 import { duplicateFormValues, topicFormValues } from "@/server/services/detail";
@@ -55,12 +55,12 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
 
   // Globální náhled (lišta Pohled) očima skupiny nebo kolegy počítá server stejnými pravidly jako pro skutečného uživatele.
   const preview = await currentPreview(user);
-  const managing = organizer && !preview;
   // Celá stránka, tedy i úkoly, se počítá pro stejného diváka jako harmonogram.
   const viewer = preview?.viewer ?? user;
-  // Náhled 1:1 očima kolegy-správce: stavy, štítky „Doplnit“ a návrhy jako u něj, ale nic se nemění
-  // (přidání, přesun, výběr, menu úprav a odeslání do Kalendáře zůstávají na `managing`).
+  // Náhled 1:1 očima kolegy-správce: stavy, štítky „Doplnit“, návrhy i nástroje plánování jako u něj.
+  // Akční tlačítka zamyká `PreviewLock`, přesun tažením se v náhledu nenabízí a stav Googlu je zástupný.
   const planView = isOrganizer(viewer);
+  const managing = organizer && (!preview || planView);
   // Všechna data stránky v jedné vlně: dotazy na sobě nezávisí, takže se čeká jen na nejpomalejší z nich.
   const [rawMonthCards, template, viewerTasks, people, topics, calendar, monthDrafts, personal] = await Promise.all([
     listMonth(viewer, monthKey),
@@ -68,7 +68,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
     listTasks(viewer),
     organizer ? listPeople(user) : [],
     organizer ? listTopics(user) : [],
-    managing ? loadCalendarStatus(user) : null,
+    managing ? (preview ? loadPreviewCalendarStatus(user) : loadCalendarStatus(user)) : null,
     managing ? listMonthDrafts(user, monthKey) : null,
     // Vlastní kalendář patří přihlášenému, v náhledu očima kolegy se neukazuje.
     preview ? null : loadPersonalCalendar(user),
@@ -91,7 +91,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   const syncing = monthCards.some((c) => c.syncStatus === "pending");
   // Čekající pozvánky (nový host ve skupině, obnovené propojení) i zveřejněné akce bez vazby se odešlou
   // samy, jakmile správce otevře Plán. Souběh hlídá zámek u každé vazby v `syncPending`.
-  if (managing) after(() => syncPublished());
+  if (managing && !preview) after(() => syncPublished());
 
   type Current = { mesic: string; pohled?: string; ucast?: string; typ: string[]; stav: string[]; akce?: string; den?: string; kopie?: string };
   const current: Current = { mesic: monthKey, pohled: listView ? "seznam" : undefined, ucast: attendanceFilter, typ: selectedTypes, stav: states };
@@ -329,7 +329,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
             </div>
           )}
 
-          {managing ? <MoveDropZone movableFrom={todayKey}>{schedule}</MoveDropZone> : schedule}
+          {managing && !preview ? <MoveDropZone movableFrom={todayKey}>{schedule}</MoveDropZone> : schedule}
         </SelectionZone>
       </section>
     </>

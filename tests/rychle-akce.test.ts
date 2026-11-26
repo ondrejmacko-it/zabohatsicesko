@@ -95,6 +95,12 @@ describe("menu ⋯ na kartě: položky podle stavu a role", () => {
     expect(kinds(card({ ...PAST, minutesPublished: true }), preview)).toEqual(["details", "minutes"]);
     expect(kinds(card({ planStatus: "draft" }), preview)).toEqual([]);
   });
+
+  test("D2: náhled očima správce nabídne stejné položky jako u něj (zamyká je CardMenu), nahrávku ne", () => {
+    const asOrganizer = { ...manager, preview: true };
+    for (const c of [card(), card({ planStatus: "draft" }), card({ planStatus: "cancelled" })]) expect(kinds(c, asOrganizer)).toEqual(kinds(c, manager));
+    expect(kinds(card({ ...PAST, handler: true }), asOrganizer)).not.toContain("recording");
+  });
 });
 
 const source: EventInput = {
