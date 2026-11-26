@@ -1,4 +1,4 @@
-# Navazující relace (stav 26. 11. 2026, relace 4 zadání „Finální dokončení po PR #92“)
+# Navazující relace (stav 26. 11. 2026, relace 5 zadání „Finální dokončení po PR #92“)
 
 Větev `claude/festive-sagan-lilorz` z main 2703a0b (PR #92 v main). Limit relace 170 tis. (start v cloudu zabere
 ~120 tis., na práci zbývá málo: čti cíleně, výstupy zkracuj). Nic nemergovat/nenasazovat, žádné vzdálené migrace,
@@ -24,26 +24,25 @@ J matice F01–F18, D01–D07 · K UX/regresní audit + smoke E2E v CI · L rele
   = deklarace v kódu, ne smluvní garance). E2E nespuštěno.
 - tsc OK na e4b6a8f. Celá sada, eslint celý a e2e zatím ne.
 
-## Fáze A audit (relace 4, 26. 11., jen čtení)
-- Produkce Vercel `zbc-vzdelavani-demo`: READY dpl_xei6Euj… = main 2703a0b (PR #92). Preview větve READY na 2116733.
-  Starší ERROR build 8e78cea (C04) opraven f3b85cf.
-- Neon `zbc-wiki-produkce` (bitter-breeze-02749976) main: `schema_migrations` 0001–0014, chybí 0015–0018 (potvrzeno).
-- Neon `neon-zbz-vzdelavani-demo` (still-shadow-86247101) branch `overeni-ucast-0016-0018`
-  (br-wandering-paper-b9ef86og): ready, má 0001–0018 (vč. starých 0007_invite_hold, 0008_access_links).
-- Vercel env (jen názvy/nesecretní hodnoty): `PARTICIPATION` není nastavena nikde → účast je všude „off“.
-  Produkce: WIKI_MODE=production, LOGIN_MODE=google-test, CALENDAR_MODE=google-test, CALENDAR_ATTENDEES=audience,
-  GOOGLE_OAUTH_PUBLISHED=1. Preview: WIKI_MODE=demo, CALENDAR_MODE=simulation, DEMO_ACCESS_CODE;
-  APPROVED_MIGRATIONS jen pro starou větev claude/finalni-kontrola-novy-pr-g2r2wd (0015).
-  Nepotvrzeno: na kterou DB míří Preview DATABASE_URL (šifrované, nedešifrováno).
-- Testovací účty: neověřeno (tabulka `users` nemá sloupec `active`; zjisti schéma v `src/server/db/schema.ts`).
-- Google Kalendář: produkce v režimu google-test (skutečné API s omezením), Preview simulace. Živě neověřeno.
+## Fáze A (hotovo, relace 5, jen čtení)
+- Produkce Vercel READY = main 2703a0b. Neon produkce: migrace 0001–0014 (chybí 0015–0018), účty 12 (origin invite:
+  2 admin, 3 organizer, 7 member). Neon branch br-wandering-paper-b9ef86og (projekt still-shadow-86247101): 0001–0018,
+  5 demo účtů (1 admin, 1 organizer, 3 member). Otevřená PR: žádná. Preview DATABASE_URL: sdílená, cíl neověřen.
+
+## Fáze B (rozpracováno)
+- Nastaveno: Vercel env `PARTICIPATION=on` jen preview + gitBranch `claude/festive-sagan-lilorz` (id 0jS10jzE1PjjGqaB).
+  Bezpečné: bez migrací 0016/0017 zůstane účast vypnutá (`participationReadiness`).
+- Nový e2e test (zapis-temat) „garantovaných témat je neomezeně…“ v `e2e/temata-planovani.spec.ts`: 3.–6. téma,
+  posun, odebrání, reload, úklid. Projekt zapis-temat 4/4 OK lokálně (PGlite). Účast lokálně kryje `e2e/ucast.spec.ts`
+  (nespuštěno v této relaci).
+- Čeká na vlastníka: Preview env `DATABASE_URL` (sensitive, preview, gitBranch claude/festive-sagan-lilorz) =
+  connection string branche br-wandering-paper-b9ef86og; pak redeploy větve. Bez toho nejde živé Preview ověření.
 
 ## Další krok
-1. Dokonči A: účty na branchi (`SELECT role…` podle schema.ts), PR otevřená (GitHub MCP list_pull_requests).
-2. B: požadavky na schválení vlastníka = Preview env pro větev `claude/festive-sagan-lilorz`: `PARTICIPATION=on`
-   (nesecretní, smíš nastavit sám jen pro preview+gitBranch) a DATABASE_URL na br-wandering-paper (tajemství →
-   vlastník). Pak scénáře účasti a garantovaných témat v prohlížeči (Playwright) proti Preview URL.
-3. Pak fáze D (náhled 1:1). Text fází: soubor list_events (viz Zadání), fáze A od „3. Fáze A“, B od „4. Fáze B“.
+1. `npx playwright test e2e/ucast.spec.ts --project=windows-1280` (před tím `npm ci` a projekt `prihlaseni`) a doplnit
+   chybějící scénáře z fáze B (zrušená/proběhlá akce, změna publika, chyba sítě), pokud je spec nekryje.
+2. Až vlastník nastaví DATABASE_URL: Playwright proti Preview URL větve (scénáře účasti z fáze B).
+3. Fáze D (náhled 1:1). Text fází: list_events (viz Zadání) → soubor → python, fáze D od „Fáze D“.
 
 ## Otevřené otázky pro vlastníka
 - C04: správce si může nastavit sám sebe jako nadřízeného kohokoli a pak číst jeho důvody omluv (audit
