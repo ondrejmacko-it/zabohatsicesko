@@ -1,4 +1,4 @@
-# Navazující relace (stav 26. 11. 2026, relace 20 zadání „Finální dokončení po PR #92“)
+# Navazující relace (stav 26. 11. 2026, relace 21 zadání „Finální dokončení po PR #92“)
 
 Větev `claude/festive-sagan-lilorz` z main 2703a0b (PR #92 v main). Limit relace 170 tis. (start v cloudu zabere
 ~120 tis., na práci zbývá málo: čti cíleně, výstupy zkracuj). Nic nemergovat/nenasazovat, žádné vzdálené migrace,
@@ -38,14 +38,20 @@ K UX/regresní audit + smoke E2E v CI · L release checklist · výstup: report 
   Konvence: primární první; sekundární „Zrušit úpravy“ (formulář) / „Zpět“ (destruktivní) / „Zavřít“ (info).
   e2e okna 76 OK, tsc+eslint OK.
 
+- G5 (bd3cf7e): texty – karty Plánu „Vede:“ místo „Kdo:“ (`status.ts`, `Schedule.tsx`, testy kdo-tema),
+  TopicActions „Pro koho“ místo „Pro skupinu“. Průchod tykáním: žádné vykání v UI. G hotovo.
+- H1 (d7fe624): Témata – hledání podle názvu v `TopicBoard` (`normalizeName`, bez diakritiky, při hledání
+  řazení vypnuté), aktivní zájem `.interest-on` plný zelený. e2e `temata-hledani` + `temata-planovani` OK.
+
 ## Další krok
-- G texty: sjednotit Vede/Kdo – karty Plánu mají „Kdo:“ (`status.ts` `CardDetail` label "Kdo", ř. 90/94/110,
-  `Schedule.tsx:210`), Domů a formulář „Vede“. Doporučení: všude „Vede“ (pozor na testy/e2e hledající „Kdo:“,
-  `grep -rn "Kdo" tests e2e`). „Pro skupinu“ v TopicActions ř. 105/328 vs „Pro koho“ jinde → zvážit „Pro koho“.
-  Pak rychlý průchod texty (tykání). D03 hotové (G2).
-- Snímky: dočasný `e2e/zz-snimky.spec.ts` (necommitovat), `--project=prihlaseni --project=windows-1280
-  --project=telefon-390 --trace off --reporter=dot`.
-- Pak H (ř. 485–535), I (536–556), J (557–583), K (584–637), L (638–656), výstup (657+).
+- Zbytek H (zadání ř. 485–535): ověřit snímky Témata na telefonu 390 (dlouhé názvy); PageCall princip
+  u dalších výzev napříč Wiki (`grep -rn page-call src`); barvy účasti `--ucast-*`/`ParticipationBadge` –
+  ověřit použití ve štítcích i filtrech (Povinné okrová, Dobrovolné modrošedá, Přihlášeno zelená, Omluveno
+  fialová, Odhlášeno šedá, Zrušeno červená), oddělení stavu akce od účasti; animovaný stoh návrhu změny
+  vizuálně ověřit (hover, z-index, reduced-motion, klávesnice, dotyk).
+- Snímky: dočasný `e2e/zz-snimky.spec.ts` (necommitovat, `storageState: authFile("spravce"|"ucastnikRm")`),
+  `--project=prihlaseni --project=windows-1280 --project=telefon-390 --trace off --reporter=dot`.
+- Pak I (536–556), J (557–583), K (584–637), L (638–656), výstup (657+).
 - Zadání: `list_events` výsledek → Python (`raw_decode` po `{`, rekurzivně řetězec s „PO PR #92“ a „Fáze“) do
   scratchpadu, pak `sed -n` jen řádky fáze.
 - Celou vitest sadu spustit jednou před předáním (naposledy celá na 8546138: 611 OK).
