@@ -1,13 +1,14 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { ActionForm, ActionMessage } from "@/components/ActionForm";
+import { ActionForm, ActionMessage, callAction } from "@/components/ActionForm";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { changeParticipationAction, type ActionResult } from "@/features/vzdelavani/actions";
 import { calendarNote, type OwnCalendar } from "@/lib/calendar-note";
 import { ParticipationBadge } from "./ParticipationBadge";
 import { EXCUSE_REASON_LABELS } from "@/lib/labels";
 import { EXCUSE_NOTE_MAX, EXCUSE_REASONS, type ExcuseReason, type ParticipationState } from "@/lib/types";
+import { lockedProps, usePreviewLock } from "@/components/PreviewLock";
 
 
 type Action = "enroll" | "withdraw" | "excuse" | "revoke_excuse";
@@ -79,7 +80,7 @@ export function ParticipationPanel({ eventId, state, label, actions, excuse, cal
       {note && <p className="small" data-kalendar={calendar?.inCalendar ? "v-kalendari" : "mimo-kalendar"}>{note}</p>}
       {state === "excused" && !preview && (
         <p className="small muted">
-          {excuse ? `Důvod: ${EXCUSE_REASON_LABELS[excuse.reason]}${excuse.note ? ` · ${excuse.note}` : ""}. ` : ""}
+          {excuse && <span data-feedback-redact="">{`Důvod: ${EXCUSE_REASON_LABELS[excuse.reason]}${excuse.note ? ` · ${excuse.note}` : ""}. `}</span>}
           Důvod vidíš jen ty. Wiki tě z pozvánky odebere, odpověď v Google Kalendáři za tebe ale nemění.
         </p>
       )}
@@ -138,8 +139,9 @@ export function ParticipationPanel({ eventId, state, label, actions, excuse, cal
 /** Omluva: důvod (Nemoc / Dovolená / Jiné) a volitelná poznámka v samostatném okně. */
 function ExcuseButton({ eventId }: { eventId: string }) {
   const [open, setOpen] = useState(false);
+  const lock = lockedProps(usePreviewLock());
   const [state, formAction, pending] = useActionState(async (prev: ActionResult | null, formData: FormData) => {
-    const result = await changeParticipationAction(prev, formData);
+    const result = await callAction(changeParticipationAction, prev, formData);
     if (result.ok) setOpen(false);
     return result;
   }, null);
@@ -178,7 +180,7 @@ function ExcuseButton({ eventId }: { eventId: string }) {
         <button type="button" className="btn" onClick={() => setOpen(false)} disabled={pending} autoFocus>
           Zpět
         </button>
-        <button type="submit" form={formId} className="btn btn-primary" disabled={pending}>
+        <button type="submit" form={formId} className="btn btn-primary" disabled={pending} {...lock}>
           {pending ? "Ukládám…" : "Omluvit se"}
         </button>
       </ConfirmDialog>

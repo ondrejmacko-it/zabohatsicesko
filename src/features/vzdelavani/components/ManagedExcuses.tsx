@@ -7,7 +7,7 @@ export function ManagedExcuses({ excuses }: { excuses: ManagedExcuse[] }) {
   return (
     <section className="section managed-excuses" aria-labelledby="omluveni-tvoji-lide" data-testid="omluvy-nadrizeny">
       <h2 id="omluveni-tvoji-lide">Omluvení z tvých lidí</h2>
-      <ul className="list-plain">
+      <ul className="list-plain" data-feedback-redact="">
         {excuses.map((excuse) => (
           <li key={excuse.name}>
             <strong>{excuse.name}</strong> · {EXCUSE_REASON_LABELS[excuse.reason]}

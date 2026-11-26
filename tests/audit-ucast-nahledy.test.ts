@@ -5,7 +5,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ParticipationBadge } from "@/features/vzdelavani/components/ParticipationBadge";
 import { matchesAttendance, primaryStatus } from "@/features/vzdelavani/status";
-import { now } from "@/server/config";
+import { config, now } from "@/server/config";
 import { getDb } from "@/server/db/client";
 import { events, users } from "@/server/db/schema";
 import { ownParticipationView, type Participation } from "@/server/domain/participation";
@@ -17,7 +17,10 @@ import { PAST_FP, lead, organizer, outsider, participant, resetDemo } from "./he
 // Audit 23. 11. 2026 (§5 a §6): filtr Moje, viditelnost v rollbacku, štítky bez přihlášek a tón štítků.
 
 beforeEach(resetDemo);
-afterEach(() => vi.unstubAllEnvs());
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.useRealTimers();
+});
 
 const view = (state: ParticipationState, required = state === "required" || state === "excused") => ({ state, required, label: null, actions: [] });
 const card = (patch: Partial<Parameters<typeof matchesAttendance>[0]>) => ({ type: "training-fp" as const, participation: null, leadsOrReviews: false, ...patch });
@@ -103,6 +106,9 @@ describe("štítky bez zapnutých přihlášek (PARTICIPATION vypnuté, i ostrá
       // Bez PARTICIPATION=on jsou přihlášky vypnuté v ukázce i v ostré Wiki.
       vi.stubEnv("WIKI_MODE", mode);
       vi.stubEnv("PARTICIPATION", "");
+      // Ostrá Wiki jede podle skutečných hodin: bez zastavení času na referenčním dni seedu by test
+      // časem nenašel budoucí akci RM v listopadu a prosinci 2026. Falešné je jen Date, timery DB běží.
+      vi.useFakeTimers({ toFake: ["Date"], now: config.referenceNow });
       const rm = await futurePublishedId("rm");
       const preview = { viewer: { ...participant, id: "nahled-skupiny" }, label: "Skupina FP" };
       const detail = await ownParticipationDetail(organizer, preview, rm);

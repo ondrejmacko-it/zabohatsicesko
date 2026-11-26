@@ -104,7 +104,8 @@ function topicItem(t: RankedTopic, index: number, count: number, ctx: RowContext
       <div className="topic-actions">
         {/* Náhled nic nemění: stejné tlačítko a stav zájmu jako u kolegy, jen zamčené. */}
         <InterestButton topicId={t.id} interested={t.interestedByViewer} titleId={`tema-${t.id}`} locked={ctx.readOnly} />
-        {ctx.organizer && !ctx.readOnly && (
+        {/* V náhledu správce stejná nabídka jako u správce, akční položky zamčené (PreviewLock). */}
+        {ctx.organizer && (
           <TopicManage topic={t} groups={ctx.groups} canMoveUp={ctx.sortable && index > 0} canMoveDown={ctx.sortable && index < count - 1} />
         )}
       </div>
@@ -150,7 +151,7 @@ export async function TopicsSection({ user, readOnly = false, filter: requested 
   const guaranteed = filterTopics(guaranteedTopics(all), user.groups, filter);
   const others = filterTopics(otherTopics(all), user.groups, filter);
   const manualOrder = hasManualOrder(all);
-  const sortable = organizer && !readOnly && filter === "all";
+  const sortable = organizer && filter === "all";
   const groups = GROUPS.filter((g) => organizer || user.groups.includes(g)) as Group[];
   const ctx: RowContext = {
     organizer,
@@ -212,7 +213,7 @@ export async function TopicsSection({ user, readOnly = false, filter: requested 
                   </h3>
                 )}
                 {/* Správa pořadí jen pro správce (F11), kolega vidí jen výsledný seznam. */}
-                {organizer && !readOnly && manualOrder && (
+                {organizer && manualOrder && (
                   <div className="topic-order-note">
                     <p className="item-meta">Pořadí upravil správce. Nová témata přibývají na konec.</p>
                     {sortable && <ActionForm action={resetTopicOrderAction} label="Seřadit podle zájmu" pendingLabel="Řadím…" small />}
@@ -232,11 +233,11 @@ export async function TopicsSection({ user, readOnly = false, filter: requested 
               Pořadí změníš přetažením úchytu, i mezi garantovanými a ostatními tématy. Šipkami nahoru a dolů posuneš téma o jedno místo, přes okraj skupiny do druhé skupiny.
             </p>
           )}
-          {organizer && !readOnly && !sortable && <p className="item-meta topic-filter-note">Pořadí měníš v zobrazení Všechna.</p>}
+          {organizer && !sortable && <p className="item-meta topic-filter-note">Pořadí měníš v zobrazení Všechna.</p>}
         </>
       )}
 
-      {!readOnly && archived.length > 0 && (
+      {archived.length > 0 && (
         <details className="archived-block">
           <summary>Archivovaná témata ({archived.length})</summary>
           <ul className="topic-list archived-topics">

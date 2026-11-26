@@ -5,6 +5,7 @@ import { createContext, startTransition, useActionState, useContext, useEffect, 
 import { ActionMessage } from "@/components/ActionForm";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { flash } from "@/components/FlashMessage";
+import { lockedProps, usePreviewLock } from "@/components/PreviewLock";
 import { Icon } from "@/components/Icon";
 import { Modal } from "@/components/Modal";
 import { publishInviteNote, type InviteMode } from "@/lib/invite-mode";
@@ -19,7 +20,8 @@ export type PickItem = { id: string; revision: number };
 type Ask = "publish" | "delete" | null;
 type Selection = {
   active: boolean;
-  picked: Set<string>;
+  /** Vybrané návrhy s verzí, kterou správce viděl při výběru. */
+  picked: ReadonlyMap<string, number>;
   toggle: (id: string) => void;
   start: () => void;
   stop: () => void;
@@ -36,6 +38,13 @@ export type PublishInvite = { recipients: Record<Group, Array<{ email: string; n
 const SelectionContext = createContext<Selection | null>(null);
 
 const drafts = (n: number) => `${n} ${n === 1 ? "návrh" : n >= 2 && n <= 4 ? "návrhy" : "návrhů"}`;
+/** Hláška o návrzích, které z výběru vypadly, protože je mezitím někdo změnil nebo smazal. */
+const staleNote = (n: number) =>
+  n === 1
+    ? "1 vybraný návrh se mezitím změnil, z výběru zmizel."
+    : n <= 4
+      ? `${n} vybrané návrhy se mezitím změnily, z výběru zmizely.`
+      : `${n} vybraných návrhů se mezitím změnilo, z výběru zmizelo.`;
 const events = (n: number) => `${n} ${n >= 1 && n <= 4 ? "akce" : "akcí"}`;
 
 /**
@@ -46,6 +55,7 @@ const events = (n: number) => `${n} ${n >= 1 && n <= 4 ? "akce" : "akcí"}`;
  */
 export function SelectionZone({
   monthKey,
+  contextKey,
   items,
   publishable,
   changeDrafts,
@@ -53,43 +63,64 @@ export function SelectionZone({
   children,
 }: {
   monthKey: string;
+  /** Měsíc a filtry. Při změně se výběr zruší; podstrom se nepřemontuje, aby otevřená nabídka Filtry zůstala otevřená. */
+  contextKey: string;
   invite?: PublishInvite | null;
   items: PickItem[];
   publishable: MonthDraft[];
-  /** Počet návrhů změn zveřejněných akcí v měsíci. Ty mají vlastní potvrzení dopadu v okně akce. */
+  /** Počet viditelných návrhů změn zveřejněných akcí (po filtrech). Ty mají vlastní potvrzení dopadu v okně akce. */
   changeDrafts: number;
   children: React.ReactNode;
 }) {
   const router = useRouter();
   const [active, setActive] = useState(false);
-  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [picked, setPicked] = useState<ReadonlyMap<string, number>>(new Map());
   const [ask, setAsk] = useState<Ask>(null);
   const [single, setSingle] = useState<MonthDraft | null>(null);
   // Proč naposledy kliknutou kartu vybrat nejde. Ukáže se v liště místo otevření okna akce.
   const [hint, setHint] = useState<string | null>(null);
   const bar = useRef<HTMLDivElement>(null);
+  // Kontext poslední hromadné akce: její hlášení se po změně měsíce nebo filtru už neukáže.
+  const [actionContext, setActionContext] = useState(contextKey);
+  const [seenContext, setSeenContext] = useState(contextKey);
+  if (seenContext !== contextKey) {
+    setSeenContext(contextKey);
+    setActive(false);
+    setPicked(new Map());
+    setAsk(null);
+    setSingle(null);
+    setHint(null);
+  }
 
   const byId = new Map(items.map((i) => [i.id, i]));
   const publishableById = new Map(publishable.map((d) => [d.id, d]));
-  const selected = items.filter((i) => picked.has(i.id));
+  // Po obnovení dat (router.refresh, souběžná změna) zůstane ve výběru jen návrh se stejnou verzí,
+  // jakou správce viděl. Jinak by hromadná akce tiše poslala novější verzi, kterou nekontroloval.
+  const stale = [...picked].filter(([id, revision]) => byId.get(id)?.revision !== revision).length;
+  if (stale > 0) {
+    setPicked(new Map([...picked].filter(([id, revision]) => byId.get(id)?.revision === revision)));
+    setHint(staleNote(stale));
+  }
+  const selected = items.filter((i) => picked.get(i.id) === i.revision);
   const toPublish = selected.flatMap((i) => publishableById.get(i.id) ?? []);
   const pastPicked = selected.length - toPublish.length;
   const incomplete = toPublish.filter((d) => !d.topicTitle || !d.leadId).length;
 
   const stop = () => {
     setActive(false);
-    setPicked(new Set());
+    setPicked(new Map());
     setAsk(null);
     setHint(null);
   };
   const toggle = (id: string) => {
-    if (!byId.has(id)) return;
+    const item = byId.get(id);
+    if (!item) return;
     setAsk(null);
     setHint(null);
     setPicked((current) => {
-      const next = new Set(current);
+      const next = new Map(current);
       if (next.has(id)) next.delete(id);
-      else next.add(id);
+      else next.set(id, item.revision);
       return next;
     });
   };
@@ -109,9 +140,11 @@ export function SelectionZone({
   });
 
   const finish = (result: ActionResult) => {
-    // Chyba se ukáže v liště výběru. Potvrzovací okno se zavře, aby ji nezakrylo.
+    // Chyba se ukáže v liště výběru. Potvrzovací okno se zavře, aby ji nezakrylo. Obnovená data
+    // vyřadí z výběru návrhy, které mezitím někdo změnil (porovnání verzí při vykreslení).
     if (!result.ok) {
       setAsk(null);
+      router.refresh();
       return result;
     }
     flash(result.message);
@@ -124,6 +157,7 @@ export function SelectionZone({
   const busy = publishing || deleting;
 
   const submit = (intent: "publish" | "delete") => {
+    setActionContext(contextKey);
     const fd = new FormData();
     fd.set("month", monthKey);
     if (intent === "publish") {
@@ -173,7 +207,7 @@ export function SelectionZone({
         {single && <PublishOneDialog key={single.id} draft={single} monthKey={monthKey} invite={invite} onClose={() => setSingle(null)} />}
         {active && (
           <div ref={bar} className="select-bar" role="region" aria-label="Hromadný výběr návrhů">
-            <ActionMessage state={deleteState ?? publishState} />
+            <ActionMessage state={actionContext === contextKey ? (deleteState ?? publishState) : null} />
             <ConfirmDialog
               open={ask === "publish"}
               title={`Zveřejnit ${events(toPublish.length)}?`}
@@ -211,11 +245,19 @@ export function SelectionZone({
             </ConfirmDialog>
             <div className="select-bar-row">
               <p className="select-bar-text" aria-live="polite">
-                <strong>Vybráno {selected.length} z {items.length}</strong>
+                <strong>
+                  Vybráno {selected.length} z {items.length} {items.length === 1 ? "nového návrhu" : "nových návrhů"}
+                </strong>
                 {selected.length < items.length && (
-                  <button type="button" className="link-button" onClick={() => setPicked(new Set(items.map((i) => i.id)))}>
+                  <button type="button" className="link-button" onClick={() => setPicked(new Map(items.map((i) => [i.id, i.revision])))}>
                     Vybrat všechny dostupné
                   </button>
+                )}
+                {selected.length > 0 && (
+                  <span className="small select-bar-hint" data-testid="rozpad-vyberu">
+                    Zveřejnit jde {toPublish.length}.{pastPicked > 0 && ` ${pastPicked} v minulosti jde jen smazat.`}
+                    {incomplete > 0 && ` ${incomplete} bez tématu nebo vedoucího, potvrzení to připomene.`}
+                  </span>
                 )}
                 {hint ? (
                   <span className="small select-bar-hint" data-testid="duvod-vyberu">{hint}</span>
@@ -255,11 +297,14 @@ export const useSelection = () => useContext(SelectionContext);
 /** Tlačítko „Vybrat návrhy“ v řádku filtrů. Bez návrhů v měsíci (nebo mimo Plán správce) se nevykreslí. */
 export function SelectToggle({ wide }: { wide?: boolean }) {
   const selection = useContext(SelectionContext);
+  // Výběr slouží jen hromadným úpravám návrhů, v náhledu je tlačítko na místě zamčené.
+  const lock = lockedProps(usePreviewLock());
   if (!selection?.available) return null;
   return (
     <button
       type="button"
       className="btn btn-small btn-quiet filter-button"
+      {...lock}
       data-wide={wide || undefined}
       aria-pressed={selection.active}
       onClick={selection.active ? selection.stop : selection.start}

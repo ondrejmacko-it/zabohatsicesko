@@ -1,20 +1,20 @@
-# Návod: sloučení dokončení F01–F18 (větev `claude/nice-lamport-vjfy87`) do `main`
+# Návod: sloučení finálního dokončení (větev `claude/festive-sagan-lilorz`) do `main`
 
-Stav ověřený 24. 11. 2026 (jen čtení ve Vercelu a Neonu). `main` = `a30605c` (PR #91). Stack #77–#87 a PR #91 už
-jsou sloučené, platí jen tento jeden PR. Před každým krokem zkontroluj, že čísla v GitHubu sedí. Pokud ne,
+Stav ověřený 26. 11. 2026 (jen čtení ve Vercelu a Neonu). `main` = `2703a0b` (PR #92, předchozí `a30605c` PR #91).
+Platí jen tento jeden PR. Před každým krokem zkontroluj, že čísla v GitHubu sedí. Pokud ne,
 nepokračuj.
 
 ## Nejdůležitější fakta
 
 1. **Merge do `main` hned nasadí produkci.** Vercel projekt `zbc-vzdelavani-demo`: posledních 5 produkčních
-   nasazení vzniklo automaticky z merge do `main` (poslední `a30605c`, PR #91, Ready, kandidát na rollback).
+   nasazení vzniklo automaticky z merge do `main` (poslední `2703a0b`, PR #92, Ready, kandidát na rollback).
 2. **Produkce je ostrá Wiki**: `WIKI_MODE=production`, `CALENDAR_MODE=google-test`, `CALENDAR_ATTENDEES=audience`.
    `PARTICIPATION` ani `APPROVED_MIGRATIONS` v produkci **nejsou nastavené** (ověřeno 24. 11.).
 3. **Po merge se účast v produkci nezapne.** `participationEnabled()` je v ostré Wiki zapnutá jen při
    `PARTICIPATION=on` **a zároveň** provedených migracích 0016 a 0017; nadřízený pro omluvy navíc potřebuje 0018.
    Bez nich zůstanou štítky, přihlášky, omluvy i Nadřízený pro omluvy skryté a kód se na nové tabulky nedotazuje
    (`excuseManagersEnabled`, `participationReadiness` = `off`). Správa → Integrace ukazuje stav „Přihlášky a omluvy“.
-4. **Migrace se samy nespustí.** Produkční DB (`zbc-wiki-produkce`) má 0001–0014. 0015–0018 mají příznak „čeká na
+4. **Migrace se samy nespustí.** Produkční DB (`zbc-wiki-produkce`) má 0001–0014. 0015–0019 mají příznak „čeká na
    schválení“ a na vzdálené DB proběhnou jen s ID v `APPROVED_MIGRATIONS`.
 5. **Ověření migrací:** izolovaný Neon branch `overeni-ucast-0016-0018` (projekt `neon-zbz-vzdelavani-demo`, fiktivní
    data) má 0016–0018 a SQL kontroly prošly (omezení, unikáty, FK, nadřízený ne sám sobě). Aplikaci proti němu
@@ -24,8 +24,8 @@ nepokračuj.
 
 ### 0. Příprava (nic se nenasazuje)
 
-1. Vercel → `zbc-vzdelavani-demo` → Deployments → filtr Production: poznamenej si nasazení `a30605c`
-   („Merge pull request #91“). To je bod pro rollback.
+1. Vercel → `zbc-vzdelavani-demo` → Deployments → filtr Production: poznamenej si nasazení `2703a0b`
+   („Merge pull request #92“). To je bod pro rollback.
 2. V produkci **nic nenastavuj**. Merge žádnou proměnnou nepotřebuje.
 3. Otevři draft PR této větve do `main`: kontroly „Lint, typy, testy a build“ a Vercel Preview musí být zelené
    a PR nesmí mít konflikt s `main`.
@@ -51,19 +51,23 @@ nepokračuj.
 * Správa → Integrace: „Přihlášky a omluvy“ = vypnuto.
 * Logy nasazení (Hobby je drží hodinu): `[db] migrace 0015_topic_priority_unlimited čeká na schválení`, nic se
   neprovedlo.
-* Problém: Deployments → `a30605c` → ⋯ → **Instant Rollback**. DB se nezměnila, návrat je bezpečný.
+* Problém: Deployments → `2703a0b` → ⋯ → **Instant Rollback**. DB se nezměnila, návrat je bezpečný.
 
 ## Aktivace účasti v produkci (samostatný krok, jen s výslovným schválením)
 
 1. Záloha: Neon → `zbc-wiki-produkce` → Branches → Create branch (snapshot).
 2. Vercel Production:
-   `APPROVED_MIGRATIONS=0015_topic_priority_unlimited,0016_event_participation,0017_participation_withdrawn,0018_excuse_managers`
+   `APPROVED_MIGRATIONS=0015_topic_priority_unlimited,0016_event_participation,0017_participation_withdrawn,0018_excuse_managers,0019_user_salutation`
    (ID podle `src/server/db/migrations.ts`), redeploy. V logu ověř provedení, v Neonu
    `SELECT id FROM schema_migrations ORDER BY id`.
-3. Teprve potom `PARTICIPATION=on`, redeploy. Integrace musí ukázat „zapnuto“, ne „chybí schéma“.
-4. Ve Správě nastav nadřízené pro omluvy (skutečné mapování dodá firma, stejně jako dobu uchování omluv).
-5. Google Kalendář: změna účasti přepočítá pozvánky povinných akcí. Živé pozvánky jen po schválení D06.
-6. Návrat: `PARTICIPATION` smazat a redeploy (funkce zmizí, data zůstanou). Migrace jen přidávají tabulky
+   0019 (tabulka `user_salutations`) zapne vlastní oslovení na Domů; bez ní se oslovení nečte ani neukládá.
+3. Před zapnutím `npx tsx scripts/kalendar-migrace.ts aktivace-ucasti` (počty a otisk, Google se nevolá),
+   otisk schvaluje vlastník (`docs/kalendar-migrace.md`, Aktivace účasti).
+4. Teprve potom `PARTICIPATION=on`, redeploy. Integrace musí ukázat „zapnuto“, ne „chybí schéma“.
+5. Ve Správě nastav nadřízené pro omluvy (skutečné mapování dodá firma, stejně jako dobu uchování omluv).
+6. Google Kalendář: `synchronizovat-ucast --provest <otisk> --davka 20`, opakovat do `remaining` 0. Živé pozvánky
+   jen po schválení D06.
+7. Návrat: `PARTICIPATION` smazat a redeploy (funkce zmizí, data zůstanou, hosté akcí s uloženou účastí se nemění). Migrace jen přidávají tabulky
    a sloupce, starší kód je nečte.
 
 ## Co nedělat

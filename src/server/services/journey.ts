@@ -72,6 +72,8 @@ export type MissingMinutesItem = {
   state: Exclude<RecordingProgress, "published">;
   /** Uživatel smí nahrát záznam a zápis zveřejnit (vedoucí, kontrolor, správce). */
   canHandle: boolean;
+  /** Úkol uživatele, stejně jako v úkolech Plánu: zápis píše (vedoucí, u akce bez vedoucího správce), kontrolor jen hotový návrh. */
+  mine: boolean;
 };
 
 /**
@@ -143,6 +145,7 @@ export async function listMissingMinutes(viewer: Viewer): Promise<{ items: Missi
     .map((row) => {
       const snapshot = row.published!;
       const state = byEvent.get(row.id) ?? "none";
+      const role = minutesTaskRole(viewer, snapshot);
       return {
         eventId: row.id,
         title: eventTitle(snapshot.label, snapshot.topicTitle),
@@ -151,6 +154,7 @@ export async function listMissingMinutes(viewer: Viewer): Promise<{ items: Missi
         leadName: snapshot.leadId ? (names.get(snapshot.leadId) ?? null) : null,
         state: state as MissingMinutesItem["state"],
         canHandle: handled.has(row.id),
+        mine: role === "write" || (role === "review" && state === "draft"),
       };
     });
   return { items, handlesAny: handled.size > 0 };
@@ -193,7 +197,11 @@ const NO_LEAD_DRAFT_TASK = { detail: "Návrh zápisu je hotový, ale akce nemá 
 
 /** `external`: odkaz vede mimo stránky Wiki (přesměrování na Google), proto běžná navigace prohlížeče. */
 /** `eventType`: úkol patří ke konkrétní akci, filtr Typ akce na Plánu ho podle něj schová nebo nechá. */
-export type JourneyTask = { key: string; title: string; detail: string; href: string; action: string; external?: boolean; eventType?: EventType };
+/** `count`: souhrnný úkol zastupuje víc úkolů, počítadla Čeká na tebe ho počítají touto hodnotou. */
+export type JourneyTask = { key: string; title: string; detail: string; href: string; action: string; external?: boolean; eventType?: EventType; count?: number };
+
+/** Počet úkolů pro odznak: souhrnný úkol se počítá za všechny, které zastupuje. */
+export const taskCount = (tasks: Pick<JourneyTask, "count">[]) => tasks.reduce((sum, task) => sum + (task.count ?? 1), 0);
 
 /**
  * Co na uživatele čeká: zápisy k dokončení u akcí, které vede (správce u akcí bez vedoucího), kontrola návrhů
@@ -220,13 +228,17 @@ export async function listTasks(viewer: Viewer): Promise<JourneyTask[]> {
   if (handled.length) {
     const byEvent = await recordingProgressByEvent(db);
     const canUpload = recordingUploadEnabled();
+    let hidden = 0;
     for (const { row, snapshot, role } of handled) {
       const state = byEvent.get(row.id) ?? "none";
       if (state === "published") continue;
       if (role === "review" && state !== "draft") continue;
       // Datum v názvu: stejně pojmenované akce se opakují každý týden.
       const title = `${eventTitle(snapshot.label, snapshot.topicTitle)} · ${formatDayMonth(toDateKey(new Date(snapshot.startsAt)))}`;
-      if (tasks.length >= MAX_MINUTES_TASKS) break;
+      if (tasks.length >= MAX_MINUTES_TASKS) {
+        hidden++;
+        continue;
+      }
       const today = toDateKey(new Date(snapshot.endsAt)) === toDateKey(reference);
       const href = `/vzdelavani/akce/${row.id}?odkud=prehled#nahravka`;
       const base = { href, eventType: snapshot.type };
@@ -245,6 +257,10 @@ export async function listTasks(viewer: Viewer): Promise<JourneyTask[]> {
             ? NONE_WITH_RECORDING
             : MINUTES_TASKS[state];
       tasks.push({ ...base, ...task, key: `${state === "draft" || state === "started" ? "zapis" : "nahravka"}-${row.id}`, title });
+    }
+    // Starší zápisy se nezahazují potichu: souhrnný úkol vede do okna K dokončení, kde je celý seznam.
+    if (hidden > 0) {
+      tasks.push({ key: "zapisy-dalsi", title: `Další zápisy k dokončení: ${hidden}`, detail: "Starší akce bez hotového zápisu. Celý seznam je v Zápisech pod K dokončení.", href: "/vzdelavani/zapisy?pridat=1", action: "Otevřít K dokončení", count: hidden });
     }
   }
 

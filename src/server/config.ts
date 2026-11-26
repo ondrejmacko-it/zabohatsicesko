@@ -95,6 +95,11 @@ export function excuseManagersEnabled(): boolean {
   return participationEnabled() && migrationApplied("0018_excuse_managers");
 }
 
+/** Vlastní oslovení (0019). Bez migrace se nečte ani neukládá, pozdrav bere tvar ze slovníku. */
+export function salutationsEnabled(): boolean {
+  return migrationApplied("0019_user_salutation");
+}
+
 export type ParticipationReadiness = "on" | "off" | "missing-schema";
 
 /** Stav připravenosti účasti pro kontrolu po nasazení (bez tajemství). */
@@ -111,6 +116,11 @@ export function participationReadiness(): ParticipationReadiness {
  * zůstává v produkčním režimu včetně přihlašování a oprávnění, účast nemění nic jiného.
  * Rollback: odebrat `PARTICIPATION` (záznamy v tabulce zůstanou, jen se nečtou).
  */
+/** Tabulka účasti existuje (migrace 0016 a 0017), i když je přepínač vypnutý. Pro rollback hostů pozvánek. */
+export function participationSchemaReady(): boolean {
+  return PARTICIPATION_MIGRATIONS.every(migrationApplied);
+}
+
 export function participationEnabled(): boolean {
   return participationReadiness() === "on";
 }

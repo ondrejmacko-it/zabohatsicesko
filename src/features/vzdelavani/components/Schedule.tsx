@@ -164,7 +164,7 @@ function MoveHandle({ card }: { card: EventCard }) {
   );
 }
 
-/** Kolonky Kdo a Téma pod názvem akce. Prázdná pole jsou tlumená, ať nepřebíjí vyplněné údaje. */
+/** Kolonky Vede a Téma pod názvem akce. Prázdná pole jsou tlumená, ať nepřebíjí vyplněné údaje. */
 function CardDetails({ card, managing }: { card: EventCard; managing: boolean }) {
   return cardDetails(card, managing).map((detail) => (
     <span key={detail.label} className={styles.topic} data-detail={detail.label}>
@@ -207,14 +207,14 @@ function OriginalLayer({ card, href }: { card: EventCard; href: string }) {
     >
       <span className={styles.originalTab}>Zveřejněná verze</span>
       <span className={styles.title}>{original.label}</span>
-      {original.leadName && <span className={styles.topic}>Kdo: {original.leadName}</span>}
+      {original.leadName && <span className={styles.topic}>Vede: {original.leadName}</span>}
       {original.topicTitle && original.topicTitle !== original.label && <span className={styles.topic}>Téma: {original.topicTitle}</span>}
       <span className={styles.line}>{formatEventTime(new Date(original.startsAt), new Date(original.endsAt), original.allDay)}</span>
     </Link>
   );
 }
 
-// Karta v mřížce: název, Kdo a Téma, čas a jeden stav. Podrobnosti ukáže okno akce po kliknutí.
+// Karta v mřížce: název, Vede a Téma, čas a jeden stav. Podrobnosti ukáže okno akce po kliknutí.
 function EventBlock({ card, hrefFor = pageHref, managing = false, planView = managing, movable = false, menuFor }: { card: EventCard; movable?: boolean } & Linking) {
   const tone = toneOf(card);
   const isHoliday = card.type === "holiday";

@@ -1,18 +1,26 @@
 #!/usr/bin/env python3
 """Hook Claude Code: hlídá velikost kontextu relace a šetří tokeny.
 
-Od 200 tis. tokenů upozorní (po každých dalších 10 tis.), od 250 tis. zablokuje další práci kromě
-dokončení: git, zápis předávacího promptu do docs/dalsi-session.md a operace na GitHubu.
+Od 140 tis. tokenů upozorní (po každých dalších 10 tis.), od 170 tis. zablokuje další práci kromě
+dokončení: git, zápis předávacího promptu do docs/dalsi-session.md, operace na GitHubu a založení
+navazující relace.
 Velikost kontextu se čte z poslední odpovědi modelu v přepisu relace.
 """
 import json
 import sys
 from pathlib import Path
 
-SOFT_LIMIT = 200_000
-HARD_LIMIT = 250_000
+SOFT_LIMIT = 140_000
+HARD_LIMIT = 170_000
 STEP = 10_000
 HANDOFF_FILE = "docs/dalsi-session.md"
+# Nástroje, kterými relace předá práci navazující relaci (podle prostředí je dostupný jen některý).
+HANDOFF_TOOLS = (
+    "mcp__claude-code-remote__create_session",
+    "mcp__claude-code-remote__send_message",
+    "mcp__ccd_session__spawn_task",
+    "mcp__ccd_session__start_session",
+)
 
 
 def context_tokens(transcript: str) -> int:
@@ -40,7 +48,7 @@ def allowed_when_over(event: dict) -> bool:
         return str(params.get("command", "")).lstrip().startswith("git ")
     if tool in ("Edit", "Write"):
         return str(params.get("file_path", "")).endswith(HANDOFF_FILE)
-    return tool.startswith("mcp__github__")
+    return tool.startswith("mcp__github__") or tool in HANDOFF_TOOLS
 
 
 def main() -> int:
@@ -50,8 +58,8 @@ def main() -> int:
     if phase == "PreToolUse" and tokens >= HARD_LIMIT and not allowed_when_over(event):
         print(
             f"Limit kontextu {HARD_LIMIT // 1000} tis. tokenů překročen ({tokens // 1000} tis.). "
-            f"Dokonči práci: commitni rozpracované změny, zapiš navazující prompt do {HANDOFF_FILE} "
-            "a ukonči relaci. Další práce pokračuje v nové relaci.",
+            f"Dokonči práci: commitni a pushni rozpracované změny, přepiš navazující prompt v {HANDOFF_FILE} "
+            "a založ navazující relaci (create_session / spawn_task), jinak předej prompt uživateli. Pak skonči.",
             file=sys.stderr,
         )
         return 2
@@ -60,7 +68,11 @@ def main() -> int:
         bucket = tokens // STEP
         if not marker.exists() or marker.read_text() != str(bucket):
             marker.write_text(str(bucket))
-            print(f"Kontext má {tokens // 1000} tis. tokenů (limit {HARD_LIMIT // 1000} tis.). Směřuj k dokončení.", file=sys.stderr)
+            print(
+                f"Kontext má {tokens // 1000} tis. tokenů (tvrdý limit {HARD_LIMIT // 1000} tis.). Nezačínej nový "
+                "velký krok: dokonči rozdělanou jednotku, commitni ji a připrav předání.",
+                file=sys.stderr,
+            )
             return 2
     return 0
 

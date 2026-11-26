@@ -17,6 +17,7 @@ import type { InviteRecipients } from "@/server/services/calendar-status";
 import type { EventFormValues } from "@/server/services/detail";
 import type { ChangeImpact } from "@/server/services/impact";
 import { previewImpactAction, saveEventAction, type ActionResult } from "../actions";
+import { lockedProps, usePreviewLock } from "@/components/PreviewLock";
 
 type FormField = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
 
@@ -92,6 +93,7 @@ export function EventDialog(props: CreateProps) {
   const [open, setOpen] = useState(Boolean(props.openOnMount));
   const [session, setSession] = useState(0);
   const edited = useRef(false);
+  const lock = lockedProps(usePreviewLock());
   const close = () => {
     setOpen(false);
     if (props.closeHref) router.replace(props.closeHref, { scroll: false });
@@ -105,6 +107,7 @@ export function EventDialog(props: CreateProps) {
           setSession((s) => s + 1);
           setOpen(true);
         }}
+        {...lock}
       >
         <Icon name="plus" />
         Přidat akci
@@ -207,6 +210,7 @@ function EventForm({
   // Souhrn chyb z kontroly prohlížeče: názvy polí, která je potřeba opravit (U08).
   const [invalid, setInvalid] = useState<string[]>([]);
   const valuesKey = JSON.stringify({ ...values, endDate: multiDay ? values.endDate : null });
+  const lock = lockedProps(usePreviewLock());
   const [state, action, pending] = useActionState(async (prev: ActionResult | null, formData: FormData) => {
     const result = await saveEventAction(prev, formData);
     if (result.ok) {
@@ -568,7 +572,7 @@ function EventForm({
         <button type="button" className="btn" onClick={back} autoFocus>
           Zpět k úpravám
         </button>
-        <button type="submit" form={formId} name="intent" value="publish" data-confirm="incomplete" className="btn btn-primary" disabled={busy}>
+        <button type="submit" form={formId} name="intent" value="publish" data-confirm="incomplete" className="btn btn-primary" disabled={busy} {...lock}>
           {checking ? "Ověřuji…" : pending ? "Zveřejňuji…" : "Zveřejnit bez nich"}
         </button>
       </ConfirmDialog>
@@ -611,7 +615,7 @@ function EventForm({
         <button type="button" className="btn" onClick={back} autoFocus>
           Zpět k úpravám
         </button>
-        <button type="submit" form={formId} name="intent" value="publish" data-confirm="impact" className="btn btn-primary" disabled={busy}>
+        <button type="submit" form={formId} name="intent" value="publish" data-confirm="impact" className="btn btn-primary" disabled={busy} {...lock}>
           {pending ? "Zveřejňuji…" : "Potvrdit zveřejnění"}
         </button>
       </ConfirmDialog>
@@ -621,12 +625,12 @@ function EventForm({
         {menu && <div className="event-actions-menu">{menu}</div>}
         {unchanged && <span className="small muted event-actions-note">Beze změn</span>}
         {duplicateOf && <span className="small muted event-actions-note">Kopie se uloží jako návrh, zveřejníš ji po kontrole.</span>}
-        <button type="submit" name="intent" value="draft" data-confirm-save="Uložit jako návrh" className={duplicateOf ? "btn btn-primary" : "btn"} disabled={busy || (mode === "edit" && !dirty)}>
+        <button type="submit" name="intent" value="draft" data-confirm-save="Uložit jako návrh" className={duplicateOf ? "btn btn-primary" : "btn"} disabled={busy || (mode === "edit" && !dirty)} {...lock}>
           Uložit jako návrh
         </button>
         {duplicateOf ? null : (
           // Primární vzhled jen tehdy, když je skutečně co zveřejnit; bez změn tlačítko k ničemu nevybízí.
-          <button type="submit" name="intent" value="publish" className={unchanged ? "btn" : "btn btn-primary"} disabled={busy || unchanged}>
+          <button type="submit" name="intent" value="publish" className={unchanged ? "btn" : "btn btn-primary"} disabled={busy || unchanged} {...lock}>
             {checking ? "Ověřuji…" : pending ? "Ukládám…" : publishLabel}
           </button>
         )}

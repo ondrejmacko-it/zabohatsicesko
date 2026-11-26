@@ -28,20 +28,20 @@ const card = (over: Partial<EventCard> = {}): EventCard => ({
 
 const text = (c: EventCard, managing: boolean) => cardDetails(c, managing).map((d) => `${d.label}: ${d.value}`);
 
-describe("kolonky Kdo a Téma na kartě harmonogramu", () => {
+describe("kolonky Vede a Téma na kartě harmonogramu", () => {
   test("vyplněné údaje vidí správce i účastník stejně", () => {
     const filled = card({ leadName: "Vašek", topicTitle: "Rozbor schůzky" });
     for (const managing of [true, false]) {
-      expect(text(filled, managing)).toEqual(["Kdo: Vašek", "Téma: Rozbor schůzky"]);
+      expect(text(filled, managing)).toEqual(["Vede: Vašek", "Téma: Rozbor schůzky"]);
       expect(cardDetails(filled, managing).every((d) => !d.missing)).toBe(true);
     }
   });
 
   test("nevyplněné: správce „— doplnit“, účastník „Bude upřesněno“", () => {
-    expect(text(card(), true)).toEqual(["Kdo: — doplnit", "Téma: — doplnit"]);
-    expect(text(card(), false)).toEqual(["Kdo: Bude upřesněno", "Téma: Bude upřesněno"]);
+    expect(text(card(), true)).toEqual(["Vede: — doplnit", "Téma: — doplnit"]);
+    expect(text(card(), false)).toEqual(["Vede: Bude upřesněno", "Téma: Bude upřesněno"]);
     expect(cardDetails(card({ leadName: "Vašek" }), false)).toEqual([
-      { label: "Kdo", value: "Vašek", missing: false },
+      { label: "Vede", value: "Vašek", missing: false },
       { label: "Téma", value: "Bude upřesněno", missing: true },
     ]);
   });
@@ -55,28 +55,28 @@ describe("kolonky Kdo a Téma na kartě harmonogramu", () => {
 
   test("téma shodné s názvem akce se nezdvojuje", () => {
     const same = card({ label: "Rozbor schůzky", topicTitle: " rozbor schůzky ", leadName: "Vašek" });
-    expect(text(same, true)).toEqual(["Kdo: Vašek"]);
-    expect(text(same, false)).toEqual(["Kdo: Vašek"]);
+    expect(text(same, true)).toEqual(["Vede: Vašek"]);
+    expect(text(same, false)).toEqual(["Vede: Vašek"]);
   });
 
   test("proběhlá akce: účastník prázdná pole nevidí, správce ano", () => {
     const past = card({ past: true, topicTitle: "Rozbor schůzky" });
     expect(text(past, false)).toEqual(["Téma: Rozbor schůzky"]);
-    expect(text(past, true)).toEqual(["Kdo: — doplnit", "Téma: Rozbor schůzky"]);
+    expect(text(past, true)).toEqual(["Vede: — doplnit", "Téma: Rozbor schůzky"]);
   });
 
-  test("Action time: Kdo vždy, Téma jen vyplněné", () => {
+  test("Action time: Vede vždy, Téma jen vyplněné", () => {
     const action = card({ type: "action", label: "Action time", leadName: "Vašek" });
-    expect(text(action, true)).toEqual(["Kdo: Vašek"]);
-    expect(text(action, false)).toEqual(["Kdo: Vašek"]);
-    expect(text(card({ type: "action", label: "Action time" }), false)).toEqual(["Kdo: Bude upřesněno"]);
-    expect(text({ ...action, topicTitle: "Telefonáty" }, false)).toEqual(["Kdo: Vašek", "Téma: Telefonáty"]);
+    expect(text(action, true)).toEqual(["Vede: Vašek"]);
+    expect(text(action, false)).toEqual(["Vede: Vašek"]);
+    expect(text(card({ type: "action", label: "Action time" }), false)).toEqual(["Vede: Bude upřesněno"]);
+    expect(text({ ...action, topicTitle: "Telefonáty" }, false)).toEqual(["Vede: Vašek", "Téma: Telefonáty"]);
   });
 
   test("návrh a mimořádná akce kolonky mají", () => {
-    expect(text(card({ planStatus: "draft", topicTitle: "Hypotéky" }), true)).toEqual(["Kdo: — doplnit", "Téma: Hypotéky"]);
+    expect(text(card({ planStatus: "draft", topicTitle: "Hypotéky" }), true)).toEqual(["Vede: — doplnit", "Téma: Hypotéky"]);
     expect(text(card({ type: "workshop", label: "AI workshop", extraordinary: true, leadName: "Eva" }), false)).toEqual([
-      "Kdo: Eva",
+      "Vede: Eva",
       "Téma: Bude upřesněno",
     ]);
   });

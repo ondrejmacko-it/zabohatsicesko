@@ -23,6 +23,7 @@ import {
   updateTopicAction,
   type ActionResult,
 } from "../actions";
+import { lockedProps, usePreviewLock } from "@/components/PreviewLock";
 
 /**
  * Přepínač zájmu. Jeden uživatel = nejvýš jeden zájem o téma (hlídá server). Viditelný text i přístupný název
@@ -30,7 +31,8 @@ import {
  */
 export function InterestButton({ topicId, interested, titleId, locked = false }: { topicId: string; interested: boolean; titleId: string; locked?: boolean }) {
   const [state, action, pending] = useActionState(toggleInterestAction, null);
-  if (locked) {
+  const previewLocked = usePreviewLock();
+  if (locked || previewLocked) {
     // Náhled: stejné tlačítko a stav zájmu jako u kolegy, jen zamčené (server změnu v náhledu stejně odmítne).
     return (
       <button type="button" className={interested ? "btn btn-small interest-on" : "btn btn-small"} aria-pressed={interested} aria-describedby={titleId} disabled title={PREVIEW_READ_ONLY}>
@@ -86,6 +88,7 @@ export function ProposeTopicDialog({ groups, locked = false }: { groups: Group[]
 }
 
 function ProposeForm({ groups, onClose }: { groups: Group[]; onClose: () => void }) {
+  const lock = lockedProps(usePreviewLock());
   const [state, action, pending] = useActionState(async (prev: ActionResult | null, formData: FormData) => {
     const result = await proposeTopicAction(prev, formData);
     if (result.ok) onClose();
@@ -99,7 +102,7 @@ function ProposeForm({ groups, onClose }: { groups: Group[]; onClose: () => void
           <input className="input" name="name" required minLength={3} maxLength={120} autoFocus />
         </label>
         <label className="field">
-          <span className="field-label">Pro skupinu</span>
+          <span className="field-label">Pro koho</span>
           <select className="select" name="audience" defaultValue={groups[0]}>
             {groups.map((g) => (
               <option key={g} value={g}>
@@ -110,9 +113,9 @@ function ProposeForm({ groups, onClose }: { groups: Group[]; onClose: () => void
         </label>
         <ActionMessage state={state} />
         {/* Bez druhého „Zavřít“ dole: okno zavírá záhlaví, které s rozepsaným návrhem stejně zeptá. */}
-        <div className="row">
-          <button type="submit" className="btn btn-primary" disabled={pending}>
-            Navrhnout téma
+        <div className="dialog-actions">
+          <button type="submit" className="btn btn-primary" disabled={pending} {...lock}>
+            {pending ? "Odesílám…" : "Navrhnout téma"}
           </button>
         </div>
       </form>
@@ -135,10 +138,12 @@ export type TopicManageProps = {
 export function TopicManage({ topic, groups, canMoveUp, canMoveDown }: TopicManageProps) {
   const [dialog, setDialog] = useState<"edit" | "plan" | null>(null);
   const guaranteed = topic.priorityRank != null;
+  // Okno Naplánovat téma načítá nabídku akcí přes server, který ji v náhledu odmítne: v náhledu je položka zamčená.
+  const lock = lockedProps(usePreviewLock());
   return (
     <>
       <Menu label={`Možnosti tématu ${topic.name}`} variant="card" className="menu-inline">
-        <button type="button" className="btn" onClick={() => setDialog("plan")}>
+        <button type="button" className="btn" onClick={() => setDialog("plan")} {...lock}>
           <Icon name="calendar" />
           Naplánovat téma
         </button>
@@ -261,7 +266,7 @@ function PlanTopicDialog({ topic, onClose }: { topic: { id: string; name: string
             Zobrazit další ({candidates.length - shown.length})
           </button>
         )}
-        <div className="row">
+        <div className="dialog-actions">
           <Link className={scheduled ? "btn" : "btn btn-primary"} href={`/vzdelavani/harmonogram?tema=${encodeURIComponent(topic.id)}`}>
             <Icon name="plus" />
             Vytvořit novou akci
@@ -273,6 +278,7 @@ function PlanTopicDialog({ topic, onClose }: { topic: { id: string; name: string
 }
 
 function AssignToDraft({ topicId, candidate, onDone }: { topicId: string; candidate: TopicPlanOptions["candidates"][number]; onDone: () => void }) {
+  const lock = lockedProps(usePreviewLock());
   const [state, action, pending] = useActionState(async (prev: ActionResult | null, formData: FormData) => {
     const result = await assignTopicAction(prev, formData);
     if (result.ok) {
@@ -286,7 +292,7 @@ function AssignToDraft({ topicId, candidate, onDone }: { topicId: string; candid
       <input type="hidden" name="topicId" value={topicId} />
       <input type="hidden" name="eventId" value={candidate.id} />
       <input type="hidden" name="revision" value={String(candidate.revision)} />
-      <button type="submit" className="btn btn-small" disabled={pending} aria-label={`Přidat do návrhu ${candidate.label} ${formatDayMonth(candidate.dateKey)}`}>
+      <button type="submit" className="btn btn-small" disabled={pending} {...lock} aria-label={`Přidat do návrhu ${candidate.label} ${formatDayMonth(candidate.dateKey)}`}>
         {pending ? "Ukládám…" : "Přidat do návrhu"}
       </button>
       {state && !state.ok && <ActionMessage state={state} />}
@@ -298,6 +304,7 @@ function EditTopicForm({ topic, groups, onClose }: { topic: { id: string; name: 
   const [name, setName] = useState(topic.name);
   const [audience, setAudience] = useState(topic.audience);
   const [state, setState] = useState<ActionResult | null>(null);
+  const lock = lockedProps(usePreviewLock());
   const [pending, start] = useTransition();
   // Ruční odeslání: po chybě (například duplicitní název) zůstanou hodnoty tak, jak je správce vyplnil.
   const submit = (event: React.FormEvent<HTMLFormElement>) => {
@@ -318,7 +325,7 @@ function EditTopicForm({ topic, groups, onClose }: { topic: { id: string; name: 
           <input className="input" name="name" value={name} onChange={(e) => setName(e.target.value)} required minLength={3} maxLength={120} />
         </label>
         <label className="field">
-          <span className="field-label">Pro skupinu</span>
+          <span className="field-label">Pro koho</span>
           <select className="select" name="audience" value={audience} onChange={(e) => setAudience(e.target.value)}>
             {groups.map((g) => (
               <option key={g} value={g}>
@@ -329,8 +336,8 @@ function EditTopicForm({ topic, groups, onClose }: { topic: { id: string; name: 
         </label>
         <p className="small muted">Akce, které téma už mají v plánu nebo v zápisu, si nechají název, pod kterým byly zveřejněné.</p>
         <ActionMessage state={state} />
-        <div className="row">
-          <button type="submit" className="btn btn-primary" disabled={pending}>
+        <div className="dialog-actions">
+          <button type="submit" className="btn btn-primary" disabled={pending} {...lock}>
             {pending ? "Ukládám…" : "Uložit"}
           </button>
           <button type="button" className="btn" onClick={onClose}>

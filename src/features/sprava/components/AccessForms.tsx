@@ -8,6 +8,7 @@ import { submitKeepingValues } from "@/features/shared/keep-values";
 import { GROUP_LABELS, ROLE_LABELS } from "@/lib/labels";
 import { GROUPS, type Group, type Role } from "@/lib/types";
 import { createLoginLinkAction, inviteUserAction, rejectRequestAction, revokeDeviceAction, revokeLoginLinkAction, setExcuseManagersAction, updateAccessAction } from "../actions";
+import { lockedProps, usePreviewLock } from "@/components/PreviewLock";
 
 /** Výběr role a skupin. Nabízí jen role, které smí přihlášený uživatel přidělit (hlídá i server). */
 const PRESETS: Array<{ label: string; role: Role; groups: Group[] }> = [
@@ -80,6 +81,7 @@ type AccessProps = {
 
 /** Schválení žádosti, úprava přístupu, nebo jeho vrácení. Po úspěšném uložení se okno zavře. */
 function AccessForm({ userId, roles, role, groups, mode, onDone }: AccessProps) {
+  const lock = lockedProps(usePreviewLock());
   const [state, action, pending] = useActionState(updateAccessAction, null);
   useEffect(() => {
     if (state?.ok) onDone();
@@ -91,7 +93,7 @@ function AccessForm({ userId, roles, role, groups, mode, onDone }: AccessProps) 
       <AccessFields roles={roles} role={role} groups={mode === "approve" && groups.length === 0 ? ["vsichni"] : groups} />
       <ActionMessage state={state} />
       <div className="row">
-        <button type="submit" name="status" value="active" className="btn btn-primary" disabled={pending}>
+        <button type="submit" name="status" value="active" className="btn btn-primary" disabled={pending} {...lock}>
           {pending ? "Ukládám…" : mode === "approve" ? "Schválit přístup" : mode === "restore" ? "Vrátit přístup" : "Uložit změny"}
         </button>
         <button type="button" className="btn" onClick={onDone}>
@@ -134,6 +136,7 @@ export function InviteLink({ link }: { link: string }) {
 
 /** Nový odkaz pro existující účet: potvrzení, pak odkaz ke zkopírování. */
 function NewLink({ account: a, onClose }: { account: AccountActionsProps["account"]; onClose: () => void }) {
+  const lock = lockedProps(usePreviewLock());
   const [state, action, pending] = useActionState(createLoginLinkAction, null);
   return (
     // Hotový odkaz už není rozepsaná změna: zavření se na nic neptá.
@@ -151,8 +154,8 @@ function NewLink({ account: a, onClose }: { account: AccountActionsProps["accoun
           <input type="hidden" name="userId" value={a.id} />
           <p>Odkaz přidá jedno zařízení. Starší nepoužitý odkaz přestane platit.</p>
           <ActionMessage state={state} />
-          <div className="row">
-            <button type="submit" className="btn btn-primary" disabled={pending}>
+          <div className="dialog-actions">
+            <button type="submit" className="btn btn-primary" disabled={pending} {...lock}>
               {pending ? "Vytvářím…" : "Vytvořit odkaz"}
             </button>
             <button type="button" className="btn" data-modal-close>
@@ -173,6 +176,7 @@ type ExcuseManagersProps = {
 
 /** Kdo smí číst důvody omluv tohoto člověka. Vazbu určuje firma, Wiki si ji neodvozuje z rolí. */
 function ExcuseManagersForm({ account: a, excuse, onClose }: ExcuseManagersProps) {
+  const lock = lockedProps(usePreviewLock());
   const [state, action, pending] = useActionState(setExcuseManagersAction, null);
   useEffect(() => {
     if (state?.ok) onClose();
@@ -198,12 +202,12 @@ function ExcuseManagersForm({ account: a, excuse, onClose }: ExcuseManagersProps
           <span className="field-hint">Nejvýš 5 lidí. Ostatní kolegové a správci důvod neuvidí, ani v náhledu za jiného uživatele.</span>
         </fieldset>
         <ActionMessage state={state} />
-        <div className="row">
-          <button type="submit" className="btn btn-primary" disabled={pending}>
+        <div className="dialog-actions">
+          <button type="submit" className="btn btn-primary" disabled={pending} {...lock}>
             {pending ? "Ukládám…" : "Uložit"}
           </button>
           <button type="button" className="btn" onClick={onClose}>
-            Zavřít
+            Zrušit úpravy
           </button>
         </div>
       </form>
@@ -313,6 +317,7 @@ export function AccountActions({ account: a, roles, live, editable = true, excus
 
 /** Odebrání přístupu s potvrzením. Role a skupiny zůstávají, aby šel přístup později vrátit beze změn. */
 function RevokeAccess({ account: a, onClose }: { account: AccountActionsProps["account"]; onClose: () => void }) {
+  const lock = lockedProps(usePreviewLock());
   const [state, action, pending] = useActionState(updateAccessAction, null);
   useEffect(() => {
     if (state?.ok) onClose();
@@ -331,7 +336,7 @@ function RevokeAccess({ account: a, onClose }: { account: AccountActionsProps["a
         </p>
         <ActionMessage state={state} />
         <div className="row">
-          <button type="submit" name="status" value="disabled" className="btn btn-danger" disabled={pending}>
+          <button type="submit" name="status" value="disabled" className="btn btn-danger" disabled={pending} {...lock}>
             {pending ? "Odebírám…" : "Odebrat přístup"}
           </button>
           <button type="button" className="btn" onClick={onClose}>
@@ -368,6 +373,7 @@ export function InviteButton({ roles }: { roles: Role[] }) {
 }
 
 function InviteForm({ roles, onCreated }: { roles: Role[]; onCreated: () => void }) {
+  const lock = lockedProps(usePreviewLock());
   const [state, action, pending] = useActionState(inviteUserAction, null);
   const done = Boolean(state?.ok && state.link);
   useEffect(() => {
@@ -395,7 +401,7 @@ function InviteForm({ roles, onCreated }: { roles: Role[]; onCreated: () => void
       </div>
       <AccessFields roles={roles} role="member" groups={["vsichni"]} />
       <div>
-        <button type="submit" className="btn btn-primary" disabled={pending}>
+        <button type="submit" className="btn btn-primary" disabled={pending} {...lock}>
           {pending ? "Ukládám…" : "Vytvořit odkaz"}
         </button>
       </div>

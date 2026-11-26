@@ -9,7 +9,7 @@ const cookie = (value: string) => ({ name: "zbc_nahled", value, domain: "localho
 test.describe("správce: pohled skupiny", () => {
   test.use({ storageState: authFile("spravce") });
 
-  test("pohled FP platí na Domů, Plánu, Tématech a Zápisech, jen ke čtení", async ({ page }) => {
+  test("pohled FP platí na Domů, Plánu, Tématech a Zápisech, jen ke čtení @smoke", async ({ page }) => {
     await page.goto("/vzdelavani/harmonogram");
     await settle(page);
     await expect(page.getByRole("button", { name: "Přidat akci" }).first()).toBeVisible();
@@ -23,8 +23,7 @@ test.describe("správce: pohled skupiny", () => {
 
     await page.goto("/");
     await expect(bar(page)).toContainText("jen ke čtení");
-    await expect(page.getByRole("heading", { name: "Nejbližší akce" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Čeká na tebe" })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "Co tě čeká" })).toBeVisible();
     // F16: pozdrav nepatří správci a navigace odpovídá pohledu poradce (bez Správy systému).
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Ahoj.");
     const nav = page.getByRole("complementary", { name: "Hlavní navigace" });
@@ -50,10 +49,11 @@ test.describe("správce: pohled skupiny", () => {
     await page.goto("/vzdelavani/zapisy?zapis=tr-rm-1112");
     await expect(page.getByRole("dialog", { name: "Zápis není dostupný" })).toBeVisible();
 
-    // Správa náhled nepoužívá: pruh to řekne a stránka ukazuje skutečný účet.
+    // Správa platí podle oprávnění zobrazeného: skupina FP Správu nemá, ukáže se zástupný stav bez účtů.
     await page.goto("/sprava");
-    await expect(bar(page)).toContainText("tu neplatí");
-    await expect(page.getByRole("heading", { name: "Správa systému" })).toBeVisible();
+    await expect(bar(page)).toContainText("jen ke čtení");
+    await expect(page.getByTestId("sprava-nahled")).toBeVisible();
+    await expect(page.locator("[data-account-id], .account-row")).toHaveCount(0);
 
     await page.goto("/vzdelavani/harmonogram");
     await bar(page).getByRole("button", { name: "Ukončit pohled" }).click();
@@ -80,7 +80,10 @@ test.describe("správce: pohled skupiny", () => {
       const ownNames = (await own.allTextContents()).map((t) => t.trim());
       const viewed = await controls(page, path);
       expect((await viewed.allTextContents()).map((t) => t.trim()), path).toEqual(ownNames);
-      for (const control of await viewed.all()) await expect(control, path).toBeDisabled();
+      // Akční tlačítka jsou zamčená; odkazy (např. K dokončení) jen otevírají informační přehled.
+      for (const control of await viewed.all()) {
+        if ((await control.evaluate((el) => el.tagName)) === "BUTTON") await expect(control, path).toBeDisabled();
+      }
       if (ownNames.length) await expect(page.getByText(/Náhled je jen ke čtení/).first(), path).toBeVisible();
     }
     // Domů: stejné úkoly (i skryté pod Další úkoly) kromě osobních pozvánek z Kalendáře kolegy, ty náhled nenačítá.
@@ -123,7 +126,7 @@ test.describe("správce: pohled skupiny", () => {
 test.describe("správce: náhled kolegy-správce 1:1", () => {
   test.use({ storageState: authFile("spravce") });
 
-  test("Plán očima druhého správce: stejné stavy a „— doplnit“, žádné ovládání zápisu", async ({ page, context }, info) => {
+  test("Plán očima druhého správce: stejné stavy a „— doplnit“, ovládání zápisu zamčené", async ({ page, context }, info) => {
     const plan = "/vzdelavani/harmonogram?mesic=2026-11&pohled=seznam";
     const snapshot = async () => {
       await page.goto(plan);
@@ -140,16 +143,17 @@ test.describe("správce: náhled kolegy-správce 1:1", () => {
     await context.addCookies([cookie("demo-spravce|kolega-demo-organizator")]);
     expect(await snapshot()).toEqual(own);
     await expect(bar(page)).toContainText("jen ke čtení");
-    // Zápisové prvky správce v náhledu nejsou: přidání, výběr návrhů, přesun ani menu úprav.
-    await expect(page.getByRole("button", { name: "Přidat akci" })).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "Připravit měsíc" })).toHaveCount(0);
-    await expect(page.locator("[data-pick-id], [data-handle-label]")).toHaveCount(0);
+    // Zápisové prvky správce jsou na stejném místě, ale zamčené; přesouvat akce v náhledu nejde.
+    for (const name of ["Přidat akci", "Připravit měsíc"]) {
+      for (const button of await page.getByRole("button", { name, exact: true }).all()) await expect(button).toBeDisabled();
+    }
+    await expect(page.locator("[data-handle-label]")).toHaveCount(0);
 
-    // Okno akce: stav a rady jako u správce, ale bez formuláře úprav.
+    // Okno akce: stav a rady jako u správce, uložení úprav zamčené.
     await page.locator("a[href*='akce=']").filter({ visible: true }).first().click();
     const dialog = page.getByRole("dialog");
     await expect(dialog.locator(".status-band")).toContainText("jen ke čtení");
-    await expect(dialog.locator("form")).toHaveCount(0);
+    for (const submit of await dialog.locator("button[type=submit]").all()) await expect(submit).toBeDisabled();
     await page.screenshot({ path: info.outputPath("nahled-kolegy-spravce.png"), fullPage: true });
   });
 });
@@ -157,7 +161,7 @@ test.describe("správce: náhled kolegy-správce 1:1", () => {
 test.describe("účastník: podvržená cookie náhledu", () => {
   test.use({ storageState: authFile("ucastnikFp") });
 
-  test("cookie pohledu RM nic nezmění ani neodhalí", async ({ page, context }) => {
+  test("cookie pohledu RM nic nezmění ani neodhalí @smoke", async ({ page, context }) => {
     await context.addCookies([cookie("demo-ucastnik|skupina-rm")]);
     for (const path of ["/", "/vzdelavani/harmonogram", "/vzdelavani/temata", "/vzdelavani/zapisy"]) {
       await page.goto(path);

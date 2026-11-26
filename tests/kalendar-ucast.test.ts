@@ -1,7 +1,8 @@
 import { randomBytes } from "node:crypto";
 import { eq } from "drizzle-orm";
-import { calendarLinks, calendarResponses, calendarSyncState, calendarWorkerRuns, integrationCredentials, users } from "@/server/db/schema";
+import { calendarLinks, calendarResponses, eventParticipation, calendarSyncState, calendarWorkerRuns, integrationCredentials, users } from "@/server/db/schema";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
+import { activationInventory, queueActivationSync } from "@/server/calendar/activation";
 import { eventIdForKey } from "@/server/calendar/google";
 import { clearAccessTokenCache, completeAuthorization } from "@/server/calendar/google-auth";
 import { requestNewInvite, syncEvent, syncPending } from "@/server/calendar/sync";
@@ -186,6 +187,21 @@ describe("pozvánky podle účasti (desiredGuestIds)", () => {
     expect(emails(invite())).toEqual([DRUHA]);
   });
 
+  test("rollback přepínače: další úprava akce znovu nepozve omluveného ani neodebere dobrovolně přihlášeného", async () => {
+    await invited();
+    await inviteUser(admin, { email: "fp@example.com", name: "FP Kolega", role: "member", groups: ["vsichni", "fp"] });
+    await changeOwnParticipation(await viewerOf("fp@example.com"), PUBLISHED_RM, { kind: "enroll" });
+    await changeOwnParticipation(await viewerOf(KOLEGA), PUBLISHED_RM, { kind: "excuse", excuse: { reason: "other", note: null } });
+    await syncPending();
+    expect(emails(invite()).sort()).toEqual([DRUHA, "fp@example.com"]);
+    vi.stubEnv("PARTICIPATION", "");
+    // Úprava akce po vypnutí účasti: fronta pozvánku přepočítá.
+    await (await getDb()).update(calendarLinks).set({ syncStatus: "pending" }).where(eq(calendarLinks.eventId, PUBLISHED_RM));
+    await syncPending();
+    expect(emails(invite()).sort()).toEqual([DRUHA, "fp@example.com"]);
+    vi.stubEnv("PARTICIPATION", "on");
+  });
+
   test("bez přepínače se hosté řídí publikem jako dřív a omluva Kalendář nemění", async () => {
     vi.stubEnv("PARTICIPATION", "");
     await invited();
@@ -196,5 +212,34 @@ describe("pozvánky podle účasti (desiredGuestIds)", () => {
     expect(google.requests.slice(before).filter((r) => r.method !== "GET" && r.url.hostname !== "oauth2.googleapis.com")).toHaveLength(0);
     expect(emails(invite()).sort()).toEqual([DRUHA, KOLEGA]);
     vi.stubEnv("PARTICIPATION", "on");
+  });
+});
+
+describe("aktivace účasti nad existujícími pozvánkami", () => {
+  test("inventura jen čte, synchronizace jen se zapnutou účastí a schváleným otiskem", async () => {
+    vi.stubEnv("PARTICIPATION", "");
+    await invited();
+    const db = await getDb();
+    const kolega = await viewerOf(KOLEGA);
+    // Omluva uložená dřív (data z předchozího používání), pozvánka zatím podle publika.
+    await db.insert(eventParticipation).values({ orgId: config.orgId, eventId: PUBLISHED_RM, userId: kolega.id, kind: "excused", excuseReason: "illness", excuseNote: NOTE });
+    const before = google.requests.length;
+    const inventory = await activationInventory(db);
+    expect(inventory).toMatchObject({ notApplicable: null, eventsAffected: 1, add: { required: 0, voluntaryEnrolled: 0 }, remove: { excused: 1, notEnrolled: 0, notRecipient: 0 } });
+    expect(JSON.stringify(inventory)).not.toContain("@");
+    expect(JSON.stringify(inventory)).not.toContain(NOTE);
+    expect((await queueActivationSync(db)).mode).toBe("dry-run");
+    await expect(queueActivationSync(db, { approvedFingerprint: inventory.fingerprint })).rejects.toThrow("zapnutou účast");
+    expect((await link()).syncStatus).toBe("synced");
+
+    vi.stubEnv("PARTICIPATION", "on");
+    await expect(queueActivationSync(db, { approvedFingerprint: "000000000000" })).rejects.toThrow("Otisk");
+    expect(await queueActivationSync(db, { approvedFingerprint: inventory.fingerprint })).toEqual({ mode: "queued", queued: 1, remaining: 0, inProgress: 0 });
+    expect(await queueActivationSync(db, { approvedFingerprint: inventory.fingerprint })).toMatchObject({ queued: 0, inProgress: 1 });
+    expect(google.requests.length).toBe(before);
+    await syncPending();
+    expect(emails(invite())).toEqual([DRUHA]);
+    expect(bodies()).not.toContain("declined");
+    expect((await activationInventory(db)).eventsAffected).toBe(0);
   });
 });

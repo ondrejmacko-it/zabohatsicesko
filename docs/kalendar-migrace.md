@@ -74,3 +74,20 @@ Odstranit až po schváleném přepnutí produkce, jinak by produkce s `personal
   Vercelu jako sensitive a nejdou stáhnout, skript proto lokálně proti produkci nepoběží. Návrh: tlačítko pro
   hlavního správce ve Správě (inventura → potvrzení s otiskem), nebo chráněný endpoint s otiskem schváleným
   v proměnné prostředí. Rozhodne vlastník.
+
+## Aktivace účasti nad existujícími pozvánkami (PARTICIPATION=on)
+
+Po zapnutí účasti se už vydané pozvánky samy nepřepočítají (změní se až při další úpravě akce nebo účasti).
+Řízený postup, Google se při něm nevolá, výstup obsahuje jen počty (žádné adresy ani důvody omluv):
+
+1. Před zapnutím: `npx tsx scripts/kalendar-migrace.ts aktivace-ucasti` – počet dotčených akcí, kolik hostů se
+   přidá (povinní, přihlášení) a odebere (omluvení, nepřihlášení dobrovolní, neaktivní účty) a otisk.
+   Výsledek a otisk schvaluje vlastník.
+2. Zapnout `PARTICIPATION=on` (migrace 0016 a 0017 musí být provedené).
+3. `npx tsx scripts/kalendar-migrace.ts synchronizovat-ucast --provest <otisk> --davka 20` – vrátí do fronty
+   nejvýš 20 dotčených akcí. Bez otisku jen dry-run; bez zapnuté účasti nebo s jiným otiskem se odmítne.
+   Opakovat po zpracování fronty, dokud `remaining` není 0; akce ve stavu `attention` řešit ručně.
+4. Ručně přidaní hosté a RSVP zůstávají, omluvenému Wiki nenastavuje `declined`, jen ho přestane zvát.
+   Rollback (vypnutí přepínače) hosty akcí s uloženou účastí nemění.
+
+Živý test jen se schválením vlastníka, na samostatném testovacím kalendáři a s povolenými testovacími účty.

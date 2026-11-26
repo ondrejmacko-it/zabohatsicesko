@@ -27,6 +27,8 @@ describe("úkol z pozvánek", () => {
       verified: true,
     })!;
     expect(task.title).toBe("Odpověz na pozvánky (2)");
+    // Odznak Čeká na tebe počítá obě pozvánky, ne jeden úkol.
+    expect(task.count).toBe(2);
     expect(task.detail).toContain("Nejbližší: Trénink RM, 18. 11. v 08:30");
     expect(task).toMatchObject({ action: "Otevřít Gmail", external: true, newTab: true, urgent: true });
     expect(task.href).toContain("mail.google.com");

@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { ActionForm } from "@/components/ActionForm";
+import { LockedLink } from "@/components/PreviewLock";
 import { GROUP_LABELS, eventTitle } from "@/lib/labels";
 import { formatEventWhen } from "@/lib/time";
 import type { EventOriginal } from "@/server/services/events";
@@ -30,9 +30,9 @@ export function ChangeBanner({
         </p>
         <div className="change-banner-actions">
           {publishHref && (
-            <Link className="btn btn-primary btn-small" href={publishHref} scroll={false}>
+            <LockedLink className="btn btn-primary btn-small" href={publishHref} scroll={false}>
               Zveřejnit změny…
-            </Link>
+            </LockedLink>
           )}
           <ActionForm
             action={discardChangesAction}

@@ -227,7 +227,7 @@ test.describe("Témata: zápis priority, pořadí a návrhu @desktop @zapis-tema
     for (const name of own) {
       await page.getByRole("button", { name: "Navrhnout téma" }).click();
       await propose.getByLabel("Téma").fill(name);
-      await propose.getByLabel("Pro skupinu").selectOption("tym-a");
+      await propose.getByLabel("Pro koho").selectOption("tym-a");
       await propose.getByRole("button", { name: "Navrhnout téma" }).click();
       await expect(propose).toBeHidden();
     }
@@ -439,6 +439,56 @@ test.describe("Témata: zápis priority, pořadí a návrhu @desktop @zapis-tema
     const card = page.locator("a[data-move-id]").filter({ hasText: "Otevřené otázky na schůzce" });
     await expect(card).toHaveCount(1);
     await expect(card).toContainText(/Návrh/);
+  });
+
+  test("garantovaných témat je neomezeně: 3. až 6. téma, pořadí, odebrání a přetrvání po obnovení (0015) @smoke", async ({ page }) => {
+    await openTopics(page);
+    const guaranteed = () => names(guaranteedOf(page));
+    // Ostatních témat musí být aspoň čtyři: chybějící navrhne správce pro Tým A. Nové téma se může zařadit
+    // i mezi Nejžádanější a vytlačit jiné do Ostatních, proto se počet ověřuje znovu po každém návrhu.
+    const propose = page.getByRole("dialog", { name: "Navrhnout téma" });
+    for (let i = 1; (await names(othersOf(page))).length < 4 && i <= 8; i++) {
+      await page.getByRole("button", { name: "Navrhnout téma" }).click();
+      await propose.getByLabel("Téma").fill(`Garance téma ${i}`);
+      await propose.getByLabel("Pro koho").selectOption("tym-a");
+      await propose.getByRole("button", { name: "Navrhnout téma" }).click();
+      await expect(propose).toBeHidden();
+      await expect(page.locator(".item-title > span[id]", { hasText: `Garance téma ${i}` })).toBeVisible();
+    }
+    const extra = (await names(othersOf(page))).slice(0, 4);
+    expect(extra).toHaveLength(4);
+    const [third, fourth, fifth, sixth] = extra as [string, string, string, string];
+    // Bez horního limitu: každé další téma nabídne „Nastavit prioritu“ a zařadí se na konec.
+    for (const [i, name] of extra.entries()) {
+      await chooseInMenu(page, name, "Nastavit prioritu");
+      await expect(guaranteedOf(page).locator(".item-title > span[id]")).toHaveText([...SEED_GUARANTEED, ...extra.slice(0, i + 1)]);
+      await page.keyboard.press("Escape");
+    }
+    await expect(page.locator(".topic-guaranteed .topic-rank")).toHaveText(["1", "2", "3", "4", "5", "6"]);
+    await page.reload();
+    await settle(page);
+    expect(await guaranteed()).toEqual([...SEED_GUARANTEED, ...extra]);
+
+    // Pořadí: šesté téma o místo výš, pak odebrat garanci čtvrtému; obojí přetrvá po obnovení.
+    await chooseInMenu(page, sixth, "Posunout výš");
+    const reordered = [...SEED_GUARANTEED, third, fourth, sixth, fifth];
+    await expect(guaranteedOf(page).locator(".item-title > span[id]")).toHaveText(reordered);
+    await page.keyboard.press("Escape");
+    await chooseInMenu(page, fourth, "Zrušit prioritu");
+    await expect(guaranteedOf(page).locator(".item-title > span[id]")).toHaveText(reordered.filter((n) => n !== fourth));
+    await page.keyboard.press("Escape");
+    await page.reload();
+    await settle(page);
+    expect(await guaranteed()).toEqual(reordered.filter((n) => n !== fourth));
+    // Garance nesouvisí s Nejžádanějšími: odebrané téma je zpět mezi ostatními.
+    expect(await names(othersOf(page))).toContain(fourth);
+
+    // Úklid: zpět na seed, aby další běhy začínaly stejně.
+    for (const name of [third, sixth, fifth]) {
+      await chooseInMenu(page, name, "Zrušit prioritu");
+      await page.keyboard.press("Escape");
+    }
+    await expect(guaranteedOf(page).locator(".item-title > span[id]")).toHaveText(SEED_GUARANTEED);
   });
 });
 

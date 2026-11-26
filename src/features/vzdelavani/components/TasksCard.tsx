@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { PREVIEW_READ_ONLY } from "@/lib/labels";
 import { formatMonth } from "@/lib/time";
-import type { JourneyTask } from "@/server/services/journey";
+import { taskCount, type JourneyTask } from "@/server/services/journey";
 import { monthTasks, type MonthSummary, type PlanState } from "../status";
 
 /** Kolik úkolů se vejde bez rozbalení. */
 export const TOP_ROWS = 3;
 
 /** Úkol bez `href` nemá tlačítko (např. pozvánka v simulaci). `newTab`: odkaz mimo Wiki (Gmail). */
-export type TaskRow = Pick<JourneyTask, "key" | "title" | "detail" | "external"> &
+export type TaskRow = Pick<JourneyTask, "key" | "title" | "detail" | "external" | "count"> &
   Partial<Pick<JourneyTask, "href" | "action">> & { newTab?: boolean; urgent?: boolean };
 
 /**
@@ -81,7 +81,7 @@ export function TasksCard({
       <div className="spread section-head">
         <h2 id="ceka">
           {title}
-          {tasks.length > 0 && <span className="count-badge">{tasks.length}</span>}
+          {tasks.length > 0 && <span className="count-badge">{taskCount(tasks)}</span>}
         </h2>
       </div>
       {tasks.length === 0 ? (

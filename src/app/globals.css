@@ -1118,8 +1118,16 @@ body > .dialog[open]:has(~ .dialog[open]:not(.confirm-dialog)) {
   visibility: hidden;
 }
 
+/* Hlavička s názvem a Zavřít zůstává při rolování dlouhého okna nahoře, stejně jako patička s akcemi dole. */
 .dialog-head {
+  position: sticky;
+  top: -22px;
+  z-index: 2;
   align-items: center;
+  margin: -22px -24px 0;
+  padding: 18px 24px 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
 }
 
 .dialog-head h2 {
@@ -1823,8 +1831,15 @@ details > summary {
 }
 
 .interest-on {
-  border-color: var(--ochre);
-  background: var(--ochre-soft);
+  /* Aktivní zájem je plný zelený, neaktivní obrysový: rozdíl je vidět i na okrovém řádku garantovaného tématu. */
+  border-color: var(--ok);
+  background: var(--ok);
+  color: #fff;
+}
+
+.topic-search {
+  max-width: 360px;
+  margin-bottom: 12px;
 }
 
 /* Tabulka témat se na úzkém displeji mění na karty. */
@@ -2167,6 +2182,12 @@ details > summary {
     padding: 18px 16px;
   }
 
+  .dialog-head {
+    top: -18px;
+    margin: -18px -16px 0;
+    padding: 14px 16px 10px;
+  }
+
   .dialog-actions {
     bottom: -18px;
     margin: 0 -16px -18px;
@@ -2259,6 +2280,13 @@ a.brief-link:hover {
   font-size: 13px;
 }
 
+/* Štítek účasti jen na šířku textu, ne přes celý řádek mřížky. */
+.brief-main > .badge {
+  justify-self: start;
+  max-width: 100%;
+  white-space: normal;
+}
+
 .brief-date {
   flex: none;
   width: 52px;
@@ -2293,14 +2321,12 @@ a.brief-link:hover {
 
 /* Na telefonu jde tlačítko úkolu pod text, jinak by text zbyl na úzký sloupec. */
 @media (max-width: 520px) {
-  li.brief-row,
-  .picker-list .brief-row {
+  li.brief-row {
     flex-wrap: wrap;
     gap: 8px;
   }
 
-  li.brief-row .brief-main,
-  .picker-list .brief-row .brief-main {
+  li.brief-row .brief-main {
     flex-basis: 100%;
   }
 }
@@ -2892,12 +2918,81 @@ a.brief-link:hover {
   font-size: 17px;
 }
 
-.picker-list .brief-row {
-  justify-content: space-between;
-}
-
 .btn .count-badge {
   margin-left: 2px;
+}
+
+.btn-note {
+  /* Bez průhlednosti: na tlačítku by klesl kontrast pod 4,5 : 1. */
+  font-weight: 500;
+}
+
+/* Okno K dokončení: řádky mřížkou Název · Datum · Vedoucí · Stav · Akce, na telefonu pod sebou. */
+.missing-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.missing-row {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) 9.5em minmax(0, 1.2fr) minmax(0, 1.3fr) auto;
+  align-items: center;
+  gap: 6px 14px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--band);
+}
+
+.missing-title {
+  color: var(--ink);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.missing-title:hover {
+  text-decoration: underline;
+}
+
+.missing-status {
+  display: grid;
+  justify-items: start;
+  gap: 2px;
+}
+
+.missing-group + .missing-group {
+  margin-top: 18px;
+}
+
+.missing-group-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0 8px;
+  font-size: 15px;
+}
+
+.missing-filter {
+  margin-bottom: 8px;
+}
+
+@media (max-width: 760px) {
+  .missing-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .missing-title,
+  .missing-status {
+    grid-column: 1 / -1;
+  }
+
+  .missing-action {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
 }
 
 .btn-primary .count-badge {
@@ -3972,6 +4067,8 @@ p.cal-status {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   column-gap: 32px;
+  /* Panely mají přirozenou výšku, kratší se nenatahuje podle delšího. */
+  align-items: start;
 }
 
 .home-columns > .tasks-card {
@@ -4049,12 +4146,6 @@ p.cal-status {
 
 .invitees[open] > summary {
   margin-bottom: 4px;
-}
-
-/* Výběr zápisu: přiřazení vedoucího je tichý odkaz pod řádkem, ne další tlačítko. */
-.picker-assign {
-  display: inline-block;
-  margin: 0 0 8px 16px;
 }
 
 .peek-tech {
@@ -4611,6 +4702,48 @@ body[data-moving] .quick-actions,
   }
 }
 
+/* Široký počítač: Pohled geometricky uprostřed lišty (stejně široké krajní sloupce). Kratší odznak ukázky
+   a bez opakované role (jméno ukázkové role je ve výběru), aby se účet vešel do své poloviny. */
+@media (min-width: 1280px) {
+  .topbar:has(.view-switch) {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  }
+
+  .topbar:has(.view-switch) .brand {
+    justify-self: start;
+  }
+
+  .topbar:has(.view-switch) .account {
+    justify-self: end;
+    min-width: 0;
+  }
+
+  .topbar:has(.view-switch) .account-name {
+    flex-shrink: 1;
+    min-width: 0;
+  }
+
+  .topbar:has(.view-switch) .view-select {
+    max-width: 240px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .topbar:has(.view-switch) .persona-btn-detail,
+  .topbar:has(.view-switch) .demo-badge-detail,
+  .topbar:has(.view-switch) .account:not(.account-google) .account-name {
+    display: none;
+  }
+}
+
+/* Účet je od Pohledu oddělený čarou: vpravo je vždy skutečně přihlášený, ne zobrazovaný kolega. */
+@media (min-width: 1000px) {
+  .topbar:has(.view-switch) .account {
+    padding-left: 12px;
+    border-left: 1px solid var(--line);
+  }
+}
+
 /* Tablet: Pohled má vlastní řádek pod značkou a účtem. */
 @media (min-width: 641px) and (max-width: 999px) {
   .topbar:has(.view-switch) {
@@ -5051,4 +5184,31 @@ body[data-moving] .quick-actions,
   .bug-button {
     transition: background-color 0.15s ease, box-shadow 0.15s ease;
   }
+}
+
+/* D03: vlastní oslovení pod pozdravem na Domů. */
+.salutation {
+  margin: -8px 0 16px;
+}
+
+.salutation summary {
+  cursor: pointer;
+  width: fit-content;
+}
+
+.salutation-form {
+  display: grid;
+  gap: 6px;
+  max-width: 420px;
+  margin-top: 8px;
+}
+
+.salutation-form p {
+  margin: 0;
+}
+
+.interest-on:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--ok) 88%, #000);
+  border-color: var(--ok);
+  color: #fff;
 }

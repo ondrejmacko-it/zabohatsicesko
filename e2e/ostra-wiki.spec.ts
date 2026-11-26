@@ -23,7 +23,7 @@ test.describe("ostrá Wiki", () => {
     await expect(page.getByRole("status").filter({ hasText: "Žádost o přístup je odeslaná" })).toBeVisible();
   });
 
-  test("vstup správce nabídne přihlášení Googlem", async ({ page }) => {
+  test("vstup správce nabídne přihlášení Googlem @smoke", async ({ page }) => {
     await page.goto(`${live}/vstup?spravce=1`);
     await settle(page);
     await expect(page.getByRole("link", { name: /Google/ }).or(page.getByRole("button", { name: /Google/ })).first()).toBeVisible();

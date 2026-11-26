@@ -250,10 +250,15 @@ test.describe("okna správce", () => {
   test("Zápisy k dokončení s odpovědnou osobou", async ({ page }) => {
     await page.goto("/vzdelavani/zapisy");
     await settle(page);
-    await page.getByRole("link", { name: /Zápisy k dokončení/ }).click();
+    await page.getByRole("link", { name: /^K dokončení/ }).click();
     const picker = dialog(page, "Zápisy k dokončení");
     await expect(picker).toBeVisible();
     await expect(picker.getByText(/Vede: |Vedoucí neurčen/).first()).toBeVisible();
+    // F1: každý řádek má stav a jednu akci, vlastní úkoly správce jsou oddělené od přehledu.
+    const row = picker.locator(".missing-row").first();
+    await expect(row.locator(".badge")).toHaveText(/Chybí vedoucí|Chybí zápis|Rozpracováno|Čeká na schválení/);
+    await expect(row.locator(".missing-action")).toHaveCount(1);
+    await expect(picker.getByRole("region", { name: "Ostatní (správcovský přehled)" })).toBeVisible();
     await expectNoHorizontalScroll(page);
     await page.keyboard.press("Escape");
     await expect(page).toHaveURL(/\/vzdelavani\/zapisy$/);

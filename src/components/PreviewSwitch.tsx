@@ -5,11 +5,16 @@ import { endPreview, startPreview } from "@/app/(wiki)/nahled-actions";
 
 type Option = { key: string; label: string };
 
-/** Stránky, na kterých náhled mění data. Ostatní (Správa, Integrace, Moje role…) používají vždy skutečný účet. */
+/**
+ * Stránky, na kterých náhled platí. Správa se řídí oprávněním zobrazeného, Integrace ukáže jen zástupný stav
+ * (bez dat Googlu). Moje role a další položky shellu jsou bez obsahu, náhled na nich nic nemění.
+ */
 export function previewApplies(pathname: string): boolean {
   return (
     pathname === "/" ||
-    ["/vzdelavani/harmonogram", "/vzdelavani/akce/", "/vzdelavani/temata", "/vzdelavani/zapisy"].some((p) => pathname.startsWith(p))
+    ["/vzdelavani/harmonogram", "/vzdelavani/akce/", "/vzdelavani/temata", "/vzdelavani/zapisy", "/vzdelavani/integrace", "/sprava"].some((p) =>
+      pathname.startsWith(p),
+    )
   );
 }
 
@@ -18,6 +23,8 @@ export function previewApplies(pathname: string): boolean {
  * přihlášený. Volba odešle formulář hned, bez JavaScriptu tlačítkem Zobrazit.
  */
 export function PreviewSwitch({ groups, people, active }: { groups: Option[]; people: Option[]; active: string | null }) {
+  // Úzký výběr dlouhý název zkrátí, celý je v title a v pruhu náhledu.
+  const activeLabel = [...groups, ...people].find((o) => o.key === active)?.label;
   return (
     <div className={active ? "view-switch view-switch-active" : "view-switch"}>
       <form action={startPreview} className="view-switch-form">
@@ -30,6 +37,7 @@ export function PreviewSwitch({ groups, people, active }: { groups: Option[]; pe
           className="select select-small view-select"
           defaultValue={active ?? ""}
           key={active ?? ""}
+          title={activeLabel ?? "Můj pohled"}
           onChange={(event) => event.currentTarget.form?.requestSubmit()}
         >
           <option value="">Můj pohled</option>
@@ -74,7 +82,7 @@ export function PreviewBar({ label }: { label: string }) {
             Náhled <strong>{label}</strong> tu neplatí, stránka používá tvůj účet
           </>
         )}
-        <span className="preview-bar-where"> · Domů, Plán, Témata, Zápisy a detail akce</span>
+        <span className="preview-bar-where"> · Domů, Plán, Témata, Zápisy, detail akce, Správa a Integrace</span>
       </p>
       <form action={endPreview}>
         <button className="btn btn-small" type="submit">

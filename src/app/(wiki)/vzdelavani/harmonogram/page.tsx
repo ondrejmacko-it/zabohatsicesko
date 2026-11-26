@@ -1,3 +1,4 @@
+import { PageCall } from "@/components/PageCall";
 import type { Metadata } from "next";
 import type { EventCard } from "@/server/services/events";
 import Link from "next/link";
@@ -14,7 +15,7 @@ import { inviteModeOf } from "@/lib/invite-mode";
 import { PlanFilters, type StateChip } from "@/features/vzdelavani/components/PlanFilters";
 import { Agenda, NextEventsList, ScheduleGrid } from "@/features/vzdelavani/components/Schedule";
 import { TasksCard } from "@/features/vzdelavani/components/TasksCard";
-import { ATTENDANCE_FILTERS, PLAN_STATES, cardActions, matchesAttendance, filterCards, filterValues, isPickable, monthSummary, type CardActionKind } from "@/features/vzdelavani/status";
+import { ATTENDANCE_FILTERS, PLAN_STATES, cardActions, matchesAttendance, filterCards, filterValues, isPickable, monthSummary, draftBreakdown, draftHint, type CardActionKind } from "@/features/vzdelavani/status";
 import type { CardMenuFor } from "@/features/vzdelavani/components/Schedule";
 import styles from "@/features/vzdelavani/components/schedule.module.css";
 import { MoveDropZone } from "@/features/vzdelavani/components/MoveEvent";
@@ -27,8 +28,8 @@ import { withOwnParticipation } from "@/server/services/participation";
 import { defaultAudience } from "@/server/domain/generation";
 import { isOrganizer } from "@/server/policy";
 import { listMonth, listMonthDrafts, listPeople, loadTemplate, nextEventFor } from "@/server/services/events";
-import { loadCalendarStatus, loadPersonalCalendar } from "@/server/services/calendar-status";
-import { listTasks } from "@/server/services/journey";
+import { loadCalendarStatus, loadPersonalCalendar, loadPreviewCalendarStatus } from "@/server/services/calendar-status";
+import { listTasks, taskCount } from "@/server/services/journey";
 import { currentPreview } from "@/server/services/preview-context";
 import { duplicateFormValues, topicFormValues } from "@/server/services/detail";
 import { listTopics } from "@/server/services/topics";
@@ -55,12 +56,12 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
 
   // Globální náhled (lišta Pohled) očima skupiny nebo kolegy počítá server stejnými pravidly jako pro skutečného uživatele.
   const preview = await currentPreview(user);
-  const managing = organizer && !preview;
   // Celá stránka, tedy i úkoly, se počítá pro stejného diváka jako harmonogram.
   const viewer = preview?.viewer ?? user;
-  // Náhled 1:1 očima kolegy-správce: stavy, štítky „Doplnit“ a návrhy jako u něj, ale nic se nemění
-  // (přidání, přesun, výběr, menu úprav a odeslání do Kalendáře zůstávají na `managing`).
+  // Náhled 1:1 očima kolegy-správce: stavy, štítky „Doplnit“, návrhy i nástroje plánování jako u něj.
+  // Akční tlačítka zamyká `PreviewLock`, přesun tažením se v náhledu nenabízí a stav Googlu je zástupný.
   const planView = isOrganizer(viewer);
+  const managing = organizer && (!preview || planView);
   // Všechna data stránky v jedné vlně: dotazy na sobě nezávisí, takže se čeká jen na nejpomalejší z nich.
   const [rawMonthCards, template, viewerTasks, people, topics, calendar, monthDrafts, personal] = await Promise.all([
     listMonth(viewer, monthKey),
@@ -68,7 +69,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
     listTasks(viewer),
     organizer ? listPeople(user) : [],
     organizer ? listTopics(user) : [],
-    managing ? loadCalendarStatus(user) : null,
+    managing ? (preview ? loadPreviewCalendarStatus(user) : loadCalendarStatus(user)) : null,
     managing ? listMonthDrafts(user, monthKey) : null,
     // Vlastní kalendář patří přihlášenému, v náhledu očima kolegy se neukazuje.
     preview ? null : loadPersonalCalendar(user),
@@ -91,7 +92,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   const syncing = monthCards.some((c) => c.syncStatus === "pending");
   // Čekající pozvánky (nový host ve skupině, obnovené propojení) i zveřejněné akce bez vazby se odešlou
   // samy, jakmile správce otevře Plán. Souběh hlídá zámek u každé vazby v `syncPending`.
-  if (managing) after(() => syncPublished());
+  if (managing && !preview) after(() => syncPublished());
 
   type Current = { mesic: string; pohled?: string; ucast?: string; typ: string[]; stav: string[]; akce?: string; den?: string; kopie?: string };
   const current: Current = { mesic: monthKey, pohled: listView ? "seznam" : undefined, ucast: attendanceFilter, typ: selectedTypes, stav: states };
@@ -132,7 +133,6 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   const menuFor: CardMenuFor = (card) =>
     cardActions(card, {
       managing,
-      preview: Boolean(preview),
       movable: managing && monthOf(toDateKey(new Date(card.startsAt))) === monthKey && toDateKey(new Date(card.startsAt)) >= todayKey,
       now: menuNow,
     }).map((action) => {
@@ -145,7 +145,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   const summary = planView && monthKey >= monthOf(todayKey) ? monthSummary(monthCards, monthKey) : null;
   const chips: StateChip[] = summary
     ? [
-        { state: "navrhy" as const, label: "Návrhy", spoken: "ke zveřejnění", count: summary.toPublish, hint: "Návrhy, které kolegové uvidí až po zveřejnění." },
+        { state: "navrhy" as const, label: "Návrhy", spoken: "ke zveřejnění", count: summary.toPublish, hint: draftHint(draftBreakdown(monthCards, monthKey)) },
         { state: "doplnit" as const, label: "Doplnit", spoken: summary.toComplete <= 4 ? "akce" : "akcí", count: summary.toComplete, hint: "Chybí téma, vedoucí nebo oprava v Kalendáři." },
       ]
         .filter((chip) => chip.count > 0)
@@ -163,7 +163,8 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   const nextEvent = !planView && tasks.length === 0 ? await nearestEvent(viewer, monthKey === monthOf(todayKey) ? monthCards : []) : null;
   const thisMonth = monthOf(todayKey);
   // Přesun (mřížka myší, agenda úchytem na telefonu) i „+“ u dne jen pro správce, od dneška dál.
-  const planning = managing ? { addHref, movableFrom: todayKey } : {};
+  // V náhledu se tažením nepřesouvá (bez úchytů); „Přesunout termín…“ v menu zůstane zamčené.
+  const planning = managing ? { addHref, ...(preview ? {} : { movableFrom: todayKey }) } : {};
   const schedule = listView ? (
     <Agenda monthKey={monthKey} cards={cards} todayKey={todayKey} emptyText={scheduleEmpty} hrefFor={peekHref} managing={managing} planView={planView} menuFor={menuFor} {...planning} />
   ) : (
@@ -227,10 +228,10 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
       {tasks.length > 0 && (
         <details className="plan-tasks">
           <summary>
-            {preview ? "Úkoly v náhledu" : "Čeká na tebe"}
-            <span className="count-badge">{tasks.length}</span>
+            Čeká na tebe
+            <span className="count-badge">{taskCount(tasks)}</span>
           </summary>
-          <TasksCard tasks={tasks} title={preview ? "Úkoly v náhledu" : undefined} readOnly={Boolean(preview)} className="tasks-card" />
+          <TasksCard tasks={tasks} readOnly={Boolean(preview)} className="tasks-card" />
         </details>
       )}
 
@@ -304,11 +305,13 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
             </div>
           </div>
         </div>
+        {/* Výběr platí jen pro jeden měsíc a stejné filtry. Pohled Měsíc/Seznam ho zachová, karty jsou v obou. */}
         <SelectionZone
+          contextKey={[monthKey, selectedTypes.join(","), states.join(","), attendanceFilter ?? ""].join("|")}
           monthKey={monthKey}
           items={managing ? cards.filter(isPickable).map((c) => ({ id: c.id, revision: c.revision! })) : []}
           publishable={monthDrafts?.drafts ?? []}
-          changeDrafts={monthDrafts?.changeDrafts ?? 0}
+          changeDrafts={managing ? draftBreakdown(cards, monthKey).changes : 0}
           invite={calendar ? { recipients: calendar.recipients, mode: inviteMode } : null}
         >
           <PlanFilters
@@ -324,12 +327,12 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
           />
 
           {emptyMonth && (
-            <div className="notice month-summary-empty">
-              <p>V tomto měsíci zatím nejsou žádné akce. Začni tlačítkem Připravit měsíc, doplní termíny podle rozvrhu.</p>
+            <div className="month-summary-empty">
+              <PageCall text="V tomto měsíci zatím nejsou žádné akce. Začni tlačítkem Připravit měsíc, doplní termíny podle rozvrhu." />
             </div>
           )}
 
-          {managing ? <MoveDropZone movableFrom={todayKey}>{schedule}</MoveDropZone> : schedule}
+          {managing && !preview ? <MoveDropZone movableFrom={todayKey}>{schedule}</MoveDropZone> : schedule}
         </SelectionZone>
       </section>
     </>

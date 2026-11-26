@@ -32,7 +32,7 @@ async function createDraft(page: Page, label: string, date: string) {
 test.describe("Rychlé akce ⋯ u návrhu @desktop", () => {
   test.use({ storageState: authFile("spravce") });
 
-  test("scénář 1: Upravit, Přesunout, Duplikovat, Zveřejnit a Smazat s potvrzením", async ({ page }, testInfo) => {
+  test("scénář 1: Upravit, Přesunout, Duplikovat, Zveřejnit a Smazat s potvrzením @smoke", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "windows-1280", "zápis jen jednou");
     const label = `Rychlá akce e2e ${Date.now()}`;
     const id = await createDraft(page, label, "2027-03-10");

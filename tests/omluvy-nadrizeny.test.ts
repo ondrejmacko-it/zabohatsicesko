@@ -1,4 +1,4 @@
-import { and, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 import { PARTICIPATION_MIGRATIONS, markParticipationSchema, now } from "@/server/config";
 import { getDb } from "@/server/db/client";
@@ -74,6 +74,42 @@ describe("nadřízený pro omluvy (0018)", () => {
     await setExcuseManagers(admin, participant.id, [lead.id]);
     await setExcuseManagers(admin, participant.id, []);
     expect(await managedExcusesAt(lead, id, false)).toEqual([]);
+  });
+
+  test("historický záznam omluvy (zrušení, deaktivace, zánik povinnosti) se nadřízenému neukáže", async () => {
+    const id = await futureFp();
+    const db = await getDb();
+    await changeOwnParticipation(participant, id, { kind: "excuse", excuse: { reason: "illness", note: NOTE } });
+    await setExcuseManagers(admin, participant.id, [lead.id]);
+    expect(await managedExcusesAt(lead, id, false)).toHaveLength(1);
+    const [row] = await db.select({ published: events.published }).from(events).where(eq(events.id, id));
+    const setPublished = (patch: object) =>
+      db.update(events).set({ published: { ...row!.published!, ...patch } }).where(eq(events.id, id));
+
+    // Změna rolí: povinnost zanikne, záznam zůstane, ale neplatí. Po návratu role platí znovu.
+    await db.update(users).set({ groups: ["vsichni", "rm"] }).where(eq(users.id, participant.id));
+    expect(await managedExcusesAt(lead, id, false)).toEqual([]);
+    await db.update(users).set({ groups: ["vsichni", "fp"] }).where(eq(users.id, participant.id));
+    expect(await managedExcusesAt(lead, id, false)).toHaveLength(1);
+
+    await setPublished({ audience: "rm" });
+    expect(await managedExcusesAt(lead, id, false)).toEqual([]);
+    await setPublished({ status: "cancelled" });
+    expect(await managedExcusesAt(lead, id, false)).toEqual([]);
+    await setPublished({});
+
+    await db.update(users).set({ status: "disabled" }).where(eq(users.id, participant.id));
+    expect(await managedExcusesAt(lead, id, false)).toEqual([]);
+  });
+
+  test("zrušená omluva zmizí i nadřízenému", async () => {
+    const id = await futureFp();
+    await changeOwnParticipation(participant, id, { kind: "excuse", excuse: { reason: "illness", note: null } });
+    await setExcuseManagers(admin, participant.id, [lead.id, organizer.id]);
+    expect(await managedExcusesAt(organizer, id, false)).toHaveLength(1);
+    await changeOwnParticipation(participant, id, { kind: "revoke_excuse" });
+    expect(await managedExcusesAt(lead, id, false)).toEqual([]);
+    expect(await managedExcusesAt(organizer, id, false)).toEqual([]);
   });
 
   test("nastavovat smí jen správce, s platnými aktivními účty", async () => {

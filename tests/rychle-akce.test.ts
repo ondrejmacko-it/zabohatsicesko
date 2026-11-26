@@ -17,8 +17,8 @@ vi.mock("@/server/auth/session", () => ({ getCurrentUser: async () => ({ ...orga
 const { saveEventAction } = await import("@/features/vzdelavani/actions");
 
 const NOW = new Date("2026-11-12T09:00:00+01:00");
-const manager: CardActionContext = { managing: true, preview: false, movable: true, now: NOW };
-const reader: CardActionContext = { managing: false, preview: false, movable: false, now: NOW };
+const manager: CardActionContext = { managing: true, movable: true, now: NOW };
+const reader: CardActionContext = { managing: false, movable: false, now: NOW };
 
 const card = (over: Partial<EventCard> = {}): EventCard => ({
   id: "x",
@@ -89,11 +89,11 @@ describe("menu ⋯ na kartě: položky podle stavu a role", () => {
     expect(cardActions(card({ type: "holiday", planStatus: "published" }), manager)).toEqual([]);
   });
 
-  test("náhled očima skupiny nebo kolegy: jen čtení, žádné úpravy ani nahrávka", () => {
-    const preview = { ...manager, managing: false, preview: true };
-    expect(kinds(card(), preview)).toEqual([]);
-    expect(kinds(card({ ...PAST, minutesPublished: true }), preview)).toEqual(["details", "minutes"]);
-    expect(kinds(card({ planStatus: "draft" }), preview)).toEqual([]);
+  test("D4: náhled má stejné položky jako zobrazený účet (akční zamyká CardMenu), menu nezávisí na náhledu", () => {
+    // Vedoucí proběhlé akce: zápis zůstane v menu i v náhledu, jen zamčený.
+    expect(kinds(card({ ...PAST, minutesPublished: true }), reader)).toEqual(["details", "minutes", "recording"]);
+    expect(kinds(card(PAST), reader)).toEqual(["details", "recording"]);
+    expect(kinds(card({ planStatus: "draft" }), reader)).toEqual([]);
   });
 });
 

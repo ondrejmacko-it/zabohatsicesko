@@ -87,16 +87,16 @@ export function missingDetails(card: EventCard, managing: boolean): string[] {
  * ikonu výstrahy, aby karta nehlásila tentýž problém dvakrát (A-04).
  */
 export function hiddenMissingDetails(card: EventCard, managing: boolean): string[] {
-  const shown = new Set<string>(cardDetails(card, managing).filter((d) => d.missing).map((d) => (d.label === "Kdo" ? "vedoucí" : "téma")));
+  const shown = new Set<string>(cardDetails(card, managing).filter((d) => d.missing).map((d) => (d.label === "Vede" ? "vedoucí" : "téma")));
   return missingDetails(card, managing).filter((m) => !shown.has(m));
 }
 
-export type CardDetail = { label: "Kdo" | "Téma"; value: string; missing: boolean };
+export type CardDetail = { label: "Vede" | "Téma"; value: string; missing: boolean };
 
 const sameText = (a: string, b: string) => a.trim().toLocaleLowerCase("cs") === b.trim().toLocaleLowerCase("cs");
 
 /**
- * Kolonky Kdo a Téma na kartě harmonogramu. Svátek a zrušená akce je nemají. Nevyplněné pole správce
+ * Kolonky Vede a Téma na kartě harmonogramu. Svátek a zrušená akce je nemají. Nevyplněné pole správce
  * vidí jako „— doplnit“, účastník jako „Bude upřesněno“; u proběhlé akce účastník prázdné pole nevidí.
  * Téma shodné s názvem akce se neopakuje. Action time je pracovní blok bez tématu: Téma ukáže, jen když je vyplněné.
  */
@@ -107,7 +107,7 @@ export function cardDetails(card: EventCard, managing: boolean): CardDetail[] {
     value ? { label, value, missing: false } : placeholder && !optional ? { label, value: placeholder, missing: true } : null;
   const topic = card.topicTitle?.trim() || null;
   return [
-    field("Kdo", card.leadName?.trim() || null),
+    field("Vede", card.leadName?.trim() || null),
     topic && sameText(topic, card.label) ? null : field("Téma", topic, card.type === "action"),
   ].filter((d): d is CardDetail => d !== null);
 }
@@ -158,6 +158,32 @@ export function monthSummary(cards: EventCard[], monthKey: string): MonthSummary
     toPublish: mine.filter(awaitsPublishing).length,
     toComplete: planGaps(cards, monthKey).length,
   };
+}
+
+/** Rozpad štítku Návrhy: nové návrhy, návrhy změn zveřejněných akcí, z toho v minulosti (jde jen smazat) a bez tématu nebo vedoucího. */
+export type DraftBreakdown = { total: number; fresh: number; changes: number; past: number; incomplete: number };
+
+export function draftBreakdown(cards: EventCard[], monthKey: string): DraftBreakdown {
+  const mine = cards.filter((c) => inPlan(c, monthKey) && awaitsPublishing(c));
+  const fresh = mine.filter((c) => c.planStatus === "draft");
+  return {
+    total: mine.length,
+    fresh: fresh.length,
+    changes: mine.length - fresh.length,
+    past: fresh.filter((c) => c.past).length,
+    incomplete: mine.filter((c) => !c.topicTitle || !c.leadName).length,
+  };
+}
+
+/** Nápověda štítku Návrhy, aby počet nesliboval víc, než jde hromadně vybrat a zveřejnit. */
+export function draftHint(b: DraftBreakdown): string {
+  const parts = [
+    b.fresh > 0 && plural(b.fresh, "nový návrh", "nové návrhy", "nových návrhů"),
+    b.changes > 0 && plural(b.changes, "změna zveřejněné akce (zveřejní se v okně akce)", "změny zveřejněných akcí (zveřejní se v okně akce)", "změn zveřejněných akcí (zveřejní se v okně akce)"),
+    b.past > 0 && `${b.past} v minulosti jde jen smazat`,
+    b.incomplete > 0 && `${b.incomplete} bez tématu nebo vedoucího`,
+  ].filter(Boolean);
+  return `${parts.join(", ")}.`;
 }
 
 /** „1 termín“, „3 termíny“, „9 termínů“. */
@@ -259,7 +285,7 @@ export type CardAction = { kind: CardActionKind; label: string; danger?: boolean
  * Kdo se dívá: `managing` = správce ve svém pohledu (ne náhled očima skupiny nebo kolegy), `movable` = přesun
  * je v tomto zobrazení dostupný (od dneška dál), `now` = okamžik pro rozlišení budoucího návrhu.
  */
-export type CardActionContext = { managing: boolean; preview: boolean; movable: boolean; now: Date };
+export type CardActionContext = { managing: boolean; movable: boolean; now: Date };
 
 /**
  * Rychlé akce v menu ⋯ karty harmonogramu podle stavu akce a role. Pořadí: hlavní akce, úpravy, méně časté
@@ -268,7 +294,8 @@ export type CardActionContext = { managing: boolean; preview: boolean; movable: 
  */
 export function cardActions(card: EventCard, ctx: CardActionContext): CardAction[] {
   if (card.type === "holiday") return [];
-  const manage = ctx.managing && !ctx.preview;
+  // V náhledu očima správce menu nabídne totéž co u něj, zamčené položky vykreslí `CardMenu` (`PreviewLock`).
+  const manage = ctx.managing;
   const actions: CardAction[] = [];
   const add = (kind: CardActionKind, label: string, danger = false) => actions.push(danger ? { kind, label, danger } : { kind, label });
   const cancelled = card.planStatus === "cancelled";
@@ -286,8 +313,9 @@ export function cardActions(card: EventCard, ctx: CardActionContext): CardAction
   add("details", "Otevřít podrobnosti");
   if (!cancelled && card.past) {
     if (card.minutesPublished) add("minutes", "Zobrazit zápis");
-    // Zápis (a případnou nahrávku) obsluhuje vedoucí, kontrolor a správce, nikdy v náhledu očima jiného.
-    if (card.handler && !ctx.preview) add("recording", card.minutesPublished ? "Upravit zápis" : "Doplnit zápis");
+    // Zápis (a případnou nahrávku) obsluhuje vedoucí, kontrolor a správce. V náhledu očima vedoucího položka
+    // zůstane na místě a zamkne ji `CardMenu`, nahrávku ani přepis náhled neukáže.
+    if (card.handler) add("recording", card.minutesPublished ? "Upravit zápis" : "Doplnit zápis");
   }
   if (manage) add("duplicate", "Duplikovat jako novou");
   return manage || actions.length >= 2 ? actions : [];

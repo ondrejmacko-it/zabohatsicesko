@@ -23,6 +23,7 @@ import { formatDayMonth, toDateKey, toTimeKey } from "@/lib/time";
 import { getDb } from "@/server/db/client";
 import { isOrganizer } from "@/server/policy";
 import { readSwitches, type SimulationSwitch } from "@/server/settings";
+import { currentPreview } from "@/server/services/preview-context";
 
 export const metadata: Metadata = { title: "Integrace" };
 
@@ -51,6 +52,23 @@ const READINESS_TEXT = {
 export default async function IntegrationsPage({ searchParams }: { searchParams: Promise<{ google?: string }> }) {
   const user = await requireUser();
   if (!isOrganizer(user)) notFound();
+  // V náhledu (lišta Pohled) jen zástupný stav: připojení Googlu, přepínače ani tajemství se cizím pohledem neukazují.
+  const preview = await currentPreview(user);
+  if (preview) {
+    return (
+      <section className="section">
+        <h1>Integrace</h1>
+        <div className="empty-state" data-testid="integrace-nahled">
+          <p className="item-title">Integrace se v náhledu nezobrazují.</p>
+          <p className="item-meta">
+            {isOrganizer(preview.viewer)
+              ? "Stav Kalendáře Google a technická nastavení uvidíš ve vlastním pohledu."
+              : `Pohled ${preview.label} technické nastavení nemá, vidí ho jen správce.`}
+          </p>
+        </div>
+      </section>
+    );
+  }
   const db = await getDb();
   const switches = await readSwitches(db);
   const googleTest = calendarMode() === "google-test";

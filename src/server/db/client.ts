@@ -42,7 +42,7 @@ function approvedMigrations(): Set<string> {
  * posledního účtu nedostala šablonu podruhé. Běží pod zámkem.
  */
 export async function prepareDatabase(db: Db): Promise<void> {
-  await db.transaction(async (tx) => {
+  const done = await db.transaction(async (tx) => {
     await tx.execute(sql`SELECT pg_advisory_xact_lock(${MIGRATION_LOCK})`);
     await tx.execute(sql`CREATE TABLE IF NOT EXISTS schema_migrations (id text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())`);
     const applied = await queryRows<{ id: string }>(tx, sql`SELECT id FROM schema_migrations`);
@@ -60,7 +60,6 @@ export async function prepareDatabase(db: Db): Promise<void> {
       await tx.execute(sql`INSERT INTO schema_migrations (id) VALUES (${migration.id})`);
       done.add(migration.id);
     }
-    markParticipationSchema(done);
     const [state] = await queryRows<{ users: number; slots: number }>(
       tx,
       sql`SELECT (SELECT count(*)::int FROM users) AS users, (SELECT count(*)::int FROM template_slots) AS slots`,
@@ -69,7 +68,11 @@ export async function prepareDatabase(db: Db): Promise<void> {
       if (isLiveWiki()) await seedProductionBase(tx);
       else await seedDatabase(tx);
     }
+    return done;
   });
+  // Až po commitu: když se transakce vrátí (selhání migrace nebo seedu), funkce podmíněné schématem
+  // zůstanou podle předchozího stavu a nezapnou se nad tabulkami, které v databázi nejsou.
+  markParticipationSchema(done);
 }
 
 const globalForDb = globalThis as unknown as { __zbcDb?: Promise<Db> };

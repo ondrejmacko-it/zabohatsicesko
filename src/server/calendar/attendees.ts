@@ -1,7 +1,7 @@
 import { and, asc, eq, gt, inArray, or, sql } from "drizzle-orm";
 import type { OwnCalendar } from "@/lib/calendar-note";
 import type { EventSnapshot, SimAttendee } from "@/lib/types";
-import { attendeeSource, config, googleCalendarConfig, now, participationEnabled, personalDelivery, type AttendeeSource } from "@/server/config";
+import { attendeeSource, config, googleCalendarConfig, now, participationEnabled, participationSchemaReady, personalDelivery, type AttendeeSource } from "@/server/config";
 import type { Executor } from "@/server/db/client";
 import { calendarLinks, eventParticipation, events, userIdentities, users } from "@/server/db/schema";
 import { desiredGuestIds, type ParticipationRecord } from "@/server/domain/participation";
@@ -65,20 +65,32 @@ const fictional = (a: SimAttendee) => a.email.endsWith(SIMULATION_ATTENDEE_DOMAI
  */
 export async function eventAttendees(db: Executor, eventId: string, snapshot: EventSnapshot, source: AttendeeSource = attendeeSource()): Promise<SimAttendee[]> {
   const cfg = googleCalendarConfig();
-  if (!participationEnabled() || (cfg && source === "allowlist")) return audienceAttendees(db, snapshot.audience, source);
-  const recipients = await listRecipients(db, cfg !== null);
-  const rows = await db
-    .select({ userId: eventParticipation.userId, kind: eventParticipation.kind, excuseReason: eventParticipation.excuseReason })
-    .from(eventParticipation)
-    .where(and(eq(eventParticipation.orgId, config.orgId), eq(eventParticipation.eventId, eventId)));
-  // Do výpočtu jde jen druh záznamu. Důvod se tu nepoužívá a dál se nepředává.
-  const records = new Map<string, ParticipationRecord>(rows.map((r) => [r.userId, { kind: r.kind, excuseReason: null }]));
+  // Rollback (přepínač vypnutý, záznamy zůstaly): hosté akce s uloženými omluvami a přihláškami zůstanou,
+  // jak byli. Jinak by další úprava akce znovu pozvala omluvené a odebrala dobrovolně přihlášené (zadání I).
+  const frozen = !participationEnabled() && participationSchemaReady();
+  if ((!participationEnabled() && !frozen) || (cfg && source === "allowlist")) return audienceAttendees(db, snapshot.audience, source);
+  const { recipients, records } = await participationInputs(db, eventId);
+  if (frozen && records.size === 0) return audienceAttendees(db, snapshot.audience, source);
   const wanted = new Set(desiredGuestIds(recipients.map((r) => ({ id: r.id, status: "active" as const, groups: r.groups })), snapshot, records));
   const attendees = recipients
     .filter((r) => wanted.has(r.id))
     .map((r) => ({ email: r.email, name: r.name, responseStatus: "needsAction" as const }));
   if (cfg ? attendees.some(fictional) : !attendees.every(fictional)) throw new CalendarError("attendee_not_allowed", false);
   return attendees;
+}
+
+/**
+ * Příjemci a záznamy účasti akce pro výpočet hostů podle účasti. Bez tabulky účasti (migrace 0016) se nic
+ * nečte a záznamy jsou prázdné. Do výpočtu jde jen druh záznamu, důvod omluvy se nečte ani nepředává.
+ */
+export async function participationInputs(db: Executor, eventId: string): Promise<{ recipients: Recipient[]; records: Map<string, ParticipationRecord> }> {
+  const recipients = await listRecipients(db, googleCalendarConfig() !== null);
+  if (!participationSchemaReady()) return { recipients, records: new Map() };
+  const rows = await db
+    .select({ userId: eventParticipation.userId, kind: eventParticipation.kind })
+    .from(eventParticipation)
+    .where(and(eq(eventParticipation.orgId, config.orgId), eq(eventParticipation.eventId, eventId)));
+  return { recipients, records: new Map(rows.map((r) => [r.userId, { kind: r.kind, excuseReason: null }])) };
 }
 
 /**
@@ -144,10 +156,17 @@ export async function requeueAttendeeSync(db: Executor, person: ChangedPerson): 
     .leftJoin(userIdentities, and(eq(userIdentities.userId, users.id), eq(userIdentities.provider, "google")))
     .where(and(eq(users.orgId, config.orgId), eq(users.id, person.id)));
   const emails = [...new Set(addresses.flatMap((a) => [a.email, a.googleEmail]).filter((e): e is string => !!e).map((e) => e.toLowerCase()))];
-  const ownRecords = db
-    .select({ id: eventParticipation.eventId })
-    .from(eventParticipation)
-    .where(and(eq(eventParticipation.orgId, config.orgId), eq(eventParticipation.userId, person.id)));
+  // Bez zapnuté účasti (a tedy i bez migrace 0016) se tabulka nečte: hosté se pak řídí jen publikem
+  // a dřív pozvané pokryje `managedByWiki`, takže po rollbacku nikdo nevypadne ani se znovu nepozve.
+  const ownRecords = participationEnabled()
+    ? inArray(
+        events.id,
+        db
+          .select({ id: eventParticipation.eventId })
+          .from(eventParticipation)
+          .where(and(eq(eventParticipation.orgId, config.orgId), eq(eventParticipation.userId, person.id))),
+      )
+    : sql`false`;
   const managedByWiki = emails.length
     ? sql`${calendarLinks.managedAttendees} && array[${sql.join(emails.map((e) => sql`${e}`), sql`, `)}]::text[]`
     : sql`false`;
@@ -159,7 +178,7 @@ export async function requeueAttendeeSync(db: Executor, person: ChangedPerson): 
       and(
         eq(events.orgId, config.orgId),
         gt(events.startsAt, now()),
-        or(inArray(sql<string>`${events.published}->>'audience'`, audiences), inArray(events.id, ownRecords), managedByWiki),
+        or(inArray(sql<string>`${events.published}->>'audience'`, audiences), ownRecords, managedByWiki),
       ),
     );
   await db
