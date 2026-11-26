@@ -1,6 +1,6 @@
-# Navazující relace (stav 26. 11. 2026, relace 35 „UI rework účasti, kroky 1–3“)
+# Navazující relace (stav 26. 11. 2026, relace 36 „UI rework účasti dokončen, draft PR“)
 
-Větev `claude/gallant-bohr-m1lyna` (main 76c2011 + 807c822 C04/C05 + UI rework do 2ab8033). PR zatím nezaložen. Limit 170 tis.; čti cíleně.
+Větev `claude/gallant-bohr-m1lyna` (main 76c2011 + 807c822 C04/C05 + UI rework do 2ab8033). Draft PR založen. Limit 170 tis.; čti cíleně.
 Bez souhlasu vlastníka: žádné změny produkčního Vercelu/Neonu, migrace ani Google pozvánky, žádný merge do main.
 
 ## Ověřeno na produkci (relace 33, 23:00)
@@ -36,13 +36,11 @@ Celé zadání (body 1–7) je v historii tohoto souboru: `git show 375879d:docs
 - Ověřeno na 2ab8033: tsc OK, eslint změněných souborů OK, vitest audit-ucast-nahledy + ucast-prihlasky 24/24,
   stav-akce 8/8. Celá sada, build ani Playwright zatím neběžely. (V nové relaci nejdřív `npm ci`.)
 
-### Zbývá
-4. Náhled skupiny/kolegy: Playwright screenshot lokálního dema (detail povinné/dobrovolné/omluvené akce, náhled 1:1
-   a skupiny), zkontrolovat zamčenou kartu a 4 položky key-facts na mobilu.
-5. Revize 18 bodů (`docs/report-finalni-dokonceni.md`, čti cíleně grep), celá sada testů (`npm test`), lint,
-   build, e2e ucast/nahled (pozor: e2e mohou hledat „Proběhlo“/Téma v `dl` – opravit, pokud spadnou), pak draft PR
-   (vč. C04/C05 z 807c822, bez merge) a report vlastníkovi: soubory, 4 funkce (přihlášení/odhlášení,
-   omluva/zrušení, read-only náhled, >3 garantovaná témata), revize 18 bodů, odkaz na PR.
+### Ověřeno (relace 36, na c7974f9 + předávka)
+- vitest 623/623, typecheck OK, lint OK; e2e ucast/nahled/nahled-role na windows-1280 + telefon-390: 42 passed
+  (produkční build v e2e/server.mjs prošel). Screenshoty detailu (povinná/dobrovolná, 1280 i 390): info blok 4 položky,
+  jeden badge na stav. Zamčená karta náhledu 1:1 ověřena testem ucast.spec „správce vidí stav a tlačítka kolegy“.
+- Draft PR založen (viz GitHub, větev claude/gallant-bohr-m1lyna → main), bez merge.
 
 ## Další krok (po UI reworku)
 1. Vlastník projde klikací test na produkci; případné chyby opravit.
