@@ -1,4 +1,4 @@
-# Navazující relace (stav 26. 11. 2026, relace 30 zadání „Finální dokončení po PR #92“)
+# Navazující relace (stav 26. 11. 2026, relace 31 zadání „Finální dokončení po PR #92“)
 
 Větev `claude/festive-sagan-lilorz` z main 2703a0b. Limit relace 170 tis. (start ~120 tis.: čti cíleně, výstupy
 zkracuj). Nic nemergovat/nenasazovat, žádné vzdálené migrace, změny produkčního Vercelu/Neonu ani Google bez
@@ -14,10 +14,9 @@ schválení vlastníka. Před testy `npm ci`. Lint souboru: `npx eslint <soubor>
   je nepouštět s ním (spec je smazaný).
 
 ## Další krok
-1. Draft PR `claude/festive-sagan-lilorz` → main podle `.github/pull_request_template.md` (simulace vs. živý test,
-   výsledky z reportu C, odkaz na report a screenshoty, otevřené otázky níže). Nic nemergovat.
-2. `subscribe_pr_activity` na PR, počkat na CI; při chybě opravit (jednotka + push).
-3. Finální report uživateli (tohle je poslední relace): hotovo, ověření, rizika, PR, co čeká na vlastníka.
+- Hotovo: draft PR #93 (`claude/festive-sagan-lilorz` → main), CI na 4f6d202 zelené (lint/typy/testy/build,
+  e2e-smoke, citlivé cesty, Vercel Preview Ready), `mergeable_state: clean`. Finální report předán uživateli.
+- Čeká jen na vlastníka: review a ruční merge PR #93, rozhodnutí níže. Bez nového zadání nic dalšího nedělat.
 
 ## Otevřené otázky pro vlastníka
 - C04: správce si může nastavit sebe jako nadřízeného kohokoli a číst důvody omluv (audit to zapíše). Doporučení:
