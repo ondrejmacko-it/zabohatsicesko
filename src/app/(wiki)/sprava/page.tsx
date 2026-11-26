@@ -27,6 +27,7 @@ import { isLiveWiki, now, personalSelfInvite } from "@/server/config";
 import { canManageUsers } from "@/server/policy";
 import { listAccounts, type Account } from "@/server/services/users";
 import { listExcuseManagers } from "@/server/services/excuse-managers";
+import { currentPreview } from "@/server/services/preview-context";
 
 export const metadata: Metadata = { title: "Správa systému" };
 
@@ -34,13 +35,18 @@ export default async function AdminPage() {
   const user = await requireUser();
   // Stejná odpověď jako neexistující stránka: bez oprávnění se o správě nic nedozví.
   if (!canManageUsers(user)) notFound();
+  // Náhled (lišta Pohled) se řídí oprávněním zobrazeného: kdo Správu nemá, vidí jen zástupný stav. Správce v náhledu
+  // vidí stejné účty a nástroje zamčené (PreviewLock), bez přístupů zařízení a bez dat Kalendáře Google.
+  const preview = await currentPreview(user);
+  if (preview && !canManageUsers(preview.viewer)) return <PreviewPlaceholder label={preview.label} />;
+  const viewer = preview?.viewer ?? user;
   const [accounts, calendar, personal, legacyInvites, worker, excuseManagers] = await Promise.all([
-    listAccounts(user),
+    listAccounts(viewer),
     loadCalendarStatus(user),
-    loadPersonalCalendars(user),
-    legacyInviteCount(user),
-    getDb().then(workerHealth),
-    listExcuseManagers(user),
+    preview ? null : loadPersonalCalendars(user),
+    preview ? 0 : legacyInviteCount(user),
+    preview ? null : getDb().then(workerHealth),
+    listExcuseManagers(viewer),
   ]);
   // Jedna role pro plánování a správu. Starší hodnota „organizer“ se už nepřiděluje, pravidla ji berou stejně.
   const roles: Role[] = ["admin", "member"];
@@ -54,7 +60,9 @@ export default async function AdminPage() {
     excuseManagers ? { managerIds: excuseManagers.get(a.id) ?? [], candidates } : undefined;
   // Integrace a diagnostika jsou sbalené. Otevřou se samy, jen když něco vyžaduje zásah správce.
   const ownCalendar = personal?.get(user.id);
-  const attention = personal
+  const attention = preview
+    ? false
+    : personal
     ? legacyInvites > 0 || Boolean(ownCalendar && personalCalendarView(ownCalendar).action)
     : calendar.mode !== "simulation" && (!calendar.connection || calendarExpiresSoon(calendar.connection.expiresAt, now())) ||
       Boolean(worker?.alerts.length);
@@ -97,6 +105,7 @@ export default async function AdminPage() {
             <AccountHead
               account={a}
               live={live}
+              hideAccess={Boolean(preview)}
               personal={personal}
               excuseManagers={excuseManagers?.get(a.id)?.map((id) => nameOf.get(id) ?? "").filter(Boolean)}
               actions={
@@ -119,7 +128,7 @@ export default async function AdminPage() {
                       ? {
                           live: {
                             inviteWaiting: a.access.invite.kind === "waiting",
-                            devices: a.access.devices,
+                            devices: preview ? [] : a.access.devices,
                           },
                         }
                       : {})}
@@ -133,6 +142,14 @@ export default async function AdminPage() {
         ))}
       </section>
 
+      {preview ? (
+        <section className="section" aria-labelledby="pozvanky">
+          <h2 id="pozvanky">Kalendář a technický stav</h2>
+          <div className="empty-state">
+            <p className="item-meta">Stav Kalendáře Google a technické údaje se v náhledu nezobrazují.</p>
+          </div>
+        </section>
+      ) : (
       <details className="section admin-tech" id="pozvanky-kalendare" open={attention}>
         <summary>
           <h2 id="pozvanky">Kalendář a technický stav</h2>
@@ -195,6 +212,24 @@ export default async function AdminPage() {
         </div>
         </div>
       </details>
+      )}
+    </>
+  );
+}
+
+/** Zástupný stav Správy v náhledu účtu, který Správu nemá. Neprozradí účty ani nastavení. */
+function PreviewPlaceholder({ label }: { label: string }) {
+  return (
+    <>
+      <div className="page-head">
+        <div>
+          <h1>Správa systému</h1>
+        </div>
+      </div>
+      <div className="empty-state" data-testid="sprava-nahled">
+        <p className="item-title">Pohled {label} Správu systému nemá.</p>
+        <p className="item-meta">Správu vidí jen správce. Pro vlastní pohled ukonči náhled v liště nahoře.</p>
+      </div>
     </>
   );
 }
@@ -212,12 +247,15 @@ function AccountHead({
   account: a,
   actions,
   live = false,
+  hideAccess = false,
   personal = null,
   excuseManagers,
 }: {
   account: Account;
   actions: React.ReactNode;
   live?: boolean;
+  /** Náhled: přístupy zařízení a přihlášení cizího účtu se nezobrazují. */
+  hideAccess?: boolean;
   /** Stav osobních kalendářů, jen v režimu `CALENDAR_DELIVERY=personal`. */
   personal?: Map<string, PersonalCalendarState> | null;
   /** Jména nadřízených pro omluvy (0018); bez migrace undefined. */
@@ -242,7 +280,7 @@ function AccountHead({
           {a.groups.length > 0 && <span>{a.groups.map((g) => GROUP_LABELS[g]).join(", ")}</span>}
         </p>
         {/* Fiktivní role ukázky druhý řádek nemají: že jde o ukázku, říká štítek v hlavičce. */}
-        {live && a.status === "active" ? (
+        {hideAccess ? null : live && a.status === "active" ? (
           <ul className="access-lines" aria-label="Přihlašování se zařízeními">
             {accessLines(a).map((line, i) => (
               <li key={i} className="item-meta">

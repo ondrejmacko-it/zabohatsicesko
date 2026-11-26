@@ -32,7 +32,7 @@ describe("D1: zámek akčních tlačítek v náhledu", () => {
   test("bez náhledu a mimo stránky náhledu tlačítko funguje", () => {
     path.current = "/vzdelavani/akce/e1";
     expect(button(render(false, createElement(ActionForm, { action, label: "Přihlásit se" })), "Přihlásit se")).not.toContain("disabled");
-    path.current = "/sprava";
+    path.current = "/vstup";
     expect(button(render(true, createElement(ActionForm, { action, label: "Uložit" })), "Uložit")).not.toContain("disabled");
   });
 
@@ -76,5 +76,15 @@ describe("D1: zámek akčních tlačítek v náhledu", () => {
     expect(button(render(false, createElement(EventMenu, { id: "e1", revision: 1, canCancel: true, canDelete: false })), "Zrušit akci…")).not.toContain("disabled");
     // Bez kontextu výběru se tlačítko Vybrat návrhy nevykreslí vůbec, zámek se tu jen nesmí rozbít.
     expect(render(true, createElement(SelectToggle, {}))).toBe("");
+  });
+});
+
+describe("D3: kde náhled platí", () => {
+  test("Správa a Integrace patří do náhledu, ostatní stránky shellu ne", async () => {
+    const { previewApplies } = await import("@/components/PreviewSwitch");
+    for (const path of ["/", "/vzdelavani/harmonogram", "/vzdelavani/akce/x", "/vzdelavani/temata", "/vzdelavani/zapisy", "/sprava", "/vzdelavani/integrace"]) {
+      expect(previewApplies(path), path).toBe(true);
+    }
+    for (const path of ["/vstup", "/vzdelavani", "/jak-pracujeme"]) expect(previewApplies(path), path).toBe(false);
   });
 });

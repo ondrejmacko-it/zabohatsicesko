@@ -5,11 +5,16 @@ import { endPreview, startPreview } from "@/app/(wiki)/nahled-actions";
 
 type Option = { key: string; label: string };
 
-/** Stránky, na kterých náhled mění data. Ostatní (Správa, Integrace, Moje role…) používají vždy skutečný účet. */
+/**
+ * Stránky, na kterých náhled platí. Správa se řídí oprávněním zobrazeného, Integrace ukáže jen zástupný stav
+ * (bez dat Googlu). Moje role a další položky shellu jsou bez obsahu, náhled na nich nic nemění.
+ */
 export function previewApplies(pathname: string): boolean {
   return (
     pathname === "/" ||
-    ["/vzdelavani/harmonogram", "/vzdelavani/akce/", "/vzdelavani/temata", "/vzdelavani/zapisy"].some((p) => pathname.startsWith(p))
+    ["/vzdelavani/harmonogram", "/vzdelavani/akce/", "/vzdelavani/temata", "/vzdelavani/zapisy", "/vzdelavani/integrace", "/sprava"].some((p) =>
+      pathname.startsWith(p),
+    )
   );
 }
 
@@ -74,7 +79,7 @@ export function PreviewBar({ label }: { label: string }) {
             Náhled <strong>{label}</strong> tu neplatí, stránka používá tvůj účet
           </>
         )}
-        <span className="preview-bar-where"> · Domů, Plán, Témata, Zápisy a detail akce</span>
+        <span className="preview-bar-where"> · Domů, Plán, Témata, Zápisy, detail akce, Správa a Integrace</span>
       </p>
       <form action={endPreview}>
         <button className="btn btn-small" type="submit">
