@@ -419,3 +419,15 @@ export const excuseManagers = pgTable(
   },
   (t) => [primaryKey({ columns: [t.orgId, t.managerId, t.employeeId] })],
 );
+
+/** D03: vlastní oslovení v 5. pádě (0019). */
+export const userSalutations = pgTable(
+  "user_salutations",
+  {
+    orgId: text("org_id").notNull(),
+    userId: text("user_id").notNull(),
+    salutation: text("salutation").notNull(),
+    updatedAt: ts("updated_at").notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.orgId, t.userId] })],
+);

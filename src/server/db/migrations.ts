@@ -511,4 +511,21 @@ CREATE TABLE IF NOT EXISTS excuse_managers (
 CREATE INDEX IF NOT EXISTS excuse_managers_employee_idx ON excuse_managers (org_id, employee_id);
 `,
   },
+  {
+    id: "0019_user_salutation",
+    approval: true,
+    sql: `
+-- D03: oslovení, které si člověk nastaví sám (5. pád), má přednost před slovníkem jmen. Samostatná tabulka,
+-- aby dotazy na users fungovaly i bez této migrace. Jen nový objekt; smazání účtu oslovení smaže.
+CREATE TABLE IF NOT EXISTS user_salutations (
+  org_id text NOT NULL,
+  user_id text NOT NULL,
+  salutation text NOT NULL,
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (org_id, user_id),
+  CONSTRAINT user_salutations_length CHECK (char_length(salutation) BETWEEN 1 AND 40),
+  CONSTRAINT user_salutations_user_fk FOREIGN KEY (org_id, user_id) REFERENCES users (org_id, id) ON DELETE CASCADE
+);
+`,
+  },
 ];

@@ -5155,3 +5155,24 @@ body[data-moving] .quick-actions,
     transition: background-color 0.15s ease, box-shadow 0.15s ease;
   }
 }
+
+/* D03: vlastní oslovení pod pozdravem na Domů. */
+.salutation {
+  margin: -8px 0 16px;
+}
+
+.salutation summary {
+  cursor: pointer;
+  width: fit-content;
+}
+
+.salutation-form {
+  display: grid;
+  gap: 6px;
+  max-width: 420px;
+  margin-top: 8px;
+}
+
+.salutation-form p {
+  margin: 0;
+}

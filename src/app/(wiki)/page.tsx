@@ -15,7 +15,9 @@ import { requireUser } from "@/server/auth/session";
 import { personalSyncNeeded, syncPersonalCalendars } from "@/server/calendar/personal";
 import { invitationsFor } from "@/server/calendar/rsvp";
 import { runWorkerIfDue } from "@/server/calendar/worker";
-import { now } from "@/server/config";
+import { now, salutationsEnabled } from "@/server/config";
+import { getSalutation } from "@/server/services/salutation";
+import { SalutationForm } from "@/components/SalutationForm";
 import { isMine } from "@/server/domain/participation";
 import { withOwnParticipation } from "@/server/services/participation";
 import { getDb } from "@/server/db/client";
@@ -32,14 +34,17 @@ const SYNC_WAIT_MS = 2500;
 
 // Úvod odpovídá na dvě otázky: co mě čeká a co mám udělat. Moduly jsou v navigaci, úspěšný stav
 // Kalendáře se neukazuje, jen problém, který chce zásah.
-export default async function HomePage({ searchParams }: { searchParams: Promise<{ akce?: string }> }) {
+export default async function HomePage({ searchParams }: { searchParams: Promise<{ akce?: string; osloveni?: string }> }) {
   const user = await requireUser();
   // Akce z Nejbližších se otevře v okně přímo nad Úvodem, stejně jako v Plánu.
-  const peekId = ((await searchParams).akce ?? "").slice(0, 120);
+  const params = await searchParams;
+  const peekId = (params.akce ?? "").slice(0, 120);
+  const salutationError = params.osloveni === "chyba";
   const monthKey = monthOf(toDateKey(now()));
   // Globální náhled (lišta Pohled): akce a úkoly očima skupiny nebo kolegy, jen ke čtení. Vlastní Kalendář a
   // pozvánky patří přihlášenému, v náhledu se nenačítají.
   const preview = await currentPreview(user);
+  const salutation = preview ? null : await getSalutation(user.id);
   const viewer = preview?.viewer ?? user;
   const planner = canPlan(viewer);
   const [upcomingCandidates, initial, own, monthCards, invitations] = await Promise.all([
@@ -80,8 +85,9 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       {/* Pozdrav patří tomu, čí pohled stránka ukazuje: v náhledu kolegovi, v náhledu skupiny bez jména (F16).
           Jméno se do snímku zpětné vazby nedostane, hlášení jméno záměrně neposílá. */}
       <h1>
-        <span data-feedback-redact="">{greeting(preview ? preview.personName : user.name)}</span>.
+        <span data-feedback-redact="">{greeting(preview ? preview.personName : user.name, preview ? null : salutation)}</span>.
       </h1>
+      {!preview && salutationsEnabled() && <SalutationForm current={salutation} error={salutationError} />}
       <ShotGrant page="/" />
       {personal && <PersonalCalendarStatus state={personal} />}
       {/* Odpověď na pozvánku se dává v Gmailu, po návratu do okna se úkol obnoví. */}
