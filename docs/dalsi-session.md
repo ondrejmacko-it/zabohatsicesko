@@ -1,4 +1,4 @@
-# Navazující relace (stav 26. 11. 2026, relace 18 zadání „Finální dokončení po PR #92“)
+# Navazující relace (stav 26. 11. 2026, relace 19 zadání „Finální dokončení po PR #92“)
 
 Větev `claude/festive-sagan-lilorz` z main 2703a0b (PR #92 v main). Limit relace 170 tis. (start v cloudu zabere
 ~120 tis., na práci zbývá málo: čti cíleně, výstupy zkracuj). Nic nemergovat/nenasazovat, žádné vzdálené migrace,
@@ -24,13 +24,20 @@ K UX/regresní audit + smoke E2E v CI · L release checklist · výstup: report 
   `/vzdelavani/zapisy?pridat=1`, `count: N`); odznaky Čeká na tebe počítají `taskCount()` (journey.ts).
   Test `tests/k-dokonceni.test.ts` (5 OK). tsc OK.
 
+- G1 (a93f0fb): lišta – na ≥1280 px Pohled geometricky uprostřed (mřížka 1fr auto 1fr), účet oddělený čarou
+  a `role=group` „Přihlášený účet“, celý název pohledu v `title`. Snímky 1100/1280/1440 + náhled OK; e2e zahlavi,
+  nahled, mobilni-ovladani 38 OK. Harmonogram prověřen snímky: účastník bez prázdného místa, Měsíc/Seznam odlišené.
+- G2 (008c3e2): D03 vlastní oslovení – migrace 0019 `user_salutations` (approval), `salutationsEnabled()`,
+  služba `services/salutation.ts`, akce `osloveni-actions.ts`, `SalutationForm` pod pozdravem na Domů.
+  Testy: `tests/d03-osloveni.test.ts`, `e2e/osloveni.spec.ts` OK, tsc+eslint OK.
+
 ## Další krok
-- G celkové UI (zadání ř. 408–484): nejdřív snímky. Pozor: dočasný spec v `e2e/` shodí webServer (build dělá
-  type check celého repa) – piš ho typově čistě, nebo do scratchpadu s vlastním configem. Spuštění:
+- G zbytek (zadání ř. 408–484): Domů – panely `.home-columns` mají přirozenou výšku (align-items:start; teď se
+  natahují), štítek „Povinné pro tebe“ v kartě Co tě čeká se roztahuje na celou šířku (má být fit-content);
+  počet Čeká na tebe = 1, ale úkol „Odpověz na pozvánky (2)“ – zvážit `count` u úkolu pozvánek (invitations.ts).
+  Pak sjednocení dialogů (hlavička/patička, fokus, scroll) a průchod texty (tykání, Vede/Kdo, Pro koho/Pro skupinu).
+- Snímky: dočasný spec v `e2e/zz-snimky.spec.ts` (typově čistý, do scratchpadu; necommitovat), spuštění
   `npx playwright test <spec> --project=prihlaseni --project=windows-1280 --project=telefon-390 --trace off`.
-  Přihlášení `test.use({ storageState: authFile("spravce") })` z `e2e/support.ts`, Pohled = `getByLabel("Pohled")`.
-  Body G: horní lišta (Topbar.tsx, PreviewSwitch.tsx – centrování Pohledu, dlouhá jména, oddělit účet/kolegu/ukončení),
-  harmonogram (4 úrovně: období, Měsíc/Seznam, filtry účasti, správa), Domů, sjednocení dialogů, texty (tykání, D03 oslovení).
 - Pak H (ř. 485–535), I (536–556), J (557–583), K (584–637), L (638–656), výstup (657+).
 - Zadání: uložit do scratchpadu Pythonem (`json.JSONDecoder().raw_decode` po `{`, rekurzivně najít řetězec s
   „PO PR #92“ a „Fáze“), pak `sed -n` jen řádky fáze.
@@ -40,5 +47,5 @@ K UX/regresní audit + smoke E2E v CI · L release checklist · výstup: report 
 - C04: správce si může nastavit sebe jako nadřízeného kohokoli a číst jeho důvody omluv (audit to zapíše).
   Doporučení: zakázat nastavení sebe. Deaktivace nadřízeného vazby nemaže – mazat?
 - C05 `vedouci-tymu`: doporučení zachovat při uložení účtu.
-- Preview `DATABASE_URL` izolovaného branche (tajemství), schválení migrací 0015–0018 na produkci.
+- Preview `DATABASE_URL` izolovaného branche (tajemství), schválení migrací 0015–0019 na produkci.
 - Zvýšení limitu relace (hook `scripts/limit-kontextu.py`) jen vlastník.
