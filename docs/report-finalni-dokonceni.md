@@ -66,20 +66,41 @@ zatím neproběhlo (viz C).
 
 | Kontrola | Výsledek | Commit |
 |---|---|---|
-| Lint (`npm run lint`) | OK | E2E_LINT |
-| Typy (`npm run typecheck`) | OK | E2E_LINT |
-| Build (`npm run build`) | BUILD_RESULT | E2E_LINT |
-| Unit (`vitest run`) | VITEST_RESULT | E2E_LINT |
-| E2E celá sada (všechny projekty) | E2E_RESULT | E2E_COMMIT |
+| Lint (`npm run lint`) | OK | deee432 |
+| Typy (`npm run typecheck`) | OK | deee432 |
+| Build (`npm run build`) | OK (`next build`) | deee432 |
+| Unit (`vitest run`) | OK, 69 souborů / 621 testů | deee432 |
+| E2E celá sada (všechny projekty) | OK, 1469 passed / 256 skipped / 0 failed (12,0 min, 3 workery) | deee432 |
 | Smoke E2E v CI (`e2e-smoke`) | blokující job v CI | ab1a2dc |
-| Bezpečnost | náhled odmítne všechny serverové akce (`tests/nahled-mutace.test.ts`); soukromí omluv (C03, C04); `npm audit`: AUDIT_RESULT | – |
+| Bezpečnost | náhled odmítne všechny serverové akce (`tests/nahled-mutace.test.ts`); soukromí omluv (C03, C04); `npm audit`: `--omit=dev` 0 zranitelností | – |
 | Migrace | 0015–0019 `approval: true`, na vzdálené DB jen přes `APPROVED_MIGRATIONS`; unit testy na PGlite 0001–0019 | – |
 | Skutečný PostgreSQL | Neon branch `overeni-ucast-0016-0018` (fiktivní data): 0016–0018 + SQL kontroly prošly; **0019 jen PGlite** | `scripts/overeni-ucasti-db.ts` |
 | Google Kalendář | simulace (F04, I1, I2 unit testy); živý test **neschválen, neproběhl** | – |
 
 ## D. Screenshoty
 
-SCREENSHOTS
+Prostředí: lokální produkční build (`node e2e/server.mjs`), fiktivní seed v PGlite, referenční čas 12. 11. 2026 9:00, Chromium 1280×800 (mobil 390×844, isMobile). Snímky 04–11 na serveru s `PARTICIPATION=on` (účast ještě není zapnutá na Preview ani v produkci). Commit deee432. Složka `docs/screenshots/finalni-dokonceni/`.
+
+| Soubor | Co ukazuje | Prostředí | Commit |
+|---|---|---|---|
+| `01-domu-ucastnik.png` | Domů, účastník FP | lokální | deee432 |
+| `02-domu-spravce.png` | Domů, správce | lokální | deee432 |
+| `03-horni-lista.png` | Horní lišta (účastník) | lokální | deee432 |
+| `04-povinna-omluvit-se.png` | Povinná akce s tlačítkem Omluvit se | lokální, PARTICIPATION=on | deee432 |
+| `05-formular-omluvy.png` | Formulář omluvy (důvod, poznámka, soukromí) | lokální, PARTICIPATION=on | deee432 |
+| `06-omluveno.png` | Omluveno ve Wiki | lokální, PARTICIPATION=on | deee432 |
+| `07-dobrovolna-prihlasit-se.png` | Dobrovolná akce s tlačítkem Přihlásit se | lokální, PARTICIPATION=on | deee432 |
+| `08-prihlaseno.png` | Přihlášeno | lokální, PARTICIPATION=on | deee432 |
+| `09-odhlaseno.png` | Odhlášeno (lze se znovu přihlásit) | lokální, PARTICIPATION=on | deee432 |
+| `10-nahled-osoby-povinna.png` | Náhled osoby (správce → účastník FP): povinná, tlačítka zamčená | lokální, PARTICIPATION=on | deee432 |
+| `11-nahled-osoby-dobrovolna.png` | Náhled osoby: dobrovolná, tlačítka zamčená | lokální, PARTICIPATION=on | deee432 |
+| `12-navrh-zmeny.png` | Návrh změny zveřejněné akce v mřížce (ev-11-26) | lokální | deee432 |
+| `13-vysunuty-original.png` | Najetí myší vysune zveřejněnou verzi (originál) | lokální | deee432 |
+| `14-vybrat-navrhy.png` | Režim Vybrat návrhy | lokální | deee432 |
+| `15-garantovana-temata-5.png` | Pět garantovaných témat (bez limitu) | lokální | deee432 |
+| `16-zapisy.png` | Zápisy (správce) | lokální | deee432 |
+| `17-mobil-390-domu.png` | Mobil 390: Domů | lokální | deee432 |
+| `18-mobil-390-plan.png` | Mobil 390: Plán | lokální | deee432 |
 
 ## E. Co zbývá
 
