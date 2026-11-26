@@ -79,7 +79,7 @@ export function ParticipationPanel({ eventId, state, label, actions, excuse, cal
       {note && <p className="small" data-kalendar={calendar?.inCalendar ? "v-kalendari" : "mimo-kalendar"}>{note}</p>}
       {state === "excused" && !preview && (
         <p className="small muted">
-          {excuse ? `Důvod: ${EXCUSE_REASON_LABELS[excuse.reason]}${excuse.note ? ` · ${excuse.note}` : ""}. ` : ""}
+          {excuse && <span data-feedback-redact="">{`Důvod: ${EXCUSE_REASON_LABELS[excuse.reason]}${excuse.note ? ` · ${excuse.note}` : ""}. `}</span>}
           Důvod vidíš jen ty. Wiki tě z pozvánky odebere, odpověď v Google Kalendáři za tebe ale nemění.
         </p>
       )}
