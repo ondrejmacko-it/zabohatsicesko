@@ -30,7 +30,7 @@ K UX/regresní audit + smoke E2E v CI · L release checklist · výstup: report 
 
 ## Další krok
 Relace 16 jen načetla zadání F a kód (start cloudu spotřeboval ~140 tis.), nic nezměnila. Vitest po E2–E4
-stále neověřen: `npx vitest run --reporter=dot 2>&1 | tail -5` spusť na pozadí hned po `npm ci`.
+ověřen na 8546138: 67 souborů / 611 testů OK. Rovnou začni F1.
 Fáze F (zadání ř. 350–407) – rozbor hotový, navrhovaný postup po jednotkách:
 - F1 `journey.ts:65` `MissingMinutesItem` + `mine` (= `minutesTaskRole` write, nebo review a stav draft; stejně jako
   `listTasks` ř. 207). Okno K dokončení (`MinutesPeek.tsx` `AddMinutesPicker`, volá `zapisy/page.tsx:57`): `RouteModal
