@@ -6,6 +6,7 @@ import { ActionMessage } from "@/components/ActionForm";
 import { FilePicker } from "@/components/FilePicker";
 import { createMinutesDraftAction } from "../actions";
 import { UploadForm } from "./UploadForm";
+import { lockedProps, usePreviewLock } from "@/components/PreviewLock";
 
 const MAX_TEXT_BYTES = 1024 * 1024;
 
@@ -23,6 +24,7 @@ function DraftForm({ eventId, source, replaceId, replacingDraft, children, submi
   /** Vedlejší cesta (ruční zápis): tlačítko bez zvýraznění. */
   secondary?: boolean;
 }) {
+  const lock = lockedProps(usePreviewLock());
   const [state, action, pending] = useActionState(createMinutesDraftAction, null);
   const [asking, setAsking] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
@@ -47,7 +49,7 @@ function DraftForm({ eventId, source, replaceId, replacingDraft, children, submi
       {children}
       <ActionMessage state={state} />
       <div className="row">
-        <button type="submit" className={secondary ? "btn" : "btn btn-primary"} disabled={pending || disabled}>
+        <button type="submit" className={secondary ? "btn" : "btn btn-primary"} disabled={pending || disabled} {...lock}>
           {pending ? "Připravuji…" : submitLabel}
         </button>
       </div>

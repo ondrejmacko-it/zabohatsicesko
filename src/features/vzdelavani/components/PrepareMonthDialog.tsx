@@ -25,6 +25,7 @@ import {
   type OverviewKey,
 } from "../prepare-month";
 import { TemplateDialog, type SlotValue } from "./TemplateDialog";
+import { lockedProps, usePreviewLock } from "@/components/PreviewLock";
 
 /** Jak se zveřejnění propíše do Kalendáře. Určuje jen text přehledu dopadu. */
 
@@ -161,6 +162,7 @@ type FormProps = Props & {
  * sám. „Uložit změny“ uloží úpravy všech řádků a nic neodešle, „Zveřejnit“ vydá jen vybrané.
  */
 function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, topics, recipients, inviteMode, action, pending, state, onCancel, trackUnsaved, onDirtyChange }: FormProps) {
+  const lock = lockedProps(usePreviewLock());
   const [picked, setPicked] = useState<Set<string>>(() => new Set(drafts.filter((d) => d.fromTemplate).map((d) => d.id)));
   const toggle = (id: string, on: boolean) =>
     setPicked((before) => {
@@ -406,13 +408,13 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
                       <span className="small muted"> · {d.suggestion}</span>
                     </span>
                     <span className="topic-suggestion-actions">
-                      <button type="submit" name="topicDecision" value={`accept:${d.id}`} className="btn btn-small btn-primary" disabled={pending} aria-label={`Přijmout doporučené téma: ${name}`}>
+                      <button type="submit" name="topicDecision" value={`accept:${d.id}`} className="btn btn-small btn-primary" disabled={pending} {...lock} aria-label={`Přijmout doporučené téma: ${name}`}>
                         Přijmout
                       </button>
                       <button type="button" className="btn btn-small btn-quiet" onClick={(e) => changeTopic(e, d.id)} aria-label={`Změnit téma: ${name}`}>
                         Změnit
                       </button>
-                      <button type="submit" name="topicDecision" value={`reject:${d.id}`} className="btn btn-small btn-quiet" disabled={pending} aria-label={`Odmítnout doporučené téma: ${name}`}>
+                      <button type="submit" name="topicDecision" value={`reject:${d.id}`} className="btn btn-small btn-quiet" disabled={pending} {...lock} aria-label={`Odmítnout doporučené téma: ${name}`}>
                         Odmítnout
                       </button>
                     </span>
@@ -556,11 +558,12 @@ function MonthDraftsForm({ monthKey, todayKey, drafts, changeDrafts, people, top
           value="publish"
           className="btn btn-primary"
           disabled={pending || blockedReason !== null}
+          {...lock}
           aria-describedby={blockedReason ? "prepare-publish-why" : undefined}
         >
           {chosen.length ? `Zveřejnit ${plural(chosen.length, "akci", "akce", "akcí")}` : "Zveřejnit"}
         </button>
-        <button type="submit" name="intent" value="save" className="btn" disabled={pending}>
+        <button type="submit" name="intent" value="save" className="btn" disabled={pending} {...lock}>
           Uložit změny
         </button>
         <button type="button" className="btn" onClick={onCancel}>

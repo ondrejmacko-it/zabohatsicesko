@@ -7,6 +7,7 @@ import { submitKeepingValues } from "@/features/shared/keep-values";
 import { TYPE_LABELS } from "@/lib/labels";
 import type { EventType } from "@/lib/types";
 import { updateTemplateAction, type ActionResult } from "../actions";
+import { lockedProps, usePreviewLock } from "@/components/PreviewLock";
 
 export type SlotValue = { isoWeekday: number; startTime: string; endTime: string; types: string[]; active: boolean };
 
@@ -16,6 +17,7 @@ const REGULAR_TYPES: EventType[] = ["action", "training-fp", "portfolio", "train
 /** Pravidelný rozvrh (týdenní šablona): z něj vzniká návrh měsíce. Ruční úpravy akcí šablona nepřepisuje. */
 export function TemplateDialog({ slots }: { slots: SlotValue[] }) {
   const [open, setOpen] = useState(false);
+  const lock = lockedProps(usePreviewLock());
   const [state, action, pending] = useActionState(async (prev: ActionResult | null, formData: FormData) => {
     const result = await updateTemplateAction(prev, formData);
     if (result.ok) setOpen(false);
@@ -65,7 +67,7 @@ export function TemplateDialog({ slots }: { slots: SlotValue[] }) {
           ))}
           {state && !state.ok && <ActionMessage state={state} />}
           <div className="dialog-actions">
-            <button type="submit" className="btn btn-primary" disabled={pending}>
+            <button type="submit" className="btn btn-primary" disabled={pending} {...lock}>
               Uložit šablonu
             </button>
             <button type="button" className="btn" onClick={() => setOpen(false)}>

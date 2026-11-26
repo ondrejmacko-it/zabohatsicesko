@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import type { ActionResult } from "@/features/vzdelavani/actions";
 import { Icon, type IconName } from "./Icon";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { lockedProps, usePreviewLock } from "./PreviewLock";
 
 type Props = {
   action: (prev: ActionResult | null, formData: FormData) => Promise<ActionResult>;
@@ -36,6 +37,7 @@ export async function callAction(action: Props["action"], prev: ActionResult | n
 /** Jednotlačítková serverová akce se stavem odeslání, výsledkem a volitelným potvrzením. */
 export function ActionForm({ action, fields = {}, label, pendingLabel, variant = "default", small, confirm, icon, buttonClassName }: Props) {
   const [confirming, setConfirming] = useState(false);
+  const lock = lockedProps(usePreviewLock());
   const [state, formAction, pending] = useActionState(async (prev: ActionResult | null, formData: FormData) => {
     const result = await callAction(action, prev, formData);
     // Chyba zůstane v potvrzovacím okně (spouštěcí tlačítko může být ve skrytém menu), úspěch ho zavře.
@@ -51,7 +53,7 @@ export function ActionForm({ action, fields = {}, label, pendingLabel, variant =
     <div className="action-form">
       {confirm ? (
         <>
-          <button type="button" className={className} onClick={() => setConfirming(true)} disabled={pending}>
+          <button type="button" className={className} onClick={() => setConfirming(true)} disabled={pending} {...lock}>
             {iconMark}
             {label}
           </button>
@@ -82,7 +84,7 @@ export function ActionForm({ action, fields = {}, label, pendingLabel, variant =
       ) : (
         <form action={formAction}>
           {hidden}
-          <button type="submit" className={className} disabled={pending}>
+          <button type="submit" className={className} disabled={pending} {...lock}>
             {iconMark}
             {pending ? (pendingLabel ?? "Probíhá…") : label}
           </button>

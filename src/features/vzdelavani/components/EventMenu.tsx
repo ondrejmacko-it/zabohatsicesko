@@ -11,6 +11,7 @@ import { Modal } from "@/components/Modal";
 import { submitKeepingValues } from "@/features/shared/keep-values";
 import type { CancelImpact } from "@/server/services/impact";
 import { cancelEventAction, deleteDraftAction, previewCancelAction, type ActionResult } from "../actions";
+import { lockedProps, usePreviewLock } from "@/components/PreviewLock";
 
 type Props = {
   id: string;
@@ -67,6 +68,7 @@ export function EventMenu({ id, revision, canCancel, canDelete, links = [], copy
 }
 
 export function CancelDialog({ id, revision, onClose }: { id: string; revision: number; onClose: () => void }) {
+  const lock = lockedProps(usePreviewLock());
   const [state, action, pending] = useActionState(async (prev: ActionResult | null, formData: FormData) => {
     const result = await cancelEventAction(prev, formData);
     if (result.ok) onClose();
@@ -133,7 +135,7 @@ export function CancelDialog({ id, revision, onClose }: { id: string; revision: 
         </label>
         <ActionMessage state={state} />
         <div className="row">
-          <button type="submit" className="btn btn-danger" disabled={pending || impact === null || (unverified && !acceptUnverified)}>
+          <button type="submit" className="btn btn-danger" disabled={pending || impact === null || (unverified && !acceptUnverified)} {...lock}>
             Zrušit akci
           </button>
           <button type="button" className="btn" onClick={onClose}>
@@ -151,6 +153,7 @@ export function CancelDialog({ id, revision, onClose }: { id: string; revision: 
  */
 export function DeleteDialog({ id, revision, onClose, stay = false }: { id: string; revision: number; onClose: () => void; stay?: boolean }) {
   const router = useRouter();
+  const lock = lockedProps(usePreviewLock());
   const [state, action, pending] = useActionState(deleteDraftAction, null);
   const handled = useRef<ActionResult | null>(null);
   useEffect(() => {
@@ -170,7 +173,7 @@ export function DeleteDialog({ id, revision, onClose, stay = false }: { id: stri
         <p>Návrh se smaže. Pokud vznikl z Pravidelného týdne, doplnění měsíce ho znovu nevytvoří. Vrátit ho jde v Připravit měsíc tlačítkem Obnovit smazané návrhy.</p>
         <ActionMessage state={state} />
         <div className="row">
-          <button type="submit" className="btn btn-danger" disabled={pending}>
+          <button type="submit" className="btn btn-danger" disabled={pending} {...lock}>
             Smazat návrh
           </button>
           <button type="button" className="btn" onClick={onClose}>

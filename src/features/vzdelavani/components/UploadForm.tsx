@@ -4,11 +4,13 @@ import { useActionState, useState } from "react";
 import { ActionMessage } from "@/components/ActionForm";
 import { FilePicker } from "@/components/FilePicker";
 import { uploadRecordingAction } from "../actions";
+import { lockedProps, usePreviewLock } from "@/components/PreviewLock";
 
 const MAX_BYTES = 4 * 1024 * 1024;
 
 /** Nahrání nahrávky k akci. Před odesláním ukáže, ke které akci se soubor přiřadí. */
 export function UploadForm({ eventId, eventLabel, replacing }: { eventId: string; eventLabel: string; replacing: boolean }) {
+  const lock = lockedProps(usePreviewLock());
   const [state, action, pending] = useActionState(uploadRecordingAction, null);
   const [file, setFile] = useState<File | null>(null);
   const tooLarge = file !== null && file.size > MAX_BYTES;
@@ -39,7 +41,7 @@ export function UploadForm({ eventId, eventLabel, replacing }: { eventId: string
       )}
       <ActionMessage state={state} />
       <div className="row">
-        <button type="submit" className="btn btn-primary" disabled={pending || !file || tooLarge}>
+        <button type="submit" className="btn btn-primary" disabled={pending || !file || tooLarge} {...lock}>
           {pending ? "Nahrávám…" : replacing ? "Nahradit nahrávku" : "Nahrát nahrávku"}
         </button>
       </div>

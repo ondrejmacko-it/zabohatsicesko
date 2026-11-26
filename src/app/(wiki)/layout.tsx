@@ -7,6 +7,7 @@ import { listPersonas } from "@/server/auth/personas";
 import { requireUser } from "@/server/auth/session";
 import { getDb } from "@/server/db/client";
 import { PreviewBar } from "@/components/PreviewSwitch";
+import { PreviewLockProvider } from "@/components/PreviewLock";
 import { canManageUsers, isOrganizer } from "@/server/policy";
 import { listPreviewOptions } from "@/server/services/preview";
 import { currentPreview } from "@/server/services/preview-context";
@@ -34,7 +35,7 @@ export default async function WikiLayout({ children }: { children: React.ReactNo
         <Sidebar badge={badge} canManageUsers={canManageUsers(preview?.viewer ?? user)} pendingRequests={pendingRequests} live={isLiveWiki()} />
         <main className="panel" id="obsah">
           <FlashMessage />
-          {children}
+          <PreviewLockProvider active={Boolean(preview)}>{children}</PreviewLockProvider>
         </main>
       </div>
       <FeedbackRoot />

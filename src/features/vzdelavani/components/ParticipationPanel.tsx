@@ -8,6 +8,7 @@ import { calendarNote, type OwnCalendar } from "@/lib/calendar-note";
 import { ParticipationBadge } from "./ParticipationBadge";
 import { EXCUSE_REASON_LABELS } from "@/lib/labels";
 import { EXCUSE_NOTE_MAX, EXCUSE_REASONS, type ExcuseReason, type ParticipationState } from "@/lib/types";
+import { lockedProps, usePreviewLock } from "@/components/PreviewLock";
 
 
 type Action = "enroll" | "withdraw" | "excuse" | "revoke_excuse";
@@ -138,6 +139,7 @@ export function ParticipationPanel({ eventId, state, label, actions, excuse, cal
 /** Omluva: důvod (Nemoc / Dovolená / Jiné) a volitelná poznámka v samostatném okně. */
 function ExcuseButton({ eventId }: { eventId: string }) {
   const [open, setOpen] = useState(false);
+  const lock = lockedProps(usePreviewLock());
   const [state, formAction, pending] = useActionState(async (prev: ActionResult | null, formData: FormData) => {
     const result = await callAction(changeParticipationAction, prev, formData);
     if (result.ok) setOpen(false);
@@ -178,7 +180,7 @@ function ExcuseButton({ eventId }: { eventId: string }) {
         <button type="button" className="btn" onClick={() => setOpen(false)} disabled={pending} autoFocus>
           Zpět
         </button>
-        <button type="submit" form={formId} className="btn btn-primary" disabled={pending}>
+        <button type="submit" form={formId} className="btn btn-primary" disabled={pending} {...lock}>
           {pending ? "Ukládám…" : "Omluvit se"}
         </button>
       </ConfirmDialog>

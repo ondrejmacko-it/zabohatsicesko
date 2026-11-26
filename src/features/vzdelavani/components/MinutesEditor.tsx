@@ -6,6 +6,7 @@ import { useMarkModalSaved } from "@/components/Modal";
 import { submitKeepingValues } from "@/features/shared/keep-values";
 import type { MinutesContent } from "@/lib/types";
 import { saveMinutesAction } from "../actions";
+import { lockedProps, usePreviewLock } from "@/components/PreviewLock";
 
 /**
  * Úprava návrhu zápisu vedoucím, kontrolorem nebo správcem. Body se píší po řádcích. Schválit a zveřejnit
@@ -29,6 +30,7 @@ export function MinutesEditor({
   /** Úprava už schváleného zápisu: uložení změny schválení zruší. */
   published?: boolean;
 }) {
+  const lock = lockedProps(usePreviewLock());
   const [state, action, pending] = useActionState(saveMinutesAction, null);
   // V okně zápisu (Zápisy → ?zapis=) je uložený text nový výchozí stav: zavření okna se pak na nic neptá.
   const markSaved = useMarkModalSaved();
@@ -95,11 +97,11 @@ export function MinutesEditor({
       {!published && canApprove && <p className="small muted">Kolegové zápis uvidí až po schválení.</p>}
       <ActionMessage state={state} />
       <div className="row">
-        <button type="submit" name="intent" value="save" className={canApprove && !published ? "btn" : "btn btn-primary"} disabled={pending}>
+        <button type="submit" name="intent" value="save" className={canApprove && !published ? "btn" : "btn btn-primary"} disabled={pending} {...lock}>
           {published ? "Uložit změny" : "Uložit návrh zápisu"}
         </button>
         {canApprove && !published && (
-          <button type="submit" name="intent" value="approve" className="btn btn-primary" disabled={pending}>
+          <button type="submit" name="intent" value="approve" className="btn btn-primary" disabled={pending} {...lock}>
             Schválit a zveřejnit
           </button>
         )}
