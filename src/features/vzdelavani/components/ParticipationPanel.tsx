@@ -169,7 +169,7 @@ function ExcuseButton({ eventId }: { eventId: string }) {
             <label className="field">
               <span className="field-label">Poznámka (nepovinná)</span>
               <textarea className="textarea" name="note" maxLength={EXCUSE_NOTE_MAX} rows={3} />
-              <span className="field-hint">Důvod i poznámku vidíš jen ty. Do Kalendáře ani kolegům se neposílají.</span>
+              <span className="field-hint">Důvod a poznámku vidíš ty a tvůj oprávněný nadřízený. Do Google Kalendáře se neposílají.</span>
             </label>
             {state && !state.ok && <ActionMessage state={state} />}
           </form>
