@@ -8,7 +8,7 @@ import { monthTasks, type MonthSummary, type PlanState } from "../status";
 export const TOP_ROWS = 3;
 
 /** Úkol bez `href` nemá tlačítko (např. pozvánka v simulaci). `newTab`: odkaz mimo Wiki (Gmail). */
-export type TaskRow = Pick<JourneyTask, "key" | "title" | "detail" | "external"> &
+export type TaskRow = Pick<JourneyTask, "key" | "title" | "detail" | "external" | "count"> &
   Partial<Pick<JourneyTask, "href" | "action">> & { newTab?: boolean; urgent?: boolean };
 
 /**
