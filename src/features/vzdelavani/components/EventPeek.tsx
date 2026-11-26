@@ -107,6 +107,11 @@ export async function EventPeek({ user, eventId, preview, closeHref, presetTopic
           </p>
         )}
         {card.original && <ChangeBanner eventId={card.id} revision={detail.revision} original={card.original} />}
+      </>
+    );
+    // Vlastní účast a správa omluv až po údajích akce (pořadí okna: stav, obsah, účast, správa, další možnosti).
+    const afterFields = (participationPanel || managedPanel) && (
+      <>
         {participationPanel}
         {managedPanel}
       </>
@@ -124,6 +129,7 @@ export async function EventPeek({ user, eventId, preview, closeHref, presetTopic
         title={card.label}
         closeHref={closeHref}
         intro={intro}
+        afterFields={afterFields}
         menu={
           <EventMenu
             id={card.id}

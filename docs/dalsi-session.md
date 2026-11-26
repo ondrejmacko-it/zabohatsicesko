@@ -37,13 +37,22 @@ Větev `claude/gallant-bohr-m1lyna`, draft PR #94 (nezakládat další, nemergov
     výsledky testů vč. přeskočených, překážky se závažností, postup kontroly Preview před merge.
 Další související chybu opravit a doložit regresním testem. Cíl: funkční, bezpečné, sjednocené, ne jen zelené CI.
 
-## Stav (relace 38, HEAD 948ea18, nic neimplementováno – relace spotřebovala limit na úvodní kontext)
-- PR #94 draft; relace 38 přihlášena k aktivitě (nová relace se přihlásí znovu: subscribe_pr_activity #94).
-- Ověřeno na 536b210: vitest 623/623, tsc, eslint OK; e2e ucast/nahled/nahled-role (1280+390) 42 passed.
-- V nové relaci nejdřív `npm ci`. Screenshoty do scratchpadu. Kontext šetřit: nečíst celé soubory, jen grep + rozsahy.
+## Stav (relace 39, bod 1 hotový v kódu)
+- PR #94 draft; nová relace se přihlásí: subscribe_pr_activity #94. Na začátku `npm ci`.
+- Bod 1 commitnut: `EventForm` má prop `afterFields` (mimo <form>, tlačítka Uložit/Zveřejnit s `form={formId}`,
+  `publishButton` přes `actionsRef`); `EventPeek` předává participationPanel+managedPanel jako `afterFields`.
+  Ověřeno: tsc, eslint, vitest 623/623. E2E pořadí/rozpracovaná editace zatím NEověřeno (bod 8).
+- Bod 4 rozpracováno jen návrhem (necommitnuto): v `calendar-note.ts` věty „Kalendář: synchronizováno.“ /
+  „Kalendář: synchronizace čeká.“ / „Kalendář: synchronizace selhala, Wiki ji zkusí znovu.“ / „Kalendář: Wiki tě
+  na akci nezve.“ / „Kalendář: zatím tě Wiki nezve. Po přihlášení se synchronizuje.“ / „Kalendář: stav neznámý,
+  Wiki tvoji pozvánku nespravuje.“; null (osobní režim) → „Kalendář: stav neznámý.“ místo null.
+  Upravit i `tests/kalendar-f04.test.ts` (ř. 95–287) a `e2e/ucast.spec.ts` (ř. 100–119). Confirm texty enroll/
+  withdraw/revoke v `ParticipationPanel.tsx` bez slibu pozvánky („Změna se uloží ve Wiki…“). Server zprávy:
+  `PARTICIPATION_MESSAGES` v `src/features/vzdelavani/actions.ts` (~ř. 760) zkontrolovat.
+- Pozor: úvodní kontext relace (definice nástrojů) zabere ~120 tis. → v relaci jen 1–2 malé jednotky, číst minimum.
 
 ## Zjištěno pro bod 1–4 (nemusíš znovu číst)
-- `EventPeek.tsx`: správce → `EventWindow` (EventDialog.tsx:142) s `intro` = statusBand, preset, ChangeBanner,
+- (HOTOVO bod 1) `EventPeek.tsx`: správce → `EventWindow` (EventDialog.tsx:142) s `intro` = statusBand, preset, ChangeBanner,
   participationPanel, managedPanel; pak `EventForm` (ř. ~179). Ne-správce → RouteModal: statusBand, `dl.fact-list`,
   participationPanel, managedPanel, odkazy (pořadí tam už sedí).
 - Návrh opravy: `EventForm` dostane prop `afterFields`; `<form id={formId}>` (ř. ~512) uzavřít před
