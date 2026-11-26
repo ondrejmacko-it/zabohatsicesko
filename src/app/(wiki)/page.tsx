@@ -87,7 +87,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       <h1>
         <span data-feedback-redact="">{greeting(preview ? preview.personName : user.name, preview ? null : salutation)}</span>.
       </h1>
-      {!preview && salutationsEnabled() && <SalutationForm current={salutation} error={salutationError} />}
+      {salutationsEnabled() && <SalutationForm current={salutation} error={!preview && salutationError} locked={Boolean(preview)} />}
       <ShotGrant page="/" />
       {personal && <PersonalCalendarStatus state={personal} />}
       {/* Odpověď na pozvánku se dává v Gmailu, po návratu do okna se úkol obnoví. */}
