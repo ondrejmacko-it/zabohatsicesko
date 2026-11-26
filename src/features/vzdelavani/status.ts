@@ -87,16 +87,16 @@ export function missingDetails(card: EventCard, managing: boolean): string[] {
  * ikonu výstrahy, aby karta nehlásila tentýž problém dvakrát (A-04).
  */
 export function hiddenMissingDetails(card: EventCard, managing: boolean): string[] {
-  const shown = new Set<string>(cardDetails(card, managing).filter((d) => d.missing).map((d) => (d.label === "Kdo" ? "vedoucí" : "téma")));
+  const shown = new Set<string>(cardDetails(card, managing).filter((d) => d.missing).map((d) => (d.label === "Vede" ? "vedoucí" : "téma")));
   return missingDetails(card, managing).filter((m) => !shown.has(m));
 }
 
-export type CardDetail = { label: "Kdo" | "Téma"; value: string; missing: boolean };
+export type CardDetail = { label: "Vede" | "Téma"; value: string; missing: boolean };
 
 const sameText = (a: string, b: string) => a.trim().toLocaleLowerCase("cs") === b.trim().toLocaleLowerCase("cs");
 
 /**
- * Kolonky Kdo a Téma na kartě harmonogramu. Svátek a zrušená akce je nemají. Nevyplněné pole správce
+ * Kolonky Vede a Téma na kartě harmonogramu. Svátek a zrušená akce je nemají. Nevyplněné pole správce
  * vidí jako „— doplnit“, účastník jako „Bude upřesněno“; u proběhlé akce účastník prázdné pole nevidí.
  * Téma shodné s názvem akce se neopakuje. Action time je pracovní blok bez tématu: Téma ukáže, jen když je vyplněné.
  */
@@ -107,7 +107,7 @@ export function cardDetails(card: EventCard, managing: boolean): CardDetail[] {
     value ? { label, value, missing: false } : placeholder && !optional ? { label, value: placeholder, missing: true } : null;
   const topic = card.topicTitle?.trim() || null;
   return [
-    field("Kdo", card.leadName?.trim() || null),
+    field("Vede", card.leadName?.trim() || null),
     topic && sameText(topic, card.label) ? null : field("Téma", topic, card.type === "action"),
   ].filter((d): d is CardDetail => d !== null);
 }

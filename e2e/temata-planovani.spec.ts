@@ -227,7 +227,7 @@ test.describe("Témata: zápis priority, pořadí a návrhu @desktop @zapis-tema
     for (const name of own) {
       await page.getByRole("button", { name: "Navrhnout téma" }).click();
       await propose.getByLabel("Téma").fill(name);
-      await propose.getByLabel("Pro skupinu").selectOption("tym-a");
+      await propose.getByLabel("Pro koho").selectOption("tym-a");
       await propose.getByRole("button", { name: "Navrhnout téma" }).click();
       await expect(propose).toBeHidden();
     }
@@ -450,7 +450,7 @@ test.describe("Témata: zápis priority, pořadí a návrhu @desktop @zapis-tema
     for (let i = 1; (await names(othersOf(page))).length < 4 && i <= 8; i++) {
       await page.getByRole("button", { name: "Navrhnout téma" }).click();
       await propose.getByLabel("Téma").fill(`Garance téma ${i}`);
-      await propose.getByLabel("Pro skupinu").selectOption("tym-a");
+      await propose.getByLabel("Pro koho").selectOption("tym-a");
       await propose.getByRole("button", { name: "Navrhnout téma" }).click();
       await expect(propose).toBeHidden();
       await expect(page.locator(".item-title > span[id]", { hasText: `Garance téma ${i}` })).toBeVisible();

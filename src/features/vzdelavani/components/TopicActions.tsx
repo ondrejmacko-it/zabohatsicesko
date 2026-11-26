@@ -102,7 +102,7 @@ function ProposeForm({ groups, onClose }: { groups: Group[]; onClose: () => void
           <input className="input" name="name" required minLength={3} maxLength={120} autoFocus />
         </label>
         <label className="field">
-          <span className="field-label">Pro skupinu</span>
+          <span className="field-label">Pro koho</span>
           <select className="select" name="audience" defaultValue={groups[0]}>
             {groups.map((g) => (
               <option key={g} value={g}>
@@ -325,7 +325,7 @@ function EditTopicForm({ topic, groups, onClose }: { topic: { id: string; name: 
           <input className="input" name="name" value={name} onChange={(e) => setName(e.target.value)} required minLength={3} maxLength={120} />
         </label>
         <label className="field">
-          <span className="field-label">Pro skupinu</span>
+          <span className="field-label">Pro koho</span>
           <select className="select" name="audience" value={audience} onChange={(e) => setAudience(e.target.value)}>
             {groups.map((g) => (
               <option key={g} value={g}>
