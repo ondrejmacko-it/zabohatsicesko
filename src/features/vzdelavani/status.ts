@@ -160,6 +160,32 @@ export function monthSummary(cards: EventCard[], monthKey: string): MonthSummary
   };
 }
 
+/** Rozpad štítku Návrhy: nové návrhy, návrhy změn zveřejněných akcí, z toho v minulosti (jde jen smazat) a bez tématu nebo vedoucího. */
+export type DraftBreakdown = { total: number; fresh: number; changes: number; past: number; incomplete: number };
+
+export function draftBreakdown(cards: EventCard[], monthKey: string): DraftBreakdown {
+  const mine = cards.filter((c) => inPlan(c, monthKey) && awaitsPublishing(c));
+  const fresh = mine.filter((c) => c.planStatus === "draft");
+  return {
+    total: mine.length,
+    fresh: fresh.length,
+    changes: mine.length - fresh.length,
+    past: fresh.filter((c) => c.past).length,
+    incomplete: mine.filter((c) => !c.topicTitle || !c.leadName).length,
+  };
+}
+
+/** Nápověda štítku Návrhy, aby počet nesliboval víc, než jde hromadně vybrat a zveřejnit. */
+export function draftHint(b: DraftBreakdown): string {
+  const parts = [
+    b.fresh > 0 && plural(b.fresh, "nový návrh", "nové návrhy", "nových návrhů"),
+    b.changes > 0 && plural(b.changes, "změna zveřejněné akce (zveřejní se v okně akce)", "změny zveřejněných akcí (zveřejní se v okně akce)", "změn zveřejněných akcí (zveřejní se v okně akce)"),
+    b.past > 0 && `${b.past} v minulosti jde jen smazat`,
+    b.incomplete > 0 && `${b.incomplete} bez tématu nebo vedoucího`,
+  ].filter(Boolean);
+  return `${parts.join(", ")}.`;
+}
+
 /** „1 termín“, „3 termíny“, „9 termínů“. */
 const plural = (count: number, one: string, few: string, many: string) => `${count} ${count === 1 ? one : count >= 2 && count <= 4 ? few : many}`;
 

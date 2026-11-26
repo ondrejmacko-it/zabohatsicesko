@@ -14,7 +14,7 @@ import { inviteModeOf } from "@/lib/invite-mode";
 import { PlanFilters, type StateChip } from "@/features/vzdelavani/components/PlanFilters";
 import { Agenda, NextEventsList, ScheduleGrid } from "@/features/vzdelavani/components/Schedule";
 import { TasksCard } from "@/features/vzdelavani/components/TasksCard";
-import { ATTENDANCE_FILTERS, PLAN_STATES, cardActions, matchesAttendance, filterCards, filterValues, isPickable, monthSummary, type CardActionKind } from "@/features/vzdelavani/status";
+import { ATTENDANCE_FILTERS, PLAN_STATES, cardActions, matchesAttendance, filterCards, filterValues, isPickable, monthSummary, draftBreakdown, draftHint, type CardActionKind } from "@/features/vzdelavani/status";
 import type { CardMenuFor } from "@/features/vzdelavani/components/Schedule";
 import styles from "@/features/vzdelavani/components/schedule.module.css";
 import { MoveDropZone } from "@/features/vzdelavani/components/MoveEvent";
@@ -144,7 +144,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   const summary = planView && monthKey >= monthOf(todayKey) ? monthSummary(monthCards, monthKey) : null;
   const chips: StateChip[] = summary
     ? [
-        { state: "navrhy" as const, label: "Návrhy", spoken: "ke zveřejnění", count: summary.toPublish, hint: "Návrhy, které kolegové uvidí až po zveřejnění." },
+        { state: "navrhy" as const, label: "Návrhy", spoken: "ke zveřejnění", count: summary.toPublish, hint: draftHint(draftBreakdown(monthCards, monthKey)) },
         { state: "doplnit" as const, label: "Doplnit", spoken: summary.toComplete <= 4 ? "akce" : "akcí", count: summary.toComplete, hint: "Chybí téma, vedoucí nebo oprava v Kalendáři." },
       ]
         .filter((chip) => chip.count > 0)
