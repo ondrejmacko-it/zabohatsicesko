@@ -4672,6 +4672,48 @@ body[data-moving] .quick-actions,
   }
 }
 
+/* Široký počítač: Pohled geometricky uprostřed lišty (stejně široké krajní sloupce). Kratší odznak ukázky
+   a bez opakované role (jméno ukázkové role je ve výběru), aby se účet vešel do své poloviny. */
+@media (min-width: 1280px) {
+  .topbar:has(.view-switch) {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  }
+
+  .topbar:has(.view-switch) .brand {
+    justify-self: start;
+  }
+
+  .topbar:has(.view-switch) .account {
+    justify-self: end;
+    min-width: 0;
+  }
+
+  .topbar:has(.view-switch) .account-name {
+    flex-shrink: 1;
+    min-width: 0;
+  }
+
+  .topbar:has(.view-switch) .view-select {
+    max-width: 240px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .topbar:has(.view-switch) .persona-btn-detail,
+  .topbar:has(.view-switch) .demo-badge-detail,
+  .topbar:has(.view-switch) .account:not(.account-google) .account-name {
+    display: none;
+  }
+}
+
+/* Účet je od Pohledu oddělený čarou: vpravo je vždy skutečně přihlášený, ne zobrazovaný kolega. */
+@media (min-width: 1000px) {
+  .topbar:has(.view-switch) .account {
+    padding-left: 12px;
+    border-left: 1px solid var(--line);
+  }
+}
+
 /* Tablet: Pohled má vlastní řádek pod značkou a účtem. */
 @media (min-width: 641px) and (max-width: 999px) {
   .topbar:has(.view-switch) {

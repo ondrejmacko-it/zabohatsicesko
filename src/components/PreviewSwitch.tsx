@@ -23,6 +23,8 @@ export function previewApplies(pathname: string): boolean {
  * přihlášený. Volba odešle formulář hned, bez JavaScriptu tlačítkem Zobrazit.
  */
 export function PreviewSwitch({ groups, people, active }: { groups: Option[]; people: Option[]; active: string | null }) {
+  // Úzký výběr dlouhý název zkrátí, celý je v title a v pruhu náhledu.
+  const activeLabel = [...groups, ...people].find((o) => o.key === active)?.label;
   return (
     <div className={active ? "view-switch view-switch-active" : "view-switch"}>
       <form action={startPreview} className="view-switch-form">
@@ -35,6 +37,7 @@ export function PreviewSwitch({ groups, people, active }: { groups: Option[]; pe
           className="select select-small view-select"
           defaultValue={active ?? ""}
           key={active ?? ""}
+          title={activeLabel ?? "Můj pohled"}
           onChange={(event) => event.currentTarget.form?.requestSubmit()}
         >
           <option value="">Můj pohled</option>

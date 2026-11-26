@@ -17,7 +17,7 @@ export function Topbar({ user, personas, preview }: { user: CurrentUser; persona
         <span className="brand-tagline">Za bohatší Česko – znalosti a procesy na jednom místě</span>
       </Link>
       {preview && <PreviewSwitch groups={preview.groups} people={preview.people} active={preview.active} />}
-      <div className={user.signedInWith === "google" ? "account account-google" : "account"}>
+      <div className={user.signedInWith === "google" ? "account account-google" : "account"} role="group" aria-label="Přihlášený účet">
         {!isLiveWiki() && (
           <span className="demo-badge" title="Fiktivní data a ukázkové režimy integrací">
             Ukázka<span className="demo-badge-detail"> · fiktivní data</span>
