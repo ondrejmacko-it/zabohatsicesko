@@ -1,4 +1,4 @@
-# Navazující relace (stav 26. 11. 2026, relace 14 zadání „Finální dokončení po PR #92“)
+# Navazující relace (stav 26. 11. 2026, relace 15 zadání „Finální dokončení po PR #92“)
 
 Větev `claude/festive-sagan-lilorz` z main 2703a0b (PR #92 v main). Limit relace 170 tis. (start v cloudu zabere
 ~120 tis., na práci zbývá málo: čti cíleně, výstupy zkracuj). Nic nemergovat/nenasazovat, žádné vzdálené migrace,
@@ -21,19 +21,16 @@ K UX/regresní audit + smoke E2E v CI · L release checklist · výstup: report 
   (nové / změny zveřejněných / v minulosti jen smazat / bez tématu či vedoucího); počet = filtr „navrhy“
   (konzistentní). Test `tests/navrhy-rozpad.test.ts`. tsc + eslint čisté.
 
-## Další krok – fáze E (zadání ř. 302–349), návrh zvolený jako nejméně invazivní
-Názvy tlačítek „Smazat vybrané“/„Zveřejnit vybrané“, „Vybrat všechny dostupné“ a text „Vybráno N“ ponechat
-(e2e okna, priprava-mesice, vyber-navrhu na ně spoléhají).
-- E2 `PlanSelection.tsx` lišta: „Vybráno Y z X nových návrhů“; při Y>0 řádek „Zveřejnit jde Z.“ + „N v minulosti
-  jde jen smazat.“ + „M bez tématu nebo vedoucího, potvrzení to připomene.“; info o návrzích změn počítat
-  z viditelných karet (dnes `monthDrafts.changeDrafts` za celý měsíc i při filtru) – page.tsx ř. ~311.
-- E3 reset kontextu: `SelectionZone key={monthKey|typ|stav|ucast}` v page.tsx (pohled Měsíc/Seznam výběr
-  zachová, karty s PickBox jsou v obou). Po `router.refresh` prořezat `picked` na aktuální `items`
-  (render-time porovnání id) a ukázat hint „N vybraných se mezitím změnilo, z výběru zmizely.“
-- E4 e2e (nový `e2e/vyber-kontext.spec.ts`, projekt zapis-temat kvůli zápisům): změna měsíce, Měsíc/Seznam,
-  filtr, reload, Esc, smazání s potvrzením, zveřejnění, chyba (souběh: změna dat jiným kontextem), mobil 390 px:
-  lišta (sticky v toku, globals.css ~3306) nepřekrývá poslední kartu ani `.bug-dock`.
-- Pak F (ř. 350–407) … L, výstup (657+) podle zadání.
+- E2–E4 (6aa27c6): lišta „Vybráno Y z X nových návrhů“ + rozpad (`data-testid=rozpad-vyberu`); návrhy změn
+  z viditelných karet (`draftBreakdown(cards).changes`); `picked` = Map id→revize, po refresh (i po chybě akce)
+  vyřadí změněné s hláškou v `duvod-vyberu`; `SelectionZone key` = měsíc|typ|stav|ucast. Nový
+  `e2e/vyber-kontext.spec.ts` (v projektu zapis-temat přidán do testMatch) – prošel na windows-1280, telefon-390,
+  zapis-temat. tsc + eslint čisté. Celá vitest sada po změně neověřena (výstup se ořízl) – spustit `npx vitest run`.
+  Zveřejnění z výběru e2e v tomto souboru není (kryjí ho okna/priprava-mesice).
+
+## Další krok
+1. `npx vitest run --reporter=dot | tail -5` (kontrola po E2–E4).
+2. Fáze F Zápisy (zadání ř. 350–407), pak G (408–484), H, I, J, K, L a výstup (657+) podle zadání.
 
 ## Otevřené otázky pro vlastníka
 - C04: správce si může nastavit sebe jako nadřízeného kohokoli a číst jeho důvody omluv (audit to zapíše).
