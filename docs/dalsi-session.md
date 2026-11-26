@@ -1,4 +1,4 @@
-# Navazující relace (stav 26. 11. 2026, relace 6 zadání „Finální dokončení po PR #92“)
+# Navazující relace (stav 26. 11. 2026, relace 7 zadání „Finální dokončení po PR #92“)
 
 Větev `claude/festive-sagan-lilorz` z main 2703a0b (PR #92 v main). Limit relace 170 tis. (start v cloudu zabere
 ~120 tis., na práci zbývá málo: čti cíleně, výstupy zkracuj). Nic nemergovat/nenasazovat, žádné vzdálené migrace,
@@ -13,16 +13,8 @@ E hromadný výběr (bod 9) · F Zápisy (bod 11) · G celkové UI (bod 13) · H
 J matice F01–F18, D01–D07 · K UX/regresní audit + smoke E2E v CI · L release checklist · výstup: report + draft PR.
 
 ## Hotovo (fáze C)
-- C01 a029755, C02 e1f654d, C03 910e0dc (viz commity a testy c01/c02/c03).
-- C04 8e78cea+f3b85cf: `managedExcusesAt` vrací jen platné omluvy podle `participationState` (zrušená/nezveřejněná
-  akce, neaktivní účet, zánik povinnosti po změně rolí/publika = historický záznam). Testy v
-  `tests/omluvy-nadrizeny.test.ts` (7/7, nový test bez opravy padá). Ověřeno beze změny: správce sám nic nevidí,
-  náhled nic, souběh `setExcuseManagers` serializuje zámek řádků `users`, zrušení omluvy zmizí, víc nadřízených OK.
-- C05 jen zjištění (viz otázky).
-- C06 e4b6a8f: text `MinutesSourceForm.tsx` (lokální šablona, ne AI shrnutí; heuristické vynechání, ne zaručená
-  anonymizace), `e2e/zapisy-schvaleni.spec.ts` očekávání, `docs/integrace-do-firemni-wiki.md` (training: "never"
-  = deklarace v kódu, ne smluvní garance). E2E nespuštěno.
-- tsc OK na e4b6a8f. Celá sada, eslint celý a e2e zatím ne.
+- C01 a029755, C02 e1f654d, C03 910e0dc, C04 8e78cea+f3b85cf (`managedExcusesAt` jen platné omluvy), C05 jen zjištění,
+  C06 e4b6a8f (texty zápisů). tsc OK; celá sada, celý eslint a e2e zatím ne.
 
 ## Fáze A (hotovo, relace 5, jen čtení)
 - Produkce Vercel READY = main 2703a0b. Neon produkce: migrace 0001–0014 (chybí 0015–0018), účty 12 (origin invite:
@@ -40,20 +32,34 @@ J matice F01–F18, D01–D07 · K UX/regresní audit + smoke E2E v CI · L rele
 - Čeká na vlastníka: Preview env `DATABASE_URL` (sensitive, preview, gitBranch claude/festive-sagan-lilorz) =
   connection string branche br-wandering-paper-b9ef86og; pak redeploy větve. Bez toho nejde živé Preview ověření.
 
-## Fáze D – text zadání (shrnutí)
-Náhled 1:1: stejné rozložení, data, navigace, tlačítka, štítky, filtry, formuláře, úkoly, stavy účasti a oprávněné
-admin možnosti; jediný rozdíl = mutace zamčené (tlačítko na stejném místě, zamčené; procházení a informační
-dialogy povolené). Známé mezery: editační formulář akce správce v náhledu chybí, `TopicsSection.tsx` read-only
-skrývá správcovské nástroje, náhled Zápisů neprojde všechny obrazovky, `PreviewSwitch.tsx` omezuje stránky.
-Bez soukromých důvodů omluv, Google dat, tajemství. Náhled skupiny modelový. Testy pro FP, RM, FP+RM, vedoucí akce,
-kontrolor, nadřízený, správce; všechny mutace odmítne server (i cesty mimo `runAction`).
+## Fáze D (relace 7)
+- Zadání D: náhled 1:1 (rozložení, data, navigace, tlačítka, štítky, filtry, formuláře, úkoly, stavy účasti, oprávněné
+  admin možnosti); jediný rozdíl = akční tlačítka na stejném místě zamčená; informační dialogy povolené; bez soukromých
+  důvodů omluv, Google dat, tajemství, cizích přístupů, citlivých přepisů (zástupný stav). Náhled skupiny modelový.
+  Testy: FP, RM, FP+RM, vedoucí akce, kontrolor, nadřízený, správce vedle sebe; mutace odmítne server.
+- Hotovo (commit po 3bdc576): `tests/nahled-mutace.test.ts` volá všechny exporty `features/vzdelavani/actions.ts`
+  a `features/sprava/actions.ts` s cookie náhledu → `preview_read_only` (2/2; bez kontroly v `runAction` padá).
+  Mimo `runAction`: `submitFeedback` (zpětná vazba správce pod vlastní identitou, záměrně), `app/vstup/actions.ts`
+  (vstup/persona/odhlášení, cookie náhledu je vázaná na id účtu), API routy jen přihlášení/pozvánka/cron. Žádná
+  datová mutace nejde obejít. Pozn.: informační akce `previewImpactAction`, `previewCancelAction`, `previewMoveAction`,
+  `topicPlanOptionsAction` náhled taky blokuje (tlačítka k nim budou zamčená, takže nevadí).
+- Návrh UI (čeká na schválení vlastníka, viz otázka D1):
+  1. Klientský kontext `PreviewLock` (provider v `app/(wiki)/layout.tsx` při aktivním náhledu); `ActionForm`,
+     `InterestButton` a další submit tlačítka ho čtou → `disabled` + `aria-disabled` + title „V náhledu jen ke čtení“.
+  2. Stránky místo skrývání (`organizer && !preview`) renderují podle `isOrganizer(viewer)`: detail akce (editační
+     formulář, `akce/[id]/page.tsx:49,62`), Plán `managing` (`harmonogram/page.tsx:58`), Zápisy `canAdd`
+     (`zapisy/page.tsx:44`), `TopicsSection` readOnly → nástroje viditelné, zamčené. Citlivé části (nahrávka/přepis
+     handlera, důvody omluv, osobní Kalendář) zůstávají zástupným stavem.
+  3. `previewApplies` (`PreviewSwitch.tsx`) rozšířit na Moje role a Správu (podle oprávnění zobrazeného), Integrace
+     = zástupný stav bez Google dat.
+  4. E2E: pro 7 rolí porovnat sadu nadpisů/tlačítek reálného účtu a náhledu (stejná data, 1280).
 
 ## Další krok
-1. Fáze D: začít `PreviewSwitch.tsx` (omezení stránek) a `TopicsSection.tsx` read-only; grep mutací mimo `runAction`
-   (`"use server"` soubory, route handlery `src/app/api`) a test, že je náhled odmítne. Větší změny nejdřív navrhnout.
+1. Podle odpovědi D1 provést návrh po jednotkách (1 → 2 po stránkách → 3 → 4), každá s testem a pushem.
 2. Až vlastník nastaví DATABASE_URL: Playwright proti Preview URL větve (scénáře účasti z fáze B).
 
 ## Otevřené otázky pro vlastníka
+- D1: schválit návrh UI náhledu 1:1 (body 1–4 výše)? Doporučení: ano, celé, po jednotkách.
 - C04: správce si může nastavit sám sebe jako nadřízeného kohokoli a pak číst jeho důvody omluv (audit
   `excuse_managers.changed` zapíše, kdo koho změnil). Varianty: (a) zakázat nastavení sebe (musí jiný správce),
   (b) povolit, ale zvlášť auditovat a ukázat ve Správě. Doporučení: (a), pokud firma má víc správců.
