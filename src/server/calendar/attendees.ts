@@ -144,10 +144,17 @@ export async function requeueAttendeeSync(db: Executor, person: ChangedPerson): 
     .leftJoin(userIdentities, and(eq(userIdentities.userId, users.id), eq(userIdentities.provider, "google")))
     .where(and(eq(users.orgId, config.orgId), eq(users.id, person.id)));
   const emails = [...new Set(addresses.flatMap((a) => [a.email, a.googleEmail]).filter((e): e is string => !!e).map((e) => e.toLowerCase()))];
-  const ownRecords = db
-    .select({ id: eventParticipation.eventId })
-    .from(eventParticipation)
-    .where(and(eq(eventParticipation.orgId, config.orgId), eq(eventParticipation.userId, person.id)));
+  // Bez zapnuté účasti (a tedy i bez migrace 0016) se tabulka nečte: hosté se pak řídí jen publikem
+  // a dřív pozvané pokryje `managedByWiki`, takže po rollbacku nikdo nevypadne ani se znovu nepozve.
+  const ownRecords = participationEnabled()
+    ? inArray(
+        events.id,
+        db
+          .select({ id: eventParticipation.eventId })
+          .from(eventParticipation)
+          .where(and(eq(eventParticipation.orgId, config.orgId), eq(eventParticipation.userId, person.id))),
+      )
+    : sql`false`;
   const managedByWiki = emails.length
     ? sql`${calendarLinks.managedAttendees} && array[${sql.join(emails.map((e) => sql`${e}`), sql`, `)}]::text[]`
     : sql`false`;
@@ -159,7 +166,7 @@ export async function requeueAttendeeSync(db: Executor, person: ChangedPerson): 
       and(
         eq(events.orgId, config.orgId),
         gt(events.startsAt, now()),
-        or(inArray(sql<string>`${events.published}->>'audience'`, audiences), inArray(events.id, ownRecords), managedByWiki),
+        or(inArray(sql<string>`${events.published}->>'audience'`, audiences), ownRecords, managedByWiki),
       ),
     );
   await db
