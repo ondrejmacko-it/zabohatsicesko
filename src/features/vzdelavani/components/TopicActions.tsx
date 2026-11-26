@@ -138,10 +138,12 @@ export type TopicManageProps = {
 export function TopicManage({ topic, groups, canMoveUp, canMoveDown }: TopicManageProps) {
   const [dialog, setDialog] = useState<"edit" | "plan" | null>(null);
   const guaranteed = topic.priorityRank != null;
+  // Okno Naplánovat téma načítá nabídku akcí přes server, který ji v náhledu odmítne: v náhledu je položka zamčená.
+  const lock = lockedProps(usePreviewLock());
   return (
     <>
       <Menu label={`Možnosti tématu ${topic.name}`} variant="card" className="menu-inline">
-        <button type="button" className="btn" onClick={() => setDialog("plan")}>
+        <button type="button" className="btn" onClick={() => setDialog("plan")} {...lock}>
           <Icon name="calendar" />
           Naplánovat téma
         </button>

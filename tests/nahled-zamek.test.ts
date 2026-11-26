@@ -4,12 +4,14 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test, vi } from "vitest";
 
 const path = vi.hoisted(() => ({ current: "/" }));
-vi.mock("next/navigation", () => ({ usePathname: () => path.current }));
+vi.mock("next/navigation", () => ({ usePathname: () => path.current, useRouter: () => ({ refresh() {}, push() {} }) }));
 
 import { ActionForm } from "@/components/ActionForm";
 import { LockedLink, PreviewLockProvider } from "@/components/PreviewLock";
 import { CardMenu } from "@/features/vzdelavani/components/CardMenu";
-import { InterestButton } from "@/features/vzdelavani/components/TopicActions";
+import { EventMenu } from "@/features/vzdelavani/components/EventMenu";
+import { SelectToggle } from "@/features/vzdelavani/components/PlanSelection";
+import { InterestButton, TopicManage } from "@/features/vzdelavani/components/TopicActions";
 
 // D1: v náhledu zůstávají akční tlačítka na stejném místě, jen zamčená. Server mutaci odmítne i tak (nahled-mutace).
 const action = async () => ({ ok: true as const });
@@ -58,5 +60,21 @@ describe("D1: zámek akčních tlačítek v náhledu", () => {
     expect(button(html, "Upravit akci")).toContain("disabled");
     expect(button(html, "Zrušit akci…")).toContain("disabled");
     expect(html).toContain('href="/d"');
+  });
+
+  test("D2: spouštěcí tlačítka akčních oken (téma, zrušení akce) jsou v náhledu zamčená, úprava tématu ne", () => {
+    path.current = "/vzdelavani/temata";
+    const topic = render(true, createElement(TopicManage, { topic: { id: "t1", name: "T", audience: "fp", priorityRank: null }, groups: [], canMoveUp: true, canMoveDown: false }));
+    expect(button(topic, "Naplánovat téma")).toContain("disabled");
+    expect(button(topic, "Upravit téma")).not.toContain("disabled");
+    expect(button(topic, "Nastavit prioritu")).toContain("disabled");
+    expect(button(topic, "Posunout výš")).toContain("disabled");
+    path.current = "/vzdelavani/harmonogram";
+    const menu = render(true, createElement(EventMenu, { id: "e1", revision: 1, canCancel: true, canDelete: true }));
+    expect(button(menu, "Zrušit akci…")).toContain("disabled");
+    expect(button(menu, "Smazat návrh…")).toContain("disabled");
+    expect(button(render(false, createElement(EventMenu, { id: "e1", revision: 1, canCancel: true, canDelete: false })), "Zrušit akci…")).not.toContain("disabled");
+    // Bez kontextu výběru se tlačítko Vybrat návrhy nevykreslí vůbec, zámek se tu jen nesmí rozbít.
+    expect(render(true, createElement(SelectToggle, {}))).toBe("");
   });
 });

@@ -41,7 +41,8 @@ export default async function MinutesPage({ searchParams }: { searchParams: Sear
   };
   const missing = await listMissingMinutes(viewer);
   const showAdd = isOrganizer(viewer) || missing.handlesAny;
-  const canAdd = !preview && showAdd;
+  // Výběr K dokončení je jen přehled (informační okno), v náhledu se otevře stejně. Zápis sám pak hlídá MinutesPeek
+  // (bez nahrávky a přepisu handlera), akční tlačítka zamyká PreviewLock a server mutace v náhledu odmítne.
   // Správce vidí všechny chybějící zápisy, vedoucí jen ty, za které odpovídá. Stránka odlišuje krátkými
   // názvy, co už kolegové čtou (Zveřejněné zápisy) a co se teprve dokončuje (K dokončení).
   const missingTitle = isOrganizer(viewer) ? "Zápisy k dokončení" : "Moje zápisy k dokončení";
@@ -53,23 +54,16 @@ export default async function MinutesPage({ searchParams }: { searchParams: Sear
     {peekId ? (
       <MinutesPeek key={peekId} user={viewer} eventId={peekId} closeHref={link()} previewLabel={preview?.label} />
     ) : (
-      canAdd && params.pridat === "1" && <AddMinutesPicker title={missingTitle} items={missing.items} hrefFor={(id) => link({ zapis: id })} closeHref={link()}
-        assignHref={isOrganizer(user) ? (item) => `/vzdelavani/harmonogram?mesic=${item.startsAt.slice(0, 7)}&akce=${encodeURIComponent(item.eventId)}` : undefined} />
+      showAdd && params.pridat === "1" && <AddMinutesPicker title={missingTitle} items={missing.items} hrefFor={(id) => link({ zapis: id })} closeHref={link()}
+        assignHref={isOrganizer(viewer) ? (item) => `/vzdelavani/harmonogram?mesic=${item.startsAt.slice(0, 7)}&akce=${encodeURIComponent(item.eventId)}` : undefined} />
     )}
     <section className="section" aria-labelledby="zapisy">
       {showAdd && (
-        <PageCall text={canAdd ? "Dokonči zápisy z proběhlých akcí." : `${PREVIEW_READ_ONLY}. Kolega tu dokončuje zápisy z proběhlých akcí.`}>
-          {canAdd ? (
-            <Link className="btn btn-primary" href={link({ pridat: "1" })} scroll={false} aria-label={`${missingTitle}: ${missing.items.length}`}>
-              K dokončení
-              {missing.items.length > 0 && <span className="count-badge">{missing.items.length}</span>}
-            </Link>
-          ) : (
-            <button type="button" className="btn btn-primary" disabled title={PREVIEW_READ_ONLY} aria-label={`${missingTitle}: ${missing.items.length}`}>
-              K dokončení
-              {missing.items.length > 0 && <span className="count-badge">{missing.items.length}</span>}
-            </button>
-          )}
+        <PageCall text={preview ? `${PREVIEW_READ_ONLY}. Kolega tu dokončuje zápisy z proběhlých akcí.` : "Dokonči zápisy z proběhlých akcí."}>
+          <Link className="btn btn-primary" href={link({ pridat: "1" })} scroll={false} aria-label={`${missingTitle}: ${missing.items.length}`}>
+            K dokončení
+            {missing.items.length > 0 && <span className="count-badge">{missing.items.length}</span>}
+          </Link>
         </PageCall>
       )}
       <h2 id="zapisy">Zveřejněné zápisy</h2>
@@ -131,7 +125,7 @@ export default async function MinutesPage({ searchParams }: { searchParams: Sear
           <p className="item-meta">
             {filtering
               ? "Zkus jiné slovo nebo zruš filtr."
-              : canAdd && missing.items.length > 0
+              : showAdd && missing.items.length > 0
                 ? "Po skončení akce otevři K dokončení, doplň zápis a nech ho schválit. Účastníci ho pak najdou tady."
                 : "Zápis se objeví, jakmile ho vedoucí po skončení akce zveřejní. Uvidíš zápisy z akcí pro své skupiny."}
           </p>

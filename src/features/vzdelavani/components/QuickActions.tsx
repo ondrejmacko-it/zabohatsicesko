@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Icon } from "@/components/Icon";
+import { lockedProps, usePreviewLock } from "@/components/PreviewLock";
 import { Menu } from "@/components/Menu";
 import { Modal } from "@/components/Modal";
 import { formatDayMonth, weekdayLong, weekdayShort } from "@/lib/time";
@@ -48,6 +49,7 @@ function jumpTo(day: HTMLElement) {
  */
 export function QuickActions({ monthKey, todayKey, planHref, addDate, anchor, filters }: Props) {
   const selection = useSelection();
+  const locked = usePreviewLock();
   const [past, setPast] = useState(false);
   const [hidden, setHidden] = useState(false);
   const [panel, setPanel] = useState<Panel>(null);
@@ -109,7 +111,7 @@ export function QuickActions({ monthKey, todayKey, planHref, addDate, anchor, fi
             </button>
           )}
           {selection?.available && (
-            <button type="button" className="btn" onClick={selection.start}>
+            <button type="button" className="btn" onClick={selection.start} {...lockedProps(locked)}>
               <Icon name="select" />
               Vybrat návrhy
             </button>

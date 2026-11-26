@@ -30,6 +30,8 @@ type Props = {
 export function EventMenu({ id, revision, canCancel, canDelete, links = [], copyHref, children }: Props) {
   const [dialog, setDialog] = useState<"cancel" | "delete" | null>(null);
   const hasExtra = Children.toArray(children).length > 0 || Boolean(copyHref);
+  // Zrušení i smazání otevírá okno, které načítá dopad přes server (v náhledu odmítnutý): v náhledu jsou položky zamčené.
+  const lock = lockedProps(usePreviewLock());
   if (!canCancel && !canDelete && links.length === 0 && !hasExtra) return null;
   return (
     <>
@@ -49,13 +51,13 @@ export function EventMenu({ id, revision, canCancel, canDelete, links = [], copy
         {children}
         {(canCancel || canDelete) && (links.length > 0 || hasExtra) && <hr className="menu-divider" />}
         {canCancel && (
-          <button type="button" className="btn menu-danger" onClick={() => setDialog("cancel")}>
+          <button type="button" className="btn menu-danger" onClick={() => setDialog("cancel")} {...lock}>
             <Icon name="ban" />
             Zrušit akci…
           </button>
         )}
         {canDelete && (
-          <button type="button" className="btn menu-danger" onClick={() => setDialog("delete")}>
+          <button type="button" className="btn menu-danger" onClick={() => setDialog("delete")} {...lock}>
             <Icon name="trash" />
             Smazat návrh…
           </button>

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState, useTransition, type KeyboardEvent, type PointerEvent, type ReactNode } from "react";
 import { Icon } from "@/components/Icon";
+import { lockedProps, usePreviewLock } from "@/components/PreviewLock";
 import { placeInSections, type TopicSection } from "@/server/domain/topics";
 import { placeTopicAction } from "../actions";
 
@@ -65,6 +66,7 @@ export function TopicBoard({
   othersHead: ReactNode;
 }) {
   const router = useRouter();
+  const locked = usePreviewLock();
   const serverKey = `${guaranteed.map((i) => i.id).join(",")}|${others.map((i) => i.id).join(",")}`;
   const [order, setOrder] = useState<Order>(() => ({ guaranteed: guaranteed.map((i) => i.id), others: others.map((i) => i.id) }));
   const [dragId, setDragId] = useState<string | null>(null);
@@ -314,10 +316,15 @@ export function TopicBoard({
             <li key={id} className={rowClasses} data-topic={id} data-section={section}>
               {sortable && (
                 <div className="topic-lead">
-                  <button
-                    type="button"
-                    className="topic-handle"
-                    data-handle={id}
+                  {locked ? (
+                    <button type="button" className="topic-handle" aria-label={`Změnit pořadí: ${item.name}`} {...lockedProps(true)}>
+                      <Icon name="grip" size={16} />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="topic-handle"
+                      data-handle={id}
                     aria-label={`Změnit pořadí: ${item.name}`}
                     aria-describedby="tema-poradi-napoveda"
                     title="Přetáhni, nebo použij šipky nahoru a dolů"
@@ -331,6 +338,7 @@ export function TopicBoard({
                   >
                     <Icon name="grip" size={16} />
                   </button>
+                  )}
                   {ordered && (
                     <span className="topic-rank" aria-hidden="true">
                       {index + 1}
