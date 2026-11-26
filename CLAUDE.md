@@ -31,8 +31,29 @@ Repo obsahuje samostatné demo modulu Vzdělávání pro firemní Wiki Za bohat�
 - Přístupy produkce, záznamy klientů a firemní podklady nepatří do pracovního kódu, historie Gitu ani veřejného buildu. Pro práci stačí fiktivní seed. Při objevení možného tajemství hodnotu nezobrazuj, zapiš pouze cestu a typ problému a pokračuj bezpečně dostupnou prací. Změny oprávnění záměrně neoslabuj.
 - Před předáním spusť dostupný lint, typovou kontrolu, testy, build a scénáře v 04 a 06. Přidej cílené testy nových oprávnění a integrací tam, kde existující sada riziko nepokrývá. Výsledky a stav simulace oproti živému testu popiš v draftu PR.
 
-## Úspora tokenů
+## Úspora tokenů a navazující relace (závazné)
 
-- Cíl relace je do 200 tis. tokenů kontextu, tvrdý limit 250 tis. Hlídá ho hook `scripts/limit-kontextu.py` (nastavený v `.claude/settings.json`): od 200 tis. upozorňuje, od 250 tis. dovolí jen dokončení (git, zápis `docs/dalsi-session.md`, GitHub).
-- Na začátku relace čti `docs/dalsi-session.md`, `README.md` a jen soubory, které měníš. Nečti znovu celé zadání ani celý kód. Ověřuj cíleně (jednotlivé testy, konkrétní stránky).
-- Před koncem relace zapiš do `docs/dalsi-session.md` stručný navazující prompt: stav, další krok, otevřené otázky.
+Limit relace je **170 tis. tokenů kontextu (±10 tis.)**. Hlídá ho hook `scripts/limit-kontextu.py` (v `.claude/settings.json`):
+od 140 tis. upozorňuje, od 170 tis. dovolí jen předání (git, zápis `docs/dalsi-session.md`, GitHub, založení relace).
+Limit se neobchází ani nezvyšuje. Kvalita má přednost před rychlostí, ale ne před limitem: radši menší hotový krok
+než velký rozdělaný.
+
+Začátek relace:
+- Čti jen `docs/dalsi-session.md`, pak cíleně soubory, které měníš. `README.md` jen když předávka nestačí.
+  Nečti zadání, reporty v `docs/`, celé soubory ani celé složky. Napřed `grep`/`Glob`, pak čti jen potřebné řádky.
+- Ověř větev a `git log -3`. Na stav z předávky se spolehni, znovu neaudituj hotové věci.
+
+Během relace:
+- Práci dělej po malých uzavřených jednotkách (jednotka = změna + cílený test + commit). Po každé jednotce push.
+- Výstupy příkazů zkracuj (`| tail`, `| head`, `--reporter=dot`, `-q`). Testy spouštěj cíleně (soubor, `-g`),
+  celou sadu jen jednou před předáním. Žádné opakované čtení nezměněných souborů ani opakované běhy stejného příkazu.
+- Subagenty jen na velké nezávislé hledání, s úzkým zadáním a stručným výstupem.
+- Od 140 tis. nezačínej nový velký krok. Dokonči rozdělanou jednotku a připrav předání.
+
+Konec relace (nejpozději při 170 tis., jinak po dokončení úkolu):
+1. Commitni a pushni hotovou práci na pracovní větev.
+2. **Přepiš** `docs/dalsi-session.md` (nepřidávej historii, max. ~50 řádků): cíl a rozsah, větev a HEAD, PR, hotovo
+   (jen co ovlivní další krok), ověřené testy s commitem, přesný další krok, otevřené otázky.
+3. Založ navazující relaci (`create_session` nebo `spawn_task`, podle dostupnosti) s promptem
+   „Pokračuj podle docs/dalsi-session.md na větvi …“. Když nástroj není dostupný, dej uživateli ten prompt jako
+   jeden blok ke zkopírování. Pak relaci ukonči.
