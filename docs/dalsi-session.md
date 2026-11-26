@@ -37,11 +37,33 @@ Větev `claude/gallant-bohr-m1lyna`, draft PR #94 (nezakládat další, nemergov
     výsledky testů vč. přeskočených, překážky se závažností, postup kontroly Preview před merge.
 Další související chybu opravit a doložit regresním testem. Cíl: funkční, bezpečné, sjednocené, ne jen zelené CI.
 
-## Stav na začátku (HEAD 536b210)
-- PR #94 draft, mergeable clean, Vercel preview READY. Hotovo: StatusBadge, krátké texty, key-facts, C04/C05.
+## Stav (relace 38, HEAD 948ea18, nic neimplementováno – relace spotřebovala limit na úvodní kontext)
+- PR #94 draft; relace 38 přihlášena k aktivitě (nová relace se přihlásí znovu: subscribe_pr_activity #94).
 - Ověřeno na 536b210: vitest 623/623, tsc, eslint OK; e2e ucast/nahled/nahled-role (1280+390) 42 passed.
-- Tip: karta v harmonogramu otevírá EventPeek (`?akce=`), ne stránku detailu; e2e helper `openCard` v e2e/ucast.spec.ts.
-- V nové relaci nejdřív `npm ci`. Screenshoty ukládat do scratchpadu, ne do repa (kromě příloh PR, pokud nutné).
+- V nové relaci nejdřív `npm ci`. Screenshoty do scratchpadu. Kontext šetřit: nečíst celé soubory, jen grep + rozsahy.
+
+## Zjištěno pro bod 1–4 (nemusíš znovu číst)
+- `EventPeek.tsx`: správce → `EventWindow` (EventDialog.tsx:142) s `intro` = statusBand, preset, ChangeBanner,
+  participationPanel, managedPanel; pak `EventForm` (ř. ~179). Ne-správce → RouteModal: statusBand, `dl.fact-list`,
+  participationPanel, managedPanel, odkazy (pořadí tam už sedí).
+- Návrh opravy: `EventForm` dostane prop `afterFields`; `<form id={formId}>` (ř. ~512) uzavřít před
+  `div.dialog-actions.event-actions` (ř. ~624), mezi ně vložit `afterFields` (participation + managed), tlačítka
+  Uložit/Zveřejnit dostanou `form={formId}` (submitter i Enter fungují). `publishButton()` (ř. 245) hledá přes
+  `formRef.current.querySelector('.event-actions …')` → přepnout na ref akčního divu. EventWindow předá panel místo intro.
+  Rozpracovanou editaci drží useState (key=revision); ověřit e2e: upravit pole, změnit účast, hodnota zůstane.
+- `ParticipationPanel.tsx` (190 ř.): `section.section.participation-panel`, h2 „Tvoje účast“, StatusBadge, STATE_TEXT,
+  `calendarNote()` z `src/lib/calendar-note.ts` (texty „Pozvánku máš v Kalendáři.“, „…čeká na odeslání.“ → bod 4
+  přepsat na uloženo ve Wiki / synchronizace čeká / synchronizováno / selhalo / neznámý). Potvrzení enroll/withdraw/
+  revoke slibují pozvánku („pozvánku dostaneš do Kalendáře“, „odebere z pozvánky“, „vrátí do pozvánky“) → opravit.
+  Dialog omluvy: ř. ~165–185, hint „Důvod i poznámku vidíš jen ty…“ → přesný text z bodu 3.
+- CSS: tokeny `--ucast-*`(-bg/-fg) v globals.css ~646–698 přes `[data-ucast=…]`; panel má `data-ucast-panel={state}`
+  → podbarvení karty: `.participation-panel[data-ucast-panel=…]` s `--ucast-bg`/border-left `--ucast`
+  (pozor: selektor `[data-ucast=…]` tokeny nastavuje jen pro atribut data-ucast, přidat i data-ucast-panel).
+  Styl panelu globals.css ~5216. Layout desktop: hlavička flex (h2 + štítek), akce vpravo; mobil wrap.
+- e2e: `e2e/ucast.spec.ts` (port UCAST 3313, projekty windows-1280/telefon-390, `openCard` dělá goto, ne klik).
+  Pro bod 8 nový spec (např. `e2e/ucast-karta.spec.ts`): klik na kartu v harmonogramu, assert pořadí
+  (`.event-form` / `.fact-list` před `[data-ucast-panel]` přes compareDocumentPosition), screenshoty na 7 šířkách
+  (viewport v testu; projekty 768/1024 jen s E2E_WEBKIT, proto šířky nastavit `page.setViewportSize`).
 
 ## Otevřené (firma)
 - C04: mazat vazby i při deaktivaci podřízeného? Mapování nadřízených a retence omluv.
