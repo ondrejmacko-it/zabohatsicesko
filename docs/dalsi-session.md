@@ -1,4 +1,4 @@
-# Navazující relace (stav 26. 11. 2026, relace 17 zadání „Finální dokončení po PR #92“)
+# Navazující relace (stav 26. 11. 2026, relace 18 zadání „Finální dokončení po PR #92“)
 
 Větev `claude/festive-sagan-lilorz` z main 2703a0b (PR #92 v main). Limit relace 170 tis. (start v cloudu zabere
 ~120 tis., na práci zbývá málo: čti cíleně, výstupy zkracuj). Nic nemergovat/nenasazovat, žádné vzdálené migrace,
@@ -16,23 +16,25 @@ K UX/regresní audit + smoke E2E v CI · L release checklist · výstup: report 
 
 ## Hotovo
 - A, B (Preview čeká na vlastníka: Preview `DATABASE_URL` = Neon branch br-wandering-paper-b9ef86og, pak redeploy),
-  C01–C06, D1–D4, E1–E4 hotovo (viz git log). Vitest na 8546138: 67 souborů / 611 OK.
-- F1+F2 (82be4a1): `MissingMinutesItem.mine` (= `minutesTaskRole` write, nebo review a draft), okno K dokončení
-  `RouteModal wide` + klientský `MissingMinutesList.tsx` (mřížka `.missing-row` Název·Datum·Vedoucí·Stav·Akce,
-  štítky Chybí vedoucí/Chybí zápis/Rozpracováno/Čeká na schválení, skupiny „Moje úkoly“ / „Ostatní (správcovský
-  přehled)“ jakmile jsou cizí akce, hledání + filtr stavu od 7 položek). Tlačítko: badge = moje, „· všech N“ u správce.
-  Test `tests/k-dokonceni.test.ts`, e2e `okna.spec.ts:250` rozšířen (windows-1280 + telefon-390 OK). CSS `.picker-*` odstraněno.
-- F3 část (d39fd02): `MinutesSourceForm` krátké upozornění `.notice` NAD polem, technický text v `<details>`
-  (`data-testid=citliva-data` zachován). e2e `zapisy-schvaleni.spec.ts` OK.
+  C01–C06, D1–D4, E1–E4, F1–F4 hotovo (viz git log).
+- F1+F2 (82be4a1) okno K dokončení (Moje úkoly / Ostatní), F3 (d39fd02) upozornění na citlivá data nad polem.
+  Zbytek F3 posouzen: struktura už odpovídá (hlavička stav + `ApproverNote`, upozornění nad polem, akce dole) – beze změny.
+- F4 (b15660a + oprava typu): testy schvalování OK (`zapisy-f13-f15`, `zapisy-schvaleni`). `listTasks` nad limit
+  `MAX_MINUTES_TASKS`=4 přidá souhrnný úkol `zapisy-dalsi` („Další zápisy k dokončení: N“, href
+  `/vzdelavani/zapisy?pridat=1`, `count: N`); odznaky Čeká na tebe počítají `taskCount()` (journey.ts).
+  Test `tests/k-dokonceni.test.ts` (5 OK). tsc OK.
 
 ## Další krok
-- F3 zbytek: oddělit Kontext / Stav a odpovědná osoba (`RecordingSection` hlavička + `ApproverNote`) / Vstup / Akce
-  – nejdřív se podívat, zda to po F3 části ještě dává smysl (malá změna, nebo přeskočit).
-- F4 schvalování: ověřit testy (`tests/zapisy-f13-f15.test.ts`, re-approval `approvedVersion` v `RecordingSection`).
-- Zvážit popisek „Čeká na tebe“ (Domů/Plán, `MAX_MINUTES_TASKS`=4) – odkaz na K dokončení, když je víc.
-- Pak G (zadání ř. 408–484), H, I, J, K, L a výstup (657+). Zadání: uložit do scratchpadu Pythonem
-  `json.JSONDecoder().raw_decode` (soubor má víc JSON řádků), hledat řetězec s „PO PR #92“ a „Fáze“.
-- Celou vitest sadu spustit jednou před předáním (po F1 neověřena celá, jen cílené soubory).
+- G celkové UI (zadání ř. 408–484): nejdřív snímky. Pozor: dočasný spec v `e2e/` shodí webServer (build dělá
+  type check celého repa) – piš ho typově čistě, nebo do scratchpadu s vlastním configem. Spuštění:
+  `npx playwright test <spec> --project=prihlaseni --project=windows-1280 --project=telefon-390 --trace off`.
+  Přihlášení `test.use({ storageState: authFile("spravce") })` z `e2e/support.ts`, Pohled = `getByLabel("Pohled")`.
+  Body G: horní lišta (Topbar.tsx, PreviewSwitch.tsx – centrování Pohledu, dlouhá jména, oddělit účet/kolegu/ukončení),
+  harmonogram (4 úrovně: období, Měsíc/Seznam, filtry účasti, správa), Domů, sjednocení dialogů, texty (tykání, D03 oslovení).
+- Pak H (ř. 485–535), I (536–556), J (557–583), K (584–637), L (638–656), výstup (657+).
+- Zadání: uložit do scratchpadu Pythonem (`json.JSONDecoder().raw_decode` po `{`, rekurzivně najít řetězec s
+  „PO PR #92“ a „Fáze“), pak `sed -n` jen řádky fáze.
+- Celou vitest sadu spustit jednou před předáním (naposledy celá na 8546138: 611 OK).
 
 ## Otevřené otázky pro vlastníka
 - C04: správce si může nastavit sebe jako nadřízeného kohokoli a číst jeho důvody omluv (audit to zapíše).
