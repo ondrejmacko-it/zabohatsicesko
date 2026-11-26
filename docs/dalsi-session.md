@@ -1,4 +1,4 @@
-# Navazující relace (stav 26. 11. 2026, relace 19 zadání „Finální dokončení po PR #92“)
+# Navazující relace (stav 26. 11. 2026, relace 20 zadání „Finální dokončení po PR #92“)
 
 Větev `claude/festive-sagan-lilorz` z main 2703a0b (PR #92 v main). Limit relace 170 tis. (start v cloudu zabere
 ~120 tis., na práci zbývá málo: čti cíleně, výstupy zkracuj). Nic nemergovat/nenasazovat, žádné vzdálené migrace,
@@ -31,16 +31,23 @@ K UX/regresní audit + smoke E2E v CI · L release checklist · výstup: report 
   služba `services/salutation.ts`, akce `osloveni-actions.ts`, `SalutationForm` pod pozdravem na Domů.
   Testy: `tests/d03-osloveni.test.ts`, `e2e/osloveni.spec.ts` OK, tsc+eslint OK.
 
+- G3 (viz git log): Domů – `.home-columns` align-items:start, štítek účasti `.brief-main > .badge`
+  justify-self:start, `invitationTask` vrací `count` (test `tests/ukoly-uvod.test.ts`). Snímky 1280/390 OK.
+- G4 (76a1bab): dialogy – `.dialog-head` lepivá (desktop i mobil), krátká okna (TopicActions, EventMenu,
+  AccessForms) mají patičku `dialog-actions`; Nadřízený „Zrušit úpravy“, Navrhnout téma „Odesílám…“.
+  Konvence: primární první; sekundární „Zrušit úpravy“ (formulář) / „Zpět“ (destruktivní) / „Zavřít“ (info).
+  e2e okna 76 OK, tsc+eslint OK.
+
 ## Další krok
-- G zbytek (zadání ř. 408–484): Domů – panely `.home-columns` mají přirozenou výšku (align-items:start; teď se
-  natahují), štítek „Povinné pro tebe“ v kartě Co tě čeká se roztahuje na celou šířku (má být fit-content);
-  počet Čeká na tebe = 1, ale úkol „Odpověz na pozvánky (2)“ – zvážit `count` u úkolu pozvánek (invitations.ts).
-  Pak sjednocení dialogů (hlavička/patička, fokus, scroll) a průchod texty (tykání, Vede/Kdo, Pro koho/Pro skupinu).
-- Snímky: dočasný spec v `e2e/zz-snimky.spec.ts` (typově čistý, do scratchpadu; necommitovat), spuštění
-  `npx playwright test <spec> --project=prihlaseni --project=windows-1280 --project=telefon-390 --trace off`.
+- G texty: sjednotit Vede/Kdo – karty Plánu mají „Kdo:“ (`status.ts` `CardDetail` label "Kdo", ř. 90/94/110,
+  `Schedule.tsx:210`), Domů a formulář „Vede“. Doporučení: všude „Vede“ (pozor na testy/e2e hledající „Kdo:“,
+  `grep -rn "Kdo" tests e2e`). „Pro skupinu“ v TopicActions ř. 105/328 vs „Pro koho“ jinde → zvážit „Pro koho“.
+  Pak rychlý průchod texty (tykání). D03 hotové (G2).
+- Snímky: dočasný `e2e/zz-snimky.spec.ts` (necommitovat), `--project=prihlaseni --project=windows-1280
+  --project=telefon-390 --trace off --reporter=dot`.
 - Pak H (ř. 485–535), I (536–556), J (557–583), K (584–637), L (638–656), výstup (657+).
-- Zadání: uložit do scratchpadu Pythonem (`json.JSONDecoder().raw_decode` po `{`, rekurzivně najít řetězec s
-  „PO PR #92“ a „Fáze“), pak `sed -n` jen řádky fáze.
+- Zadání: `list_events` výsledek → Python (`raw_decode` po `{`, rekurzivně řetězec s „PO PR #92“ a „Fáze“) do
+  scratchpadu, pak `sed -n` jen řádky fáze.
 - Celou vitest sadu spustit jednou před předáním (naposledy celá na 8546138: 611 OK).
 
 ## Otevřené otázky pro vlastníka
