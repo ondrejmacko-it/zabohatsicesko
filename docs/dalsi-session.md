@@ -26,9 +26,12 @@ K UX/regresní audit + smoke E2E v CI · L release checklist · výstup: report 
   (`movableFrom` jen mimo náhled; tím v náhledu chybí i „+“ na dni v mřížce – drobná odchylka 1:1, případně vrátit
   jako zamčené). Serverová pojistka `tests/nahled-mutace.test.ts`.
 - Ověřeno na D4: vitest 609/609, tsc, eslint čisté; `e2e/nahled-role.spec.ts` + `e2e/nahled.spec.ts` 19/19
-  (windows-1280). Celá e2e windows-1280: VIZ NÍŽE.
+  (windows-1280). Celá e2e windows-1280 (commit D4): 281 passed, 13 skipped, 1 failed:
+  `e2e/ucast.spec.ts:262` (nadřízený pro omluvy) – `locator.click: Test ended` na „Omluvit se“ (ř. 285), nejspíš
+  timeout pod zátěží; samostatně zatím neověřeno.
 
 ## Další krok
+0. `npx playwright test e2e/ucast.spec.ts:262 --project=windows-1280 --trace off` samostatně; když padá i tak, opravit.
 1. Fáze E (hromadný výběr): soubory `PlanSelection.tsx`, `Schedule.tsx`, `PlanFilters.tsx`, `harmonogram/page.tsx`,
    `status.ts` (`monthSummary`/`awaitsPublishing` vs `isPickable` – počítadlo „Návrhy“ nesedí s výběrem).
    Nejdřív krátký návrh prezentace typů návrhů + texty výběrové lišty uživateli (CLAUDE.md: větší změny schválit),
