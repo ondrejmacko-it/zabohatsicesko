@@ -11,7 +11,7 @@ import { InterestButton } from "@/features/vzdelavani/components/TopicActions";
 
 // D1: v náhledu zůstávají akční tlačítka na stejném místě, jen zamčená. Server mutaci odmítne i tak (nahled-mutace).
 const action = async () => ({ ok: true as const });
-const render = (active: boolean, child: React.ReactElement) => renderToStaticMarkup(createElement(PreviewLockProvider, { active }, child));
+const render = (active: boolean, child: React.ReactElement) => renderToStaticMarkup(createElement(PreviewLockProvider, { active, children: child }));
 const button = (html: string, label: string) => html.match(new RegExp(`<button[^>]*>(?:<[^>]+>)*${label}`))?.[0] ?? "";
 
 describe("D1: zámek akčních tlačítek v náhledu", () => {

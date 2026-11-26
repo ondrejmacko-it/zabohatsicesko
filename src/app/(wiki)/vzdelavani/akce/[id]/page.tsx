@@ -10,7 +10,7 @@ import { Todo, missingText } from "@/components/Todo";
 import { RecordingSection } from "@/features/vzdelavani/components/RecordingSection";
 import { SyncPanelView } from "@/features/vzdelavani/components/SyncPanelView";
 import { badgeClass, detailBadges, statusAdvice } from "@/features/vzdelavani/status";
-import { GROUP_LABELS, eventContext, eventTitle } from "@/lib/labels";
+import { GROUP_LABELS, PREVIEW_READ_ONLY, eventContext, eventTitle } from "@/lib/labels";
 import { safeDecode } from "@/lib/params";
 import { formatDate, formatEventWhen, monthOf, toDateKey } from "@/lib/time";
 import { requireUser } from "@/server/auth/session";
@@ -46,9 +46,9 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
   // Vlastní účast (jen PARTICIPATION=on). Identita vždy ze session; v náhledu jen podle rolí, bez akcí.
   const participation = card.type === "holiday" ? null : await ownParticipationDetail(user, preview, card.id);
   const managedExcuses = card.type === "holiday" ? [] : await managedExcusesAt(user, card.id, Boolean(preview));
-  const organizer = isOrganizer(user) && !preview;
-  // Náhled očima kolegy-správce: rady a chybějící údaje jako u něj, akce (úpravy, návrh změny) ne.
+  // Náhled 1:1 (D2): nástroje správce se ukazují podle zobrazeného účtu, v náhledu na stejném místě zamčené.
   const planView = isOrganizer(preview?.viewer ?? user);
+  const organizer = planView;
   const start = new Date(card.startsAt);
   const dayKey = toDateKey(start);
   const title = eventTitle(card.label, card.topicTitle);
@@ -103,11 +103,16 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
             </a>
           )}
           {/* U proběhlé akce, kterou správce sám vede, je hlavní krok nahrávka. Úprava zůstává vedle jako vedlejší. */}
-          {editable && (
-            <Link className={handler && card.past ? "btn" : "btn btn-primary"} href={`${planHref}&akce=${encodeURIComponent(card.id)}`}>
-              Upravit akci
-            </Link>
-          )}
+          {editable &&
+            (preview ? (
+              <button type="button" className="btn btn-primary" disabled aria-disabled="true" title={PREVIEW_READ_ONLY}>
+                Upravit akci
+              </button>
+            ) : (
+              <Link className={handler && card.past ? "btn" : "btn btn-primary"} href={`${planHref}&akce=${encodeURIComponent(card.id)}`}>
+                Upravit akci
+              </Link>
+            ))}
         </div>
       </div>
 
