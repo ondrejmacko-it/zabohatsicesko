@@ -2259,6 +2259,13 @@ a.brief-link:hover {
   font-size: 13px;
 }
 
+/* Štítek účasti jen na šířku textu, ne přes celý řádek mřížky. */
+.brief-main > .badge {
+  justify-self: start;
+  max-width: 100%;
+  white-space: normal;
+}
+
 .brief-date {
   flex: none;
   width: 52px;
@@ -4039,6 +4046,8 @@ p.cal-status {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   column-gap: 32px;
+  /* Panely mají přirozenou výšku, kratší se nenatahuje podle delšího. */
+  align-items: start;
 }
 
 .home-columns > .tasks-card {

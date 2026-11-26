@@ -19,5 +19,7 @@ export function invitationTask(view: InvitationsView | null): TaskRow | null {
     // Vyhledávání podle odesílatele včetně Spamu. Odkaz na konkrétní zprávu Wiki nezná. V simulaci odkaz není.
     ...(view.organizerEmail ? { href: gmailSearchHref(view.organizerEmail), action: "Otevřít Gmail", external: true, newTab: true } : {}),
     urgent: open.some((item) => item.urgent),
+    // Odznak Čeká na tebe počítá každou nezodpovězenou pozvánku zvlášť, stejně jako číslo v názvu.
+    count: open.length,
   };
 }
