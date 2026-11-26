@@ -154,7 +154,7 @@ function NewLink({ account: a, onClose }: { account: AccountActionsProps["accoun
           <input type="hidden" name="userId" value={a.id} />
           <p>Odkaz přidá jedno zařízení. Starší nepoužitý odkaz přestane platit.</p>
           <ActionMessage state={state} />
-          <div className="row">
+          <div className="dialog-actions">
             <button type="submit" className="btn btn-primary" disabled={pending} {...lock}>
               {pending ? "Vytvářím…" : "Vytvořit odkaz"}
             </button>
@@ -202,12 +202,12 @@ function ExcuseManagersForm({ account: a, excuse, onClose }: ExcuseManagersProps
           <span className="field-hint">Nejvýš 5 lidí. Ostatní kolegové a správci důvod neuvidí, ani v náhledu za jiného uživatele.</span>
         </fieldset>
         <ActionMessage state={state} />
-        <div className="row">
+        <div className="dialog-actions">
           <button type="submit" className="btn btn-primary" disabled={pending} {...lock}>
             {pending ? "Ukládám…" : "Uložit"}
           </button>
           <button type="button" className="btn" onClick={onClose}>
-            Zavřít
+            Zrušit úpravy
           </button>
         </div>
       </form>

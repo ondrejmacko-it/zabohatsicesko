@@ -1118,8 +1118,16 @@ body > .dialog[open]:has(~ .dialog[open]:not(.confirm-dialog)) {
   visibility: hidden;
 }
 
+/* Hlavička s názvem a Zavřít zůstává při rolování dlouhého okna nahoře, stejně jako patička s akcemi dole. */
 .dialog-head {
+  position: sticky;
+  top: -22px;
+  z-index: 2;
   align-items: center;
+  margin: -22px -24px 0;
+  padding: 18px 24px 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
 }
 
 .dialog-head h2 {
@@ -2165,6 +2173,12 @@ details > summary {
 
   .dialog-body {
     padding: 18px 16px;
+  }
+
+  .dialog-head {
+    top: -18px;
+    margin: -18px -16px 0;
+    padding: 14px 16px 10px;
   }
 
   .dialog-actions {

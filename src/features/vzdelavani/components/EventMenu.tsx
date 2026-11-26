@@ -136,7 +136,7 @@ export function CancelDialog({ id, revision, onClose }: { id: string; revision: 
           <textarea className="textarea" name="reason" required minLength={3} maxLength={300} />
         </label>
         <ActionMessage state={state} />
-        <div className="row">
+        <div className="dialog-actions">
           <button type="submit" className="btn btn-danger" disabled={pending || impact === null || (unverified && !acceptUnverified)} {...lock}>
             Zrušit akci
           </button>
@@ -174,7 +174,7 @@ export function DeleteDialog({ id, revision, onClose, stay = false }: { id: stri
         <input type="hidden" name="revision" value={revision} />
         <p>Návrh se smaže. Pokud vznikl z Pravidelného týdne, doplnění měsíce ho znovu nevytvoří. Vrátit ho jde v Připravit měsíc tlačítkem Obnovit smazané návrhy.</p>
         <ActionMessage state={state} />
-        <div className="row">
+        <div className="dialog-actions">
           <button type="submit" className="btn btn-danger" disabled={pending} {...lock}>
             Smazat návrh
           </button>

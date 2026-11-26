@@ -113,9 +113,9 @@ function ProposeForm({ groups, onClose }: { groups: Group[]; onClose: () => void
         </label>
         <ActionMessage state={state} />
         {/* Bez druhého „Zavřít“ dole: okno zavírá záhlaví, které s rozepsaným návrhem stejně zeptá. */}
-        <div className="row">
+        <div className="dialog-actions">
           <button type="submit" className="btn btn-primary" disabled={pending} {...lock}>
-            Navrhnout téma
+            {pending ? "Odesílám…" : "Navrhnout téma"}
           </button>
         </div>
       </form>
@@ -266,7 +266,7 @@ function PlanTopicDialog({ topic, onClose }: { topic: { id: string; name: string
             Zobrazit další ({candidates.length - shown.length})
           </button>
         )}
-        <div className="row">
+        <div className="dialog-actions">
           <Link className={scheduled ? "btn" : "btn btn-primary"} href={`/vzdelavani/harmonogram?tema=${encodeURIComponent(topic.id)}`}>
             <Icon name="plus" />
             Vytvořit novou akci
@@ -336,7 +336,7 @@ function EditTopicForm({ topic, groups, onClose }: { topic: { id: string; name: 
         </label>
         <p className="small muted">Akce, které téma už mají v plánu nebo v zápisu, si nechají název, pod kterým byly zveřejněné.</p>
         <ActionMessage state={state} />
-        <div className="row">
+        <div className="dialog-actions">
           <button type="submit" className="btn btn-primary" disabled={pending} {...lock}>
             {pending ? "Ukládám…" : "Uložit"}
           </button>
