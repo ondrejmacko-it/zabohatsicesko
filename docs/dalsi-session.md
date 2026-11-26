@@ -43,7 +43,7 @@ J matice F01–F18, D01–D07 · K UX/regresní audit + smoke E2E v CI · L rele
   (vstup/persona/odhlášení, cookie náhledu je vázaná na id účtu), API routy jen přihlášení/pozvánka/cron. Žádná
   datová mutace nejde obejít. Pozn.: informační akce `previewImpactAction`, `previewCancelAction`, `previewMoveAction`,
   `topicPlanOptionsAction` náhled taky blokuje (tlačítka k nim budou zamčená, takže nevadí).
-- Návrh UI (čeká na schválení vlastníka, viz otázka D1):
+- Návrh UI SCHVÁLEN vlastníkem celý (D1, 26. 11.), provést po jednotkách:
   1. Klientský kontext `PreviewLock` (provider v `app/(wiki)/layout.tsx` při aktivním náhledu); `ActionForm`,
      `InterestButton` a další submit tlačítka ho čtou → `disabled` + `aria-disabled` + title „V náhledu jen ke čtení“.
   2. Stránky místo skrývání (`organizer && !preview`) renderují podle `isOrganizer(viewer)`: detail akce (editační
@@ -55,11 +55,10 @@ J matice F01–F18, D01–D07 · K UX/regresní audit + smoke E2E v CI · L rele
   4. E2E: pro 7 rolí porovnat sadu nadpisů/tlačítek reálného účtu a náhledu (stejná data, 1280).
 
 ## Další krok
-1. Podle odpovědi D1 provést návrh po jednotkách (1 → 2 po stránkách → 3 → 4), každá s testem a pushem.
+1. Provést schválený návrh po jednotkách (1 → 2 po stránkách → 3 → 4), každá s testem a pushem.
 2. Až vlastník nastaví DATABASE_URL: Playwright proti Preview URL větve (scénáře účasti z fáze B).
 
 ## Otevřené otázky pro vlastníka
-- D1: schválit návrh UI náhledu 1:1 (body 1–4 výše)? Doporučení: ano, celé, po jednotkách.
 - C04: správce si může nastavit sám sebe jako nadřízeného kohokoli a pak číst jeho důvody omluv (audit
   `excuse_managers.changed` zapíše, kdo koho změnil). Varianty: (a) zakázat nastavení sebe (musí jiný správce),
   (b) povolit, ale zvlášť auditovat a ukázat ve Správě. Doporučení: (a), pokud firma má víc správců.
