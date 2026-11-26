@@ -13,6 +13,16 @@ import { DomainError } from "@/server/services/errors";
 
 export const MAX_EXCUSE_MANAGERS = 5;
 
+/** Odebere vazby, ve kterých je `managerId` nadřízeným. Volá se při deaktivaci účtu (C04). */
+export async function removeManagerLinks(tx: Executor, actorId: string, managerId: string): Promise<void> {
+  if (!excuseManagersEnabled()) return;
+  const removed = await tx
+    .delete(excuseManagers)
+    .where(and(eq(excuseManagers.orgId, config.orgId), eq(excuseManagers.managerId, managerId)))
+    .returning({ employeeId: excuseManagers.employeeId });
+  if (removed.length) await audit(tx, actorId, "excuse_managers.removed_on_disable", "user", managerId);
+}
+
 /** Lidé, jejichž důvody omluv smí `managerId` číst. */
 export async function managedEmployeeIds(db: Executor, managerId: string): Promise<Set<string>> {
   if (!excuseManagersEnabled()) return new Set();
@@ -46,6 +56,8 @@ export async function setExcuseManagers(viewer: Viewer, employeeId: string, mana
   if (!excuseManagersEnabled()) throw new DomainError("forbidden");
   const ids = [...new Set(managerIds)];
   if (ids.length > MAX_EXCUSE_MANAGERS || ids.includes(employeeId)) throw new DomainError("invalid_input");
+  // Správce si sám sebe nadřízeným nastavit nesmí, jinak by si mohl otevřít důvody omluv kohokoli (C04).
+  if (ids.includes(viewer.id)) throw new DomainError("forbidden");
   const db = await getDb();
   await db.transaction(async (tx) => {
     const people = await tx

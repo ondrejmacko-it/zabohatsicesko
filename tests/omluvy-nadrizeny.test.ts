@@ -4,6 +4,7 @@ import { PARTICIPATION_MIGRATIONS, markParticipationSchema, now } from "@/server
 import { getDb } from "@/server/db/client";
 import { auditLog, events, users } from "@/server/db/schema";
 import { DomainError } from "@/server/services/errors";
+import { updateAccess } from "@/server/services/users";
 import { listExcuseManagers, managedExcusesAt, setExcuseManagers } from "@/server/services/excuse-managers";
 import { changeOwnParticipation } from "@/server/services/participation";
 import { admin, lead, organizer, outsider, participant, resetDemo } from "./helpers";
@@ -123,6 +124,21 @@ describe("nadřízený pro omluvy (0018)", () => {
     const db = await getDb();
     await db.update(users).set({ status: "disabled" }).where(sql`${users.id} = ${lead.id}`);
     expect(await code(setExcuseManagers(admin, participant.id, [lead.id]))).toBe("invalid_input");
+  });
+
+  test("C04: správce nesmí nastavit sám sebe nadřízeným", async () => {
+    expect(await code(setExcuseManagers(admin, participant.id, [admin.id]))).toBe("forbidden");
+    expect(await code(setExcuseManagers(admin, participant.id, [lead.id, admin.id]))).toBe("forbidden");
+  });
+
+  test("C04: deaktivace nadřízeného odebere jeho vazby, C05: vedouci-tymu zůstane", async () => {
+    const db = await getDb();
+    await db.update(users).set({ groups: [...lead.groups, "vedouci-tymu"] }).where(sql`${users.id} = ${lead.id}`);
+    await setExcuseManagers(admin, participant.id, [lead.id]);
+    await updateAccess(admin, lead.id, { role: lead.role, groups: lead.groups.filter((g) => g !== "vedouci-tymu") as never, status: "disabled" });
+    expect((await listExcuseManagers(admin))?.get(participant.id) ?? []).toEqual([]);
+    const [row] = await db.select({ groups: users.groups }).from(users).where(sql`${users.id} = ${lead.id}`);
+    expect(row?.groups).toContain("vedouci-tymu");
   });
 
   test("bez migrace 0018 se vazby nečtou ani neukládají", async () => {
