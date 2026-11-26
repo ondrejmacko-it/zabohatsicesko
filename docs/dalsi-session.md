@@ -1,4 +1,4 @@
-# Navazující relace (stav 26. 11. 2026, relace 11 zadání „Finální dokončení po PR #92“)
+# Navazující relace (stav 26. 11. 2026, relace 12 zadání „Finální dokončení po PR #92“)
 
 Větev `claude/festive-sagan-lilorz` z main 2703a0b (PR #92 v main). Limit relace 170 tis. (start v cloudu zabere
 ~120 tis., na práci zbývá málo: čti cíleně, výstupy zkracuj). Nic nemergovat/nenasazovat, žádné vzdálené migrace,
@@ -54,31 +54,20 @@ J matice F01–F18, D01–D07 · K UX/regresní audit + smoke E2E v CI · L rele
      = zástupný stav bez Google dat.
   4. E2E: pro 7 rolí porovnat sadu nadpisů/tlačítek reálného účtu a náhledu (stejná data, 1280).
 
-## Fáze D – průběh (relace 8–9)
-- 4a754a1 D1 hotovo: `src/components/PreviewLock.tsx` (`PreviewLockProvider`, `usePreviewLock`, `lockedProps`,
-  nově `LockedLink` = odkaz-akce jako zamčené tlačítko). Test `tests/nahled-zamek.test.ts` 4/4.
-- b93bd2f D2 detail akce: „Upravit akci“ zamčené. 9ddf21b D2 Plán: `managing = organizer && (!preview || planView)`,
-  `ChangeBanner` „Zveřejnit změny…“ přes `LockedLink`, `cardActions` v náhledu správce stejné položky
-  (`status.ts`, nahrávka dál ne), `CardMenu` akční položky zamčené (čtecí jen details/minutes),
-  `loadPreviewCalendarStatus` (simulace, bez Googlu), v náhledu bez `MoveDropZone` a bez `syncPublished`.
-  Testy: nahled-zamek 4/4, rychle-akce OK, tsc + eslint změněných OK.
-- Relace 10: 302eff3 D2 hotovo: Témata v náhledu správce ukazují nabídku tématu, úchyty pořadí, Seřadit podle
-  zájmu a archiv (vše zamčené; Upravit téma otevře okno se zamčeným uložením, Naplánovat téma zamčené). Zápisy:
-  K dokončení otevře přehled i v náhledu (informační okno), `assignHref` podle zobrazeného. Zamčené: EventMenu
-  Zrušit/Smazat, Vybrat návrhy (SelectToggle i menu QuickActions). Test nahled-zamek 5/5.
-- Oprava audit-ucast-nahledy: v production módu test zastaví Date na `config.referenceNow` (jen Date). Celá sada
-  vitest 66 souborů / 609 testů OK, tsc OK. E2E po D2 nespouštěno (ověřit v D4, hlavně `e2e/nahled.spec.ts`).
-
-- Relace 11: a42705c D3 hotovo: `previewApplies` zahrnuje `/sprava` a `/vzdelavani/integrace`. Správa v náhledu:
-  zobrazený bez Správy → zástupný stav (`data-testid="sprava-nahled"`); zobrazený správce → `listAccounts(viewer)`,
-  akce zamčené, bez přístupů zařízení (`hideAccess`, devices []), sekce Kalendáře nahrazená zástupným stavem
-  (bez Google dat). Integrace v náhledu = jen zástupný stav (`data-testid="integrace-nahled"`). Moje role nemá
-  stránku (položka shellu bez href), beze změny. Testy nahled-zamek 6/6 + nahled OK, tsc + eslint změněných OK.
+## Fáze D – průběh (relace 8–12)
+- D1 4a754a1 (`PreviewLock`, `LockedLink`), D2 b93bd2f/9ddf21b/302eff3 (detail akce, Plán, Témata, Zápisy zamčené),
+  D3 a42705c (Správa podle oprávnění zobrazeného, Integrace zástupný stav). Vitest 609/609 OK po D2.
+- Relace 12: ef423fa `e2e/nahled.spec.ts` upraven na zamčené ovládání, 16/16 OK (windows-1280).
+  359c335: Domů a Plán v náhledu mají stejné nadpisy („Co tě čeká“, „Čeká na tebe“), nový `e2e/nahled-role.spec.ts`
+  porovná nadpisy + tlačítka (`button`, `a.btn`) reálného účtu a náhledu na Domů, Plán (11/2026 seznam), Témata,
+  Zápisy, Správa. FP a RM OK. **Vedoucí FAIL**: v Plánu náhledu chybí „Možnosti akce …“ u akcí, které vede (reálný
+  účet má 5, náhled 1). Kontrolor/nadřízený nejsou účty ukázky (vazby); vedoucí kryje FP+RM i kontrolora.
 
 ## Další krok
-1. D4: e2e 7 rolí na 1280 (sada nadpisů/tlačítek reálného účtu vs. náhled) + spustit `e2e/nahled.spec.ts`
-   (po D2 i D3 nespuštěno; může čekat text pruhu „· Domů, Plán, Témata, Zápisy, detail akce, Správa a Integrace“).
-2. Pokračovat fázemi E–L podle zadání.
+1. Opravit menu karet v náhledu vedoucího: `cardActions`/`CardMenu` v Plánu (`harmonogram/page.tsx`, `status.ts`)
+   musí v náhledu brát vedení akce zobrazeného (leadId), ne jen roli správce; položky zamčené. Pak
+   `npx playwright test e2e/nahled-role.spec.ts e2e/nahled.spec.ts --project=windows-1280 --trace off`.
+2. Celá sada před předáním fáze D (vitest, tsc, eslint, e2e windows-1280), pak fáze E–L podle zadání.
 3. Až vlastník nastaví DATABASE_URL: Playwright proti Preview URL větve (scénáře účasti z fáze B).
 
 ## Otevřené otázky pro vlastníka
