@@ -9,7 +9,7 @@ const cookie = (value: string) => ({ name: "zbc_nahled", value, domain: "localho
 test.describe("správce: pohled skupiny", () => {
   test.use({ storageState: authFile("spravce") });
 
-  test("pohled FP platí na Domů, Plánu, Tématech a Zápisech, jen ke čtení", async ({ page }) => {
+  test("pohled FP platí na Domů, Plánu, Tématech a Zápisech, jen ke čtení @smoke", async ({ page }) => {
     await page.goto("/vzdelavani/harmonogram");
     await settle(page);
     await expect(page.getByRole("button", { name: "Přidat akci" }).first()).toBeVisible();
@@ -161,7 +161,7 @@ test.describe("správce: náhled kolegy-správce 1:1", () => {
 test.describe("účastník: podvržená cookie náhledu", () => {
   test.use({ storageState: authFile("ucastnikFp") });
 
-  test("cookie pohledu RM nic nezmění ani neodhalí", async ({ page, context }) => {
+  test("cookie pohledu RM nic nezmění ani neodhalí @smoke", async ({ page, context }) => {
     await context.addCookies([cookie("demo-ucastnik|skupina-rm")]);
     for (const path of ["/", "/vzdelavani/harmonogram", "/vzdelavani/temata", "/vzdelavani/zapisy"]) {
       await page.goto(path);

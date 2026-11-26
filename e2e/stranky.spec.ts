@@ -30,7 +30,7 @@ for (const role of Object.keys(ROLES) as Role[]) {
     test.use({ storageState: authFile(role) });
 
     for (const pageCase of pagesFor(role)) {
-      test(`${pageCase.name}: obsah a bez vodorovného posunu`, async ({ page }) => {
+      test(`${pageCase.name}: obsah a bez vodorovného posunu @smoke`, async ({ page }) => {
         await page.goto(pageCase.path);
         await settle(page);
         await expect(page.locator("h1").first()).toHaveText(pageCase.heading);
@@ -48,14 +48,14 @@ for (const role of Object.keys(ROLES) as Role[]) {
 }
 
 test.describe("přístup bez přihlášení", () => {
-  test("chráněné stránky vedou na vstup", async ({ page }) => {
+  test("chráněné stránky vedou na vstup @smoke", async ({ page }) => {
     for (const path of ["/", "/vzdelavani/harmonogram", "/sprava"]) {
       await page.goto(path);
       await expect(page).toHaveURL(/\/vstup/);
     }
   });
 
-  test("vstup do ukázky: kód, role, bez posunu", async ({ page }) => {
+  test("vstup do ukázky: kód, role, bez posunu @smoke", async ({ page }) => {
     await page.goto("/vstup");
     await settle(page);
     await expect(page.locator("input[name=code]")).toBeVisible();
@@ -63,7 +63,7 @@ test.describe("přístup bez přihlášení", () => {
     await expectNoHorizontalScroll(page);
   });
 
-  test("špatný kód ukáže chybu a nepustí dál", async ({ page }) => {
+  test("špatný kód ukáže chybu a nepustí dál @smoke", async ({ page }) => {
     await page.context().setExtraHTTPHeaders({ "x-forwarded-for": "10.99.0.1" });
     await page.goto("/vstup");
     await page.locator("input[name=code]").fill("spatny-kod-0000");

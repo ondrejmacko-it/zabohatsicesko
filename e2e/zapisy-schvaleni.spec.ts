@@ -9,7 +9,7 @@ const NOTES = ["Shrnutí: Akce týmu A, rozbor oslovení klientů.", "Hlavní bo
 test.describe("Zápisy: schválení vedoucím @desktop", () => {
   test.use({ storageState: authFile("vedouci") });
 
-  test("vložit text → upravit → vedoucí schválí → zveřejněno → oprava je nový návrh, schválená verze zůstává", async ({ page, browser }, testInfo) => {
+  test("vložit text → upravit → vedoucí schválí → zveřejněno → oprava je nový návrh, schválená verze zůstává @smoke", async ({ page, browser }, testInfo) => {
     test.skip(testInfo.project.name !== "windows-1280", "zápis jen jednou");
     await page.goto(`/vzdelavani/akce/${EVENT}#nahravka`);
     await settle(page);

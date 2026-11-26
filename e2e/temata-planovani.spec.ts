@@ -441,7 +441,7 @@ test.describe("Témata: zápis priority, pořadí a návrhu @desktop @zapis-tema
     await expect(card).toContainText(/Návrh/);
   });
 
-  test("garantovaných témat je neomezeně: 3. až 6. téma, pořadí, odebrání a přetrvání po obnovení (0015)", async ({ page }) => {
+  test("garantovaných témat je neomezeně: 3. až 6. téma, pořadí, odebrání a přetrvání po obnovení (0015) @smoke", async ({ page }) => {
     await openTopics(page);
     const guaranteed = () => names(guaranteedOf(page));
     // Ostatních témat musí být aspoň čtyři: chybějící navrhne správce pro Tým A. Nové téma se může zařadit

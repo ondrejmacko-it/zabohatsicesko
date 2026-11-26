@@ -37,7 +37,7 @@ test.describe("účast v harmonogramu", () => {
   // eslint-disable-next-line react-hooks/rules-of-hooks -- `use` je fixture Playwrightu, ne hook Reactu.
   test.use({ storageState: ({}, use, info) => use(authFile(info.project.name === "windows-1280" ? "ucastnikFp" : "ucastnikRm")) });
 
-  test("přepínač Moje/Všechny, štítky, přihlášení, odhlášení, omluva a její zrušení", async ({ page }, info) => {
+  test("přepínač Moje/Všechny, štítky, přihlášení, odhlášení, omluva a její zrušení @smoke", async ({ page }, info) => {
     await plan(page);
     await expect(page.getByRole("link", { name: "Moje", exact: true })).toBeVisible();
     await expect(page.getByRole("link", { name: "Všechny", exact: true })).toHaveAttribute("aria-current", "page");
@@ -140,7 +140,7 @@ async function expectCalendar(page: Page, text: string) {
 test.describe("soukromí omluvy", () => {
   test.use({ storageState: authFile("vedouci") });
 
-  test("poznámka kolegy není v HTML jiného uživatele", async ({ browser }, info) => {
+  test("poznámka kolegy není v HTML jiného uživatele @smoke", async ({ browser }, info) => {
     const own = await browser.newContext({ storageState: authFile(info.project.name === "windows-1280" ? "ucastnikFp" : "ucastnikRm") });
     const page = await own.newPage();
     await plan(page);
@@ -259,7 +259,7 @@ test.describe("víc pracovních rolí (F05)", () => {
 test.describe("nadřízený pro omluvy (F03/D01, migrace 0018)", () => {
   test.use({ storageState: authFile("spravce") });
 
-  test("správce určí nadřízeného, ten vidí důvod omluvy, jiný kolega ne", async ({ browser, page }, info) => {
+  test("správce určí nadřízeného, ten vidí důvod omluvy, jiný kolega ne @smoke", async ({ browser, page }, info) => {
     test.skip(info.project.name !== "windows-1280", "zápis vazeb jen na jednom projektu");
     // Tři role a dvě návštěvy Správy v jednom scénáři.
     test.setTimeout(90_000);
