@@ -3,7 +3,8 @@ import type { ExcuseReason } from "@/lib/types";
 import { audit } from "@/server/audit";
 import { config, excuseManagersEnabled } from "@/server/config";
 import { getDb, type Executor } from "@/server/db/client";
-import { eventParticipation, excuseManagers, users } from "@/server/db/schema";
+import { eventParticipation, events, excuseManagers, users } from "@/server/db/schema";
+import { participationState } from "@/server/domain/participation";
 import { canManageUsers, canReadExcuseDetails, type Viewer } from "@/server/policy";
 import { DomainError } from "@/server/services/errors";
 
@@ -67,14 +68,29 @@ export type ManagedExcuse = { name: string; reason: ExcuseReason; note: string |
 /**
  * Omluvení u akce, jejichž důvod smí přihlášený číst jako nadřízený. Náhled nikdy (volající předá `preview`):
  * správce se díváním „za kolegu“ k důvodům nedostane, ani když je sám něčím nadřízeným.
+ * Jen aktuálně platné omluvy podle pravidel účasti: uložený záznam u zrušené či nezveřejněné akce, u
+ * neaktivního účtu nebo po zániku povinnosti (změna rolí, publika) je historický a nadřízenému se neukáže.
  */
 export async function managedExcusesAt(viewer: Viewer, eventId: string, preview: boolean): Promise<ManagedExcuse[]> {
   if (preview || !excuseManagersEnabled()) return [];
   const db = await getDb();
   const managed = await managedEmployeeIds(db, viewer.id);
   if (managed.size === 0) return [];
+  const [event] = await db
+    .select({ published: events.published })
+    .from(events)
+    .where(and(eq(events.orgId, config.orgId), eq(events.id, eventId)))
+    .limit(1);
+  if (!event?.published) return [];
   const rows = await db
-    .select({ userId: eventParticipation.userId, name: users.name, reason: eventParticipation.excuseReason, note: eventParticipation.excuseNote })
+    .select({
+      userId: eventParticipation.userId,
+      name: users.name,
+      status: users.status,
+      groups: users.groups,
+      reason: eventParticipation.excuseReason,
+      note: eventParticipation.excuseNote,
+    })
     .from(eventParticipation)
     .innerJoin(users, and(eq(users.orgId, eventParticipation.orgId), eq(users.id, eventParticipation.userId)))
     .where(
@@ -87,6 +103,7 @@ export async function managedExcusesAt(viewer: Viewer, eventId: string, preview:
     );
   return rows
     .filter((row) => row.reason && canReadExcuseDetails(viewer, row.userId, managed))
+    .filter((row) => participationState(row, event.published, { kind: "excused", excuseReason: row.reason }) === "excused")
     .map((row) => ({ name: row.name, reason: row.reason!, note: row.note }))
     .sort((a, b) => a.name.localeCompare(b.name, "cs"));
 }
