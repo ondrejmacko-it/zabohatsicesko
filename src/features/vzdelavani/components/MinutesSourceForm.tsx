@@ -111,6 +111,16 @@ export function MinutesSourceForm({ eventId, eventLabel, hasRecording, canUpload
         submitLabel="Připravit návrh zápisu"
         disabled={(!text.trim() && !file) || textTooLarge || fileTooLarge || both}
       >
+        {/* F15: pravidla pro citlivá data říká formulář dřív, než vedoucí text vloží. Krátce nahoře, podrobnosti rozbalovací. */}
+        <div className="notice" data-testid="citliva-data">
+          <p>Nevkládej jména, kontakty ani čísla smluv klientů. Návrh vždy zkontroluj.</p>
+          <details className="small">
+            <summary>Jak Wiki s textem zachází</summary>
+            <p>
+              Návrh skládá lokální šablona přímo ve Wiki: rozdělí text podle nadpisů, nejde o AI shrnutí a text se nikam neposílá. Jména a kontakty klientů Wiki z návrhu i z uloženého textu vynechá podle pravidel, která nepoznají každé jméno, takže nejde o zaručenou anonymizaci a návrh vždy zkontroluj.
+            </p>
+          </details>
+        </div>
         <label className="field">
           <span className="field-label">Vlož přepis nebo poznámky</span>
           <textarea className="textarea" name="text" rows={6} value={text} onChange={(e) => setText(e.target.value)} />
@@ -128,10 +138,6 @@ export function MinutesSourceForm({ eventId, eventLabel, hasRecording, canUpload
           optional
         />
         {both && <p className="notice">Vlož text, nebo nahraj soubor. Obojí najednou nejde, jedno z toho odeber.</p>}
-        {/* F15: pravidla pro citlivá data říká formulář dřív, než vedoucí text vloží. */}
-        <p className="small muted" data-testid="citliva-data">
-          Návrh skládá lokální šablona přímo ve Wiki: rozdělí text podle nadpisů, nejde o AI shrnutí a text se nikam neposílá. Jména a kontakty klientů Wiki z návrhu i z uloženého textu vynechá podle pravidel, která nepoznají každé jméno, takže nejde o zaručenou anonymizaci a návrh vždy zkontroluj.
-        </p>
       </DraftForm>
       <div className="row">
         <DraftForm eventId={eventId} source="manual" replaceId={replaceId} replacingDraft={replacingDraft} submitLabel="Napsat zápis ručně" secondary />
