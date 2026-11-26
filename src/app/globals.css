@@ -2403,7 +2403,7 @@ a.brief-link:hover {
   font-size: 14px;
 }
 
-.status-band span {
+.status-band > span {
   color: var(--ink-soft);
 }
 

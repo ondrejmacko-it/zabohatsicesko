@@ -489,9 +489,8 @@ export function NextEventsList({ cards, todayKey, hrefFor = pageHref, emptyText 
               <span className="brief-main">
                 <span className="item-title">
                   {eventTitle(card.label, card.topicTitle)}
-                  {card.planStatus === "draft" && (
-                    <StatusBadge tone="draft" label="Návrh" title="Návrh, do Kalendáře zatím nejde" />
-                  )}
+                  {/* Stejný štítek stavu jako karta v Plánu (Zrušeno, Návrh…), osobní účast zvlášť pod ním. */}
+                  {cardStatus(card) && <StatusBadge tone={cardStatus(card)!.tone} label={cardStatus(card)!.label} />}
                 </span>
                 <span className="item-meta">
                   {formatEventTime(new Date(card.startsAt), new Date(card.endsAt), card.allDay)}
