@@ -1,81 +1,44 @@
-# Navazující relace (stav 26. 11. 2026, relace 12 zadání „Finální dokončení po PR #92“)
+# Navazující relace (stav 26. 11. 2026, relace 13 zadání „Finální dokončení po PR #92“)
 
 Větev `claude/festive-sagan-lilorz` z main 2703a0b (PR #92 v main). Limit relace 170 tis. (start v cloudu zabere
 ~120 tis., na práci zbývá málo: čti cíleně, výstupy zkracuj). Nic nemergovat/nenasazovat, žádné vzdálené migrace,
 změny produkčního Vercelu/Neonu ani Google pozvánky bez schválení vlastníka. Před testy `npm ci` (node_modules chybí).
 
 ## Zadání
-Plné znění: první zpráva uživatele s nadpisem „ZBČ – FINÁLNÍ DOKONČENÍ PROJEKTU PO PR #92“ v relaci
-session_01HpUiryLcisq3sp1bDNE1U2. `list_events` kinds=["user"], limit 100, `before_id=ce15ad91-6fd8-49f9-b71c-5b737056552a`
-(výsledek jde do souboru; text vytáhni pythonem a grepni nadpis fáze, např. „Fáze D“). Čti jen svou fázi.
-Fáze: A audit stavu · B účast + garantovaná témata na izolovaném Preview · C01–C06 (hotovo) · D náhled 1:1 ·
-E hromadný výběr (bod 9) · F Zápisy (bod 11) · G celkové UI (bod 13) · H Témata a barvy účasti · I Google Kalendář F04 ·
-J matice F01–F18, D01–D07 · K UX/regresní audit + smoke E2E v CI · L release checklist · výstup: report + draft PR.
+Plné znění: první zpráva uživatele „ZBČ – FINÁLNÍ DOKONČENÍ PROJEKTU PO PR #92“ v relaci
+session_01HpUiryLcisq3sp1bDNE1U2: `list_events` kinds=["user"], limit 100,
+`before_id=ce15ad91-6fd8-49f9-b71c-5b737056552a` (výsledek jde do souboru; JSON za úvodní hlavičkou, najdi řetězec
+obsahující „PO PR #92“ a „Fáze“, ulož do scratchpadu a čti jen řádky své fáze: E ř. 302–349, F 350–407,
+G 408–484, H 485–535, I 536–556, J 557–583, K 584–637, L 638–656, výstup 657+).
+Fáze: A audit · B účast na izolovaném Preview · C hotovo · D náhled 1:1 hotovo · E hromadný výběr (bod 9) ·
+F Zápisy (bod 11) · G celkové UI (bod 13) · H Témata a barvy · I Google Kalendář F04 · J matice F01–F18, D01–D07 ·
+K UX/regresní audit + smoke E2E v CI · L release checklist · výstup: report + draft PR.
 
-## Hotovo (fáze C)
-- C01 a029755, C02 e1f654d, C03 910e0dc, C04 8e78cea+f3b85cf (`managedExcusesAt` jen platné omluvy), C05 jen zjištění,
-  C06 e4b6a8f (texty zápisů). tsc OK; celá sada, celý eslint a e2e zatím ne.
-
-## Fáze A (hotovo, relace 5, jen čtení)
-- Produkce Vercel READY = main 2703a0b. Neon produkce: migrace 0001–0014 (chybí 0015–0018), účty 12 (origin invite:
-  2 admin, 3 organizer, 7 member). Neon branch br-wandering-paper-b9ef86og (projekt still-shadow-86247101): 0001–0018,
-  5 demo účtů (1 admin, 1 organizer, 3 member). Otevřená PR: žádná. Preview DATABASE_URL: sdílená, cíl neověřen.
-
-## Fáze B (rozpracováno)
-- Vercel env `PARTICIPATION=on` jen preview + gitBranch `claude/festive-sagan-lilorz` (id 0jS10jzE1PjjGqaB).
-- Relace 6 (0db222c): lokálně `e2e/ucast.spec.ts` windows-1280 9/9 OK (+ zapis-temat). `callAction` v
-  `src/components/ActionForm.tsx`: síťová chyba akce = zpráva u tlačítka místo chybové stránky (ActionForm,
-  omluva v ParticipationPanel), test `tests/sit-akce.test.ts`. E2E garantovaných témat stabilizován (počet Ostatních
-  se ověřuje po každém návrhu). Doménu (zrušená/proběhlá akce, změna publika, souběh) kryjí unit testy
-  `ucast-prihlasky`, `dopad-zmeny-ucast`. V e2e chybí: opětovné přihlášení po odhlášení (jen tlačítko), reload,
-  Úvod, proběhlá/zrušená akce v UI, výpadek sítě v prohlížeči (`page.route` abort) – doplnit, pokud zbude kapacita.
-- Čeká na vlastníka: Preview env `DATABASE_URL` (sensitive, preview, gitBranch claude/festive-sagan-lilorz) =
-  connection string branche br-wandering-paper-b9ef86og; pak redeploy větve. Bez toho nejde živé Preview ověření.
-
-## Fáze D (relace 7)
-- Zadání D: náhled 1:1 (rozložení, data, navigace, tlačítka, štítky, filtry, formuláře, úkoly, stavy účasti, oprávněné
-  admin možnosti); jediný rozdíl = akční tlačítka na stejném místě zamčená; informační dialogy povolené; bez soukromých
-  důvodů omluv, Google dat, tajemství, cizích přístupů, citlivých přepisů (zástupný stav). Náhled skupiny modelový.
-  Testy: FP, RM, FP+RM, vedoucí akce, kontrolor, nadřízený, správce vedle sebe; mutace odmítne server.
-- Hotovo (commit po 3bdc576): `tests/nahled-mutace.test.ts` volá všechny exporty `features/vzdelavani/actions.ts`
-  a `features/sprava/actions.ts` s cookie náhledu → `preview_read_only` (2/2; bez kontroly v `runAction` padá).
-  Mimo `runAction`: `submitFeedback` (zpětná vazba správce pod vlastní identitou, záměrně), `app/vstup/actions.ts`
-  (vstup/persona/odhlášení, cookie náhledu je vázaná na id účtu), API routy jen přihlášení/pozvánka/cron. Žádná
-  datová mutace nejde obejít. Pozn.: informační akce `previewImpactAction`, `previewCancelAction`, `previewMoveAction`,
-  `topicPlanOptionsAction` náhled taky blokuje (tlačítka k nim budou zamčená, takže nevadí).
-- Návrh UI SCHVÁLEN vlastníkem celý (D1, 26. 11.), provést po jednotkách:
-  1. Klientský kontext `PreviewLock` (provider v `app/(wiki)/layout.tsx` při aktivním náhledu); `ActionForm`,
-     `InterestButton` a další submit tlačítka ho čtou → `disabled` + `aria-disabled` + title „V náhledu jen ke čtení“.
-  2. Stránky místo skrývání (`organizer && !preview`) renderují podle `isOrganizer(viewer)`: detail akce (editační
-     formulář, `akce/[id]/page.tsx:49,62`), Plán `managing` (`harmonogram/page.tsx:58`), Zápisy `canAdd`
-     (`zapisy/page.tsx:44`), `TopicsSection` readOnly → nástroje viditelné, zamčené. Citlivé části (nahrávka/přepis
-     handlera, důvody omluv, osobní Kalendář) zůstávají zástupným stavem.
-  3. `previewApplies` (`PreviewSwitch.tsx`) rozšířit na Moje role a Správu (podle oprávnění zobrazeného), Integrace
-     = zástupný stav bez Google dat.
-  4. E2E: pro 7 rolí porovnat sadu nadpisů/tlačítek reálného účtu a náhledu (stejná data, 1280).
-
-## Fáze D – průběh (relace 8–12)
-- D1 4a754a1 (`PreviewLock`, `LockedLink`), D2 b93bd2f/9ddf21b/302eff3 (detail akce, Plán, Témata, Zápisy zamčené),
-  D3 a42705c (Správa podle oprávnění zobrazeného, Integrace zástupný stav). Vitest 609/609 OK po D2.
-- Relace 12: ef423fa `e2e/nahled.spec.ts` upraven na zamčené ovládání, 16/16 OK (windows-1280).
-  359c335: Domů a Plán v náhledu mají stejné nadpisy („Co tě čeká“, „Čeká na tebe“), nový `e2e/nahled-role.spec.ts`
-  porovná nadpisy + tlačítka (`button`, `a.btn`) reálného účtu a náhledu na Domů, Plán (11/2026 seznam), Témata,
-  Zápisy, Správa. FP a RM OK. **Vedoucí FAIL**: v Plánu náhledu chybí „Možnosti akce …“ u akcí, které vede (reálný
-  účet má 5, náhled 1). Kontrolor/nadřízený nejsou účty ukázky (vazby); vedoucí kryje FP+RM i kontrolora.
+## Hotovo
+- A (jen čtení): produkce = main 2703a0b, Neon produkce migrace 0001–0014 (chybí 0015–0018); Neon branch
+  br-wandering-paper-b9ef86og (projekt still-shadow-86247101) 0001–0018 s demo účty.
+- B: Vercel env `PARTICIPATION=on` jen preview + gitBranch této větve. `e2e/ucast.spec.ts` lokálně OK. Živé Preview
+  čeká na vlastníka (Preview `DATABASE_URL` = branch výše, pak redeploy).
+- C01–C06 hotovo (a029755…e4b6a8f).
+- D hotovo: D1 `PreviewLock`/`LockedLink`, D2 zamčené nástroje v detailu/Plánu/Tématech/Zápisech, D3 Správa podle
+  oprávnění zobrazeného, D4 (relace 13, commit po 547efc9): `cardActions` už nebere `preview` (zápis v menu
+  vedoucího zůstává, zamyká `CardMenu`), „Přidat akci“ v `EventDialog` zamčené, v náhledu bez úchytů přesunu
+  (`movableFrom` jen mimo náhled; tím v náhledu chybí i „+“ na dni v mřížce – drobná odchylka 1:1, případně vrátit
+  jako zamčené). Serverová pojistka `tests/nahled-mutace.test.ts`.
+- Ověřeno na D4: vitest 609/609, tsc, eslint čisté; `e2e/nahled-role.spec.ts` + `e2e/nahled.spec.ts` 19/19
+  (windows-1280). Celá e2e windows-1280: VIZ NÍŽE.
 
 ## Další krok
-1. Opravit menu karet v náhledu vedoucího: `cardActions`/`CardMenu` v Plánu (`harmonogram/page.tsx`, `status.ts`)
-   musí v náhledu brát vedení akce zobrazeného (leadId), ne jen roli správce; položky zamčené. Pak
-   `npx playwright test e2e/nahled-role.spec.ts e2e/nahled.spec.ts --project=windows-1280 --trace off`.
-2. Celá sada před předáním fáze D (vitest, tsc, eslint, e2e windows-1280), pak fáze E–L podle zadání.
-3. Až vlastník nastaví DATABASE_URL: Playwright proti Preview URL větve (scénáře účasti z fáze B).
+1. Fáze E (hromadný výběr): soubory `PlanSelection.tsx`, `Schedule.tsx`, `PlanFilters.tsx`, `harmonogram/page.tsx`,
+   `status.ts` (`monthSummary`/`awaitsPublishing` vs `isPickable` – počítadlo „Návrhy“ nesedí s výběrem).
+   Nejdřív krátký návrh prezentace typů návrhů + texty výběrové lišty uživateli (CLAUDE.md: větší změny schválit),
+   pak po jednotkách. Testy: změna měsíce, Měsíc/Seznam, filtry, reload, Esc, hromadné smazání/zveřejnění,
+   chyba, změna dat na serveru, potvrzení; lišta nesmí zakrývat karty ani zpětnou vazbu (i mobil).
+2. Pak F–L podle zadání.
 
 ## Otevřené otázky pro vlastníka
-- C04: správce si může nastavit sám sebe jako nadřízeného kohokoli a pak číst jeho důvody omluv (audit
-  `excuse_managers.changed` zapíše, kdo koho změnil). Varianty: (a) zakázat nastavení sebe (musí jiný správce),
-  (b) povolit, ale zvlášť auditovat a ukázat ve Správě. Doporučení: (a), pokud firma má víc správců.
-- C04: deaktivace nadřízeného vazby nemaže (po reaktivaci platí znovu). Má se mazat?
-- C05 `vedouci-tymu`: (a) zachovat při uložení účtu, (b) přidělitelná kvalifikace ve Správě, (c) odstranit. Doporučení (a).
-- Zvýšení hooku limitu na 200 tis. musí udělat vlastník (`scripts/limit-kontextu.py`, `CLAUDE.md`).
-- Preview s DB izolovaného branche (tajemství), schválení migrací 0015–0018 na `zbc-wiki-produkce`.
-- Význam role `vedouci-tymu`, skutečné vztahy nadřízených, doba uchování omluv (firma).
+- C04: správce si může nastavit sebe jako nadřízeného kohokoli a číst jeho důvody omluv (audit to zapíše).
+  Doporučení: zakázat nastavení sebe. Deaktivace nadřízeného vazby nemaže – mazat?
+- C05 `vedouci-tymu`: doporučení zachovat při uložení účtu.
+- Preview `DATABASE_URL` izolovaného branche (tajemství), schválení migrací 0015–0018 na produkci.
+- Zvýšení limitu relace (hook `scripts/limit-kontextu.py`) jen vlastník.
