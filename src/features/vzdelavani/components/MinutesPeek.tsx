@@ -1,10 +1,10 @@
-import Link from "next/link";
 import { RouteModal, UnavailableModal } from "@/components/RouteModal";
 import { eventContext, eventTitle } from "@/lib/labels";
 import { formatDate, toDateKey } from "@/lib/time";
 import type { Viewer } from "@/server/policy";
 import { getEventDetail } from "@/server/services/detail";
 import type { MissingMinutesItem } from "@/server/services/journey";
+import { MissingMinutesList, type MissingRow, type MissingStatus } from "./MissingMinutesList";
 import { RecordingSection } from "./RecordingSection";
 
 const STATE_TEXT: Record<MissingMinutesItem["state"], string> = {
@@ -24,6 +24,12 @@ const STATE_ACTION: Record<MissingMinutesItem["state"], string> = {
   started: "Dokončit zápis",
   draft: "Zkontrolovat",
 };
+
+function statusOf(item: MissingMinutesItem): MissingStatus {
+  if (!item.leadName) return "no-lead";
+  if (item.state === "none") return "none";
+  return item.state === "draft" ? "draft" : "progress";
+}
 
 /**
  * Zápis v okně nad stránkou Zápisy. Čtenář vidí zveřejněný zápis, vedoucí a kontrolor tu rovnou nahrají
@@ -74,6 +80,7 @@ export function AddMinutesPicker({
   hrefFor,
   closeHref,
   assignHref,
+  othersLabel,
 }: {
   title: string;
   items: MissingMinutesItem[];
@@ -81,9 +88,27 @@ export function AddMinutesPicker({
   closeHref: string;
   /** Jen správce: kam vede přiřazení vedoucího akci, která ho nemá. */
   assignHref?: (item: MissingMinutesItem) => string;
+  othersLabel: string;
 }) {
+  // Adresy a texty se počítají tady na serveru, funkce do klientské komponenty předat nejdou.
+  const rows: MissingRow[] = items.map((item) => {
+    const status = statusOf(item);
+    return {
+      eventId: item.eventId,
+      title: item.title,
+      date: formatDate(toDateKey(new Date(item.startsAt))),
+      lead: item.leadName ? `Vede: ${item.leadName}` : "Vedoucí neurčen",
+      status,
+      detail: status === "progress" || (status === "no-lead" && item.state !== "none") ? STATE_TEXT[item.state] : undefined,
+      href: item.canHandle ? hrefFor(item.eventId) : `/vzdelavani/akce/${encodeURIComponent(item.eventId)}?odkud=zapisy`,
+      action: item.canHandle ? STATE_ACTION[item.state] : "Otevřít akci",
+      primary: item.mine,
+      assignHref: !item.leadName && assignHref ? assignHref(item) : undefined,
+      mine: item.mine,
+    };
+  });
   return (
-    <RouteModal title={title} closeHref={closeHref}>
+    <RouteModal title={title} closeHref={closeHref} wide>
       {items.length === 0 ? (
         <div className="empty-state">
           <p className="item-title">Všechny proběhlé akce už zápis mají.</p>
@@ -92,39 +117,7 @@ export function AddMinutesPicker({
       ) : (
         <>
           <p className="hint">Vyber akci a dokonči její zápis.</p>
-          <ul className="brief-list picker-list">
-            {items.map((item) => {
-              const body = (
-                <>
-                  <span className="brief-main">
-                    <span className="item-title">{item.title}</span>
-                    <span className="item-meta">
-                      {formatDate(toDateKey(new Date(item.startsAt)))} · {STATE_TEXT[item.state]} · {item.leadName ? `Vede: ${item.leadName}` : "Vedoucí neurčen"}
-                    </span>
-                  </span>
-                  <span className={item.canHandle ? "btn btn-small btn-primary" : "btn btn-small"} aria-hidden="true">
-                    {item.canHandle ? STATE_ACTION[item.state] : "Otevřít akci"}
-                  </span>
-                </>
-              );
-              return (
-                <li key={item.eventId}>
-                  <Link
-                    className="brief-row brief-link"
-                    href={item.canHandle ? hrefFor(item.eventId) : `/vzdelavani/akce/${encodeURIComponent(item.eventId)}?odkud=zapisy`}
-                    scroll={false}
-                  >
-                    {body}
-                  </Link>
-                  {!item.leadName && assignHref && (
-                    <Link className="small picker-assign" href={assignHref(item)}>
-                      Přiřadit vedoucího
-                    </Link>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
+          <MissingMinutesList rows={rows} othersLabel={othersLabel} />
         </>
       )}
     </RouteModal>

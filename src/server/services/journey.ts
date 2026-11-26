@@ -72,6 +72,8 @@ export type MissingMinutesItem = {
   state: Exclude<RecordingProgress, "published">;
   /** Uživatel smí nahrát záznam a zápis zveřejnit (vedoucí, kontrolor, správce). */
   canHandle: boolean;
+  /** Úkol uživatele, stejně jako v úkolech Plánu: zápis píše (vedoucí, u akce bez vedoucího správce), kontrolor jen hotový návrh. */
+  mine: boolean;
 };
 
 /**
@@ -143,6 +145,7 @@ export async function listMissingMinutes(viewer: Viewer): Promise<{ items: Missi
     .map((row) => {
       const snapshot = row.published!;
       const state = byEvent.get(row.id) ?? "none";
+      const role = minutesTaskRole(viewer, snapshot);
       return {
         eventId: row.id,
         title: eventTitle(snapshot.label, snapshot.topicTitle),
@@ -151,6 +154,7 @@ export async function listMissingMinutes(viewer: Viewer): Promise<{ items: Missi
         leadName: snapshot.leadId ? (names.get(snapshot.leadId) ?? null) : null,
         state: state as MissingMinutesItem["state"],
         canHandle: handled.has(row.id),
+        mine: role === "write" || (role === "review" && state === "draft"),
       };
     });
   return { items, handlesAny: handled.size > 0 };

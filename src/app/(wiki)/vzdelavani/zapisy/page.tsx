@@ -47,6 +47,10 @@ export default async function MinutesPage({ searchParams }: { searchParams: Sear
   // názvy, co už kolegové čtou (Zveřejněné zápisy) a co se teprve dokončuje (K dokončení).
   const missingTitle = isOrganizer(viewer) ? "Zápisy k dokončení" : "Moje zápisy k dokončení";
   const peekId = (params.zapis ?? "").slice(0, 120);
+  // Odznak počítá jen vlastní úkoly (stejně jako Čeká na tebe), správce navíc vidí počet všech chybějících.
+  const mineCount = missing.items.filter((item) => item.mine).length;
+  const allCount = missing.items.length;
+  const showAll = isOrganizer(viewer) && allCount > mineCount;
 
   return (
     <>
@@ -55,14 +59,21 @@ export default async function MinutesPage({ searchParams }: { searchParams: Sear
       <MinutesPeek key={peekId} user={viewer} eventId={peekId} closeHref={link()} previewLabel={preview?.label} />
     ) : (
       showAdd && params.pridat === "1" && <AddMinutesPicker title={missingTitle} items={missing.items} hrefFor={(id) => link({ zapis: id })} closeHref={link()}
+        othersLabel={isOrganizer(viewer) ? "Ostatní (správcovský přehled)" : "Ostatní"}
         assignHref={isOrganizer(viewer) ? (item) => `/vzdelavani/harmonogram?mesic=${item.startsAt.slice(0, 7)}&akce=${encodeURIComponent(item.eventId)}` : undefined} />
     )}
     <section className="section" aria-labelledby="zapisy">
       {showAdd && (
         <PageCall text={preview ? `${PREVIEW_READ_ONLY}. Kolega tu dokončuje zápisy z proběhlých akcí.` : "Dokonči zápisy z proběhlých akcí."}>
-          <Link className="btn btn-primary" href={link({ pridat: "1" })} scroll={false} aria-label={`${missingTitle}: ${missing.items.length}`}>
+          <Link
+            className="btn btn-primary"
+            href={link({ pridat: "1" })}
+            scroll={false}
+            aria-label={`${missingTitle}: moje ${mineCount}${showAll ? `, všech ${allCount}` : ""}`}
+          >
             K dokončení
-            {missing.items.length > 0 && <span className="count-badge">{missing.items.length}</span>}
+            {mineCount > 0 && <span className="count-badge">{mineCount}</span>}
+            {showAll && <span className="btn-note">· všech {allCount}</span>}
           </Link>
         </PageCall>
       )}
