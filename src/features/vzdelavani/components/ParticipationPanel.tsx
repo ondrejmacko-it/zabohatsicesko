@@ -108,7 +108,7 @@ export function ParticipationPanel({ eventId, state, label, actions, excuse, cal
               label={ACTION_LABELS.enroll}
               pendingLabel="Přihlašuji…"
               variant="primary"
-              confirm={{ title: "Přihlásit se na akci?", text: "Akce se ti objeví v Moje a pozvánku dostaneš do Kalendáře.", confirmLabel: "Přihlásit se" }}
+              confirm={{ title: "Přihlásit se na akci?", text: "Přihláška se uloží ve Wiki a akce se ti objeví v Moje. Kalendář se synchronizuje automaticky.", confirmLabel: "Přihlásit se" }}
             />
           )}
           {actions.includes("withdraw") && (
@@ -117,7 +117,7 @@ export function ParticipationPanel({ eventId, state, label, actions, excuse, cal
               fields={{ id: eventId, change: "withdraw" }}
               label={ACTION_LABELS.withdraw}
               pendingLabel="Odhlašuji…"
-              confirm={{ title: "Odhlásit se z akce?", text: "Wiki tě odebere z pozvánky. Přihlásit se můžeš znovu až do začátku akce.", confirmLabel: "Odhlásit se" }}
+              confirm={{ title: "Odhlásit se z akce?", text: "Odhlášení se uloží ve Wiki a Kalendář se synchronizuje automaticky. Přihlásit se můžeš znovu až do začátku akce.", confirmLabel: "Odhlásit se" }}
             />
           )}
           {actions.includes("excuse") && <ExcuseButton eventId={eventId} />}
@@ -127,7 +127,7 @@ export function ParticipationPanel({ eventId, state, label, actions, excuse, cal
               fields={{ id: eventId, change: "revoke_excuse" }}
               label={ACTION_LABELS.revoke_excuse}
               pendingLabel="Ruším…"
-              confirm={{ title: "Zrušit omluvu?", text: "Akce pro tebe bude zase povinná a Wiki tě vrátí do pozvánky.", confirmLabel: "Zrušit omluvu" }}
+              confirm={{ title: "Zrušit omluvu?", text: "Akce pro tebe bude zase povinná. Změna se uloží ve Wiki a Kalendář se synchronizuje automaticky.", confirmLabel: "Zrušit omluvu" }}
             />
           )}
         </div>
