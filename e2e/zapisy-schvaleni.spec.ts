@@ -21,7 +21,7 @@ test.describe("Zápisy: schválení vedoucím @desktop", () => {
     // F13: sekce říká, kdo zápis schvaluje. F14: jedno pole a soubor místo voleb.
     await expect(section.getByTestId("schvaluje")).toContainText("Zápis schvaluješ ty jako vedoucí akce");
     await expect(section.getByRole("radio")).toHaveCount(0);
-    await expect(section.getByTestId("citliva-data")).toContainText("Text se nepoužívá k trénování AI");
+    await expect(section.getByTestId("citliva-data")).toContainText("nejde o AI shrnutí");
     // Audit P1-Z1: vynechání jmen je heuristika a návrh skládá lokální šablona, text nesmí slibovat víc.
     await expect(section.getByTestId("citliva-data")).toContainText("nepoznají každé jméno");
     await expect(section.getByTestId("citliva-data")).toContainText("text se nikam neposílá");
