@@ -47,7 +47,7 @@ test.describe("U07 menu @desktop", () => {
 
 test.describe("U05 Plán na telefonu", () => {
   test("účastník vidí nahoře nejbližší akci, prázdný panel úkolů tam není", async ({ browser }, testInfo) => {
-    test.skip(onlyOnce(testInfo.project.name));
+    test.skip(onlyOnce(testInfo.project.name), "klávesnice a fokus stačí ověřit na jednom projektu");
     const context = await browser.newContext({ storageState: authFile("ucastnikFp"), viewport: { width: 390, height: 760 }, isMobile: true, hasTouch: true });
     const page = await context.newPage();
     await page.goto("/vzdelavani/harmonogram");
@@ -63,7 +63,7 @@ test.describe("U05 Plán na telefonu", () => {
   });
 
   test("správce má stav měsíce jako štítky viditelné bez rozbalení", async ({ browser }, testInfo) => {
-    test.skip(onlyOnce(testInfo.project.name));
+    test.skip(onlyOnce(testInfo.project.name), "klávesnice a fokus stačí ověřit na jednom projektu");
     const context = await browser.newContext({ storageState: authFile("spravce"), viewport: { width: 390, height: 760 }, isMobile: true, hasTouch: true });
     const page = await context.newPage();
     await page.goto("/vzdelavani/harmonogram");
@@ -90,7 +90,7 @@ async function openAddEvent(page: Page) {
 
 test.describe("U08 dialog akce", () => {
   test("na 320×256 jde okno projít bez posunu do strany a chyby mají souhrn a fokus", async ({ browser }, testInfo) => {
-    test.skip(onlyOnce(testInfo.project.name));
+    test.skip(onlyOnce(testInfo.project.name), "klávesnice a fokus stačí ověřit na jednom projektu");
     const context = await browser.newContext({ storageState: authFile("spravce"), viewport: { width: 320, height: 256 }, isMobile: true, hasTouch: true });
     const page = await context.newPage();
     const opened = await openAddEvent(page);
