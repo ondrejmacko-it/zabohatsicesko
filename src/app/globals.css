@@ -1831,8 +1831,15 @@ details > summary {
 }
 
 .interest-on {
-  border-color: var(--ochre);
-  background: var(--ochre-soft);
+  /* Aktivní zájem je plný zelený, neaktivní obrysový: rozdíl je vidět i na okrovém řádku garantovaného tématu. */
+  border-color: var(--ok);
+  background: var(--ok);
+  color: #fff;
+}
+
+.topic-search {
+  max-width: 360px;
+  margin-bottom: 12px;
 }
 
 /* Tabulka témat se na úzkém displeji mění na karty. */
@@ -5198,4 +5205,10 @@ body[data-moving] .quick-actions,
 
 .salutation-form p {
   margin: 0;
+}
+
+.interest-on:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--ok) 88%, #000);
+  border-color: var(--ok);
+  color: #fff;
 }

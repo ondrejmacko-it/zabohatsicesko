@@ -54,7 +54,7 @@ const docBox = (el: Element): Box => {
 export function TopicBoard({
   guaranteed,
   others,
-  sortable,
+  sortable: sortableProp,
   guaranteedHead,
   othersHead,
 }: {
@@ -69,6 +69,10 @@ export function TopicBoard({
   const locked = usePreviewLock();
   const serverKey = `${guaranteed.map((i) => i.id).join(",")}|${others.map((i) => i.id).join(",")}`;
   const [order, setOrder] = useState<Order>(() => ({ guaranteed: guaranteed.map((i) => i.id), others: others.map((i) => i.id) }));
+  const [query, setQuery] = useState("");
+  const needle = normalizeName(query.trim());
+  // Při hledání se pořadí nemění: posun o jedno místo by přeskočil skrytá témata.
+  const sortable = sortableProp && !needle;
   const [dragId, setDragId] = useState<string | null>(null);
   const [slot, setSlot] = useState<Slot | null>(null);
   const [announce, setAnnounce] = useState("");
@@ -293,7 +297,7 @@ export function TopicBoard({
   }
 
   function renderList(section: TopicSection) {
-    const ids = listOf(visible, section);
+    const ids = listOf(visible, section).filter((id) => !needle || normalizeName(byId.get(id)!.name).includes(needle));
     const ordered = section === "guaranteed";
     const target = slot?.section === section;
     if (ids.length === 0) {
@@ -354,10 +358,24 @@ export function TopicBoard({
     );
   }
 
-  const showGuaranteed = visible.guaranteed.length > 0 || sortable;
-  const showOthers = visible.others.length > 0 || (sortable && visible.guaranteed.length > 0);
+  const matches = (id: string) => !needle || normalizeName(byId.get(id)!.name).includes(needle);
+  const showGuaranteed = visible.guaranteed.some(matches) || sortable;
+  const showOthers = visible.others.some(matches) || (sortable && visible.guaranteed.length > 0);
+  const total = visible.guaranteed.length + visible.others.length;
   return (
     <div ref={boardRef} className={dragId ? "topic-board topic-dragging" : "topic-board"} aria-busy={pending || undefined}>
+      {total > 1 && (
+        <label className="field topic-search">
+          <span className="visually-hidden">Hledat téma</span>
+          <input className="input" type="search" placeholder="Hledat téma podle názvu" value={query} onChange={(e) => setQuery(e.target.value)} />
+        </label>
+      )}
+      {needle && !showGuaranteed && !showOthers && (
+        <p className="item-meta topic-search-empty" role="status">
+          Žádné téma neodpovídá hledání „{query.trim()}“.
+        </p>
+      )}
+      {sortableProp && needle && <p className="item-meta">Při hledání nejde měnit pořadí. Vymaž hledání a přetáhni téma v celém seznamu.</p>}
       {showGuaranteed && (
         <div className="topic-group topic-group-guaranteed" aria-labelledby="temata-garantovana">
           {guaranteedHead}
@@ -392,4 +410,9 @@ export function TopicBoard({
       )}
     </div>
   );
+}
+
+/** Hledání bez ohledu na velikost písmen a diakritiku („navaznost“ najde „Návaznost“). */
+export function normalizeName(value: string): string {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 }
