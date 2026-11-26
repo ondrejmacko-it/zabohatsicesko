@@ -1,54 +1,47 @@
-# Navazující relace (stav 26. 11. 2026, relace 36 „UI rework účasti dokončen, draft PR“)
+# Zadání vlastníka 26. 11. (relace 37): dokončení UI účasti a finální kontrola PR #94
 
-Větev `claude/gallant-bohr-m1lyna` (main 76c2011 + 807c822 C04/C05 + UI rework do 2ab8033). Draft PR založen. Limit 170 tis.; čti cíleně.
-Bez souhlasu vlastníka: žádné změny produkčního Vercelu/Neonu, migrace ani Google pozvánky, žádný merge do main.
+Větev `claude/gallant-bohr-m1lyna`, draft PR #94 (nezakládat další, nemergovat, žádná produkce/DB/Google pozvánky).
 
-## Ověřeno na produkci (relace 33, 23:00)
-- Deployment dpl_AeCfSDi5d1pbvoiSEgjFFCqoAdWg (commit 76c2011) READY, alias zbc-vzdelavani-demo.vercel.app.
-- Neon zbc-wiki-produkce: schema_migrations obsahuje 0015–0019 (applied 22:50:40). Data zachována: 12 aktivních
-  účtů, 143 akcí, 15 témat; event_participation, excuse_managers, user_salutations prázdné.
-- Runtime logy deploymentu (posledních 30 min, warning/error/fatal): žádné záznamy. Hobby drží logy jen 1 h.
-- Klikací test v aplikaci NEPROBĚHL: vstup jen přes osobní pozvánku, Claude nemá přihlášení (vytvořit pozvánku =
-  zápis do produkce). Postup testu pro vlastníka je ve zprávě relace 33 (omluva, zrušení, přihlášení/odhlášení
-  dobrovolné akce, >3 garantovaná témata, náhled 1:1 se zamčenými tlačítky).
+1. P0 EventPeek: `EventPeek.tsx` se v PR nezměnil; u správce je `participationPanel` v `intro` před `EventForm`.
+   Pořadí: 1 nadpis, 2 stav akce + upozornění, 3 obsah a údaje, 4 samostatná karta vlastní účasti, 5 správa
+   účastníků/omluv dle oprávnění, 6 další možnosti správce. Upravit `EventPeek.tsx`, příp. `EventDialog.tsx`.
+   Oddělené formuláře, žádné vnořené <form>, změna účasti nesmí uložit editaci akce; ošetřit rozpracovanou editaci
+   + změnu účasti. Varianty: správce, organizátor, vedoucí, účastník, náhled osoby, náhled skupiny, stránka detailu,
+   okno v harmonogramu; zrušená, proběhlá, budoucí akce.
+2. P0 ParticipationPanel: skutečná samostatná karta v designu Wiki: nadpis „Tvoje účast“, jeden stavový štítek,
+   max. jedna hlavní věta, akční tlačítko, info o synchronizaci s Kalendářem, vlastní důvod omluvy (jen oprávněný).
+   Desktop: stav vedle nadpisu, tlačítko vpravo, využít šířku; mobil zalomit. Jemné podbarvení podle stavu stávajícími
+   tokeny: povinná okrová, dobrovolná modrošedá, přihlášeno zelená, omluveno vlastní klidná, zrušeno tlumená červená,
+   neutrální/historické neutrál. Barva není jediný nositel významu; kontrast, a11y; žádný nový design systém.
+3. P0 Dialog omluvy: jasný nadpis, volby Nemoc / Dovolená / Jiné, nepovinná poznámka, krátké soukromí, Zpět + Omluvit se,
+   bez odstavců. Text „Důvod i poznámku vidíš jen ty“ nahradit přesně: „Důvod a poznámku vidíš ty a tvůj oprávněný
+   nadřízený. Do Google Kalendáře se neposílají.“ Ověřit proti oprávněním: správce bez oprávnění nevidí důvod/poznámku
+   v HTML, RSC, API, náhledu, diagnostice ani zpětné vazbě. Omluva platí hned, bez schvalování.
+4. P0 Kalendář v potvrzeních: neslibovat doručení pozvánky. Rozlišit: uloženo ve Wiki / synchronizace čeká /
+   synchronizováno / selhalo / stav neznámý (osobní režim, výpadek). Zachovat bezpečnostní pravidla.
+5. P1 Konzistence StatusBadge: Domů, měsíc, seznam, detail, EventPeek, filtry, vlastní účast, náhledy, přehled omluv,
+   mobil. Stejný význam = stejný název/barva/styl/místo. Oddělit životní stav akce od osobní účasti, neopakovat štítky.
+6. P1 Náhled 1:1: stejné komponenty; náhled osoby = individuální stavy a zamčená (ne odstraněná) tlačítka; náhled
+   skupiny jen stav z rolí; serverový zákaz mutací zůstává; soukromá data výjimkou.
+7. P1 Nová matice F01–F18 podle `docs/pozadavky-f01-f18.md` + kódu (neopisovat starou): implementováno / auto test /
+   vizuálně / skutečný PostgreSQL / Preview / produkce / čeká na integraci či firmu. Zvlášť: ≥5 garantovaných témat
+   přes UI + reload, animace původní verze při najetí na návrh, hromadný výběr návrhů, kolize v přípravě měsíce,
+   zápisy a schvalování, filtry a počítadla, oslovení, horní lišta, mobil. F04 jen simulace; F15 jen heuristika.
+8. P0 Ověření: lokálně PARTICIPATION=on, izolovaná DB (e2e/server.mjs, port UCAST). Playwright: otevřít akci KLIKEM
+   v harmonogramu. Screenshoty: správce povinná/dobrovolná, účastník povinná, formulář omluvy, omluveno, před
+   přihlášením, přihlášeno, potvrzení odhlášení, zrušená, proběhlá, náhled kolegy, náhled skupiny, stránka detailu.
+   Šířky 320/390/768/1024/1280/1440/1920. Přetékání, mezery, kontrast, sticky, scroll modalu, fokus, klávesnice,
+   dotyk, ztráta rozpracovaných dat. Trvalý regresní test: karta účasti AŽ PO obsahu akce. Celá sada testů.
+9. Zachovat C04/C05; nevymýšlet nadřízené ani retenci; nemazat Neon zálohu ani test branch; žádná produkce.
+10. Výstup: aktualizovat PR #94 a předávku; seznam oprav, změněné soubory, screenshoty před/po, matice F01–F18,
+    výsledky testů vč. přeskočených, překážky se závažností, postup kontroly Preview před merge.
+Další související chybu opravit a doložit regresním testem. Cíl: funkční, bezpečné, sjednocené, ne jen zelené CI.
 
-## Hotovo v kódu (807c822, zatím jen na větvi)
-- C04: `setExcuseManagers` – správce nesmí nastavit sám sebe nadřízeným (forbidden).
-  Deaktivace účtu (`updateAccess` status=disabled) smaže vazby, kde je účet nadřízeným, + audit
-  `excuse_managers.removed_on_disable` (jen když je 0018 aktivní). Po reaktivaci je nutné vazby nastavit znovu.
-- C05: `updateAccess` zachová `vedouci-tymu`, které formulář správy neukazuje (`keepUnmanagedGroups`).
-- Testy: celá sada 623/623 OK, typecheck a lint OK na 807c822.
+## Stav na začátku (HEAD 536b210)
+- PR #94 draft, mergeable clean, Vercel preview READY. Hotovo: StatusBadge, krátké texty, key-facts, C04/C05.
+- Ověřeno na 536b210: vitest 623/623, tsc, eslint OK; e2e ucast/nahled/nahled-role (1280+390) 42 passed.
+- Tip: karta v harmonogramu otevírá EventPeek (`?akce=`), ne stránku detailu; e2e helper `openCard` v e2e/ucast.spec.ts.
+- V nové relaci nejdřív `npm ci`. Screenshoty ukládat do scratchpadu, ne do repa (kromě příloh PR, pokud nutné).
 
-## AKTUÁLNÍ ÚKOL (zadání vlastníka 26. 11.) – UI/UX rework sekce účasti, logiku NEMĚNIT
-Neměnit služby participation/excuse-managers ani server actions; jen layout, komponenty, texty, badge, spacing.
-Celé zadání (body 1–7) je v historii tohoto souboru: `git show 375879d:docs/dalsi-session.md`.
-
-### Hotovo (relace 34–35)
-- 5a0db07 krok 0: krátké texty `ParticipationPanel.tsx`, spacing v `globals.css`, e2e věta omluvy.
-- fed7f10 kroky 1–2: nová `components/StatusBadge.tsx` (props `label`, `title?`, `tone` | `ucast`),
-  `ParticipationBadge.tsx` smazán; použito v `Schedule.tsx` (CardMeta, seznam, „Návrh“), `ParticipationPanel.tsx`,
-  hlavičce `akce/[id]/page.tsx`. `PARTICIPATION_LABELS.excused` = „Omluven/a“ (testy ucast-prihlasky, e2e ucast:198).
-  EventPeek má status-band, ne badge (beze změny). Štítky témat (Garantované/Doporučené) nejsou stav akce, beze změny.
-- 2ab8033 krok 3: `lifecycleStatus` past → „Zveřejněno · proběhlo“ (tests/stav-akce); `key-facts` v detailu
-  Kdy / Téma / Vede / Pro koho (Téma = topicTitle nebo Todo), staré `dl` s Tématem odstraněno.
-- Rozhodnutí: badge „Náhled“ se nepřidává, náhled nese nadpis „Účast v náhledu“ + věta „Náhled je jen ke čtení.“
-  (pravidlo 1 badge na stav).
-- Ověřeno na 2ab8033: tsc OK, eslint změněných souborů OK, vitest audit-ucast-nahledy + ucast-prihlasky 24/24,
-  stav-akce 8/8. Celá sada, build ani Playwright zatím neběžely. (V nové relaci nejdřív `npm ci`.)
-
-### Ověřeno (relace 36, na c7974f9 + předávka)
-- vitest 623/623, typecheck OK, lint OK; e2e ucast/nahled/nahled-role na windows-1280 + telefon-390: 42 passed
-  (produkční build v e2e/server.mjs prošel). Screenshoty detailu (povinná/dobrovolná, 1280 i 390): info blok 4 položky,
-  jeden badge na stav. Zamčená karta náhledu 1:1 ověřena testem ucast.spec „správce vidí stav a tlačítka kolegy“.
-- Draft PR založen (viz GitHub, větev claude/gallant-bohr-m1lyna → main), bez merge.
-
-## Další krok (po UI reworku)
-1. Vlastník projde klikací test na produkci; případné chyby opravit.
-2. Se souhlasem vlastníka draft PR z této větve (C04/C05) → ruční merge vlastníkem.
-3. Úklid se souhlasem: Neon branch `test-migrace-0015-0019` (br-shy-pine-ba0v9yl8) smazat; záloha
-   `zaloha-pred-0015-2026-11-26` (br-withered-salad-batie5vn) ponechat do potvrzení testu.
-4. Rollback účasti: odebrat `PARTICIPATION` (data zůstanou); DB obnova ze zálohy.
-
-## Otevřené otázky
-- C04: mazat vazby i když se deaktivuje podřízený? (teď ne – jeho omluvy se stejně nefiltrují jako platné).
-- Mapování nadřízených a doba uchování omluv (rozhodnutí firmy).
+## Otevřené (firma)
+- C04: mazat vazby i při deaktivaci podřízeného? Mapování nadřízených a retence omluv.
