@@ -1,22 +1,36 @@
-# Navazující relace (stav 26. 11. 2026)
+# Navazující relace (stav 26. 11. 2026, relace 1 zadání „Finální dokončení po PR #92“)
 
-Limit relace 170 tis. tokenů (pravidla v `CLAUDE.md`, hook `scripts/limit-kontextu.py`).
-Větev `claude/festive-sagan-lilorz` z main 2703a0b (PR #92 F01–F18 je v main). Nic nemergovat/nenasazovat,
-žádné migrace na `zbc-wiki-produkce` ani změny produkčních Vercel proměnných bez schválení vlastníka.
+Větev `claude/festive-sagan-lilorz` z main 2703a0b (PR #92 v main). Limit relace 170 tis. (start v cloudu zabere
+~120 tis., na práci zbývá málo: čti cíleně, výstupy zkracuj). Nic nemergovat/nenasazovat, žádné vzdálené migrace,
+změny produkčního Vercelu/Neonu ani Google pozvánky bez schválení vlastníka.
 
-## Stav účasti (přihlášky, omluvy, nadřízený)
-- Kód hotový v main: `participationEnabled()` = `PARTICIPATION=on` + migrace 0016+0017; nadřízený pro omluvy
-  navíc 0018 (`src/server/config.ts`, `services/participation.ts`, `services/excuse-managers.ts`, `docs/ucast-a-role.md`).
-- Produkční DB `zbc-wiki-produkce` (bitter-breeze-02749976): migrace 0001–0014, chybí 0015–0018. Produkce nemá
-  `PARTICIPATION` ani `APPROVED_MIGRATIONS` (ověřeno 24. 11.).
-- Ukázková DB `neon-zbz-vzdelavani-demo` (still-shadow-86247101): 0001–0015, chybí 0016–0018.
-  Izolovaný branch `overeni-ucast-0016-0018` (br-wandering-paper-b9ef86og) má 0016–0018, po ověření smazat.
-- Release postup: `docs/navod-merge-f01-f18.md`.
+## Zadání
+Plné znění: první zpráva uživatele s nadpisem „ZBČ – FINÁLNÍ DOKONČENÍ PROJEKTU PO PR #92“ v relaci
+session_01HpUiryLcisq3sp1bDNE1U2 (`list_events`, kinds=["user"]). Čti jen fázi, na které pracuješ.
+Fáze: A audit stavu (deploymenty, migrace, proměnné jen názvy, Neon branch, testovací účty) · B účast + garantovaná
+témata na izolovaném Preview · C01–C06 technické/bezpečnostní · D náhled 1:1 · E hromadný výběr (bod 9) ·
+F Zápisy (bod 11) · G celkové UI (bod 13) · H Témata a barvy účasti · I Google Kalendář F04 · J matice F01–F18,
+D01–D07 · K UX/regresní audit + smoke E2E v CI · L release checklist · výstup: report + draft PR.
 
-## Další krok
-Plán „účast naplno + Preview“ předložen vlastníkovi 26. 11., čeká na schválení (body a otázky v chatu relace).
-Bez schválení nic neprovádět.
+## Hotovo
+- a029755 C01: `requeueAttendeeSync` (`src/server/calendar/attendees.ts`) četl `event_participation` i bez 0016,
+  na DB 0001–0014 (produkce) padalo uložení účtu. Oprava + `tests/c01-ucast-bez-schematu.test.ts`
+  (+ kalendar-ucast, kalendar-uklid: 15/15). tsc a eslint OK.
+- Zbylé přístupy k tabulkám 0016/0018 (`participation.ts`, `excuse-managers.ts`, `detail.ts`, `eventAttendees`) jsou
+  podmíněné `participationEnabled()`/`excuseManagersEnabled()`. Neověřeno: 0015 (`topic_priority`), schéma
+  `prepareDatabase` při cold startu/souběhu (C02).
+
+## Další krok (pořadí, každá jednotka = změna + test + commit + push)
+1. Push a029755 (`git push -u origin claude/festive-sagan-lilorz`), pokud ještě není venku.
+2. C02 (`src/server/config.ts` markParticipationSchema/migrationApplied, `src/server/db/client.ts` getDb):
+   co volá `participationEnabled()` před `getDb()`; zkontrolovat přístupy na 0015.
+3. C03 (`ManagedExcuses.tsx`, `ParticipationPanel.tsx`, `src/components/feedback/screenshot.ts`, `data-feedback-redact`).
+4. C05 `vedouci-tymu` ve `WORK_ROLES` vs `GROUPS` (`src/lib/types.ts`): zjistit, pak varianty vlastníkovi.
+5. Fáze A audit přes Vercel/Neon MCP jen čtením, pak B (Preview proti branchi `overeni-ucast-0016-0018`,
+   br-wandering-paper-b9ef86og v still-shadow-86247101; DATABASE_URL je tajemství = schválení vlastníka).
 
 ## Otevřené otázky pro vlastníka
-- Varianta Preview (ukázková DB + `APPROVED_MIGRATIONS`, nebo izolovaný branch) a schválení migrací 0015–0018.
-- Skutečné mapování nadřízených a doba uchování omluv (firma).
+- Limit 170 tis. při startu ~120 tis. dává ~50 tis. na práci. Zvýšení hooku na 200 tis. (podle zadání) musí
+  udělat vlastník: v `scripts/limit-kontextu.py` SOFT_LIMIT 170_000, HARD_LIMIT 200_000 a text v `CLAUDE.md`.
+- Preview s DB izolovaného branche (tajemství) a schválení migrací 0015–0018 na `zbc-wiki-produkce`.
+- Význam role `vedouci-tymu`, skutečné mapování nadřízených, doba uchování omluv (firma).
