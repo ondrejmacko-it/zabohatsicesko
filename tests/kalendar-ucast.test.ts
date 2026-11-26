@@ -186,6 +186,21 @@ describe("pozvánky podle účasti (desiredGuestIds)", () => {
     expect(emails(invite())).toEqual([DRUHA]);
   });
 
+  test("rollback přepínače: další úprava akce znovu nepozve omluveného ani neodebere dobrovolně přihlášeného", async () => {
+    await invited();
+    await inviteUser(admin, { email: "fp@example.com", name: "FP Kolega", role: "member", groups: ["vsichni", "fp"] });
+    await changeOwnParticipation(await viewerOf("fp@example.com"), PUBLISHED_RM, { kind: "enroll" });
+    await changeOwnParticipation(await viewerOf(KOLEGA), PUBLISHED_RM, { kind: "excuse", excuse: { reason: "other", note: null } });
+    await syncPending();
+    expect(emails(invite()).sort()).toEqual([DRUHA, "fp@example.com"]);
+    vi.stubEnv("PARTICIPATION", "");
+    // Úprava akce po vypnutí účasti: fronta pozvánku přepočítá.
+    await (await getDb()).update(calendarLinks).set({ syncStatus: "pending" }).where(eq(calendarLinks.eventId, PUBLISHED_RM));
+    await syncPending();
+    expect(emails(invite()).sort()).toEqual([DRUHA, "fp@example.com"]);
+    vi.stubEnv("PARTICIPATION", "on");
+  });
+
   test("bez přepínače se hosté řídí publikem jako dřív a omluva Kalendář nemění", async () => {
     vi.stubEnv("PARTICIPATION", "");
     await invited();

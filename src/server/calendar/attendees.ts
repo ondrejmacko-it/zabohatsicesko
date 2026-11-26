@@ -1,7 +1,7 @@
 import { and, asc, eq, gt, inArray, or, sql } from "drizzle-orm";
 import type { OwnCalendar } from "@/lib/calendar-note";
 import type { EventSnapshot, SimAttendee } from "@/lib/types";
-import { attendeeSource, config, googleCalendarConfig, now, participationEnabled, personalDelivery, type AttendeeSource } from "@/server/config";
+import { attendeeSource, config, googleCalendarConfig, now, participationEnabled, participationSchemaReady, personalDelivery, type AttendeeSource } from "@/server/config";
 import type { Executor } from "@/server/db/client";
 import { calendarLinks, eventParticipation, events, userIdentities, users } from "@/server/db/schema";
 import { desiredGuestIds, type ParticipationRecord } from "@/server/domain/participation";
@@ -65,12 +65,16 @@ const fictional = (a: SimAttendee) => a.email.endsWith(SIMULATION_ATTENDEE_DOMAI
  */
 export async function eventAttendees(db: Executor, eventId: string, snapshot: EventSnapshot, source: AttendeeSource = attendeeSource()): Promise<SimAttendee[]> {
   const cfg = googleCalendarConfig();
-  if (!participationEnabled() || (cfg && source === "allowlist")) return audienceAttendees(db, snapshot.audience, source);
+  // Rollback (přepínač vypnutý, záznamy zůstaly): hosté akce s uloženými omluvami a přihláškami zůstanou,
+  // jak byli. Jinak by další úprava akce znovu pozvala omluvené a odebrala dobrovolně přihlášené (zadání I).
+  const frozen = !participationEnabled() && participationSchemaReady();
+  if ((!participationEnabled() && !frozen) || (cfg && source === "allowlist")) return audienceAttendees(db, snapshot.audience, source);
   const recipients = await listRecipients(db, cfg !== null);
   const rows = await db
     .select({ userId: eventParticipation.userId, kind: eventParticipation.kind, excuseReason: eventParticipation.excuseReason })
     .from(eventParticipation)
     .where(and(eq(eventParticipation.orgId, config.orgId), eq(eventParticipation.eventId, eventId)));
+  if (frozen && rows.length === 0) return audienceAttendees(db, snapshot.audience, source);
   // Do výpočtu jde jen druh záznamu. Důvod se tu nepoužívá a dál se nepředává.
   const records = new Map<string, ParticipationRecord>(rows.map((r) => [r.userId, { kind: r.kind, excuseReason: null }]));
   const wanted = new Set(desiredGuestIds(recipients.map((r) => ({ id: r.id, status: "active" as const, groups: r.groups })), snapshot, records));
