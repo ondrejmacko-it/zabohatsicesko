@@ -9,7 +9,8 @@ import { Icon } from "@/components/Icon";
 import { Todo, missingText } from "@/components/Todo";
 import { RecordingSection } from "@/features/vzdelavani/components/RecordingSection";
 import { SyncPanelView } from "@/features/vzdelavani/components/SyncPanelView";
-import { badgeClass, detailBadges, statusAdvice } from "@/features/vzdelavani/status";
+import { StatusBadge } from "@/features/vzdelavani/components/StatusBadge";
+import { detailBadges, statusAdvice } from "@/features/vzdelavani/status";
 import { GROUP_LABELS, PREVIEW_READ_ONLY, eventContext, eventTitle } from "@/lib/labels";
 import { safeDecode } from "@/lib/params";
 import { formatDate, formatEventWhen, monthOf, toDateKey } from "@/lib/time";
@@ -84,9 +85,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
           <h2 className="detail-title">{title}</h2>
           <div className="row detail-badges">
             {detailBadges(card).map((badge) => (
-              <span key={badge.label} className={badgeClass(badge.tone)}>
-                {badge.label}
-              </span>
+              <StatusBadge key={badge.label} tone={badge.tone} label={badge.label} />
             ))}
           </div>
           {planView && advice && <p className="small muted status-advice">{advice}</p>}

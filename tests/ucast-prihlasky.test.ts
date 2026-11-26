@@ -74,7 +74,7 @@ describe("akce formuláře: přechody", () => {
     expect(await act({ id: fp, change: "excuse", reason: "vacation", note: `  ${NOTE}  ` })).toMatchObject({ ok: true });
     expect((await records())[0]).toMatchObject({ kind: "excused", excuseReason: "vacation", excuseNote: NOTE });
     const detail = await ownParticipationDetail(participant, null, fp);
-    expect(detail).toMatchObject({ state: "excused", label: "Omluveno", actions: ["revoke_excuse"], excuse: { reason: "vacation", note: NOTE } });
+    expect(detail).toMatchObject({ state: "excused", label: "Omluven/a", actions: ["revoke_excuse"], excuse: { reason: "vacation", note: NOTE } });
     expect(await act({ id: fp, change: "revoke_excuse" })).toMatchObject({ ok: true });
     expect(await records()).toHaveLength(0);
   });

@@ -190,7 +190,7 @@ export const PARTICIPATION_LABELS = {
   required: "Povinné pro tebe",
   optional: "Můžeš se přihlásit",
   voluntary_enrolled: "Přihlášeno",
-  excused: "Omluveno",
+  excused: "Omluven/a",
   withdrawn: "Odhlášeno",
 } as const satisfies Partial<Record<ParticipationState, string>>;
 
