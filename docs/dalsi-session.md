@@ -2,7 +2,7 @@
 
 Cíl: finální responzivní audit a mobilní UX (zadání vlastníka body 1–23). **Hotovo**, draft PR otevřen.
 Žádný redesign desktopu, merge, deploy, produkční DB, živý Google ani Make.
-Větev `claude/oprava-mobilni-responzivita` z main `01db12f`, poslední kód `c2ee85d`. Draft PR: viz níže.
+Větev `claude/oprava-mobilni-responzivita` z main `01db12f`, poslední kód `c2ee85d`. Draft PR #95.
 
 ## Hotovo
 - Všechny opravy bodů 1–23 + audit 347 px (Domů, Plán, Zápisy, Témata, Integrace, Správa; správce a účastník FP).
@@ -12,7 +12,7 @@ Větev `claude/oprava-mobilni-responzivita` z main `01db12f`, poslední kód `c2
   a otevřené otázky. Před/po screenshoty jen ve scratchpadu relace 59 (ne v repu).
 
 ## Ověřeno (c2ee85d)
-- ESLint, `tsc` OK; celá sada viz popis PR (Vitest + Playwright).
+- ESLint, `tsc` OK, Vitest 629/629, Playwright 1526 OK / 546 skipped / 0 failed.
 
 ## Technika
 - `npm ci`; před `--no-deps` nejdřív `npx playwright test --project=prihlaseni --no-deps --trace off --reporter=line`.
