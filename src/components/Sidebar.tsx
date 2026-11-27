@@ -1,5 +1,6 @@
 "use client";
 
+import type React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { FEEDBACK_OPEN_EVENT } from "./feedback/FeedbackRoot";
@@ -20,16 +21,23 @@ const ADMIN: Item = { label: "Správa", labelTail: " systému", icon: "settings"
 /** `live`: ostrá Wiki. Neaktivní kulisy ukázky (další sekce, dokumenty, hledání) se v ní nezobrazují. */
 type Props = { badge: number; canManageUsers: boolean; pendingRequests: number; live: boolean };
 
+/** Mobilní menu je mřížka stejně širokých položek: do čtyř v jedné řadě, víc ve dvou řadách. */
+const columns = (count: number) => (count <= 4 ? count : Math.ceil(count / 2));
+
 export function Sidebar({ badge, canManageUsers, pendingRequests, live }: Props) {
   const pathname = usePathname();
   // Správa se ukazuje jen tomu, kdo ji smí používat. Ostatním by byla jen neaktivní položka bez účelu.
   const shell = canManageUsers ? [...ITEMS, ADMIN] : ITEMS;
   const items = live ? shell.filter((item) => item.href) : shell;
   const counts = { education: badge, admin: pendingRequests };
+  // +1 za Zpětnou vazbu. Telefon skrývá neaktivní kulisy, proto má vlastní počet.
+  const total = items.length + 1;
+  const phoneTotal = items.filter((item) => item.href).length + 1;
+  const gridStyle = { "--nav-cols": columns(total), "--nav-cols-phone": columns(phoneTotal) } as React.CSSProperties;
   return (
     <aside className="sidebar" aria-label="Hlavní navigace">
       <nav>
-        <ul className="nav">
+        <ul className="nav" style={gridStyle} data-phone-count={phoneTotal}>
           {items.map((item) => {
             const count = item.badgeKey ? counts[item.badgeKey] : 0;
             const content = (
@@ -60,15 +68,15 @@ export function Sidebar({ badge, canManageUsers, pendingRequests, live }: Props)
               </li>
             );
           })}
+          {/* Zpětná vazba je poslední položkou téže mřížky, aby na telefonu nezůstala osamocená na dalším řádku. */}
+          <li className="sidebar-feedback">
+            <button type="button" className="nav-item" onClick={() => window.dispatchEvent(new Event(FEEDBACK_OPEN_EVENT))}>
+              <Icon name="bug" />
+              <span>Zpětná vazba</span>
+            </button>
+          </li>
         </ul>
       </nav>
-      {/* Zpětná vazba z menu na všech šířkách. Otevře okno a vrátí skrytého broučka. */}
-      <div className="sidebar-feedback">
-        <button type="button" className="nav-item" onClick={() => window.dispatchEvent(new Event(FEEDBACK_OPEN_EVENT))}>
-          <Icon name="bug" />
-          <span>Zpětná vazba</span>
-        </button>
-      </div>
       {!live && (
         <div className="sidebar-section">
           <p className="sidebar-label">Dokumenty</p>

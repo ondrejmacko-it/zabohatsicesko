@@ -328,31 +328,24 @@ a.nav-item:hover {
     padding: 8px;
   }
 
+  /* Menu jako mřížka stejně širokých položek (počet sloupců posílá Sidebar), aktivní stav vyplní celou buňku. */
   .nav {
-    flex-direction: row;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(var(--nav-cols, 4), minmax(0, 1fr));
   }
 
   .nav-item {
-    width: auto;
+    justify-content: center;
+    min-width: 0;
     padding: 8px 10px;
+  }
+
+  .nav-badge {
+    margin-left: 0;
   }
 
   .sidebar-section {
     display: none;
-  }
-
-  /* Zpětná vazba zůstává v menu i na telefonu: stejný řádek jako navigace, zalomí se jen při nedostatku místa. */
-  .sidebar {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 2px;
-  }
-
-  .sidebar > nav {
-    flex: 1 1 auto;
-    min-width: 0;
   }
 
   .sidebar-feedback {
@@ -2145,22 +2138,26 @@ details > summary {
     display: none;
   }
 
-  /* Zbylé sekce drží jeden řádek. Kdyby se nevešly, řádek se posouvá do strany, stránka ne. */
+  /* Telefon: ikona nad popiskem, všechny položky v jedné řadě stejně široké. */
   .nav {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-
-  .nav::-webkit-scrollbar {
-    display: none;
+    grid-template-columns: repeat(var(--nav-cols-phone, 4), minmax(0, 1fr));
   }
 
   .nav-item {
-    gap: 6px;
-    padding: 8px 7px;
+    position: relative;
+    flex-direction: column;
+    gap: 4px;
+    min-height: 52px;
+    padding: 8px 4px;
     font-size: 13px;
-    white-space: nowrap;
+    line-height: 1.2;
+    text-align: center;
+  }
+
+  .nav-badge {
+    position: absolute;
+    top: 4px;
+    right: 6px;
   }
 
   h1 {
@@ -4906,7 +4903,8 @@ body[data-moving] .quick-actions,
 .sidebar-feedback .nav-item {
   border: 0;
   background: none;
-  font: inherit;
+  /* Jen rodina písma: zkratka `font` by přepsala výšku řádku a položka by byla vyšší než odkazy vedle. */
+  font-family: inherit;
   font-size: 14px;
   text-align: left;
   cursor: pointer;
@@ -5484,9 +5482,27 @@ body[data-moving] .quick-actions,
   }
 }
 
-/* Telefon: Zpětná vazba má stejné písmo jako ostatní položky menu. */
+/* Telefon: Zpětná vazba má stejné písmo a zarovnání jako ostatní položky menu. */
 @media (max-width: 640px) {
   .sidebar-feedback .nav-item {
     font-size: 13px;
+    text-align: center;
+  }
+}
+
+/* Úzký telefon se čtyřmi položkami: 2×2 s ikonou vedle popisku místo čtyř stísněných sloupců. */
+@media (max-width: 480px) {
+  .nav[data-phone-count="4"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .nav[data-phone-count="4"] .nav-item {
+    flex-direction: row;
+    gap: 8px;
+    min-height: 44px;
+  }
+
+  .nav[data-phone-count="4"] .nav-badge {
+    position: static;
   }
 }
