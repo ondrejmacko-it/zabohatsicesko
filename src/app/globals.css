@@ -2137,21 +2137,6 @@ details > summary {
   margin: 8px 0 0;
   max-width: 60ch;
 }
-/* Další údaje uvnitř rámečku formuláře: jen dělicí čára, žádný druhý rámeček. */
-.form-main > .more-settings {
-  margin-top: 14px;
-  padding-top: 12px;
-  border-top: 1px solid var(--line);
-}
-
-.more-settings > summary {
-  cursor: pointer;
-  font-weight: 600;
-}
-.more-settings[open] > summary {
-  margin-bottom: 12px;
-}
-
 /* ——— Dotyková zařízení (iPhone, iPad) ———
    Pole s písmem pod 16 px Safari na iOS po klepnutí přiblíží a stránka zůstane zvětšená.
    Ovládací prvky mají výšku podle doporučení Applu pro dotyk (44 px). */
@@ -2413,19 +2398,29 @@ a.brief-link:hover {
   margin-top: 16px;
 }
 
-/* Základní údaje v dialogu akce jsou odlišené od méně častého nastavení. */
-.form-main {
+/* Skupiny okna akce (Akce, Termín a vedení): nadpis a dělicí čára, žádné vnořené karty. */
+.form-section {
+  min-width: 0;
   margin: 0;
-  padding: 14px 16px 12px;
-  border: 1px solid var(--line);
-  border-left: 4px solid var(--ochre);
-  border-radius: var(--radius-sm);
-  background: var(--band);
+  padding: 0;
+  border: 0;
 }
 
-.form-main > legend {
-  padding: 0 6px;
+.form-section + .form-section {
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.form-section > legend {
+  float: left;
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 0;
   font-weight: 650;
+}
+
+.form-section > legend + * {
+  clear: both;
 }
 
 /* ——— Chybějící údaj: v celé Wiki stejně, menší, kurzívou a okrově, aby se nepletl se skutečnou hodnotou ——— */
@@ -4232,10 +4227,6 @@ p.cal-status {
   vertical-align: 1px;
 }
 
-.form-step + .form-step {
-  margin-top: 2px;
-}
-
 .form-term {
   grid-template-columns: minmax(0, 1.4fr) repeat(2, minmax(0, 1fr));
 }
@@ -5527,12 +5518,6 @@ body[data-moving] .quick-actions,
     margin-left: -12px;
     padding-right: 12px;
     padding-left: 12px;
-  }
-
-  .dialog.dialog-wide .form-main {
-    padding-right: 10px;
-    padding-left: 10px;
-    border-left-width: 3px;
   }
 }
 

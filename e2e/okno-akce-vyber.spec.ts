@@ -37,7 +37,6 @@ for (const width of [320, 390]) {
     await expect(lead).toHaveValue("Správce ZBC ukázky");
 
     // Kdo zkontroluje zápis: prázdná hodnota má vlastní název „Jen vedoucí“.
-    await dialog.locator("summary", { hasText: "Další údaje" }).click();
     const reviewer = dialog.getByRole("combobox", { name: /^Kdo zkontroluje zápis/ });
     await chooseOption(dialog, /^Kdo zkontroluje zápis/, { label: "Správce ZBC ukázky" });
     await expect(reviewer).toHaveValue("Správce ZBC ukázky");
