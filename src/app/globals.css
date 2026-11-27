@@ -5257,3 +5257,73 @@ body[data-moving] .quick-actions,
 .participation-panel .participation-actions {
   flex: 0 0 auto;
 }
+
+/* ——— Horní lišta na telefonu (≤640 px) ———
+   Jedna mřížka místo přeskupování flexu: 1. řádek značka a účet, Pohled vždy na vlastním řádku pod nimi.
+   Účet Google je jen tlačítko Účet (jméno, role, e-mail a Odhlásit jsou v jeho menu), takže se nic nepřekrývá
+   ani na 320 px. Ukázková role má výběr role na celém druhém řádku, Odhlásit je také v menu. */
+.account-menu {
+  display: none;
+}
+
+.account-menu-who {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 10px 4px;
+  overflow-wrap: anywhere;
+}
+
+.account-menu-who .small {
+  padding: 0;
+}
+
+@media (max-width: 640px) {
+  .topbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 6px 8px;
+  }
+
+  .brand {
+    grid-column: 1;
+    grid-row: 1;
+    justify-self: start;
+    min-width: 0;
+  }
+
+  .account {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: auto;
+    min-width: 0;
+    margin-left: 0;
+  }
+
+  .account.account-google {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+  }
+
+  .view-switch {
+    grid-column: 1 / -1;
+    grid-row: 3;
+  }
+
+  .account .account-menu {
+    display: inline-flex;
+    flex: none;
+  }
+
+  .account .account-signout,
+  .account-google .account-name {
+    display: none;
+  }
+
+  /* U účtu Google je v prvním řádku místo, odznak ukázky tam stojí v řadě před tlačítkem Účet. */
+  .account-google .demo-badge {
+    position: static;
+  }
+}
