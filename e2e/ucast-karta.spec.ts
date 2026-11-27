@@ -75,6 +75,10 @@ async function acrossWidths(page: Page, name: string, info: Parameters<typeof sh
     await page.setViewportSize({ width, height: height(width) });
     await expectPanelAfterContent(scope());
     await expectNoHorizontalScroll(page);
+    // Úzké šířky: karta účasti je pod obsahem, okno se musí dát doscrollovat až k ní.
+    const panel = scope().locator("[data-ucast-panel]");
+    await panel.scrollIntoViewIfNeeded();
+    await expect(panel).toBeInViewport();
     await shot(page, `${name}-${width}`, info);
   }
   await page.setViewportSize({ width: 1280, height: 800 });
