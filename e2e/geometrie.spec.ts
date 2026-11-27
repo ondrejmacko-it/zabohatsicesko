@@ -31,6 +31,28 @@ test.describe("Zápisy k dokončení", () => {
     }
     await expectNoHorizontalScroll(page);
   });
+
+  test("dlouhý název okna nevytlačí Zavřít na samostatný řádek", async ({ page }) => {
+    await page.goto("/vzdelavani/zapisy");
+    await settle(page);
+    await page.getByRole("link", { name: /^K dokončení/ }).click();
+    const picker = page.getByRole("dialog", { name: "Zápisy k dokončení" });
+    await expect(picker).toBeVisible();
+    // Název prodloužený na víc řádků: Zavřít zůstane vpravo vedle něj, na ose s textem.
+    const box = await picker.locator(".dialog-head").evaluate((head) => {
+      const title = head.querySelector("h2") as HTMLElement;
+      title.textContent = "Zápisy k dokončení za celé pololetí pro všechny skupiny poradců a manažerů";
+      const t = title.getBoundingClientRect();
+      const c = (head.querySelector("button") as HTMLElement).getBoundingClientRect();
+      return { tTop: t.top, tBottom: t.bottom, tRight: t.right, cTop: c.top, cBottom: c.bottom, cLeft: c.left, cW: c.width, cH: c.height };
+    });
+    expect(box.cLeft, "Zavřít vpravo od názvu").toBeGreaterThanOrEqual(box.tRight);
+    expect(box.cTop, "Zavřít v řadě s názvem").toBeLessThan(box.tBottom);
+    expect(box.cBottom).toBeGreaterThan(box.tTop);
+    expect(Math.min(box.cW, box.cH), "plocha Zavřít aspoň 44 px").toBeGreaterThanOrEqual(44);
+    await expect(picker.getByRole("button", { name: "Zavřít" })).toBeVisible();
+    await expectNoHorizontalScroll(page);
+  });
 });
 
 test.describe("Témata: hlavička a lišta", () => {

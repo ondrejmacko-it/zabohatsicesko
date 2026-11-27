@@ -1122,10 +1122,14 @@ body > .dialog[open]:has(~ .dialog[open]:not(.confirm-dialog)) {
 }
 
 /* Hlavička s názvem a Zavřít zůstává při rolování dlouhého okna nahoře, stejně jako patička s akcemi dole. */
+/* Dlouhý název se zalomí po slovech vedle ikonového Zavřít; tlačítko nikdy nespadne na samostatný řádek. */
 .dialog-head {
   position: sticky;
   top: -22px;
   z-index: 2;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
   align-items: center;
   margin: -22px -24px 0;
   padding: 18px 24px 12px;
@@ -1135,6 +1139,12 @@ body > .dialog[open]:has(~ .dialog[open]:not(.confirm-dialog)) {
 
 .dialog-head h2 {
   margin: 0;
+  overflow-wrap: break-word;
+}
+
+.dialog-close {
+  min-width: 44px;
+  min-height: 44px;
 }
 
 /* Potvrzení rozhodnutí: malé samostatné okno nad pracovním oknem, to zůstává vidět a nic se v něm neposune. */
