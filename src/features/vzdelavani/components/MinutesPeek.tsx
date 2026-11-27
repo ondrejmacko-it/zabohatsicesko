@@ -21,8 +21,8 @@ const STATE_ACTION: Record<MissingMinutesItem["state"], string> = {
   processing: "Zobrazit stav",
   failed: "Zkusit přepis znovu",
   unsupported: "Vybrat jinou nahrávku",
-  started: "Dokončit zápis",
-  draft: "Zkontrolovat",
+  started: "Pokračovat v zápisu",
+  draft: "Zkontrolovat zápis",
 };
 
 function statusOf(item: MissingMinutesItem): MissingStatus {

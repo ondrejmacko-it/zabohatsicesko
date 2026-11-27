@@ -165,16 +165,16 @@ const MAX_MINUTES_TASKS = 4;
 
 /** Úkol podle stavu nahrávky. Text i tlačítko odpovídají tomu, co ukazuje detail akce. */
 const MINUTES_TASKS: Record<Exclude<RecordingProgress, "published">, { detail: string; action: string }> = {
-  none: { detail: "Proběhla a nemá zápis. Vlož přepis nebo poznámky, nebo nahraj soubor.", action: "Dokončit zápis" },
+  none: { detail: "Proběhla a nemá zápis. Vlož přepis nebo poznámky, nebo nahraj soubor.", action: "Připravit zápis" },
   processing: { detail: "Nahrávka se přepisuje. Návrh zápisu bude za chvíli ke kontrole.", action: "Zobrazit stav" },
   failed: { detail: "Přepis nahrávky se nepovedl. Zkus ho znovu.", action: "Zkusit přepis znovu" },
   unsupported: { detail: "Ukázkový přepis tento soubor nepřepíše, umí jen ukázkovou nahrávku.", action: "Vybrat jinou nahrávku" },
-  started: { detail: "Zápis je založený, ale zatím prázdný. Doplň ho a ulož.", action: "Dokončit zápis" },
+  started: { detail: "Zápis je založený, ale zatím prázdný. Doplň ho a ulož.", action: "Pokračovat v zápisu" },
   draft: { detail: "Návrh zápisu čeká na kontrolu. Zveřejní ho vedoucí akce.", action: "Zkontrolovat zápis" },
 };
 
 /** S ukázkou nahrávky (F14) úkol nahrávku zmíní, bez ní ne. */
-const NONE_WITH_RECORDING = { detail: "Proběhla a nemá zápis. Připrav ho z nahrávky, přepisu nebo poznámek.", action: "Dokončit zápis" };
+const NONE_WITH_RECORDING = { detail: "Proběhla a nemá zápis. Připrav ho z nahrávky, přepisu nebo poznámek.", action: "Připravit zápis" };
 
 /**
  * Úkol z dnešní akce v ukázce nahrávky (`RECORDING_DEMO`). Rozhodnutí vlastníka (audit P1): text nesmí slibovat
@@ -189,11 +189,11 @@ export function todayRecordingTask(title: string): { title: string; detail: stri
   };
 }
 
-/** Vedoucí akce zápis schvaluje, proto má vlastní úkol „Dokončit zápis“ místo kontroly. */
-const LEAD_DRAFT_TASK = { detail: "Návrh zápisu čeká na tvoje schválení. Zveřejní se až po schválení.", action: "Dokončit zápis" };
+/** Vedoucí akce zápis schvaluje, proto má vlastní úkol „Schválit zápis“ místo kontroly. */
+const LEAD_DRAFT_TASK = { detail: "Návrh zápisu čeká na tvoje schválení. Zveřejní se až po schválení.", action: "Schválit zápis" };
 
 /** Správce u akce bez vedoucího: návrh nemá kdo schválit (F13). */
-const NO_LEAD_DRAFT_TASK = { detail: "Návrh zápisu je hotový, ale akce nemá vedoucího, který ho schválí. Doplň vedoucího.", action: "Doplnit vedoucího" };
+const NO_LEAD_DRAFT_TASK = { detail: "Návrh zápisu je hotový, ale akce nemá vedoucího, který ho schválí. Doplň vedoucího.", action: "Přiřadit vedoucího" };
 
 /** `external`: odkaz vede mimo stránky Wiki (přesměrování na Google), proto běžná navigace prohlížeče. */
 /** `eventType`: úkol patří ke konkrétní akci, filtr Typ akce na Plánu ho podle něj schová nebo nechá. */

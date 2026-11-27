@@ -100,3 +100,14 @@ export async function choosePreview(page: Page, key: string) {
   await page.getByRole("combobox", { name: "Pohled" }).click();
   await page.getByRole("listbox", { name: "Pohledy" }).locator(`[data-value="${key}"]`).click();
 }
+
+/** Počet řádků, na které se zalomil text prvku (podle obdélníků textového rozsahu, ne podle výšky). */
+export async function lineCount(target: Locator): Promise<number> {
+  return target.evaluate((element) => {
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    const tops = new Set<number>();
+    for (const rect of range.getClientRects()) if (rect.width > 0) tops.add(Math.round(rect.top));
+    return tops.size;
+  });
+}

@@ -24,7 +24,7 @@ describe("Moje cesta a Zápisy", () => {
   test("zápis je v seznamu až po zveřejnění a jen pro publikum akce, hledání ignoruje diakritiku", async () => {
     const draft = await draftMinutes();
     expect(await ownMinutes(participant)).toHaveLength(0);
-    expect((await listTasks(lead)).map((t) => t.action)).toContain("Dokončit zápis");
+    expect((await listTasks(lead)).map((t) => t.action)).toContain("Schválit zápis");
 
     await approveMinutes(lead, PAST_FP, draft.id, draft.version);
     const visible = await ownMinutes(participant);

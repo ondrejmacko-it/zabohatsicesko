@@ -2933,7 +2933,10 @@ a.brief-link:hover {
   font-weight: 500;
 }
 
-/* Okno K dokončení: řádky mřížkou Název · Datum · Vedoucí · Stav · Akce, na telefonu pod sebou. */
+/*
+ * Okno K dokončení: vlevo název přes celou šířku a pod ním datum · vedoucí, vpravo stav s akcí na společné ose.
+ * Datum je atomické (nezalomí se po znacích), na úzkém okně se stav s akcí přesune pod název.
+ */
 .missing-list {
   list-style: none;
   margin: 0;
@@ -2944,29 +2947,65 @@ a.brief-link:hover {
 
 .missing-row {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) 9.5em minmax(0, 1.2fr) minmax(0, 1.3fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 6px 14px;
+  gap: 8px 16px;
   padding: 10px 14px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--band);
 }
 
+.missing-main {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
 .missing-title {
   color: var(--ink);
   text-decoration: none;
-  overflow-wrap: anywhere;
 }
 
 .missing-title:hover {
   text-decoration: underline;
 }
 
+.missing-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 6px;
+  margin: 0;
+}
+
+.missing-date {
+  white-space: nowrap;
+}
+
+.missing-lead {
+  min-width: 0;
+}
+
+.missing-date + .missing-lead::before {
+  content: "· ";
+}
+
+.missing-side {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px 12px;
+}
+
 .missing-status {
   display: grid;
-  justify-items: start;
+  justify-items: end;
   gap: 2px;
+  text-align: right;
+}
+
+.missing-action {
+  white-space: nowrap;
 }
 
 .missing-group + .missing-group {
@@ -2985,19 +3024,19 @@ a.brief-link:hover {
   margin-bottom: 8px;
 }
 
-@media (max-width: 760px) {
+@media (max-width: 640px) {
   .missing-row {
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr);
   }
 
-  .missing-title,
+  .missing-side {
+    flex-wrap: wrap;
+    justify-content: space-between;
+  }
+
   .missing-status {
-    grid-column: 1 / -1;
-  }
-
-  .missing-action {
-    grid-column: 1 / -1;
-    justify-self: start;
+    justify-items: start;
+    text-align: left;
   }
 }
 
