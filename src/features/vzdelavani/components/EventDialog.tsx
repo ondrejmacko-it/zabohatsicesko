@@ -418,18 +418,28 @@ function EventForm({
       )}
     </>
   );
+  // Vedoucí, skupina a kontrolor jsou jen výběr z nabídky: nativní <select> se na Androidu otevírá přes celou
+  // obrazovku a dlouhá jména v něm useká. Combobox `selectOnly` se kreslí v okně pod polem.
+  const personOptions = (empty?: string): ComboboxOption[] => [
+    ...(empty ? [{ value: "", label: empty }] : []),
+    ...people.map((p) => ({ value: p.id, label: p.name })),
+  ];
   const leadField = (
-    <label className="field">
-      <span className="field-label">Vede {mark("leadId")}</span>
-      <select className="select" name="leadId" value={values.leadId} onChange={(e) => set("leadId", e.target.value)}>
-        <option value="">Vyber vedoucího</option>
-        {people.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.name}
-          </option>
-        ))}
-      </select>
-    </label>
+    <div className="field">
+      <label className="field-label" htmlFor={`${formId}-lead`}>
+        Vede {mark("leadId")}
+      </label>
+      <Combobox
+        id={`${formId}-lead`}
+        name="leadId"
+        selectOnly
+        value={values.leadId}
+        onChange={(lead) => set("leadId", lead)}
+        options={personOptions()}
+        listLabel="Nabídka vedoucích"
+        placeholder="Vyber vedoucího"
+      />
+    </div>
   );
   // Příjemci pozvánky patří přímo pod „Pro koho“: změna skupiny je hned vidět na seznamu, kdo pozvánku dostane.
   const audienceField = (
@@ -437,19 +447,15 @@ function EventForm({
       <label className="field-label" htmlFor={`${formId}-audience`}>
         Pro koho {mark("audience")}
       </label>
-      <select
+      <Combobox
         id={`${formId}-audience`}
-        className="select"
         name="audience"
+        selectOnly
         value={values.audience}
-        onChange={(e) => set("audience", e.target.value as EventFormValues["audience"])}
-      >
-        {GROUPS.map((g) => (
-          <option key={g} value={g}>
-            {GROUP_LABELS[g]}
-          </option>
-        ))}
-      </select>
+        onChange={(audience) => set("audience", audience as EventFormValues["audience"])}
+        options={GROUPS.map((g) => ({ value: g, label: GROUP_LABELS[g] }))}
+        listLabel="Skupiny"
+      />
       {invite && <InviteeList invite={invite} audience={values.audience} />}
     </div>
   );
@@ -504,17 +510,20 @@ function EventForm({
             />
           </label>
         )}
-        <label className="field">
-          <span className="field-label">Kdo zkontroluje zápis {mark("reviewerId")}</span>
-          <select className="select" name="reviewerId" value={values.reviewerId} onChange={(e) => set("reviewerId", e.target.value)}>
-            <option value="">Jen vedoucí</option>
-            {people.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="field">
+          <label className="field-label" htmlFor={`${formId}-reviewer`}>
+            Kdo zkontroluje zápis {mark("reviewerId")}
+          </label>
+          <Combobox
+            id={`${formId}-reviewer`}
+            name="reviewerId"
+            selectOnly
+            value={values.reviewerId}
+            onChange={(reviewer) => set("reviewerId", reviewer)}
+            options={personOptions("Jen vedoucí")}
+            listLabel="Kontroloři zápisu"
+          />
+        </div>
       </div>
     </details>
   );

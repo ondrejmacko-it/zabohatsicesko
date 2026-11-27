@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { authFile, expect, expectNoHorizontalScroll, settle, test } from "./support";
+import { authFile, chooseOption, expect, expectNoHorizontalScroll, settle, test } from "./support";
 
 const dialog = (page: Page, title: string | RegExp) => page.getByRole("dialog", { name: title });
 
@@ -277,7 +277,7 @@ test.describe("okno akce: zahození neveřejných změn se potvrzuje @desktop", 
     await page.goto("/vzdelavani/harmonogram?mesic=2026-11&akce=ev-11-26");
     await settle(page);
     const window = page.getByRole("dialog").filter({ has: page.getByLabel(/^Vede/) });
-    await window.getByLabel(/^Vede/).selectOption({ label: "Správce ZBC ukázky" });
+    await chooseOption(window, /^Vede/, { label: "Správce ZBC ukázky" });
     await window.getByRole("button", { name: "Uložit jako návrh" }).click();
     await expect(page.getByRole("status").filter({ hasText: "Návrh změny je uložený" })).toBeVisible();
     // Mřížka: okrový návrh leží na zveřejněné verzi, z níž vykukuje pruh. Najetí myší originál vysune dopředu
@@ -330,10 +330,10 @@ test.describe("okno akce: zahození neveřejných změn se potvrzuje @desktop", 
     await confirm.getByRole("button", { name: "Zrušit návrh" }).click();
     await expect(notice).toBeHidden();
     // Otevřené okno ukáže zveřejněnou verzi hned, bez nového načtení.
-    await expect(window.getByLabel(/^Vede/).locator("option:checked")).toHaveText("Vedoucí akce");
+    await expect(window.getByRole("combobox", { name: /^Vede/ })).toHaveValue("Vedoucí akce");
     await page.reload();
     await settle(page);
-    await expect(window.getByLabel(/^Vede/).locator("option:checked")).toHaveText("Vedoucí akce");
+    await expect(window.getByRole("combobox", { name: /^Vede/ })).toHaveValue("Vedoucí akce");
   });
 });
 

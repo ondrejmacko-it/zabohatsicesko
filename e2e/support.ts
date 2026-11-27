@@ -1,5 +1,5 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect, test as base, type Page } from "@playwright/test";
+import { expect, test as base, type Locator, type Page } from "@playwright/test";
 import { DEMO_CODE } from "./constants.mjs";
 
 /** Role ukázky: klíč souboru se session a text štítku na vstupu. */
@@ -85,6 +85,14 @@ export async function expectNoSeriousA11y(page: Page) {
 /** Počká, až stránka doběhne (hydratace, odložené dotazy). */
 export async function settle(page: Page) {
   await page.waitForLoadState("networkidle");
+}
+
+/** Vybere možnost v Comboboxu `selectOnly` (náhrada <select>) podle hodnoty nebo zobrazeného názvu. */
+export async function chooseOption(scope: Locator, field: string | RegExp, option: { value: string } | { label: string }) {
+  const input = scope.getByRole("combobox", { name: field });
+  await input.click();
+  const list = scope.locator(`[id="${await input.getAttribute("aria-controls")}"]`);
+  await ("value" in option ? list.locator(`[data-value="${option.value}"]`) : list.getByRole("option", { name: option.label, exact: true })).click();
 }
 
 /** Správce přepne Pohled v liště (Combobox jen z nabídky) podle klíče, například `skupina-fp`; prázdný = můj. */

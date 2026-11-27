@@ -1,5 +1,5 @@
 import type { CDPSession, Locator, Page } from "@playwright/test";
-import { authFile, expect, expectNoHorizontalScroll, settle, test } from "./support";
+import { authFile, chooseOption, expect, expectNoHorizontalScroll, settle, test } from "./support";
 
 // Ukázka běží s referenčním časem 12. 11. 2026 9:00. Garantovaná témata ze seedu: 1. Otevřené otázky na schůzce,
 // 2. Návaznost po konzultaci. Zápisy do garantovaných témat a pořadí (@zapis-temat) běží jen v projektu zapis-temat
@@ -205,7 +205,7 @@ test.describe("Témata: garantovaná a ostatní", () => {
     await expect(suggestions.first()).toContainText("2 zájemci");
     await expect(suggestions.nth(1)).toContainText("Doporučené");
     await suggestions.first().click();
-    await add.getByLabel(/^Pro koho/).selectOption("rm");
+    await chooseOption(add, /^Pro koho/, { value: "rm" });
     await expect(add.getByText(/je pro skupinu Finanční poradci, akce je pro Relationship manažeři/)).toBeVisible();
     await page.keyboard.press("Escape");
   });
