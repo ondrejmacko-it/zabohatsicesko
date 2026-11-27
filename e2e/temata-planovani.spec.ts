@@ -171,7 +171,7 @@ test.describe("Témata: garantovaná a ostatní", () => {
     const add = page.getByRole("dialog", { name: "Přidat akci" });
     await expect(add).toBeVisible();
     await expect(add.getByLabel(/^Téma/)).toHaveValue("Příprava na úvodní schůzku");
-    await expect(add.getByLabel(/^Typ/)).toHaveValue("education-fp");
+    await expect(add.locator('input[type="hidden"][name="type"]')).toHaveValue("education-fp");
     await expect(add.getByLabel(/^Datum/)).toHaveValue("2026-11-13");
     await page.keyboard.press("Escape");
     await expect(add).toBeHidden();
@@ -198,7 +198,7 @@ test.describe("Témata: garantovaná a ostatní", () => {
     await settle(page);
     await page.getByRole("button", { name: "Přidat akci", exact: true }).click();
     const add = page.getByRole("dialog", { name: "Přidat akci" });
-    await add.getByLabel(/^Typ/).selectOption("education-fp");
+    await chooseOption(add, "Typ", { value: "education-fp" });
     const suggestions = add.getByLabel("Doporučená témata").getByRole("button");
     await expect(suggestions.first()).toContainText("Otevřené otázky na schůzce");
     await expect(suggestions.first()).toContainText("Garantované");
@@ -410,7 +410,7 @@ test.describe("Témata: zápis priority, pořadí a návrhu @desktop @zapis-tema
     await settle(page);
     await page.getByRole("button", { name: "Přidat akci", exact: true }).click();
     const add = page.getByRole("dialog", { name: "Přidat akci" });
-    await add.getByLabel(/^Typ/).selectOption("education-fp");
+    await chooseOption(add, "Typ", { value: "education-fp" });
     await add.getByLabel(/^Datum/).fill("2026-12-04");
     await add.getByRole("button", { name: "Uložit jako návrh" }).click();
     await expect(add).toBeHidden();

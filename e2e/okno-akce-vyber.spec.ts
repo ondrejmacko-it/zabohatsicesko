@@ -1,7 +1,7 @@
 import { authFile, chooseOption, expect, settle, test } from "./support";
 
 // Screenshoty vlastníka 27. 11. 2026 (Android): nativní <select> se otevírá přes celou obrazovku a dlouhé
-// názvy useká. Vede, Pro koho a Kdo zkontroluje zápis jsou v okně akce Combobox jen z nabídky.
+// názvy useká. Typ, Vede, Pro koho a Kdo zkontroluje zápis jsou v okně akce Combobox jen z nabídky.
 test.use({ storageState: authFile("spravce") });
 
 for (const width of [320, 390]) {
@@ -12,7 +12,7 @@ for (const width of [320, 390]) {
     await settle(page);
     const dialog = page.locator("dialog[open]");
     await expect(dialog).toBeVisible();
-    for (const name of ["leadId", "audience", "reviewerId"]) {
+    for (const name of ["type", "leadId", "audience", "reviewerId"]) {
       await expect(dialog.locator(`select[name="${name}"]`)).toHaveCount(0);
       await expect(dialog.locator(`input[type="hidden"][name="${name}"]`)).toHaveCount(1);
     }

@@ -366,16 +366,20 @@ function EventForm({
     </label>
   );
   const typeField = (
-    <label className="field">
-      <span className="field-label">Typ {mark("type")}</span>
-      <select className="select" name="type" value={values.type} onChange={(e) => changeType(e.target.value as EventFormValues["type"])}>
-        {FORM_TYPES.map((type) => (
-          <option key={type} value={type}>
-            {TYPE_LABELS[type]}
-          </option>
-        ))}
-      </select>
-    </label>
+    <div className="field">
+      <label className="field-label" htmlFor={`${formId}-type`}>
+        Typ {mark("type")}
+      </label>
+      <Combobox
+        id={`${formId}-type`}
+        name="type"
+        selectOnly
+        value={values.type}
+        onChange={(type) => changeType(type as EventFormValues["type"])}
+        options={FORM_TYPES.map((type) => ({ value: type, label: TYPE_LABELS[type] }))}
+        listLabel="Typy akcí"
+      />
+    </div>
   );
   const topicField = (
     <>

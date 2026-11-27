@@ -1,5 +1,5 @@
 import type { Locator, Page } from "@playwright/test";
-import { authFile, expect, expectNoHorizontalScroll, ROLES, settle, test, type Role } from "./support";
+import { authFile, chooseOption, expect, expectNoHorizontalScroll, ROLES, settle, test, type Role } from "./support";
 
 const dialog = (page: Page, title: string | RegExp) => page.getByRole("dialog", { name: title });
 
@@ -94,7 +94,7 @@ test.describe("okna správce", () => {
     await settle(page);
     await page.getByRole("button", { name: "Přidat akci" }).click();
     const opened = dialog(page, "Přidat akci");
-    await opened.getByLabel("Typ").selectOption("other");
+    await chooseOption(opened, "Typ", { value: "other" });
     await opened.getByLabel("Název akce", { exact: true }).fill("Návštěva partnera z e2e");
     await opened.getByLabel("Datum").fill("2027-06-15");
     await opened.getByRole("button", { name: "Uložit jako návrh" }).click();
@@ -148,7 +148,7 @@ test.describe("okna správce", () => {
     await settle(page);
     await page.getByRole("button", { name: "Přidat akci" }).click();
     const add = dialog(page, "Přidat akci");
-    await add.getByLabel("Typ").selectOption("other");
+    await chooseOption(add, "Typ", { value: "other" });
     await add.getByLabel("Název akce", { exact: true }).fill(label);
     await add.getByLabel("Datum").fill("2027-09-14");
     await add.getByRole("button", { name: "Uložit jako návrh" }).click();
@@ -183,7 +183,7 @@ test.describe("okna správce", () => {
     await settle(page);
     await page.getByRole("button", { name: "Přidat akci" }).click();
     const add = dialog(page, "Přidat akci");
-    await add.getByLabel("Typ").selectOption({ label: "Portfolio tým" });
+    await chooseOption(add, "Typ", { label: "Portfolio tým" });
     await add.getByLabel("Datum").fill("2027-09-15");
     await add.getByRole("button", { name: "Zveřejnit", exact: true }).click();
     const ask = page.getByRole("dialog", { name: "Zveřejnit bez tématu a vedoucího?" });
