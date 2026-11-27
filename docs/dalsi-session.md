@@ -1,8 +1,8 @@
-# Navazující relace (stav 27. 11. 2026, relace 48)
+# Navazující relace (stav 27. 11. 2026, relace 49)
 
 Cíl: finální responzivní audit a mobilní UX (zadání vlastníka body 1–23, zhuštěně v promptu relace 47/48).
 Žádný redesign desktopu, merge, deploy, produkční DB, živý Google ani Make. Na konci draft PR + report.
-Větev `claude/oprava-mobilni-responzivita` z main `01db12f`. PR zatím není. Kód zatím beze změn.
+Větev `claude/oprava-mobilni-responzivita` z main `01db12f`, HEAD `bb7a92d` (+ tato předávka). PR zatím není.
 
 ## Screenshoty vlastníka (16 ks, Android Chrome, ~347 CSS px, zdelavani-demo.vercel.app, správce Google)
 Zip: `/root/.claude/uploads/df1d1066-197f-551e-8282-0e240871cc1e/56421696-ZBC_mobilni_screenshoty_2026-11-27.zip`
@@ -27,22 +27,17 @@ potvrzení, radio. 4. Combobox místo selectů, Domů + oslovení do účtu, tex
 desktop regrese, matice rozlišení, celá sada, před/po screenshoty, draft PR + report.
 
 ## Technika
-- Lišta, příčina: `src/app/globals.css` `.topbar:has(.account-google){flex-wrap:nowrap}` (~ř. 4386) +
-  `.view-switch{width:100%}` na ≤640 (~ř. 4811); `.account-google .account-name{opacity:0}` na telefonu.
-  Další pravidla lišty ř. 144–200, 368, 1917–1960, 4656–4840. Návrh: jeden blok ≤640 grid „brand account“ /
-  „view view“, účet jako `Menu` (jméno, role, e-mail, Odhlásit). `Topbar.tsx` 62 ř., `PreviewSwitch.tsx` select.
-- Test Google účtu: e2e se Googlem nepřihlásí (session `via:"google"` vyžaduje identitu v `user_identities`,
-  ostrá Wiki navíc důvěryhodné zařízení – `src/server/auth/session.ts` resolveSessionUser). Nejjednodušší:
-  ukázka 3310 + geometrický test přes demo účet s dlouhým jménem, nebo doplnit e2e seed Google identity
-  jen pro server 3310 (ověřit, že `googleLoginConfig()` tam není null). Rozhodni levnější variantu.
-- Spuštění: `npm ci`, Playwright si server spustí sám (`node e2e/server.mjs`, build + 3310/3311/3313),
-  projekty telefon-390/360/320, `windows-1280`; stávající `e2e/zahlavi.spec.ts` hlídá 641–1200 px.
+- Hotovo (bb7a92d): lišta ≤640 = blok na konci `globals.css` (grid: brand+účet Google v ř. 1, výběr role
+  ukázky ř. 2, Pohled ř. 3); `Topbar.tsx` má `Menu` „Účet“ (jméno, role, e-mail Google, Odhlásit), na >640
+  skryté. Google se v e2e přihlásit nedá, test jede na ukázce se stejnými třídami (riziko: Google větev
+  ověřena jen CSS, ne živě – uvést v PR).
+- Spuštění: `npm ci`, Playwright si server spustí sám (build + 3310/3311/3313), projekty telefon-390/360/320,
+  `windows-1280`. Cíleně: `npx playwright test e2e/<soubor> --project=telefon-390 --trace off --reporter=line`.
 
 ## Ověřeno
-Nic nového. Main 01db12f: dle relace 46 e2e 1475 OK, Vitest 628/628.
+bb7a92d: `e2e/zahlavi.spec.ts` na telefon-390/320 + windows-1280 OK (13 passed), tsc a eslint OK.
 
 ## Další krok
-Jednotka 1: lišta (CSS sjednocení ≤640 + účet do Menu) + geometrický test v `e2e/zahlavi.spec.ts`
-(320–430 px, žádný průnik boxů brand/view/account, scrollWidth ≤ clientWidth, celé jméno v otevřeném účtu).
-Jednotka 2: `.agendaEvent` v `src/features/vzdelavani/components/schedule.module.css` (čas na 1 řádku,
-štítky pod ním jako celky) + test výšky času = 1 řádek.
+Jednotka 2: `.agendaEvent` v `src/features/vzdelavani/components/schedule.module.css` (čas „09:00–10:30“
+na 1 řádku, štítky pod ním jako celky, role vedoucího bez lámání závorky) + test výšky času = 1 řádek
+na 320–390 px. Pak zbytek bodu 2 plánu (filtry, tři tečky 44×44, brouček vs. quick actions).
