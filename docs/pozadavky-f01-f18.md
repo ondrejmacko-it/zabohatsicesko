@@ -131,12 +131,12 @@ Každý bod má aspoň jeden cílený test. Unit = `tests/` (Vitest), e2e = `e2e
 
 **F04 v simulaci (PR8):** povinná akce = pozvánka po zveřejnění (hosté = povinní − omluvení + přihlášení); omluva platí
 ve Wiki hned (D01) a hned po odpovědi (`after(() => syncEvent)` v `changeParticipationAction`) Wiki omluveného z hostů
-odebere, Google mu pošle zrušení. `declined` za něj Wiki nenastavuje (O04). Panel „Tvoje účast“ v detailu akce i v okně akce v Plánu říká
-pravdivý stav vlastní pozvánky (`calendarNote`, `ownCalendarState`): „Pozvánku máš v Kalendáři.“, „…čeká na odeslání.“,
-„Odebrání z pozvánky v Kalendáři čeká na odeslání.“, „Wiki tě na tuto akci do Kalendáře nezve.“, „Wiki tvoji pozvánku
-nespravuje. Její stav ověř v Kalendáři.“, „Do Kalendáře se akce přidá, až
-se přihlásíš.“, chyba Kalendáře. Kde stav Wiki nezná (osobní kalendáře, pevný seznam testovacích příjemců, starší
-pozvánka bez spravovaných hostů, například spárovaná ukázková `tr-rm-1112`), panel o Kalendáři nic netvrdí.
+odebere, Google mu pošle zrušení. `declined` za něj Wiki nenastavuje (O04). Karta „Tvoje účast“ v detailu akce i v okně akce v Plánu (PR #94: až po obsahu akce) říká stav synchronizace
+s Kalendářem, ne slib doručení pozvánky (`calendarNote` v `src/lib/calendar-note.ts`, `ownCalendarState`):
+„Kalendář: synchronizováno.“, „Kalendář: synchronizace čeká.“, „Kalendář: synchronizace selhala, Wiki ji zkusí znovu.“,
+„Kalendář: zatím tě Wiki nezve. Po přihlášení se synchronizuje.“, „Kalendář: Wiki tě na akci nezve.“,
+„Kalendář: stav neznámý, Wiki tvoji pozvánku nespravuje.“ Kde stav Wiki nezná (osobní kalendáře, pevný seznam
+testovacích příjemců, výpadek), karta řekne „Kalendář: stav neznámý.“ U zrušené akce věta o Kalendáři není.
 
 **Stav F04: hotovo v simulaci** (unit `kalendar-f04.test.ts` 18/18, e2e `ucast.spec.ts` › F04 na windows-1280 i
 telefon-390, celé e2e 1333 OK / 213 přeskočeno / 0 chyb). Živý test s Googlem dál čeká na schválení (D06).

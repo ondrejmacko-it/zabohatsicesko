@@ -9,6 +9,7 @@ import { getDb, type Executor } from "@/server/db/client";
 import { userIdentities, users } from "@/server/db/schema";
 import { canManageAccount, canManageUsers, type Viewer } from "@/server/policy";
 import { DomainError } from "@/server/services/errors";
+import { removeManagerLinks } from "@/server/services/excuse-managers";
 
 // Správa uživatelů Wiki: pozvání adresy, schválení žádosti, změna role a skupin, odebrání přístupu.
 // Google jen ověřuje identitu. Kdo smí dovnitř a co uvidí, rozhoduje výhradně tento modul.
@@ -144,6 +145,12 @@ export async function revokeUserDevice(viewer: Viewer, userId: string, deviceId:
   });
 }
 
+// Pracovní role, které formulář správy neukazuje (`vedouci-tymu`), se při uložení účtu nesmí ztratit (C05).
+const UNMANAGED_GROUPS: readonly string[] = ["vedouci-tymu"];
+function keepUnmanagedGroups(current: readonly string[], submitted: readonly string[]): string[] {
+  return [...new Set([...submitted, ...current.filter((g) => UNMANAGED_GROUPS.includes(g))])];
+}
+
 /**
  * Nastaví roli, skupiny a stav účtu. Schválení žádosti je změna stavu z „čeká“ na „aktivní“.
  * Běží pod zámkem na účtu správce i cíle, aby si dva správci souběžně neodebrali práva navzájem
@@ -173,7 +180,7 @@ export async function updateAccess(
 
     await tx
       .update(users)
-      .set({ role: input.role, groups: input.groups, status: input.status })
+      .set({ role: input.role, groups: keepUnmanagedGroups(target.groups, input.groups), status: input.status })
       .where(eq(users.id, userId));
     const action =
       target.status === "pending" && input.status === "active"
@@ -186,6 +193,7 @@ export async function updateAccess(
     if (input.status === "disabled") {
       await revokeUserDevices(tx, userId);
       await revokeInvites(tx, viewer.id, userId);
+      await removeManagerLinks(tx, viewer.id, userId);
     }
     // Publikum se mohlo změnit ve starých i nových skupinách, u akcí pro všechny i u přihlášek a omluv.
     // Budoucí spravované pozvánky člověka se podle toho přepočítají (i po deaktivaci).

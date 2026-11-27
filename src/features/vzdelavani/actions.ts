@@ -721,10 +721,10 @@ export async function resetDemoAction(): Promise<ActionResult> {
 
 
 const PARTICIPATION_MESSAGES: Record<ParticipationChange["kind"], string> = {
-  enroll: "Jsi přihlášený. Pozvánka do Kalendáře dorazí po další synchronizaci.",
-  withdraw: "Jsi odhlášený.",
-  excuse: "Omluva je uložená ve Wiki. Kalendář se srovná po další synchronizaci.",
-  revoke_excuse: "Omluva je zrušená, akce je pro tebe zase povinná.",
+  enroll: "Přihláška je uložená ve Wiki. Kalendář se synchronizuje automaticky.",
+  withdraw: "Odhlášení je uložené ve Wiki. Kalendář se synchronizuje automaticky.",
+  excuse: "Omluva je uložená ve Wiki. Kalendář se synchronizuje automaticky.",
+  revoke_excuse: "Omluva je zrušená, akce je pro tebe zase povinná. Kalendář se synchronizuje automaticky.",
 };
 
 /**

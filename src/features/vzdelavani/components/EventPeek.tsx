@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Icon } from "@/components/Icon";
 import { RouteModal, UnavailableModal } from "@/components/RouteModal";
 import { Todo, missingText } from "@/components/Todo";
-import { GROUP_LABELS, PLAN_STATUS_LABELS } from "@/lib/labels";
+import { GROUP_LABELS } from "@/lib/labels";
 import { formatEventWhen, toDateKey } from "@/lib/time";
 import type { Viewer } from "@/server/policy";
 import { isOrganizer } from "@/server/policy";
@@ -11,7 +11,8 @@ import { listPeople, loadTemplate } from "@/server/services/events";
 import type { PlanPreview } from "@/server/services/preview";
 import { listTopics } from "@/server/services/topics";
 import { loadInviteRecipients } from "@/server/services/calendar-status";
-import { cardTone, primaryStatus, statusAdvice } from "../status";
+import { cardTone, detailBadges, primaryStatus, statusAdvice } from "../status";
+import { StatusBadge } from "./StatusBadge";
 import { ChangeBanner } from "./ChangeBanner";
 import { EventWindow } from "./EventDialog";
 import { EventMenu } from "./EventMenu";
@@ -57,10 +58,14 @@ export async function EventPeek({ user, eventId, preview, closeHref, presetTopic
   const statusBand = (
     // Tón pásu se řídí hlavním stavem: chyba Kalendáře nikdy nesmí vypadat jako úspěch (S-01).
     <div className={`status-band status-${status?.tone === "danger" ? "danger" : status?.tone === "ochre" && card.planStatus === "published" ? "attention" : cardTone(card)}`} role="status">
-      <strong>
-        {card.planStatus === "draft" ? "Návrh · kolegové ho zatím nevidí" : (status?.label ?? PLAN_STATUS_LABELS[card.planStatus])}
-        {card.past && card.planStatus === "published" ? " · proběhlo" : ""}
-      </strong>
+      {/* Stejné štítky jako v hlavičce stránky detailu: životní stav akce a nejvýš jeden doplněk. Osobní účast
+          má vlastní štítek jen v kartě „Tvoje účast“. */}
+      <div className="row">
+        {detailBadges(card).map((badge) => (
+          <StatusBadge key={badge.label} tone={badge.tone} label={badge.label} />
+        ))}
+      </div>
+      {card.planStatus === "draft" && <span>Kolegové ho zatím nevidí.</span>}
       {advice && <span>{advice}</span>}
       {preview && <span>Pohled: {preview.label} · jen ke čtení.</span>}
       {card.planStatus === "cancelled" && detail.cancelReason && <span>Důvod: {detail.cancelReason}</span>}
@@ -107,6 +112,11 @@ export async function EventPeek({ user, eventId, preview, closeHref, presetTopic
           </p>
         )}
         {card.original && <ChangeBanner eventId={card.id} revision={detail.revision} original={card.original} />}
+      </>
+    );
+    // Vlastní účast a správa omluv až po údajích akce (pořadí okna: stav, obsah, účast, správa, další možnosti).
+    const afterFields = (participationPanel || managedPanel) && (
+      <>
         {participationPanel}
         {managedPanel}
       </>
@@ -124,6 +134,7 @@ export async function EventPeek({ user, eventId, preview, closeHref, presetTopic
         title={card.label}
         closeHref={closeHref}
         intro={intro}
+        afterFields={afterFields}
         menu={
           <EventMenu
             id={card.id}

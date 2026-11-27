@@ -9,7 +9,8 @@ import { Icon } from "@/components/Icon";
 import { Todo, missingText } from "@/components/Todo";
 import { RecordingSection } from "@/features/vzdelavani/components/RecordingSection";
 import { SyncPanelView } from "@/features/vzdelavani/components/SyncPanelView";
-import { badgeClass, detailBadges, statusAdvice } from "@/features/vzdelavani/status";
+import { StatusBadge } from "@/features/vzdelavani/components/StatusBadge";
+import { detailBadges, statusAdvice } from "@/features/vzdelavani/status";
 import { GROUP_LABELS, PREVIEW_READ_ONLY, eventContext, eventTitle } from "@/lib/labels";
 import { safeDecode } from "@/lib/params";
 import { formatDate, formatEventWhen, monthOf, toDateKey } from "@/lib/time";
@@ -84,9 +85,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
           <h2 className="detail-title">{title}</h2>
           <div className="row detail-badges">
             {detailBadges(card).map((badge) => (
-              <span key={badge.label} className={badgeClass(badge.tone)}>
-                {badge.label}
-              </span>
+              <StatusBadge key={badge.label} tone={badge.tone} label={badge.label} />
             ))}
           </div>
           {planView && advice && <p className="small muted status-advice">{advice}</p>}
@@ -133,7 +132,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
       )}
 
       <section className="section facts-section" aria-label="Údaje o akci">
-        {/* Kdy, kdo a pro koho: to hlavní, co kolega z akce potřebuje, je nahoře a výrazně. Typ nese nadpis. */}
+        {/* Kdy, téma, kdo vede a pro koho: to hlavní, co kolega z akce potřebuje, je nahoře a výrazně. Typ nese nadpis. */}
         <dl className="key-facts">
           <div>
             <dt>Kdy</dt>
@@ -141,6 +140,12 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
               <Icon name="calendar" /> {formatEventWhen(start, new Date(card.endsAt), card.allDay)}
             </dd>
           </div>
+          {card.type !== "holiday" && (
+            <div>
+              <dt>Téma</dt>
+              <dd>{card.topicTitle ?? <Todo>{missingText(fillable, "téma")}</Todo>}</dd>
+            </div>
+          )}
           {card.type !== "holiday" && (
             <div>
               <dt>Vede</dt>
@@ -152,22 +157,12 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
             <dd>{GROUP_LABELS[card.audience]}</dd>
           </div>
         </dl>
-        <dl className="dl">
-          {card.type !== "holiday" && !card.topicTitle && (
-            <>
-              <dt>Téma</dt>
-              <dd>
-                <Todo>{missingText(fillable, "téma")}</Todo>
-              </dd>
-            </>
-          )}
-          {detail.reviewerName && (
-            <>
-              <dt>Kdo zkontroluje zápis</dt>
-              <dd>{detail.reviewerName}</dd>
-            </>
-          )}
-        </dl>
+        {detail.reviewerName && (
+          <dl className="dl">
+            <dt>Kdo zkontroluje zápis</dt>
+            <dd>{detail.reviewerName}</dd>
+          </dl>
+        )}
         {card.type === "holiday" && <p className="small muted section-actions">Svátek je v plánu jen pro přehled, do Kalendáře se neposílá.</p>}
       </section>
 

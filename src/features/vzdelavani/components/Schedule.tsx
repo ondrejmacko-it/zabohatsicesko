@@ -14,8 +14,8 @@ import {
   weekdayShort,
 } from "@/lib/time";
 import type { EventCard } from "@/server/services/events";
-import { ParticipationBadge } from "./ParticipationBadge";
-import { badgeClass, cardDetails, cardStatus, cardTone, hiddenMissingDetails, isMovable, isPickable, pickBlockReason, primaryStatus } from "../status";
+import { StatusBadge } from "./StatusBadge";
+import { cardDetails, cardStatus, cardTone, hiddenMissingDetails, isMovable, isPickable, pickBlockReason, primaryStatus } from "../status";
 import { CardMenu, type CardMenuItem } from "./CardMenu";
 import { PickBox } from "./PlanSelection";
 import styles from "./schedule.module.css";
@@ -85,16 +85,14 @@ function CardMeta({ card, managing }: { card: EventCard; managing: boolean }) {
   const status = cardStatus(card);
   // Jeden stavový štítek; výstraha jen pro chybějící údaj, který karta jinak neukazuje.
   const missing = hiddenMissingDetails(card, managing);
-  // Vlastní účast (jen se zapnutou účastí): „Povinné pro tebe“, „Můžeš se přihlásit“, „Přihlášeno“, „Omluveno“.
+  // Vlastní účast (jen se zapnutou účastí): „Povinné pro tebe“, „Můžeš se přihlásit“, „Přihlášeno“, „Omluven/a“.
   const own = card.participation?.label ?? null;
   if (!status && !missing.length && !own) return null;
   const missingText = `Chybí ${missing.join(" a ")}`;
   return (
     <span className={styles.meta}>
-      {status && <span className={badgeClass(status.tone)}>{status.label}</span>}
-      {own && (
-        <ParticipationBadge state={card.participation!.state} label={own} />
-      )}
+      {status && <StatusBadge tone={status.tone} label={status.label} />}
+      {own && <StatusBadge ucast={card.participation!.state} label={own} />}
       {missing.length > 0 && (
         <span className={styles.missing} title={missingText}>
           <Icon name="alert" />
@@ -491,18 +489,15 @@ export function NextEventsList({ cards, todayKey, hrefFor = pageHref, emptyText 
               <span className="brief-main">
                 <span className="item-title">
                   {eventTitle(card.label, card.topicTitle)}
-                  {card.planStatus === "draft" && (
-                    <span className="badge badge-draft" title="Návrh, do Kalendáře zatím nejde">
-                      Návrh
-                    </span>
-                  )}
+                  {/* Stejný štítek stavu jako karta v Plánu (Zrušeno, Návrh…), osobní účast zvlášť pod ním. */}
+                  {cardStatus(card) && <StatusBadge tone={cardStatus(card)!.tone} label={cardStatus(card)!.label} />}
                 </span>
                 <span className="item-meta">
                   {formatEventTime(new Date(card.startsAt), new Date(card.endsAt), card.allDay)}
                   {card.leadName ? ` · Vede: ${card.leadName}` : ""}
                 </span>
                 {card.participation?.label && (
-                  <ParticipationBadge state={card.participation.state} label={card.participation.label} />
+                  <StatusBadge ucast={card.participation.state} label={card.participation.label} />
                 )}
               </span>
             </Link>

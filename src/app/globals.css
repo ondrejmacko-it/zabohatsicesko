@@ -666,33 +666,39 @@ a.item-card:hover {
   border: 1px solid transparent;
 }
 [data-ucast="required"],
+[data-ucast-panel="required"],
 [data-ucast-filter="required"] {
   --ucast: var(--ucast-required);
   --ucast-bg: var(--ucast-required-bg);
   --ucast-fg: var(--ucast-required-fg);
 }
 [data-ucast="optional"],
+[data-ucast-panel="optional"],
 [data-ucast-filter="optional"] {
   --ucast: var(--ucast-optional);
   --ucast-bg: var(--ucast-optional-bg);
   --ucast-fg: var(--ucast-optional-fg);
 }
-[data-ucast="voluntary_enrolled"] {
+[data-ucast="voluntary_enrolled"],
+[data-ucast-panel="voluntary_enrolled"] {
   --ucast: var(--ucast-enrolled);
   --ucast-bg: var(--ucast-enrolled-bg);
   --ucast-fg: var(--ucast-enrolled-fg);
 }
-[data-ucast="excused"] {
+[data-ucast="excused"],
+[data-ucast-panel="excused"] {
   --ucast: var(--ucast-excused);
   --ucast-bg: var(--ucast-excused-bg);
   --ucast-fg: var(--ucast-excused-fg);
 }
-[data-ucast="withdrawn"] {
+[data-ucast="withdrawn"],
+[data-ucast-panel="withdrawn"] {
   --ucast: var(--ucast-withdrawn);
   --ucast-bg: var(--ucast-withdrawn-bg);
   --ucast-fg: var(--ucast-withdrawn-fg);
 }
-[data-ucast="cancelled"] {
+[data-ucast="cancelled"],
+[data-ucast-panel="cancelled"] {
   --ucast: var(--danger);
   --ucast-bg: var(--danger-soft);
   --ucast-fg: var(--danger);
@@ -2397,7 +2403,7 @@ a.brief-link:hover {
   font-size: 14px;
 }
 
-.status-band span {
+.status-band > span {
   color: var(--ink-soft);
 }
 
@@ -5211,4 +5217,43 @@ body[data-moving] .quick-actions,
   background: color-mix(in srgb, var(--ok) 88%, #000);
   border-color: var(--ok);
   color: #fff;
+}
+
+/* Karta účasti v detailu: nadpis se štítkem, jedna věta, hlavní tlačítko vpravo. Bez dlouhých odstavců.
+   Jemné podbarvení a boční linka z tokenů --ucast-* (stejné jako štítek); význam nese vždy i text štítku.
+   Proběhlá akce (data-ucast-closed) zůstává neutrální. */
+.participation-panel[data-ucast-panel]:not([data-ucast-closed]) {
+  background: color-mix(in srgb, var(--ucast-bg) 55%, var(--surface));
+  border-color: color-mix(in srgb, var(--ucast) 30%, var(--line));
+  border-left: 4px solid var(--ucast);
+}
+.participation-panel .participation-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  margin-bottom: 8px;
+}
+.participation-panel .participation-head > h2 {
+  margin: 0;
+}
+.participation-panel .participation-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+}
+.participation-panel .participation-info {
+  flex: 1 1 280px;
+  min-width: 0;
+}
+.participation-panel .participation-info > p {
+  margin: 0 0 4px;
+}
+.participation-panel .participation-info > p:last-child {
+  margin-bottom: 0;
+}
+.participation-panel .participation-actions {
+  flex: 0 0 auto;
 }

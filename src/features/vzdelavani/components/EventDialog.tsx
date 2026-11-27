@@ -139,7 +139,14 @@ export function EventDialog(props: CreateProps) {
  * Okno akce pro správce: údaje jdou upravit rovnou a dole se uloží jako návrh nebo zveřejní.
  * Záhlaví se stavem a nabídku dalších možností připraví server (`EventPeek`).
  */
-export function EventWindow({ title, closeHref, intro, menu, ...props }: Omit<FormProps, "mode"> & { title: string; closeHref: string; intro: React.ReactNode; menu: React.ReactNode }) {
+export function EventWindow({
+  title,
+  closeHref,
+  intro,
+  afterFields,
+  menu,
+  ...props
+}: Omit<FormProps, "mode"> & { title: string; closeHref: string; intro: React.ReactNode; afterFields?: React.ReactNode; menu: React.ReactNode }) {
   const router = useRouter();
   const close = () => router.replace(closeHref, { scroll: false });
   const edited = useRef(false);
@@ -150,6 +157,7 @@ export function EventWindow({ title, closeHref, intro, menu, ...props }: Omit<Fo
         {...props}
         mode="edit"
         menu={menu}
+        afterFields={afterFields}
         onDone={close}
         onEditedChange={(value) => {
           edited.current = value;
@@ -189,10 +197,16 @@ function EventForm({
   duplicateOf,
   saved,
   menu,
+  afterFields,
   onDone,
   onEditedChange,
 }: FormProps & {
   menu?: React.ReactNode;
+  /**
+   * Obsah mezi poli a tlačítky okna (vlastní účast, správa omluv). Stojí mimo <form>: jeho vlastní formuláře
+   * se nevnořují a změna účasti neodešle rozpracovanou editaci akce.
+   */
+  afterFields?: React.ReactNode;
   onDone: (values: EventFormValues, id?: string) => void;
   /** Hlásí oknu, jestli se hodnoty liší od otevření. Okno se podle toho při zavření zeptá. */
   onEditedChange?: (edited: boolean) => void;
@@ -207,6 +221,7 @@ function EventForm({
   const [previewError, setPreviewError] = useState<ActionResult | null>(null);
   const [checking, setChecking] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
+  const actionsRef = useRef<HTMLDivElement>(null);
   // Souhrn chyb z kontroly prohlížeče: názvy polí, která je potřeba opravit (U08).
   const [invalid, setInvalid] = useState<string[]>([]);
   const valuesKey = JSON.stringify({ ...values, endDate: multiDay ? values.endDate : null });
@@ -242,7 +257,7 @@ function EventForm({
   const back = () => setAsk(null);
   // Tlačítka potvrzení jsou v portálu mimo <form>, k formuláři je váže atribut `form`.
   const formId = useId();
-  const publishButton = () => formRef.current?.querySelector<HTMLButtonElement>('.event-actions button[value="publish"]');
+  const publishButton = () => actionsRef.current?.querySelector<HTMLButtonElement>('button[value="publish"]');
 
   // Formulář se neodesílá přes <form action>: React by po akci vrátil výběry (typ, publikum) na první
   // možnost. Ruční odeslání nechá po chybě všechna pole tak, jak je správce vyplnil.
@@ -509,133 +524,136 @@ function EventForm({
   const unchanged = published !== null && !unpublishedChanges && !dirty;
 
   return (
-    <form ref={formRef} id={formId} onSubmit={submit} onInvalidCapture={onInvalid} className="stack event-form">
-      {invalid.length > 0 && (
-        <div className="notice notice-danger" role="alert">
-          <strong>Akci zatím nejde uložit.</strong> Doplň nebo oprav: {invalid.join(", ")}.
-        </div>
-      )}
-      {confirmed && <input type="hidden" name="confirmToken" value={confirmed.token} />}
-      {acceptedIncomplete === valuesKey && missing.length > 0 && <input type="hidden" name="allowIncomplete" value="on" />}
-      {id && <input type="hidden" name="id" value={id} />}
-      {duplicateOf && <input type="hidden" name="duplicateOf" value={duplicateOf} />}
-      {revision !== undefined && <input type="hidden" name="revision" value={revision} />}
+    <>
+      <form ref={formRef} id={formId} onSubmit={submit} onInvalidCapture={onInvalid} className="stack event-form">
+        {invalid.length > 0 && (
+          <div className="notice notice-danger" role="alert">
+            <strong>Akci zatím nejde uložit.</strong> Doplň nebo oprav: {invalid.join(", ")}.
+          </div>
+        )}
+        {confirmed && <input type="hidden" name="confirmToken" value={confirmed.token} />}
+        {acceptedIncomplete === valuesKey && missing.length > 0 && <input type="hidden" name="allowIncomplete" value="on" />}
+        {id && <input type="hidden" name="id" value={id} />}
+        {duplicateOf && <input type="hidden" name="duplicateOf" value={duplicateOf} />}
+        {revision !== undefined && <input type="hidden" name="revision" value={revision} />}
 
-      {mode === "create" ? (
-        <>
-          <fieldset className="form-main form-step">
-            <legend>
-              <span className="step-no">1</span> Akce
-            </legend>
+        {mode === "create" ? (
+          <>
+            <fieldset className="form-main form-step">
+              <legend>
+                <span className="step-no">1</span> Akce
+              </legend>
+              <div className="form-grid">
+                {typeField}
+                {audienceField}
+                {labelInMain && labelField}
+                {topicField}
+              </div>
+            </fieldset>
+            <fieldset className="form-main form-step">
+              <legend>
+                <span className="step-no">2</span> Termín a vedení
+              </legend>
+              <div className="form-grid">
+                {termFields}
+                {leadField}
+              </div>
+              {moreFields}
+            </fieldset>
+          </>
+        ) : (
+          <fieldset className="form-main">
+            <legend className="visually-hidden">Údaje akce</legend>
             <div className="form-grid">
-              {typeField}
-              {audienceField}
               {labelInMain && labelField}
               {topicField}
-            </div>
-          </fieldset>
-          <fieldset className="form-main form-step">
-            <legend>
-              <span className="step-no">2</span> Termín a vedení
-            </legend>
-            <div className="form-grid">
-              {termFields}
               {leadField}
+              {audienceField}
+              {termFields}
             </div>
             {moreFields}
           </fieldset>
-        </>
-      ) : (
-        <fieldset className="form-main">
-          <legend className="visually-hidden">Údaje akce</legend>
-          <div className="form-grid">
-            {labelInMain && labelField}
-            {topicField}
-            {leadField}
-            {audienceField}
-            {termFields}
-          </div>
-          {moreFields}
-        </fieldset>
-      )}
+        )}
 
-      <ActionMessage state={previewError ?? state} />
+        <ActionMessage state={previewError ?? state} />
 
-      <ConfirmDialog
-        open={ask === "incomplete"}
-        title={`Zveřejnit bez ${missing.length > 1 ? "tématu a vedoucího" : missing[0] === "téma" ? "tématu" : "vedoucího"}?`}
-        description={<p>Kolegové uvidí obecný název „{values.label.trim() || TYPE_LABELS[values.type]}“. Doplnit to půjde i později.</p>}
-        onCancel={back}
-        returnFocusTo={publishButton}
-        busy={busy}
-      >
-        <button type="button" className="btn" onClick={back} autoFocus>
-          Zpět k úpravám
-        </button>
-        <button type="submit" form={formId} name="intent" value="publish" data-confirm="incomplete" className="btn btn-primary" disabled={busy} {...lock}>
-          {checking ? "Ověřuji…" : pending ? "Zveřejňuji…" : "Zveřejnit bez nich"}
-        </button>
-      </ConfirmDialog>
-      <ConfirmDialog
-        open={ask === "impact" && confirmed !== null}
-        title="Zveřejnit změny?"
-        returnFocusTo={publishButton}
-        busy={busy}
-        description={
-          confirmed && (
-            <>
-              <p>
-                <strong>{impactHeadline(confirmed)}</strong>
-              </p>
-              <ul className="prose-list small">
-                {confirmed.changes.map((c) => (
-                  <li key={c.field}>
-                    {c.field}: <s>{c.from}</s> → <strong>{c.to}</strong>
-                  </li>
-                ))}
-                {confirmed.guests.add.length > 0 && <li>Do pozvánky přibude: {confirmed.guests.add.join(", ")}</li>}
-                {confirmed.guests.remove.length > 0 && <li>Z pozvánky ubude: {confirmed.guests.remove.join(", ")}</li>}
-              </ul>
-              {confirmed.notes.length > 0 && (
-                <details className="small">
-                  <summary>Podrobnosti</summary>
-                  <ul className="prose-list">
-                    {confirmed.guests.manual.length > 0 && <li>Ručně přidaní hosté zůstanou: {confirmed.guests.manual.join(", ")}</li>}
-                    {confirmed.notes.map((note) => (
-                      <li key={note}>{note}</li>
-                    ))}
-                  </ul>
-                </details>
-              )}
-            </>
-          )
-        }
-        onCancel={back}
-      >
-        <button type="button" className="btn" onClick={back} autoFocus>
-          Zpět k úpravám
-        </button>
-        <button type="submit" form={formId} name="intent" value="publish" data-confirm="impact" className="btn btn-primary" disabled={busy} {...lock}>
-          {pending ? "Zveřejňuji…" : "Potvrdit zveřejnění"}
-        </button>
-      </ConfirmDialog>
-
-      {/* Enter ve formuláři uloží jen návrh. Zveřejnění je vždy vědomá volba. */}
-      <div className="dialog-actions event-actions">
+        <ConfirmDialog
+          open={ask === "incomplete"}
+          title={`Zveřejnit bez ${missing.length > 1 ? "tématu a vedoucího" : missing[0] === "téma" ? "tématu" : "vedoucího"}?`}
+          description={<p>Kolegové uvidí obecný název „{values.label.trim() || TYPE_LABELS[values.type]}“. Doplnit to půjde i později.</p>}
+          onCancel={back}
+          returnFocusTo={publishButton}
+          busy={busy}
+        >
+          <button type="button" className="btn" onClick={back} autoFocus>
+            Zpět k úpravám
+          </button>
+          <button type="submit" form={formId} name="intent" value="publish" data-confirm="incomplete" className="btn btn-primary" disabled={busy} {...lock}>
+            {checking ? "Ověřuji…" : pending ? "Zveřejňuji…" : "Zveřejnit bez nich"}
+          </button>
+        </ConfirmDialog>
+        <ConfirmDialog
+          open={ask === "impact" && confirmed !== null}
+          title="Zveřejnit změny?"
+          returnFocusTo={publishButton}
+          busy={busy}
+          description={
+            confirmed && (
+              <>
+                <p>
+                  <strong>{impactHeadline(confirmed)}</strong>
+                </p>
+                <ul className="prose-list small">
+                  {confirmed.changes.map((c) => (
+                    <li key={c.field}>
+                      {c.field}: <s>{c.from}</s> → <strong>{c.to}</strong>
+                    </li>
+                  ))}
+                  {confirmed.guests.add.length > 0 && <li>Do pozvánky přibude: {confirmed.guests.add.join(", ")}</li>}
+                  {confirmed.guests.remove.length > 0 && <li>Z pozvánky ubude: {confirmed.guests.remove.join(", ")}</li>}
+                </ul>
+                {confirmed.notes.length > 0 && (
+                  <details className="small">
+                    <summary>Podrobnosti</summary>
+                    <ul className="prose-list">
+                      {confirmed.guests.manual.length > 0 && <li>Ručně přidaní hosté zůstanou: {confirmed.guests.manual.join(", ")}</li>}
+                      {confirmed.notes.map((note) => (
+                        <li key={note}>{note}</li>
+                      ))}
+                    </ul>
+                  </details>
+                )}
+              </>
+            )
+          }
+          onCancel={back}
+        >
+          <button type="button" className="btn" onClick={back} autoFocus>
+            Zpět k úpravám
+          </button>
+          <button type="submit" form={formId} name="intent" value="publish" data-confirm="impact" className="btn btn-primary" disabled={busy} {...lock}>
+            {pending ? "Zveřejňuji…" : "Potvrdit zveřejnění"}
+          </button>
+        </ConfirmDialog>
+      </form>
+      {afterFields}
+      {/* Tlačítka stojí za `afterFields`, proto mimo <form> s atributem `form`. Enter ve formuláři uloží jen
+          návrh (první tlačítko formuláře). Zveřejnění je vždy vědomá volba. */}
+      <div ref={actionsRef} className="dialog-actions event-actions">
         {menu && <div className="event-actions-menu">{menu}</div>}
         {unchanged && <span className="small muted event-actions-note">Beze změn</span>}
         {duplicateOf && <span className="small muted event-actions-note">Kopie se uloží jako návrh, zveřejníš ji po kontrole.</span>}
-        <button type="submit" name="intent" value="draft" data-confirm-save="Uložit jako návrh" className={duplicateOf ? "btn btn-primary" : "btn"} disabled={busy || (mode === "edit" && !dirty)} {...lock}>
+        <button type="submit" form={formId} name="intent" value="draft" data-confirm-save="Uložit jako návrh" className={duplicateOf ? "btn btn-primary" : "btn"} disabled={busy || (mode === "edit" && !dirty)} {...lock}>
           Uložit jako návrh
         </button>
         {duplicateOf ? null : (
           // Primární vzhled jen tehdy, když je skutečně co zveřejnit; bez změn tlačítko k ničemu nevybízí.
-          <button type="submit" name="intent" value="publish" className={unchanged ? "btn" : "btn btn-primary"} disabled={busy || unchanged} {...lock}>
+          <button type="submit" form={formId} name="intent" value="publish" className={unchanged ? "btn" : "btn btn-primary"} disabled={busy || unchanged} {...lock}>
             {checking ? "Ověřuji…" : pending ? "Ukládám…" : publishLabel}
           </button>
         )}
       </div>
-    </form>
+    </>
   );
 }
 

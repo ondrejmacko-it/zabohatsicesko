@@ -30,10 +30,11 @@ export function primaryStatus(card: EventCard): { label: string; tone: Tone } | 
   if (card.planStatus === "cancelled") return { label: "Zrušeno", tone: "danger" };
   if (card.type === "holiday") return { label: "Svátek", tone: "neutral" };
   if (card.planStatus === "draft") return { label: "Návrh", tone: "draft" };
-  if (card.syncStatus === "attention") return { label: "Kalendář čeká na opravu", tone: "danger" };
-  if (card.unpublishedChanges) return { label: "Zveřejněno · máš návrh změny", tone: "ochre" };
+  // Stejné názvy jako štítky karty a detailu (`cardStatus`, `detailBadges`): stejný význam = stejný text.
+  if (card.syncStatus === "attention") return { label: "Kalendář k opravě", tone: "danger" };
+  if (card.unpublishedChanges) return { label: "Návrh změny", tone: "ochre" };
   if (card.syncStatus === "pending") return { label: "Kalendář se synchronizuje", tone: "ochre" };
-  if (card.extraordinary) return { label: "Mimořádná akce", tone: "neutral" };
+  if (card.extraordinary) return { label: "Mimořádná", tone: "neutral" };
   return null;
 }
 
@@ -45,7 +46,7 @@ export function lifecycleStatus(card: EventCard): { label: string; tone: Tone } 
   if (card.planStatus === "cancelled") return { label: "Zrušeno", tone: "danger" };
   if (card.type === "holiday") return { label: "Svátek", tone: "neutral" };
   if (card.planStatus === "draft") return { label: "Návrh", tone: "draft" };
-  if (card.past) return { label: "Proběhlo", tone: "neutral" };
+  if (card.past) return { label: "Zveřejněno · proběhlo", tone: "neutral" };
   return { label: "Zveřejněno", tone: "ok" };
 }
 

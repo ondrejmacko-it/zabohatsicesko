@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { ParticipationState } from "@/lib/types";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { ParticipationBadge } from "@/features/vzdelavani/components/ParticipationBadge";
+import { StatusBadge } from "@/features/vzdelavani/components/StatusBadge";
 import { matchesAttendance, primaryStatus } from "@/features/vzdelavani/status";
 import { config, now } from "@/server/config";
 import { getDb } from "@/server/db/client";
@@ -154,7 +154,7 @@ describe("U10: detail bez zapnutých přihlášek", () => {
 describe("štítek účasti je jeden pro celou Wiki", () => {
   test("každý stav nese vlastní data-ucast (barvu z tokenů) a vždy i text", () => {
     for (const state of ["required", "optional", "voluntary_enrolled", "excused", "withdrawn", "cancelled"] as const) {
-      const html = renderToStaticMarkup(createElement(ParticipationBadge, { state, label: "Štítek" }));
+      const html = renderToStaticMarkup(createElement(StatusBadge, { ucast: state, label: "Štítek" }));
       expect(html).toBe(`<span class="badge badge-ucast" data-ucast="${state}">Štítek</span>`);
     }
   });

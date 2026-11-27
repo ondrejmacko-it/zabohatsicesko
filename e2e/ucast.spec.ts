@@ -70,7 +70,7 @@ test.describe("účast v harmonogramu", () => {
     await expectNoHorizontalScroll(page);
     await dialog.getByRole("button", { name: "Omluvit se" }).click();
     const excused = page.locator('[data-ucast-panel="excused"]');
-    await expect(excused).toContainText("Omluveno ve Wiki, platí hned.");
+    await expect(excused).toContainText("Na této akci jsi omluvený.");
     await expect(excused).toContainText(`${NOTE}-${info.project.name}`);
 
     // Moje: omluvená akce zůstává, nabídky k přihlášení ne.
@@ -97,26 +97,26 @@ test.describe("účast v harmonogramu", () => {
 
     await plan(page);
     let panel = await openCard(page, "required", PAIRED_INVITE);
-    await expectCalendar(page, "Pozvánku máš v Kalendáři.");
+    await expectCalendar(page, "Kalendář: synchronizováno.");
     await panel.getByRole("button", { name: "Omluvit se" }).click();
     await page.getByRole("dialog", { name: "Omluvit se z akce?" }).getByRole("button", { name: "Omluvit se" }).click();
-    await expect(page.locator('[data-ucast-panel="excused"]')).toContainText("Omluveno ve Wiki, platí hned.");
-    await expectCalendar(page, "Wiki tě na tuto akci do Kalendáře nezve.");
+    await expect(page.locator('[data-ucast-panel="excused"]')).toContainText("Na této akci jsi omluvený.");
+    await expectCalendar(page, "Kalendář: Wiki tě na akci nezve.");
     await page.locator("[data-ucast-panel]").getByRole("button", { name: "Zrušit omluvu" }).click();
     await page.getByRole("dialog", { name: "Zrušit omluvu?" }).getByRole("button", { name: "Zrušit omluvu" }).click();
-    await expectCalendar(page, "Pozvánku máš v Kalendáři.");
+    await expectCalendar(page, "Kalendář: synchronizováno.");
 
     await plan(page);
     panel = await openCard(page, "optional", PAIRED_INVITE);
-    await expectCalendar(page, "Do Kalendáře se akce přidá, až se přihlásíš.");
+    await expectCalendar(page, "Kalendář: zatím tě Wiki nezve. Po přihlášení se synchronizuje.");
     await panel.getByRole("button", { name: "Přihlásit se" }).click();
     await page.getByRole("dialog", { name: "Přihlásit se na akci?" }).getByRole("button", { name: "Přihlásit se" }).click();
-    await expectCalendar(page, "Pozvánku máš v Kalendáři.");
+    await expectCalendar(page, "Kalendář: synchronizováno.");
     await page.locator("[data-ucast-panel]").getByRole("button", { name: "Odhlásit se" }).click();
     await page.getByRole("dialog", { name: "Odhlásit se z akce?" }).getByRole("button", { name: "Odhlásit se" }).click();
     // Odhlášeno (0017) má vlastní větu, odlišnou od „nikdy nepřihlášeno“ (viz `calendarNote`).
     await expect(page.locator('[data-ucast-panel="withdrawn"]')).toBeVisible();
-    await expectCalendar(page, "Wiki tě na tuto akci do Kalendáře nezve.");
+    await expectCalendar(page, "Kalendář: Wiki tě na akci nezve.");
   });
 });
 
@@ -195,7 +195,7 @@ test.describe("náhled kolegy s omluvou (audit 23. 11.)", () => {
     await settle(page);
     const panel = page.locator('[data-ucast-panel="excused"]');
     await expect(panel.getByRole("heading", { name: "Účast v náhledu" })).toBeVisible();
-    await expect(panel).toContainText("Omluveno");
+    await expect(panel).toContainText("Omluven/a");
     await expect(panel).not.toContainText("Důvod vidíš jen ty");
     await expect(panel).not.toContainText(note);
     // Stejná tlačítka jako kolega, ale zamčená s vysvětlením; server změnu v náhledu stejně odmítne.

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from "vitest";
-import { detailBadges, lifecycleStatus } from "@/features/vzdelavani/status";
+import { cardStatus, detailBadges, lifecycleStatus, primaryStatus } from "@/features/vzdelavani/status";
 import type { Viewer } from "@/server/policy";
 import { getEventDetail } from "@/server/services/detail";
 import { cancelEvent, loadEventRow, updateEvent, type EventCard } from "@/server/services/events";
@@ -46,7 +46,7 @@ describe("štítky stavu akce v detailu", () => {
       const base = { syncStatus: role.syncStatus, unpublishedChanges: role.unpublishedChanges };
       expect(labels(card({ ...base, planStatus: "draft", syncStatus: null, unpublishedChanges: false }))[0]).toBe("Návrh");
       expect(labels(card({ ...base, planStatus: "published" }))[0]).toBe("Zveřejněno");
-      expect(labels(card({ ...base, planStatus: "published", past: true }))[0]).toBe("Proběhlo");
+      expect(labels(card({ ...base, planStatus: "published", past: true }))[0]).toBe("Zveřejněno · proběhlo");
       expect(labels(card({ ...base, planStatus: "cancelled" }))).toEqual(["Zrušeno"]);
       expect(labels(card({ ...base, planStatus: "cancelled", past: true }))).toEqual(["Zrušeno"]);
       expect(labels(card({ ...base, planStatus: "draft", past: true, syncStatus: null, unpublishedChanges: false }))[0]).toBe("Návrh");
@@ -115,10 +115,26 @@ describe("zrušená akce pro jednotlivé role", () => {
     await expect(updateEvent(organizer, PUBLISHED_RM, after.revision, input, "draft")).rejects.toThrow();
   });
 
-  test("proběhlá zveřejněná akce má štítek Proběhlo u všech rolí", async () => {
+  test("proběhlá zveřejněná akce má štítek Zveřejněno · proběhlo u všech rolí", async () => {
     for (const viewer of [organizer, admin, lead, participant]) {
       const detail = await getEventDetail(viewer, PAST_FP);
-      expect(labels(detail!.card)[0]).toBe("Proběhlo");
+      expect(labels(detail!.card)[0]).toBe("Zveřejněno · proběhlo");
     }
+  });
+});
+
+describe("stejný význam = stejný štítek (Plán, okno akce, detail)", () => {
+  const variants: Array<Partial<EventCard>> = [
+    { planStatus: "cancelled" },
+    { planStatus: "draft" },
+    { syncStatus: "attention" },
+    { unpublishedChanges: true },
+    { extraordinary: true },
+  ];
+  test.each(variants)("%o", (over) => {
+    const c = card(over);
+    const plan = cardStatus(c)!;
+    expect(primaryStatus(c)).toEqual(plan);
+    expect(detailBadges(c).map((b) => b.label)).toContain(plan.label);
   });
 });

@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { authFile, expect, expectNoHorizontalScroll, settle, test } from "./support";
 
 // Cílené kontroly auditu U03–U08. Testy nic neukládají (sdílená databáze sady), jen čtou a otevírají okna.
@@ -120,11 +120,17 @@ test.describe("U08 dialog akce na počítači @desktop", () => {
   // Jednotný editor akce: Typ vedle Pro koho, Datum vedle Od a Do (na telefonu pod sebou, viz test výše).
   test("Typ s Pro koho a Datum s časem zůstávají vedle sebe", async ({ page }) => {
     const opened = await openAddEvent(page);
-    const typeBox = await opened.getByRole("combobox", { name: "Typ", exact: true }).boundingBox();
-    const audienceBox = await opened.getByRole("combobox", { name: /^Pro koho/ }).boundingBox();
-    const dateBox = await opened.getByLabel("Datum").boundingBox();
-    const fromBox = await opened.getByRole("textbox", { name: "Od", exact: true }).boundingBox();
-    expect(Math.abs(audienceBox!.y - typeBox!.y), "Typ a Pro koho na jednom řádku").toBeLessThan(4);
-    expect(Math.abs(fromBox!.y - dateBox!.y), "Datum a Od na jednom řádku").toBeLessThan(4);
+    // Okno se otevírá animací a pole Pro koho se doplní až po načtení; pod zátěží celé sady by jednorázové
+    // měření mohlo zachytit rozpracované rozvržení. Ověřuje se proto ustálený stav.
+    const rowGap = async (a: Locator, b: Locator) => {
+      const [boxA, boxB] = [await a.boundingBox(), await b.boundingBox()];
+      return boxA && boxB ? Math.abs(boxA.y - boxB.y) : Infinity;
+    };
+    const type = opened.getByRole("combobox", { name: "Typ", exact: true });
+    const audience = opened.getByRole("combobox", { name: /^Pro koho/ });
+    const from = opened.getByRole("textbox", { name: "Od", exact: true });
+    await expect(audience).toBeVisible();
+    await expect.poll(() => rowGap(type, audience), { message: "Typ a Pro koho na jednom řádku" }).toBeLessThan(4);
+    await expect.poll(() => rowGap(opened.getByLabel("Datum"), from), { message: "Datum a Od na jednom řádku" }).toBeLessThan(4);
   });
 });

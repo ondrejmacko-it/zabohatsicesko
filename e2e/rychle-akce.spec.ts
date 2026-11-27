@@ -124,7 +124,7 @@ test.describe("Rychlé akce ⋯ u návrhu @desktop", () => {
     const newId = new URL(page.url()).searchParams.get("akce");
     expect(newId).not.toBe("ev-11-18");
     const win = page.getByRole("dialog", { name: "Portfolio tým" });
-    await expect(win).toContainText("Návrh · kolegové ho zatím nevidí");
+    await expect(win).toContainText("Kolegové ho zatím nevidí");
     await expect(win.getByLabel(/^Téma/)).toHaveValue("Porovnání dvou postupů");
   });
 });
