@@ -111,7 +111,7 @@ test.describe("Témata: garantovaná a ostatní", () => {
     await expect(page.getByRole("link", { name: "Pro mou roli", exact: true })).toHaveAttribute("aria-current", "page");
     await expect(page.locator(".topic-handle")).toHaveCount(0);
     await expect(page.locator(".topic-rank")).toHaveCount(0);
-    await expect(page.getByText("Pořadí měníš v zobrazení Všechna.")).toBeVisible();
+    await expect(page.getByText("Ve filtru Pro mou roli nejde měnit pořadí.", { exact: false })).toBeVisible();
     await menuOf(page, "Otevřené otázky na schůzce").click();
     await expect(openMenu(page).locator("a, button")).toHaveText(["Naplánovat téma", "Upravit téma", "Zrušit prioritu", "Archivovat…"]);
     await page.keyboard.press("Escape");
