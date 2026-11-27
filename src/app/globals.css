@@ -319,7 +319,7 @@ a.nav-item:hover {
 @media (max-width: 900px) {
   .shell {
     grid-template-columns: minmax(0, 1fr);
-    padding: 12px max(12px, env(safe-area-inset-right)) max(32px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+    padding: 12px max(12px, env(safe-area-inset-right)) max(72px, calc(env(safe-area-inset-bottom) + 60px)) max(12px, env(safe-area-inset-left));
     gap: 12px;
   }
 
