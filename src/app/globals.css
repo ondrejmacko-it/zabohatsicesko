@@ -4718,7 +4718,7 @@ body[data-moving] .quick-actions,
 @media (min-width: 641px) {
   .topbar {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-columns: auto minmax(0, 1fr) minmax(0, auto);
     grid-template-areas: "brand view account";
   }
 
@@ -4726,8 +4726,17 @@ body[data-moving] .quick-actions,
     grid-area: brand;
   }
 
+  /* Na 641–900 px se celý přepínač osoby ukázky do řádku nevejde: výběr a jméno se zúží, nepřetečou. */
   .account {
     grid-area: account;
+    min-width: 0;
+  }
+
+  .account > form.row,
+  .account .persona-select,
+  .account-name {
+    flex-shrink: 1;
+    min-width: 0;
   }
 
   .view-switch {
@@ -4754,6 +4763,18 @@ body[data-moving] .quick-actions,
   }
 }
 
+/* Tablet: celý přepínač osoby by se vedle značky nevešel, tlačítko stačí krátké „Změnit“. */
+@media (min-width: 641px) and (max-width: 900px) {
+  .persona-btn-detail {
+    display: none;
+  }
+
+  /* Výběr je nativní select: bez stropu by šířku určilo nejdelší jméno a lišta by přetekla. */
+  .persona-select {
+    max-width: 180px;
+  }
+}
+
 @media (min-width: 641px) and (max-width: 1199px) {
   .topbar:has(.view-switch) .brand-tagline {
     display: none;
@@ -4773,12 +4794,6 @@ body[data-moving] .quick-actions,
 
   .topbar:has(.view-switch) .account {
     justify-self: end;
-    min-width: 0;
-  }
-
-  .topbar:has(.view-switch) .account-name {
-    flex-shrink: 1;
-    min-width: 0;
   }
 
   .topbar:has(.view-switch) .view-select {
