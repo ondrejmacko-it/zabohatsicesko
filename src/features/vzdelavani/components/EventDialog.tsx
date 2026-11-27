@@ -609,7 +609,7 @@ function EventForm({
         options={GROUPS.map((g) => ({ value: g, label: GROUP_LABELS[g] }))}
         listLabel="Skupiny"
       />
-      {invite && <InviteeList invite={invite} audience={values.audience} />}
+      {invite && <InviteeList invite={invite} audience={values.audience} pending={published === null} />}
     </div>
   );
   const termFields = (
@@ -917,10 +917,10 @@ function EventForm({
 
 const SHOWN_GUESTS = 8;
 
-function guestCountLabel(count: number): string {
-  if (count === 1) return "1 příjemce pozvánky";
-  if (count < 5) return `${count} příjemci pozvánky`;
-  return `${count} příjemců pozvánky`;
+function guestCountLabel(count: number, pending: boolean): string {
+  // Před zveřejněním je to jen odhad podle skupiny: pozvánka zatím nikomu neodešla.
+  const label = count === 1 ? "1 příjemce pozvánky" : count < 5 ? `${count} příjemci pozvánky` : `${count} příjemců pozvánky`;
+  return pending ? `${label} po zveřejnění` : label;
 }
 
 /**
@@ -930,15 +930,18 @@ function guestCountLabel(count: number): string {
 function InviteeList({
   invite,
   audience,
+  pending,
 }: {
   invite: InviteRecipients;
   audience: EventFormValues["audience"];
+  /** Akce ještě není zveřejněná: příjemci jsou jen předpoklad, ne odeslané pozvánky. */
+  pending: boolean;
 }) {
   const guests = invite.recipients[audience];
   if (guests.length === 0)
     return (
       <p className="field-hint field-hint-key invitees-none">
-        Ze skupiny {GROUP_LABELS[audience]} zatím pozvánku nedostane nikdo.
+        Ze skupiny {GROUP_LABELS[audience]} zatím pozvánku {pending ? "po zveřejnění " : ""}nedostane nikdo.
       </p>
     );
   const names = guests.map((g) => g.name || g.email);
@@ -947,7 +950,7 @@ function InviteeList({
   return (
     <details className="invitees" aria-live="polite">
       <summary className="invitees-head">
-        {guestCountLabel(guests.length)}
+        {guestCountLabel(guests.length, pending)}
       </summary>
       <div className="invitees-names">
         {shown.join(", ")}

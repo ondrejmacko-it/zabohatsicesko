@@ -152,7 +152,7 @@ test.describe("správce: náhled kolegy-správce 1:1", () => {
     // Okno akce: stav a rady jako u správce, uložení úprav zamčené.
     await page.locator("a[href*='akce=']").filter({ visible: true }).first().click();
     const dialog = page.getByRole("dialog");
-    await expect(dialog.locator(".status-band")).not.toContainText("jen ke čtení"); // říká to jen pruh náhledu
+    await expect(dialog.locator(".status-line")).not.toContainText("jen ke čtení"); // říká to jen pruh náhledu
     for (const submit of await dialog.locator("button[type=submit]").all()) await expect(submit).toBeDisabled();
     await page.screenshot({ path: info.outputPath("nahled-kolegy-spravce.png"), fullPage: true });
   });

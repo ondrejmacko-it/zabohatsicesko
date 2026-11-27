@@ -2444,44 +2444,48 @@ a.brief-link:hover {
 }
 
 /* ——— Náhled akce v okně ——— */
-.status-band {
+/* Jeden kompaktní stav akce: tečka v tónu stavu, název stavu a krátká věta v jednom toku na každé šířce. */
+.status-line {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 10px 14px;
-  border-left: 4px solid var(--line-strong);
-  border-radius: var(--radius-sm);
-  background: var(--beige);
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  margin: 0;
   font-size: 14px;
 }
 
-.status-band > span {
+.status-line > span:not(.status-dot) {
   color: var(--ink-soft);
 }
 
-.status-draft {
-  border-left-color: var(--ochre);
-  background: var(--draft);
+.status-dot {
+  flex: none;
+  align-self: center;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--line-strong);
 }
 
-.status-regular {
-  border-left-color: var(--ok);
-  background: var(--ok-soft);
+.status-draft .status-dot,
+.status-attention .status-dot {
+  background: var(--ochre);
 }
 
-.status-danger {
-  border-left-color: var(--danger);
-  background: var(--danger-soft);
+.status-regular .status-dot {
+  background: var(--ok);
 }
 
-.status-attention {
-  border-left-color: var(--ochre);
-  background: var(--beige-strong);
+.status-danger .status-dot {
+  background: var(--danger);
 }
 
-.status-extra {
-  border-left-color: var(--ink-soft);
-  background: var(--beige-strong);
+.status-danger > strong {
+  color: var(--danger);
+}
+
+.status-extra .status-dot {
+  background: var(--ink-soft);
 }
 
 .fact-list {
@@ -2498,6 +2502,14 @@ a.brief-link:hover {
   align-items: baseline;
   gap: 12px;
   padding: 10px 14px;
+}
+
+/* Telefon: hodnota pod popiskem, ať dlouhý název tématu nebo jméno nemá jen úzký sloupec. */
+@media (max-width: 480px) {
+  .fact-list > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
 }
 
 .fact-list > div + div {
@@ -4262,6 +4274,43 @@ p.cal-status {
   margin-right: 4px;
 }
 
+/* Telefon: nahoře pomocná řada (⋯ vlevo, stav vpravo), pod ní dvě rovnocenné akce stejné šířky. */
+@media (max-width: 640px) {
+  .event-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: center;
+  }
+
+  .event-actions-menu,
+  .event-actions-note {
+    grid-row: 1;
+    margin: 0;
+  }
+
+  .event-actions-note {
+    grid-column: 1 / -1;
+  }
+
+  .event-actions-menu + .event-actions-note {
+    grid-column: 2;
+    justify-self: end;
+    text-align: right;
+  }
+
+  .event-actions:has(> .event-actions-menu, > .event-actions-note) > button {
+    grid-row: 2;
+  }
+
+  .event-actions > button {
+    width: 100%;
+  }
+
+  .event-actions > button:only-of-type {
+    grid-column: 1 / -1;
+  }
+}
+
 .invitees > summary {
   cursor: pointer;
   list-style-position: inside;
@@ -5537,18 +5586,6 @@ body[data-moving] .quick-actions,
 @media (max-width: 640px) {
   .excuse-reason {
     min-height: 44px;
-  }
-}
-
-/* Pás stavu v okně akce: na telefonu štítky a text v jednom toku místo sloupce, ať nezabírá první obrazovku. */
-@media (max-width: 640px) {
-  .status-band {
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 4px 8px;
-    padding: 6px 10px;
-    font-size: 13px;
   }
 }
 

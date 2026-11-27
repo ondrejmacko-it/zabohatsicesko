@@ -12,7 +12,6 @@ import type { PlanPreview } from "@/server/services/preview";
 import { listTopics } from "@/server/services/topics";
 import { loadInviteRecipients } from "@/server/services/calendar-status";
 import { cardTone, detailBadges, primaryStatus, statusAdvice } from "../status";
-import { StatusBadge } from "./StatusBadge";
 import { ChangeBanner } from "./ChangeBanner";
 import { EventWindow } from "./EventDialog";
 import { EventMenu } from "./EventMenu";
@@ -59,20 +58,22 @@ export async function EventPeek({ user, eventId, preview, closeHref, presetTopic
   const handlesRecording = detail.recording.access === "handler" && !preview && card.past;
   const minutesLabel = detail.recording.access === "handler" ? minutesSectionLabel(detail.recording) : "Zápis";
 
+  // Jeden kompaktní stav místo pásu se štítky: tečka v tónu hlavního stavu a jedna věta. Chyba Kalendáře nikdy
+  // nesmí vypadat jako úspěch (S-01). Osobní účast má vlastní řádek v „Tvoje účast“.
+  const tone = status?.tone === "danger" ? "danger" : status?.tone === "ochre" && card.planStatus === "published" ? "attention" : cardTone(card);
+  const statusNotes = [
+    card.planStatus === "draft" ? "Kolegové ho zatím nevidí." : null,
+    advice,
+    card.planStatus === "cancelled" && detail.cancelReason ? `Důvod: ${detail.cancelReason}` : null,
+  ].filter(Boolean);
   const statusBand = (
-    // Tón pásu se řídí hlavním stavem: chyba Kalendáře nikdy nesmí vypadat jako úspěch (S-01).
-    <div className={`status-band status-${status?.tone === "danger" ? "danger" : status?.tone === "ochre" && card.planStatus === "published" ? "attention" : cardTone(card)}`} role="status">
-      {/* Stejné štítky jako v hlavičce stránky detailu: životní stav akce a nejvýš jeden doplněk. Osobní účast
-          má vlastní štítek jen v kartě „Tvoje účast“. */}
-      <div className="row">
-        {detailBadges(card).map((badge) => (
-          <StatusBadge key={badge.label} tone={badge.tone} label={badge.label} />
-        ))}
-      </div>
-      {card.planStatus === "draft" && <span>Kolegové ho zatím nevidí.</span>}
-      {advice && <span>{advice}</span>}
-      {card.planStatus === "cancelled" && detail.cancelReason && <span>Důvod: {detail.cancelReason}</span>}
-    </div>
+    <p className={`status-line status-${tone}`} role="status">
+      <span className="status-dot" aria-hidden="true" />
+      <strong>{detailBadges(card).map((badge) => badge.label).join(" · ")}</strong>
+      {statusNotes.map((note) => (
+        <span key={note}>{note}</span>
+      ))}
+    </p>
   );
 
   // Vlastní účast (jen PARTICIPATION=on): stav a akce přímo v okně, potvrzení v samostatném okně. Správce ji vidí
