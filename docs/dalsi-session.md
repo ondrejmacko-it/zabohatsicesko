@@ -1,8 +1,8 @@
-# Navazující relace (stav 27. 11. 2026, relace 55)
+# Navazující relace (stav 27. 11. 2026, relace 56)
 
 Cíl: finální responzivní audit a mobilní UX (zadání vlastníka body 1–23, zhuštěně v promptu relace 47/48).
 Žádný redesign desktopu, merge, deploy, produkční DB, živý Google ani Make. Na konci draft PR + report.
-Větev `claude/oprava-mobilni-responzivita` z main `01db12f`, HEAD `c81ca59` (+ tato předávka). PR zatím není.
+Větev `claude/oprava-mobilni-responzivita` z main `01db12f`, HEAD `b8f0ede` (+ tato předávka). PR zatím není.
 
 ## Screenshoty vlastníka (16 ks, Android Chrome, ~347 CSS px, zdelavani-demo.vercel.app, správce Google)
 Zip: `/root/.claude/uploads/df1d1066-197f-551e-8282-0e240871cc1e/56421696-ZBC_mobilni_screenshoty_2026-11-27.zip`
@@ -72,14 +72,18 @@ desktop regrese, matice rozlišení, celá sada, před/po screenshoty, draft PR 
   (320/347/390 + desktop sloupec; bez opravy padá). S okno-akce, mobilni-ovladani telefon-390/320 + windows: 29 OK.
 - c81ca59 mimořádný den v `EventDialog.tsx` = `.notice` (okrová) `role="status"` místo `notice-danger`/alert.
   Test `e2e/mimoradny-termin.spec.ts` (ev-11-27, datum 23. 11., nic neukládá; bez opravy padá). tsc, eslint OK.
+- b8f0ede Pohled = `Combobox` s `selectOnly` (skrytý input `name`, `label` u možnosti, readOnly, Enter/mezerník
+  otevře, `onCommit` → `requestSubmit`, `data-value` na možnosti). No-JS tlačítko Zobrazit odstraněno (bez JS
+  nabídka nejde otevřít – uvést v PR). e2e helper `choosePreview(page, key)` v `support.ts`; v testech
+  `getByLabel("Pohled", { exact: true })` (listbox „Pohledy“). Test `e2e/pohled-vyber.spec.ts`. S nahled,
+  nahled-role, zahlavi na telefon-390/320 + windows-1280: 33 OK; tsc, eslint OK.
 - Pozn.: `--no-deps` potřebuje `e2e/.auth/*.json` – v nové relaci nejdřív
   `npx playwright test --project=prihlaseni --no-deps --trace off --reporter=line`.
 
 ## Další krok
-1. Bod 4: Combobox místo nativních selectů. `Combobox.tsx` je volnotextový – doplnit prop pro režim „jen z
-   nabídky“ (value ≠ label, hodnota v hidden input, skupiny už umí). Pořadí: `PreviewSwitch.tsx` (optgroup,
-   auto-submit `requestSubmit`), pak `EventDialog.tsx` ř. 424 vedoucí, ř. 440 Pro koho, ř. 509 schvalovatel;
-   téma (useknuté) ověřit, zda už je Combobox. Každý zvlášť jako jednotka s e2e testem.
+1. Bod 4 dál: `EventDialog.tsx` vedoucí (~ř. 424), Pro koho (~ř. 440), schvalovatel (~ř. 509) → `Combobox selectOnly`
+   (u `value` řízených polí jen `options` s `label`); téma (Combobox volnotextový, useknuté) ověřit šířku.
+   Každý zvlášť jako jednotka s e2e testem. Pozor na testy se `selectOption` na těchto polích (grep).
 2. Domů + oslovení do účtu (Menu „Účet“ v `Topbar.tsx`).
 3. Bod 5: audit, desktop regrese, celá sada, před/po screenshoty, draft PR + report.
 
