@@ -37,20 +37,23 @@ Větev `claude/gallant-bohr-m1lyna`, draft PR #94 (nezakládat další, nemergov
     výsledky testů vč. přeskočených, překážky se závažností, postup kontroly Preview před merge.
 Další související chybu opravit a doložit regresním testem. Cíl: funkční, bezpečné, sjednocené, ne jen zelené CI.
 
-## Stav (relace 41, HEAD 2551b00)
+## Stav (relace 42, HEAD fc14532)
 - PR #94 draft; nová relace: subscribe_pr_activity #94, `npm ci`. Úvodní kontext ~120 tis. → 2–3 malé jednotky/relace.
-- Body 1–4 hotové v kódu (viz Zjištěno), e2e NEspuštěno. tsc OK; vitest cíleně (stav-akce, audit-ucast-nahledy) OK.
-- Bod 5 HOTOVO (2551b00): `primaryStatus` má názvy z `cardStatus` (Kalendář k opravě / Návrh změny / Mimořádná);
-  pás okna akce (EventPeek statusBand) ukazuje `detailBadges` jako StatusBadge (stejně jako hlavička detailu),
-  u návrhu text „Kolegové ho zatím nevidí.“ (upraven `e2e/rychle-akce.spec.ts:127`); `.status-band > span`
-  (jinak by přebarvil štítky); Úvod (`NextEventsList`) ukazuje `cardStatus` (i Zrušeno). Test shody v
-  `tests/stav-akce.test.ts`. Účast: jediný zdroj `PARTICIPATION_LABELS` (domain/participation.ts:189).
-- Bod 6 prověřen v kódu, beze změn: náhled používá stejný `ParticipationPanel` (h2 „Účast v náhledu“, zamčená
-  tlačítka `data-testid=ucast-zamcena` ve stejném pořadí, skupina = stav z rolí + „Jen podle rolí…“, bez důvodu
-  omluvy a Kalendáře); server: `ownParticipationDetail` preview větev, testy nahled-mutace/nahled-zamek/
-  audit-ucast-nahledy. Vizuálně ověřit v bodu 8 (náhled kolegy + skupiny).
-- Další krok: bod 8 (nový `e2e/ucast-karta.spec.ts`, viz níže; nejdřív spustit `e2e/ucast.spec.ts`,
-  `e2e/rychle-akce.spec.ts`, `e2e/nahled.spec.ts`), pak 7 (matice), 10 (PR #94 popis + report vlastníkovi).
+- Body 1–6 hotové v kódu (viz Zjištěno); bod 5 v 2551b00, bod 6 prověřen beze změn.
+- Bod 8 ČÁST HOTOVÁ (fc14532): `e2e/ucast-karta.spec.ts` (jen projekt windows-1280, šířky si nastavuje sám
+  320–1920) – klik na kartu v harmonogramu, regrese pořadí (karta účasti po `.event-form/.fact-list/.key-facts`,
+  žádné `form form`), fokus v okně, bez vodorovného posunu; správce povinná + rozpracovaná editace (čas konce)
+  přežije omluvu/zrušení; účastník RM povinná → formulář omluvy (přesný text soukromí, šipky) → omluveno →
+  zrušení; dobrovolná → přihlášeno → potvrzení odhlášení; FP zrušená ev-11-4 / proběhlá tr-fp-1111 bez tlačítek;
+  detail ev-11-18; náhled kolegy + skupiny-fp (zamčeno). 15 passed (s login+zapis-temat). Správce je ve všech
+  skupinách → dobrovolnou akci nemá (seed), „správce dobrovolná“ nejde – uvést v reportu.
+- Screenshoty PO: 24 PNG (390 + 1280) v `docs/screenshots/ucast-karta/`; `UCAST_SHOTS=<dir>` uloží všech 7 šířek.
+  Dřív prošly: ucast + rychle-akce + nahled spec 110 passed / 51 skipped (na cc6b510).
+- Další krok: (a) prohlédnout 3–4 PNG (Read) kvůli vzhledu karty (bod 2); (b) screenshoty PŘED: worktree na
+  948ea18 (před bodem 1), symlink node_modules, `UCAST_SHOTS=… npx playwright test e2e/ucast-karta.spec.ts
+  --project=windows-1280` (spec zkopírovat; pořadí tam selže – stačí screenshoty z prvních kroků, příp. dočasně
+  vypnout assert), uložit do `docs/screenshots/ucast-karta/pred/` jen 390+1280; (c) lint+tsc+vitest+build+celá
+  e2e jednou; (d) bod 7 matice (`docs/pozadavky-f01-f18.md` + kód); (e) bod 10 popis PR #94 + report vlastníkovi.
 
 ## Zjištěno (nemusíš znovu číst)
 - (HOTOVO bod 1) `EventPeek.tsx`: správce → `EventWindow` (EventDialog.tsx:142) s `intro` = statusBand, preset, ChangeBanner,
