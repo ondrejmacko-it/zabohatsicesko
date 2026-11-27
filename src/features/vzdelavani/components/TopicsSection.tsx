@@ -234,7 +234,14 @@ export async function TopicsSection({ user, readOnly = false, filter: requested 
               Pořadí změníš přetažením úchytu, i mezi garantovanými a ostatními tématy. Šipkami nahoru a dolů posuneš téma o jedno místo, přes okraj skupiny do druhé skupiny.
             </p>
           )}
-          {organizer && !sortable && <p className="item-meta topic-filter-note">Pořadí měníš v zobrazení Všechna.</p>}
+          {organizer && !sortable && (
+            <p className="item-meta topic-filter-note">
+              Ve filtru Pro mou roli nejde měnit pořadí.{" "}
+              <Link className="link-button" href="/vzdelavani/temata?filtr=vse">
+                Zobrazit všechna
+              </Link>
+            </p>
+          )}
         </>
       )}
 

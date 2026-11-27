@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { PageCall } from "@/components/PageCall";
 import {
   AccountActions,
   InviteButton,
@@ -69,15 +70,10 @@ export default async function AdminPage() {
 
   return (
     <>
-      <div className="page-head">
-        <div>
-          <h1>Správa systému</h1>
-          <p className="page-sub">
-            Role určuje, co člověk smí, skupiny, které akce a zápisy uvidí.
-          </p>
-        </div>
+      <h1>Správa systému</h1>
+      <PageCall text="Role určuje, co člověk smí, skupiny, které akce a zápisy uvidí.">
         <InviteButton roles={roles} />
-      </div>
+      </PageCall>
 
       {pending.length > 0 && (
         <section className="section stack" aria-labelledby="zadosti">

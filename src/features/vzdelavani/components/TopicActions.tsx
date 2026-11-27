@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useActionState, useEffect, useState, useTransition } from "react";
 import { ActionForm, ActionMessage } from "@/components/ActionForm";
 import { flash } from "@/components/FlashMessage";
@@ -144,6 +145,10 @@ export function TopicManage({ topic, groups, canMoveUp, canMoveDown }: TopicMana
   const guaranteed = topic.priorityRank != null;
   // Okno Naplánovat téma načítá nabídku akcí přes server, který ji v náhledu odmítne: v náhledu je položka zamčená.
   const lock = lockedProps(usePreviewLock());
+  // Při hledání se pořadí nemění (stejně jako tažení v TopicBoard): o jedno místo by se téma posunulo přes skrytá.
+  const searching = Boolean(useSearchParams().get("hledat")?.trim());
+  const moveUp = canMoveUp && !searching;
+  const moveDown = canMoveDown && !searching;
   return (
     <>
       <Menu label={`Možnosti tématu ${topic.name}`} variant="card" className="menu-inline">
@@ -162,8 +167,8 @@ export function TopicManage({ topic, groups, canMoveUp, canMoveDown }: TopicMana
           pendingLabel="Ukládám…"
           icon="star"
         />
-        {canMoveUp && <ActionForm action={moveTopicAction} fields={{ topicId: topic.id, direction: "up" }} label="Posunout výš" pendingLabel="Posouvám…" icon="arrowUp" />}
-        {canMoveDown && <ActionForm action={moveTopicAction} fields={{ topicId: topic.id, direction: "down" }} label="Posunout níž" pendingLabel="Posouvám…" icon="arrowDown" />}
+        {moveUp && <ActionForm action={moveTopicAction} fields={{ topicId: topic.id, direction: "up" }} label="Posunout výš" pendingLabel="Posouvám…" icon="arrowUp" />}
+        {moveDown && <ActionForm action={moveTopicAction} fields={{ topicId: topic.id, direction: "down" }} label="Posunout níž" pendingLabel="Posouvám…" icon="arrowDown" />}
         <hr className="menu-divider" />
         <ActionForm
           action={archiveTopicAction}
