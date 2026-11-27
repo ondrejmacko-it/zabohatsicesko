@@ -1,4 +1,4 @@
-# Navazující relace (stav 27. 11. 2026, relace 70)
+# Navazující relace (stav 27. 11. 2026, relace 71)
 
 Cíl: finální opravné kolo UI PC + mobil (zadání vlastníka „ZBČ – finální UX/UI a funkční stabilizace“,
 body 0–12). Implementace, ne audit. Desktop i mobil stejně důležité; vzdušně, nezahušťovat, zachovat identitu Wiki.
@@ -22,8 +22,17 @@ Zadání (64 KB) a 82 screenshotů nejsou v repu; zhuštěný seznam bodů je v 
 - Známý pád: `e2e/domu-ukoly.spec.ts:40` (pozvánky bez odpovědi) padá i samostatně – úkol pozvánek chybí
   (`invitationsFor` potřebuje calendarLinks s externalEventId ze sync). Nesouvisí se změnami větve; ověřit v celé sadě.
 
+- Bod 6 ROZDĚLANÝ `b9f7352` (tsc zelené, e2e NEověřené): `EventPeek` má `edit`/`editHref`; správce bez
+  `upravit=1` vidí čtecí okno (fakta, účast, „Upravit akci“ + `EventMenu` ⋯ s „Otevřít podrobnosti“), s `upravit=1`
+  nebo `tema=` formulář. Plán: `editHref` (nabídka Upravit), detail/zápisy/témata/ChangeBanner deeplinky s `&upravit=1`.
+
 ## Pořadí práce (jednotka = změna + cílený test + commit + push)
-6. Detail akce: kompaktní čtecí detail i pro správce + „Upravit akci“; účast hned po metadatech;
+6a. PRVNÍ: upravit e2e, které jako správce klikají na kartu/`?akce=` a čekají formulář (grep `akce=` v e2e:
+   okna, okno-akce-*, rychle-akce, vyber-navrhu, plan-planovani, temata-planovani, mimoradny-termin, priprava-mesice,
+   klavesnice, mobilni-ovladani, kdo-tema, zapisy, domu-ukoly, nahled, ucast-karta, okno-omluvy) → přidat
+   `&upravit=1` nebo klik na „Upravit akci“. `okna.spec.ts:420–448` čeká „Technické informace“ → „Otevřít podrobnosti“
+   v ⋯. Spustit cíleně windows-1280 + telefon-360, pak lint (`npx eslint <soubory>`).
+6. Detail akce (zbytek): kompaktní čtecí detail i pro správce + „Upravit akci“; účast hned po metadatech;
    editace: typ+název nahoře, Další údaje neskrývají základ; mobilní footer 2 rovnocenné akce.
 7. Přidat akci: sjednotit s editací, „Doporučená témata“, bez číslovaných gigantických karet.
 8. Účast: stav jako jedna věta + akce vpravo; „Kalendář: stav neznámý“ → neutrální pravdivý text.
