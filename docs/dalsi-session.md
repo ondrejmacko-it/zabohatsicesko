@@ -1,4 +1,4 @@
-# Navazující relace (stav 27. 11. 2026, relace 60)
+# Navazující relace (stav 27. 11. 2026, relace 61)
 
 Cíl: finální opravné kolo UI PC + mobil (zadání vlastníka „ZBČ – finální UX/UI a funkční stabilizace“,
 body 0–12). Implementace, ne audit. Desktop i mobil stejně důležité; vzdušně, nezahušťovat, zachovat identitu Wiki.
@@ -7,13 +7,19 @@ Bez merge, deploye, produkční DB, živého Googlu a Make. Screenshoty ani zad�
 Větev `claude/finalni-vyladeni-ui-pc-mobil` z main `7e9b886` (PR #95 už je v main). PR zatím není.
 Zadání (64 KB) a 82 screenshotů nejsou v repu; zhuštěný seznam bodů je v promptu navazující relace.
 
-## Hotovo
-- Jen založení větve a `npm ci`. Kód zatím beze změn.
+## Hotovo (HEAD `0a6f188`, pushnuto)
+- Bod 1 Zápisy k dokončení: `.missing-row` = `.missing-main` (název, datum·vedoucí, datum nowrap) + `.missing-side`
+  (stav + CTA), ≤640 px pod sebou. „Zobrazeno X z Y“ + Zrušit filtr jen při filtru. CTA úkolů (`journey.ts`) i okna:
+  Připravit zápis / Pokračovat v zápisu / Zkontrolovat zápis / Schválit zápis (vedoucí) / Přiřadit vedoucího.
+- Nový `e2e/geometrie.spec.ts` + helper `lineCount()` v `e2e/support.ts` – sem přidávej další geometrické regrese.
+- Ověřeno: vitest (stav-nahravky, zapisy-f13-f15, journey, zapisy-schvaleni) zelené; tsc čistý; e2e geometrie
+  (windows-1280, telefon-320/360) a okna „dokončení“ zelené na `0a6f188`. Test geometrie jsem neověřil proti stavu
+  před opravou (chybí důkaz, že by padal) – při příležitosti ověřit.
+- Zbývá z bodu 8: hlavička „Zápisy k dokončení · N moje · M celkem“, hledání+Stav v jedné liště, MinutesSourceForm
+  (jedno pole přepisu, formáty TXT/MD/VTT/SRT max 1 MB, nápověda o klientech), sdílená hlavička modalu.
 
 ## Pořadí práce (jednotka = změna + cílený test + commit + push)
-1. Zápisy k dokončení: `.missing-row` (5 sloupců) – mobil láme `čt 26. 11. 2026` po řádcích, PC láme název.
-   Přestavět strukturu (název přes šířku, datum `white-space:nowrap` jako celek, vedoucí, stav+CTA skupina).
-   Tlačítko dle stavu (Připravit / Pokračovat / Zkontrolovat / Přiřadit vedoucího) i na Domů.
+1. ~~Zápisy k dokončení~~ hotovo (viz výše).
 2. Mobilní černá navigace: 4 položky v řadě nebo 2×2, 3 položky přes celou šířku; Zpětná vazba ne osamocená.
 3. Témata: filtr Pro mou roli/Všechna + vyhledávání v jedné liště (jeden zdroj stavu), PageCall text vlevo
    + CTA vpravo v jedné řadě; ⋯ kontrastní všude (sdílená ikonová akce, 44px hit area).
@@ -33,7 +39,8 @@ Zadání (64 KB) a 82 screenshotů nejsou v repu; zhuštěný seznam bodů je v 
 - `npm ci`; e2e: nejdřív `npx playwright test --project=prihlaseni --no-deps --trace off --reporter=line`,
   pak cíleně `--project=telefon-360 --no-deps`. Projekty: windows-1280/1920, macos-1440/1512, telefon-390/360/320.
 - Mobilní CSS = bloky na konci `src/app/globals.css` (5453 ř.); nepřidávat další override blok, opravovat u zdroje.
-- Hook kontextu: systémový prompt je velký, limit 140k přichází brzy – čti úzce, výstupy zkracuj.
+- Hook kontextu: systémový prompt je velký (~100k), limit 140k přichází po ~1 jednotce – čti úzce, výstupy
+  zkracuj, po každé jednotce commit+push a při 140k rovnou předávka. Celé zadání je v promptu relace 60/61.
 
 ## Otevřené otázky pro vlastníka
 - Dodat zadání a screenshoty do navazující relace znovu (ZIP), pokud bude potřeba vizuální reference.
