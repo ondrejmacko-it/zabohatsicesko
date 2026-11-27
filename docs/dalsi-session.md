@@ -1,4 +1,4 @@
-# Navazující relace (stav 27. 11. 2026, relace 63)
+# Navazující relace (stav 27. 11. 2026, relace 64)
 
 Cíl: finální opravné kolo UI PC + mobil (zadání vlastníka „ZBČ – finální UX/UI a funkční stabilizace“,
 body 0–12). Implementace, ne audit. Desktop i mobil stejně důležité; vzdušně, nezahušťovat, zachovat identitu Wiki.
@@ -23,10 +23,18 @@ Zadání (64 KB) a 82 screenshotů nejsou v repu; zhuštěný seznam bodů je v 
   `@media (min-width: 641px)` (sloupec `minmax(0, auto)`, shrink) + 641–900 px krátké „Změnit“, select max 180 px.
   `e2e/menu-telefon.spec.ts` 24/24 zelené, `zahlavi`/`pohled-vyber` zelené na `0269142`.
 
+- Bod 3 Témata (`02b6e35` + další commit): PageCall = grid `minmax(0,1fr) auto`, ≤560 px tlačítko pod textem;
+  filtr + hledání v jedné `.topic-toolbar` uvnitř `TopicBoard` (prop `filter`), dotaz v URL `hledat`
+  (useSearchParams), Vymazat (×) a „Zrušit hledání“; garantovaná „Správce je plánuje přednostně.“; ⋯
+  (`.menu-card-trigger`) světlé pozadí + plná ikona, inline 44px hit area; ikona `search` v Icon.tsx.
+  Ověřeno: tsc, eslint, build, e2e geometrie + temata-planovani (windows-1280, telefon-360/320) zelené.
+
 ## Pořadí práce (jednotka = změna + cílený test + commit + push)
 1. ~~Zápisy k dokončení~~ hotovo (viz výše).
 2. ~~Mobilní menu~~ hotovo.
-3. **DALŠÍ KROK** Témata: filtr Pro mou roli/Všechna + vyhledávání v jedné liště (jeden zdroj stavu), PageCall
+3. Témata ČÁSTEČNĚ (viz Hotovo). Zbývá: řádek tématu na mobilu bez prázdného pásu vlevo, Mám zájem
+   aria-pressed zelená s fajfkou bez skoku, okno Naplánovat téma (stávající termín → návrhy → zveřejněné, bez
+   opakované věty), PageCall i na Domů/Správa. Původně: filtr Pro mou roli/Všechna + vyhledávání v jedné liště (jeden zdroj stavu), PageCall
    text vlevo + CTA vpravo v jedné řadě; ⋯ kontrastní všude (sdílená ikonová akce, 44px hit area).
    Stav: `src/components/PageCall.tsx` (13 ř.), CSS `.page-call` ~ř. 4558 globals.css = flex-wrap +
    `.page-call-text { flex: 1 1 22ch }` → při zalomení vzniká diagonála; přestavět na grid
