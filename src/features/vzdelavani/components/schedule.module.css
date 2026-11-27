@@ -492,19 +492,37 @@
     color: var(--ink);
   }
 
-  /* Karta: čas a stav na prvním řádku (stav vpravo), pod tím název, Kdo a Téma. */
+  /* Karta: čas a štítky na prvním řádku (štítky vpravo), pod tím název, Vede a Téma. Čas ani štítek se
+     nikdy nezalomí uvnitř; když se štítky vedle času nevejdou, sjedou celé na další řádek. Slova se lámou
+     jen mezi sebou (jméno vedoucího i role v závorce zůstanou celé), uvnitř slova jen když je delší než karta. */
   .agendaEvent {
-    grid-template-columns: minmax(0, 1fr) auto;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: 8px;
+    row-gap: 4px;
+    overflow-wrap: break-word;
+  }
+
+  /* Štítky jdou na další řádek dřív, než se čas zmenší; zalomí se jen vícedenní čas, a to u mezery. */
+  .agendaEvent > .agendaTime {
+    flex: 0 1 auto;
+    overflow-wrap: normal;
   }
 
   .agendaEvent > .agendaMain {
-    grid-column: 1 / -1;
+    flex-basis: 100%;
+    order: 1;
   }
 
   .agendaEvent > .meta {
-    grid-row: 1;
-    grid-column: 2;
-    justify-self: end;
+    flex: 0 1 auto;
+    justify-content: flex-end;
+    margin-left: auto;
+  }
+
+  .agendaEvent > .meta :global(.badge) {
+    white-space: nowrap;
   }
 
   .withHandle {
