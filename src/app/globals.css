@@ -3288,9 +3288,16 @@ p.cal-status {
   display: grid;
   grid-area: month;
   grid-template-columns: 40px auto 40px;
+  grid-auto-columns: auto;
+  grid-auto-flow: column;
   align-items: center;
   justify-items: center;
   gap: 8px;
+}
+
+.month-today {
+  min-height: 40px;
+  white-space: nowrap;
 }
 
 .month-title {
@@ -3344,6 +3351,10 @@ p.cal-status {
 
   .month-title {
     font-size: 21px;
+  }
+
+  .month-today {
+    min-height: 44px;
   }
 }
 

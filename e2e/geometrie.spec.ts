@@ -98,3 +98,20 @@ test.describe("Plán: filtr účasti", () => {
     }
   });
 });
+
+test.describe("Plán: čas na kartě agendy", () => {
+  test.use({ storageState: authFile("spravce") });
+  test("jednodenní čas se nezalomí a Dnes je u navigace měsíce", async ({ page }) => {
+    await page.goto("/vzdelavani/harmonogram?pohled=seznam");
+    await settle(page);
+    const times = page.locator("[data-agenda-day] a > span:first-child").filter({ hasText: /^\d{2}:\d{2}–\d{2}:\d{2}$/ });
+    const count = await times.count();
+    expect(count).toBeGreaterThan(0);
+    for (let i = 0; i < count; i++) {
+      const time = times.nth(i);
+      if (await time.isVisible()) expect(await lineCount(time), "čas na jednom řádku").toBe(1);
+    }
+    await page.getByRole("link", { name: "Další měsíc" }).click();
+    await expect(page.locator(".month-nav").getByRole("link", { name: "Dnes" })).toBeVisible();
+  });
+});

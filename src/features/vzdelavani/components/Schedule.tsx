@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Fragment } from "react";
 import { Icon } from "@/components/Icon";
 import { changeSummary, eventContext, eventTitle } from "@/lib/labels";
 import {
@@ -69,7 +70,7 @@ function GhostBlock({ card, hrefFor = pageHref }: { card: EventCard; hrefFor?: C
   return (
     <Link href={hrefFor(card)} scroll={false} className={`${styles.event} ${styles.ghost}`} data-pick-reason="Původní termín patří zveřejněné akci, vybrat nejde.">
       <span className={styles.title}>{card.label}</span>
-      <span className={styles.line}>{formatEventTime(new Date(from.startsAt), new Date(from.endsAt), from.allDay)}</span>
+      <span className={styles.line}><EventTime text={formatEventTime(new Date(from.startsAt), new Date(from.endsAt), from.allDay)} /></span>
       <span className={styles.line}>
         Zveřejněný termín, návrh ho přesouvá na {weekdayShort(dayOf(card))} {formatDayMonth(dayOf(card))}
       </span>
@@ -81,6 +82,16 @@ function GhostBlock({ card, hrefFor = pageHref }: { card: EventCard; hrefFor?: C
  * Stav karty: nejvýš jeden štítek a decentní indikátor chybějících údajů (jen správce). Co přesně chybí,
  * říká popisek indikátoru a čtečce i text odkazu; podrobnosti jsou v okně akce.
  */
+/** Čas akce: jednodenní „09:00–10:30“ i každá polovina vícedenního rozsahu drží pohromadě, zalomit jde jen u „ – “. */
+function EventTime({ text }: { text: string }) {
+  return text.split(" – ").map((part, index) => (
+    <Fragment key={index}>
+      {index > 0 && " – "}
+      <span className={styles.nowrap}>{part}</span>
+    </Fragment>
+  ));
+}
+
 function CardMeta({ card, managing }: { card: EventCard; managing: boolean }) {
   const status = cardStatus(card);
   // Jeden stavový štítek; výstraha jen pro chybějící údaj, který karta jinak neukazuje.
@@ -206,7 +217,7 @@ function OriginalLayer({ card, href }: { card: EventCard; href: string }) {
       <span className={styles.title}>{original.label}</span>
       {original.leadName && <span className={styles.topic}>Vede: {original.leadName}</span>}
       {original.topicTitle && original.topicTitle !== original.label && <span className={styles.topic}>Téma: {original.topicTitle}</span>}
-      <span className={styles.line}>{formatEventTime(new Date(original.startsAt), new Date(original.endsAt), original.allDay)}</span>
+      <span className={styles.line}><EventTime text={formatEventTime(new Date(original.startsAt), new Date(original.endsAt), original.allDay)} /></span>
     </Link>
   );
 }
@@ -225,7 +236,7 @@ function EventBlock({ card, hrefFor = pageHref, managing = false, planView = man
       <Link href={hrefFor(card)} scroll={false} className={`${styles.event} ${styles[tone]}`} data-ucast={card.participation?.state} {...drag} {...pickAttr(card, managing)}>
         <span className={styles.title}>{card.label}</span>
         <CardDetails card={card} managing={planView} />
-        {!isHoliday && !cancelled && <span className={styles.line}>{formatEventTime(new Date(card.startsAt), new Date(card.endsAt), card.allDay)}</span>}
+        {!isHoliday && !cancelled && <span className={styles.line}><EventTime text={formatEventTime(new Date(card.startsAt), new Date(card.endsAt), card.allDay)} /></span>}
         {card.original && <span className={styles.changes}>{changesText(card)}</span>}
         <CardMeta card={card} managing={planView} />
       </Link>
@@ -426,7 +437,7 @@ export function Agenda({
                             {...pickAttr(card, managing)}
                           >
                             <span className={styles.agendaTime}>
-                              {formatEventTime(new Date(card.startsAt), new Date(card.endsAt), card.allDay)}
+                              <EventTime text={formatEventTime(new Date(card.startsAt), new Date(card.endsAt), card.allDay)} />
                             </span>
                             <span className={styles.agendaMain}>
                               <span className={styles.title}>{card.label}</span>
@@ -464,7 +475,7 @@ export function NextEventCard({ card }: { card: EventCard | null }) {
       <p className="eyebrow">{[...eventContext(title, card.type), `${weekdayShort(day)} ${formatDayMonth(day)}`].join(" · ")}</p>
       <p className="item-title">{title}</p>
       <p className="item-meta">
-        {formatEventTime(new Date(card.startsAt), new Date(card.endsAt), card.allDay)}
+        <EventTime text={formatEventTime(new Date(card.startsAt), new Date(card.endsAt), card.allDay)} />
         {card.leadName ? ` · Vede: ${card.leadName}` : ""}
       </p>
     </Link>
@@ -492,7 +503,7 @@ export function NextEventsList({ cards, todayKey, hrefFor = pageHref, emptyText 
                   {cardStatus(card) && <StatusBadge tone={cardStatus(card)!.tone} label={cardStatus(card)!.label} />}
                 </span>
                 <span className="item-meta">
-                  {formatEventTime(new Date(card.startsAt), new Date(card.endsAt), card.allDay)}
+                  <EventTime text={formatEventTime(new Date(card.startsAt), new Date(card.endsAt), card.allDay)} />
                   {card.leadName ? ` · Vede: ${card.leadName}` : ""}
                 </span>
                 {card.participation?.label && (

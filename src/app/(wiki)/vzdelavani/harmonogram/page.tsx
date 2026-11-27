@@ -258,11 +258,6 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
                   Seznam
                 </Link>
               </span>
-              {monthKey !== thisMonth && (
-                <Link className="btn btn-small btn-quiet" href={link({ mesic: thisMonth })}>
-                  Dnes
-                </Link>
-              )}
             </div>
             <div className="month-nav">
               <Link className="btn btn-icon" href={link({ mesic: shiftMonth(monthKey, -1) })} aria-label="Předchozí měsíc">
@@ -274,6 +269,12 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
               <Link className="btn btn-icon" href={link({ mesic: shiftMonth(monthKey, 1) })} aria-label="Další měsíc">
                 <Icon name="chevronRight" />
               </Link>
+              {/* Návrat na aktuální měsíc patří k navigaci měsíce, ne k přepínači zobrazení. */}
+              {monthKey !== thisMonth && (
+                <Link className="btn btn-small btn-quiet month-today" href={link({ mesic: thisMonth })}>
+                  Dnes
+                </Link>
+              )}
             </div>
             <div className="toolbar-end">
               {prepareMonth}

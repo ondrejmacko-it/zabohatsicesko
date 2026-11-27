@@ -394,6 +394,10 @@
   border-color: var(--line-strong);
 }
 
+.nowrap {
+  white-space: nowrap;
+}
+
 .agendaTime {
   color: var(--ink-soft);
   font-size: 14px;
