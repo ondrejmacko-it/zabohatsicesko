@@ -472,7 +472,8 @@ function EventForm({
       {termLocked && <p className="field-hint span-2">Akce už proběhla, termín zůstává.</p>}
       {duplicateOf && <p className="field-hint field-hint-key span-2">Navržené datum, zkontroluj.</p>}
       {unusualDay && !termLocked && (
-        <p className="notice notice-danger span-2" role="alert">
+        // Mimořádný den je dovolený, jen méně obvyklý: informace, ne chyba (screenshoty vlastníka 27. 11. 2026).
+        <p className="notice span-2" role="status">
           <strong>{ON_WEEKDAY[weekday!]} se vzdělávání běžně nekoná.</strong> V Plánu bude akce jako řádek pod týdnem.
         </p>
       )}
