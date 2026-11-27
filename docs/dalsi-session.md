@@ -37,46 +37,27 @@ Větev `claude/gallant-bohr-m1lyna`, draft PR #94 (nezakládat další, nemergov
     výsledky testů vč. přeskočených, překážky se závažností, postup kontroly Preview před merge.
 Další související chybu opravit a doložit regresním testem. Cíl: funkční, bezpečné, sjednocené, ne jen zelené CI.
 
-## Stav (relace 42, HEAD fc14532)
-- PR #94 draft; nová relace: subscribe_pr_activity #94, `npm ci`. Úvodní kontext ~120 tis. → 2–3 malé jednotky/relace.
-- Body 1–6 hotové v kódu (viz Zjištěno); bod 5 v 2551b00, bod 6 prověřen beze změn.
-- Bod 8 ČÁST HOTOVÁ (fc14532): `e2e/ucast-karta.spec.ts` (jen projekt windows-1280, šířky si nastavuje sám
-  320–1920) – klik na kartu v harmonogramu, regrese pořadí (karta účasti po `.event-form/.fact-list/.key-facts`,
-  žádné `form form`), fokus v okně, bez vodorovného posunu; správce povinná + rozpracovaná editace (čas konce)
-  přežije omluvu/zrušení; účastník RM povinná → formulář omluvy (přesný text soukromí, šipky) → omluveno →
-  zrušení; dobrovolná → přihlášeno → potvrzení odhlášení; FP zrušená ev-11-4 / proběhlá tr-fp-1111 bez tlačítek;
-  detail ev-11-18; náhled kolegy + skupiny-fp (zamčeno). 15 passed (s login+zapis-temat). Správce je ve všech
-  skupinách → dobrovolnou akci nemá (seed), „správce dobrovolná“ nejde – uvést v reportu.
-- Screenshoty PO: 24 PNG (390 + 1280) v `docs/screenshots/ucast-karta/`; `UCAST_SHOTS=<dir>` uloží všech 7 šířek.
-  Dřív prošly: ucast + rychle-akce + nahled spec 110 passed / 51 skipped (na cc6b510).
-- Další krok: (a) prohlédnout 3–4 PNG (Read) kvůli vzhledu karty (bod 2); (b) screenshoty PŘED: worktree na
-  948ea18 (před bodem 1), symlink node_modules, `UCAST_SHOTS=… npx playwright test e2e/ucast-karta.spec.ts
-  --project=windows-1280` (spec zkopírovat; pořadí tam selže – stačí screenshoty z prvních kroků, příp. dočasně
-  vypnout assert), uložit do `docs/screenshots/ucast-karta/pred/` jen 390+1280; (c) lint+tsc+vitest+build+celá
-  e2e jednou; (d) bod 7 matice (`docs/pozadavky-f01-f18.md` + kód); (e) bod 10 popis PR #94 + report vlastníkovi.
-
-## Zjištěno (nemusíš znovu číst)
-- (HOTOVO bod 1) `EventPeek.tsx`: správce → `EventWindow` (EventDialog.tsx:142) s `intro` = statusBand, preset, ChangeBanner,
-  participationPanel, managedPanel; pak `EventForm` (ř. ~179). Ne-správce → RouteModal: statusBand, `dl.fact-list`,
-  participationPanel, managedPanel, odkazy (pořadí tam už sedí).
-- Návrh opravy: `EventForm` dostane prop `afterFields`; `<form id={formId}>` (ř. ~512) uzavřít před
-  `div.dialog-actions.event-actions` (ř. ~624), mezi ně vložit `afterFields` (participation + managed), tlačítka
-  Uložit/Zveřejnit dostanou `form={formId}` (submitter i Enter fungují). `publishButton()` (ř. 245) hledá přes
-  `formRef.current.querySelector('.event-actions …')` → přepnout na ref akčního divu. EventWindow předá panel místo intro.
-  Rozpracovanou editaci drží useState (key=revision); ověřit e2e: upravit pole, změnit účast, hodnota zůstane.
-- `ParticipationPanel.tsx` (190 ř.): `section.section.participation-panel`, h2 „Tvoje účast“, StatusBadge, STATE_TEXT,
-  `calendarNote()` z `src/lib/calendar-note.ts` (texty „Pozvánku máš v Kalendáři.“, „…čeká na odeslání.“ → bod 4
-  přepsat na uloženo ve Wiki / synchronizace čeká / synchronizováno / selhalo / neznámý). Potvrzení enroll/withdraw/
-  revoke slibují pozvánku („pozvánku dostaneš do Kalendáře“, „odebere z pozvánky“, „vrátí do pozvánky“) → opravit.
-  Dialog omluvy: ř. ~165–185, hint „Důvod i poznámku vidíš jen ty…“ → přesný text z bodu 3.
-- CSS: tokeny `--ucast-*`(-bg/-fg) v globals.css ~646–698 přes `[data-ucast=…]`; panel má `data-ucast-panel={state}`
-  → podbarvení karty: `.participation-panel[data-ucast-panel=…]` s `--ucast-bg`/border-left `--ucast`
-  (pozor: selektor `[data-ucast=…]` tokeny nastavuje jen pro atribut data-ucast, přidat i data-ucast-panel).
-  Styl panelu globals.css ~5216. Layout desktop: hlavička flex (h2 + štítek), akce vpravo; mobil wrap.
-- e2e: `e2e/ucast.spec.ts` (port UCAST 3313, projekty windows-1280/telefon-390, `openCard` dělá goto, ne klik).
-  Pro bod 8 nový spec (např. `e2e/ucast-karta.spec.ts`): klik na kartu v harmonogramu, assert pořadí
-  (`.event-form` / `.fact-list` před `[data-ucast-panel]` přes compareDocumentPosition), screenshoty na 7 šířkách
-  (viewport v testu; projekty 768/1024 jen s E2E_WEBKIT, proto šířky nastavit `page.setViewportSize`).
+## Stav (relace 43, HEAD viz git log)
+- PR #94 draft; nová relace: subscribe_pr_activity #94, `npm ci`. Úvodní kontext ~120 tis. → 1–2 malé jednotky/relace.
+- Body 1–6 hotové; bod 8 HOTOVÝ: `e2e/ucast-karta.spec.ts` (+ karta se musí dát doscrollovat do zobrazení),
+  screenshoty PO 24 PNG `docs/screenshots/ucast-karta/` (cb655cc), PŘED 24 PNG `…/pred/` z 948ea18 (15fc144;
+  pořízeno kopií specu s expect.soft – před úpravou: karta nad formulářem, bez podbarvení, bez info o Kalendáři).
+  Správce je ve všech skupinách → „správce dobrovolná“ v seedu nejde (uvést v reportu).
+- Ověřeno na cb655cc/15fc144: lint 0 chyb, tsc OK, vitest 69 souborů / 628 testů OK, build OK,
+  ucast-karta 15 passed. Celá e2e (1767 testů): E2E_VYSLEDEK.
+- Matice bod 7 rozpracovaná (nic necommitnuto): mapování F01–F18 → testy v `docs/pozadavky-f01-f18.md` ř. 106–130
+  platí (soubory existují); POZOR texty F04 v ř. 132–140 jsou zastaralé (bod 4 změnil `calendar-note.ts`).
+  Zvlášť nalezeno: hromadný výběr `priprava-mesice.spec.ts:142`, F08 `…f06-f09.spec.ts:67/93`; souběh výběru
+  `vyber-kontext.spec.ts:75`; filtry `plan-planovani.spec.ts:148`, `harmonogram-rozlozeni.spec.ts:87`,
+  `mobilni-ovladani.spec.ts:312`; oslovení `osloveni.spec.ts:7`; lišta `zahlavi.spec.ts:23`, `nahled.spec.ts:221`;
+  mobil `mobilni-ovladani.spec.ts`. NENALEZENO grepem názvů testů: ≥5 garantovaných témat přes UI + reload,
+  animace při najetí na návrh, kolize v přípravě měsíce (hledat v tělech testů: `garant`, `priority`, `animation`,
+  `kolid`, `collision` v e2e/ a tests/). Chybějící doplnit krátkým e2e/unit testem, nebo v matici uvést „netestováno“.
+- Další krok: (d) dopsat matici jako `docs/matice-f01-f18.md` (sloupce: implementováno / auto test / vizuálně /
+  PostgreSQL / Preview / produkce / čeká na integraci-firmu; F04 jen simulace, F15 jen heuristika) + opravit
+  zastaralé texty F04; (e) bod 10: update popisu PR #94 (opravy, soubory `git diff --stat main...HEAD`, odkazy na
+  screenshoty před/po, matice, testy vč. přeskočených, překážky se závažností, postup kontroly Preview před merge)
+  a report vlastníkovi v chatu (česky, tykat) – jen v poslední relaci.
 
 ## Otevřené (firma)
 - C04: mazat vazby i při deaktivaci podřízeného? Mapování nadřízených a retence omluv.
