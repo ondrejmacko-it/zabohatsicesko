@@ -60,7 +60,7 @@ export default async function MinutesPage({ searchParams }: { searchParams: Sear
     ) : (
       showAdd && params.pridat === "1" && <AddMinutesPicker title={missingTitle} items={missing.items} hrefFor={(id) => link({ zapis: id })} closeHref={link()}
         othersLabel={isOrganizer(viewer) ? "Ostatní (správcovský přehled)" : "Ostatní"}
-        assignHref={isOrganizer(viewer) ? (item) => `/vzdelavani/harmonogram?mesic=${item.startsAt.slice(0, 7)}&akce=${encodeURIComponent(item.eventId)}` : undefined} />
+        assignHref={isOrganizer(viewer) ? (item) => `/vzdelavani/harmonogram?mesic=${item.startsAt.slice(0, 7)}&akce=${encodeURIComponent(item.eventId)}&upravit=1` : undefined} />
     )}
     <section className="section" aria-labelledby="zapisy">
       {showAdd && (

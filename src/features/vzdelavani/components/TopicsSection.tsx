@@ -74,7 +74,7 @@ function topicItem(t: RankedTopic, index: number, count: number, ctx: RowContext
               {" · "}
               <Link
                 className="topic-in-draft"
-                href={`/vzdelavani/harmonogram?mesic=${t.nextDraft.slice(0, 7)}${t.nextDraftId ? `&akce=${encodeURIComponent(t.nextDraftId)}` : ""}`}
+                href={`/vzdelavani/harmonogram?mesic=${t.nextDraft.slice(0, 7)}${t.nextDraftId ? `&akce=${encodeURIComponent(t.nextDraftId)}&upravit=1` : ""}`}
                 title={`Návrh akce ${formatDayMonth(t.nextDraft)}`}
               >
                 termín se potvrzuje
