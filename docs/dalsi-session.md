@@ -1,4 +1,4 @@
-# Navazující relace (stav 27. 11. 2026, relace 65)
+# Navazující relace (stav 27. 11. 2026, relace 66)
 
 Cíl: finální opravné kolo UI PC + mobil (zadání vlastníka „ZBČ – finální UX/UI a funkční stabilizace“,
 body 0–12). Implementace, ne audit. Desktop i mobil stejně důležité; vzdušně, nezahušťovat, zachovat identitu Wiki.
@@ -33,12 +33,14 @@ Zadání (64 KB) a 82 screenshotů nejsou v repu; zhuštěný seznam bodů je v 
   → přepnutí nemění šířku; ≤360 px spodní řádky správce od levého okraje. Regrese `geometrie.spec.ts`
   „Řádek tématu“ (bez opravy padá), temata-planovani telefon-360 zelené.
 
+- Bod 3 dál (`ce74be0`): okno Naplánovat téma = stávající termín → skupina „Návrhy bez tématu · uloží se jen návrh“
+  → „Zveřejněné akce · změnu potvrdíš v okně akce“ (vysvětlení jednou u skupiny, `reason` jen „téma je pro všechny“),
+  tlačítka „Přiřadit k akci“, datum nowrap. vitest temata-priority, tsc, e2e temata-planovani (1280, 360) zelené.
+
 ## Pořadí práce (jednotka = změna + cílený test + commit + push)
 1. ~~Zápisy k dokončení~~ hotovo (viz výše).
 2. ~~Mobilní menu~~ hotovo.
-3. Témata ČÁSTEČNĚ (viz Hotovo). Zbývá: okno Naplánovat téma (pořadí: stávající termín → budoucí návrhy bez
-   tématu pro publikum → zveřejněné; kompaktně, bez opakované věty pod kartou; Přiřadit k akci / Vytvořit novou
-   akci) – najdi `grep -rn "Naplánovat" src/features`. PageCall (`src/components/PageCall.tsx`, grid hotový)
+3. Témata ČÁSTEČNĚ (viz Hotovo). Zbývá: PageCall (`src/components/PageCall.tsx`, grid hotový)
    nasadit i na Domů a Správa. DnD při filtru/hledání zakázané (TopicsSection.tsx:29) – ověřit hlášku + reset.
 4. Náhled role: přepnutí z nepřístupné trasy (Správa/Integrace) → přesměrovat na Domů/Plán; jeden stručný
    banner „Náhled: … · jen ke čtení“ + Ukončit náhled, bez seznamu stránek; oslovovat efektivní osobu.
