@@ -4855,10 +4855,13 @@ body[data-moving] .quick-actions,
 }
 
 /* Zpětná vazba (brouček). Okno používá .dialog, tady jen tlačítko, označování a obsah kroků. */
-.sidebar-feedback {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--sidebar-line);
+/* Oddělovač jen ve svislém menu; na ≤900 px je Zpětná vazba v řádku s navigací (blok Shell nahoře). */
+@media (min-width: 901px) {
+  .sidebar-feedback {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--sidebar-line);
+  }
 }
 
 .sidebar-feedback .nav-item {
@@ -5439,5 +5442,12 @@ body[data-moving] .quick-actions,
   .view-switch .combobox-panel {
     right: 0;
     min-width: 0;
+  }
+}
+
+/* Telefon: Zpětná vazba má stejné písmo jako ostatní položky menu. */
+@media (max-width: 640px) {
+  .sidebar-feedback .nav-item {
+    font-size: 13px;
   }
 }
