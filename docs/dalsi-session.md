@@ -1,4 +1,4 @@
-# Navazující relace (stav 27. 11. 2026, relace 72)
+# Navazující relace (stav 27. 11. 2026, relace 73)
 
 Cíl: finální opravné kolo UI PC + mobil (zadání vlastníka „ZBČ – finální UX/UI a funkční stabilizace“,
 body 0–12). Implementace, ne audit. Desktop i mobil stejně důležité; vzdušně, nezahušťovat, zachovat identitu Wiki.
@@ -29,11 +29,12 @@ Zadání (64 KB) a 82 screenshotů nejsou v repu; zhuštěný seznam bodů je v 
   e2e okna, okno-akce-vyber, rychle-akce, pristupnost, mobilni-ovladani, plan-planovani, vyber-kontext, kdo-tema,
   priprava-mesice, mimoradny-termin zelené na windows-1280 + telefon-360.
 
+- Bod 6 HOTOVO: `EventPeek.tsx` místo pásu se štítky jeden řádek `.status-line` (tečka + stav + věta),
+  `InviteeList` „… příjemců pozvánky po zveřejnění“ u nezveřejněné akce, `.fact-list` na ≤480 px hodnota pod
+  popiskem, `.event-actions` na ≤640 px pomocná řada (⋯, stav) + 2 stejně široké akce. e2e pas-stavu + nahled
+  zelené na telefon-390/360 + windows-1280.
+
 ## Pořadí práce (jednotka = změna + cílený test + commit + push)
-6. Zbytek detailu akce: příjemci jen krátký souhrn u Pro koho (hypotetické označit) – `InviteeList` v
-   `EventDialog.tsx`; jeden kompaktní stav místo pásu (`statusBand` v `EventPeek.tsx`); mobilní footer okna
-   (pomocná řada stav + ⋯, pod ní 2 rovnocenné akce Uložit jako návrh / Zveřejnit změny); label/hodnota
-   `.fact-list` desktop vedle sebe, mobil pod sebou. Ověřit snímkem 360 + 1280 (scratchpad).
 7. Přidat akci: (skupiny a „Doporučená témata“ HOTOVO v f0c8b4f) – předvyplnění data z plus dne, duplikace bez
    omluv/registrací/zápisů; průvodce přípravou měsíce (`PrepareMonthDialog.tsx`, step-no tam zůstává jako kroky).
 8. Účast: stav jako jedna věta + akce vpravo; „Kalendář: stav neznámý“ → neutrální pravdivý text.
