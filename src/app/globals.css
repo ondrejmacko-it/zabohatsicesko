@@ -2840,6 +2840,21 @@ a.brief-link:hover {
   font-size: 1rem;
 }
 
+.plan-topic-hint {
+  font-size: 0.875rem;
+  font-weight: 400;
+}
+
+.plan-topic-group {
+  display: grid;
+  gap: 8px;
+}
+
+/* Datum v názvu akce se nesmí rozdělit na „13.“ a „11.“. */
+.plan-topic-item .nowrap {
+  white-space: nowrap;
+}
+
 .plan-topic-more {
   align-self: flex-start;
 }

@@ -152,13 +152,16 @@ test.describe("Témata: garantovaná a ostatní", () => {
     // Stávající termín je nahoře s hlavním odkazem, další termín je vedlejší volba (nejdřív nejvýš tři akce).
     await expect(plan.getByText(/^Naplánováno na 26\. 11\./)).toBeVisible();
     await expect(plan.getByRole("link", { name: "Otevřít stávající akci" })).toHaveClass(/btn-primary/);
-    await expect(plan.getByRole("heading", { name: "Další termín" })).toBeVisible();
+    // Návrhy jsou první skupina, vysvětlení dopadu je jednou u nadpisu skupiny, ne pod kartou.
+    const drafts = plan.getByRole("region", { name: "Návrhy bez tématu" });
+    await expect(drafts.getByRole("heading", { name: /uloží se jen návrh/ })).toBeVisible();
     await expect(plan.getByRole("link", { name: "Vytvořit novou akci" })).not.toHaveClass(/btn-primary/);
-    const items = plan.getByRole("list", { name: "Vhodné akce" }).getByRole("listitem");
+    const items = plan.getByRole("listitem");
     expect(await items.count()).toBeLessThanOrEqual(3);
     await expect(items.first()).toContainText("Firemní vzdělávání FP · 13. 11.");
     // D-01: skupinu už říká typ „Firemní vzdělávání FP“, proto se neopakuje.
-    await expect(items.first()).toContainText("návrh");
+    await expect(drafts.getByRole("listitem").first()).toContainText("Firemní vzdělávání FP · 13. 11.");
+    await expect(items.first()).not.toContainText("návrh");
     await expect(items.first()).not.toContainText("Finanční poradci");
     const more = plan.getByRole("button", { name: /^Zobrazit další/ });
     if (await more.isVisible()) {
@@ -422,8 +425,7 @@ test.describe("Témata: zápis priority, pořadí a návrhu @desktop @zapis-tema
     await expect(plan.getByRole("listitem").first()).toBeVisible();
     if (await more.isVisible()) await more.click();
     const item = plan.getByRole("listitem").filter({ hasText: "· 4. 12." });
-    await expect(item).toContainText("návrh");
-    await item.getByRole("button", { name: /^Přidat do návrhu/ }).click();
+    await item.getByRole("button", { name: /^Přiřadit k akci/ }).click();
     await expect(plan).toBeHidden();
     await expect(page.getByText(/Téma „Otevřené otázky na schůzce“ je v návrhu akce 4\. 12\. Termín se potvrzuje, kolegové ho uvidí po zveřejnění\./)).toBeVisible();
     await openTopics(page);
