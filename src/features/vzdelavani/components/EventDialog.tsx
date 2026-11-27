@@ -236,14 +236,14 @@ const ON_WEEKDAY = [
   "V neděli",
 ];
 
-const peopleCount = (n: number) => (n === 1 ? "1 člověka" : `${n} lidí`);
+const peopleCount = (n: number) => (n === 1 ? "1 člověka" : n < 5 ? `${n} lidi` : `${n} lidí`);
 
 /** Jedna věta o tom, co zveřejnění změní: „Změníš termín akce pro 12 lidí.“ */
 function impactHeadline(impact: ChangeImpact): string {
   const fields = impact.changes.map((c) => c.field);
   const what = fields.includes("Termín")
     ? "termín"
-    : fields.includes("Publikum")
+    : fields.includes("Pro koho")
       ? "skupinu"
       : fields.includes("Téma")
         ? "téma"

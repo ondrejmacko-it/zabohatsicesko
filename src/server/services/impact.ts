@@ -63,7 +63,7 @@ function changesOf(published: EventSnapshot, input: EventInput, next: Next): Cha
       to: term(next.startsAt, next.endsAt, next.allDay),
     });
   }
-  add("Publikum", GROUP_LABELS[published.audience], GROUP_LABELS[next.audience]);
+  add("Pro koho", GROUP_LABELS[published.audience], GROUP_LABELS[next.audience]);
   return rows;
 }
 
@@ -143,14 +143,14 @@ export async function changeImpact(viewer: Viewer, eventId: string, input: Event
   try {
     desired = await eventAttendees(db, eventId, nextSnapshot(published, input, next));
   } catch {
-    impact.notes.push("Seznam hostů pro nové publikum se nepodařilo sestavit. Synchronizace se zastaví a ukáže důvod.");
+    impact.notes.push("Seznam hostů pro novou skupinu se nepodařilo sestavit. Synchronizace se zastaví a ukáže důvod.");
     return impact;
   }
   if (!link?.externalEventId) {
     impact.guests.add = desired.map((a) => a.name);
     impact.notes.push(
       link
-        ? "Pozvánka v Kalendáři zatím nevznikla. Vytvoří se rovnou pro nové publikum."
+        ? "Pozvánka v Kalendáři zatím nevznikla. Vytvoří se rovnou pro novou skupinu."
         : "Akce nemá vazbu na pozvánku v Kalendáři. Změna se projeví jen ve Wiki, dokud pozvánku nezaložíš nebo nespáruješ.",
     );
     if (!link) impact.guests.add = [];

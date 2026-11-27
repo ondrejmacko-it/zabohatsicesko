@@ -346,7 +346,7 @@ export async function publishMonthAction(_prev: ActionResult | null, formData: F
     }));
     const skippedNote = (skipped: number) =>
       skipped
-        ? ` ${skipped} ${skipped === 1 ? "návrh mezitím někdo změnil a zůstal" : "návrhy mezitím někdo změnil a zůstaly"} beze změny, zkontroluj je.`
+        ? ` ${skipped} ${skipped === 1 ? "návrh mezitím někdo změnil a zůstal" : skipped < 5 ? "návrhy mezitím někdo změnil a zůstaly" : "návrhů mezitím někdo změnil a zůstalo"} beze změny, zkontroluj je.`
         : "";
     if (!publish) {
       const { published: saved, skipped } = await publishDrafts(user, month, items, 0, { publish: false });
@@ -385,7 +385,7 @@ export async function deleteDraftsAction(_prev: ActionResult | null, formData: F
     if (!ids.success) return { ok: false, error: "Vyber aspoň jeden návrh." };
     const items = ids.data.map((id) => ({ id, revision: z.coerce.number().int().positive().parse(formData.get(`rev-${id}`)) }));
     const { deleted, skipped } = await deleteDrafts(user, items);
-    const note = skipped ? ` ${skipped} ${skipped === 1 ? "návrh mezitím někdo změnil, zůstal" : "návrhy mezitím někdo změnil, zůstaly"}.` : "";
+    const note = skipped ? ` ${skipped} ${skipped === 1 ? "návrh mezitím někdo změnil, zůstal" : skipped < 5 ? "návrhy mezitím někdo změnil, zůstaly" : "návrhů mezitím někdo změnil, zůstalo"}.` : "";
     if (!deleted.length) return { ok: false, error: `Nic se nesmazalo.${note}` };
     const count = `${deleted.length} ${deleted.length === 1 ? "návrh" : deleted.length < 5 ? "návrhy" : "návrhů"}`;
     return { ok: true, message: `Smazáno: ${count}. Nic se neodeslalo.${note}` };
@@ -504,7 +504,7 @@ export async function saveMinutesAction(_prev: ActionResult | null, formData: Fo
       // Schvaluje se přesně verze, která právě vznikla uložením (nebo zůstala beze změny).
       await approveMinutes(user, data.id, saved.id, saved.version);
       after(() => syncEvent(data.id));
-      return { ok: true, message: `Verze ${saved.version} je schválená a zveřejněná pro publikum akce.` };
+      return { ok: true, message: `Verze ${saved.version} je schválená a zveřejněná pro skupinu akce.` };
     }
     if (saved.newDraft) return { ok: true, message: "Nová verze je uložená jako návrh. Kolegové do schválení vidí dosavadní zápis." };
     return { ok: true, message: "Úpravy zápisu jsou uložené." };

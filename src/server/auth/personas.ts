@@ -8,7 +8,7 @@ const DESCRIPTIONS: Record<string, string> = {
   "demo-spravce": "Plánuje a zveřejňuje akce, spravuje účty a skupiny, vidí vše.",
   "demo-vedouci": "Vede akce, nahrává nahrávky a kontroluje zápisy.",
   "demo-ucastnik": "Kolega ze skupiny finančních poradců.",
-  "demo-mimo-skupinu": "Kolega ze skupiny RM, mimo publikum tréninku poradců.",
+  "demo-mimo-skupinu": "Kolega ze skupiny RM, mimo skupinu tréninku poradců.",
 };
 
 export type Persona = { id: string; name: string; description: string };

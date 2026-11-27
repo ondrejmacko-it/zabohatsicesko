@@ -117,7 +117,7 @@ describe("potvrzení dopadu změny", () => {
 
     const { revision, ...change } = await inputOf(PUBLISHED_RM, { audience: "fp" });
     const impact = (await changeImpact(organizer, PUBLISHED_RM, change))!;
-    expect(impact.changes).toEqual([{ field: "Publikum", from: "Relationship manažeři", to: "Finanční poradci" }]);
+    expect(impact.changes).toEqual([{ field: "Pro koho", from: "Relationship manažeři", to: "Finanční poradci" }]);
     expect(impact.guests.add).toEqual(["Účastník – finanční poradce"]);
     expect(impact.guests.remove).toEqual([]);
     expect(impact.guests.manual).toEqual(["Účastník – relationship manažer"]); // přidaný ručně v Kalendáři, Wiki ho neodebírá
@@ -167,7 +167,7 @@ describe("potvrzení dopadu změny", () => {
 
     await writeSwitch(await getDb(), "calendar.outage", true);
     const impact = (await changeImpact(organizer, PUBLISHED_RM, { ...same, audience: "fp", date: "2026-11-19" }))!;
-    expect(impact.changes.map((c) => c.field)).toEqual(["Termín", "Publikum"]);
+    expect(impact.changes.map((c) => c.field)).toEqual(["Termín", "Pro koho"]);
     expect(impact.notes.join(" ")).toContain("není ověřený");
     await expect(changeImpact(participant, PUBLISHED_RM, same)).rejects.toMatchObject({ code: "forbidden" });
   });

@@ -174,7 +174,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                     <dt>Hosté pozvánek</dt>
                     <dd>
                       {attendeeSource() === "audience"
-                        ? "publikum akce: aktivní uživatelé skupiny, pro kterou je akce určená"
+                        ? "skupina akce: aktivní uživatelé skupiny, pro kterou je akce určená"
                         : `jen testovací příjemci: ${googleConfig.allowedAttendees.length ? googleConfig.allowedAttendees.join(", ") : "žádní, pozvánky vzniknou bez hostů"}`}
                     </dd>
                   </>
