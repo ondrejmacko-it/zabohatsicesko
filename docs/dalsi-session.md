@@ -1,4 +1,4 @@
-# Navazující relace (stav 27. 11. 2026, relace 64)
+# Navazující relace (stav 27. 11. 2026, relace 65)
 
 Cíl: finální opravné kolo UI PC + mobil (zadání vlastníka „ZBČ – finální UX/UI a funkční stabilizace“,
 body 0–12). Implementace, ne audit. Desktop i mobil stejně důležité; vzdušně, nezahušťovat, zachovat identitu Wiki.
@@ -29,17 +29,17 @@ Zadání (64 KB) a 82 screenshotů nejsou v repu; zhuštěný seznam bodů je v 
   (`.menu-card-trigger`) světlé pozadí + plná ikona, inline 44px hit area; ikona `search` v Icon.tsx.
   Ověřeno: tsc, eslint, build, e2e geometrie + temata-planovani (windows-1280, telefon-360/320) zelené.
 
+- Bod 3 dál (`7ba2ba0`): „Mám zájem“ má fajfku vždy v DOM (`.interest-check`, mimo zájem `visibility:hidden`)
+  → přepnutí nemění šířku; ≤360 px spodní řádky správce od levého okraje. Regrese `geometrie.spec.ts`
+  „Řádek tématu“ (bez opravy padá), temata-planovani telefon-360 zelené.
+
 ## Pořadí práce (jednotka = změna + cílený test + commit + push)
 1. ~~Zápisy k dokončení~~ hotovo (viz výše).
 2. ~~Mobilní menu~~ hotovo.
-3. Témata ČÁSTEČNĚ (viz Hotovo). Zbývá: řádek tématu na mobilu bez prázdného pásu vlevo, Mám zájem
-   aria-pressed zelená s fajfkou bez skoku, okno Naplánovat téma (stávající termín → návrhy → zveřejněné, bez
-   opakované věty), PageCall i na Domů/Správa. Původně: filtr Pro mou roli/Všechna + vyhledávání v jedné liště (jeden zdroj stavu), PageCall
-   text vlevo + CTA vpravo v jedné řadě; ⋯ kontrastní všude (sdílená ikonová akce, 44px hit area).
-   Stav: `src/components/PageCall.tsx` (13 ř.), CSS `.page-call` ~ř. 4558 globals.css = flex-wrap +
-   `.page-call-text { flex: 1 1 22ch }` → při zalomení vzniká diagonála; přestavět na grid
-   `minmax(0,1fr) auto` (≤560 px tlačítko pod textem přes šířku), menší serif, plochý panel. Použití: Témata
-   (`TopicsSection.tsx:173`), Zápisy (`zapisy/page.tsx:67`), Harmonogram prázdný měsíc. Pak `TopicBoard.tsx`.
+3. Témata ČÁSTEČNĚ (viz Hotovo). Zbývá: okno Naplánovat téma (pořadí: stávající termín → budoucí návrhy bez
+   tématu pro publikum → zveřejněné; kompaktně, bez opakované věty pod kartou; Přiřadit k akci / Vytvořit novou
+   akci) – najdi `grep -rn "Naplánovat" src/features`. PageCall (`src/components/PageCall.tsx`, grid hotový)
+   nasadit i na Domů a Správa. DnD při filtru/hledání zakázané (TopicsSection.tsx:29) – ověřit hlášku + reset.
 4. Náhled role: přepnutí z nepřístupné trasy (Správa/Integrace) → přesměrovat na Domů/Plán; jeden stručný
    banner „Náhled: … · jen ke čtení“ + Ukončit náhled, bez seznamu stránek; oslovovat efektivní osobu.
 5. Plán mobil: filtry Všechny/Povinné/Dobrovolné/Moje 2×2, Dnes k navigaci měsíce, čas nezalomitelný,
