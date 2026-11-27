@@ -1,18 +1,30 @@
-# Navazující relace (stav 27. 11. 2026, relace 46)
+# Navazující relace (stav 27. 11. 2026, relace 59)
 
-Větev `claude/gallant-bohr-m1lyna`, draft PR #94 (nezakládat další, nemergovat, žádná produkce/DB/Google pozvánky).
-Zadání vlastníka 26. 11. body 1–10 je **hotové**. Popis PR #94 obsahuje opravy, změněné soubory, screenshoty,
-matici F01–F18 (`docs/matice-f01-f18.md`), testy, překážky a postup kontroly Preview.
+Cíl: finální responzivní audit a mobilní UX (zadání vlastníka body 1–23). **Hotovo**, draft PR otevřen.
+Žádný redesign desktopu, merge, deploy, produkční DB, živý Google ani Make.
+Větev `claude/oprava-mobilni-responzivita` z main `01db12f`, poslední kód `c2ee85d`. Draft PR #95.
 
-## Ověřeno
-- Celá e2e sada na e24cf40: 1475 OK, 0 chyb, 292 přeskočeno (`test.skip` podle projektu/šířky), 12,7 min.
-- Lint, `tsc`, Vitest 628/628, build na 15fc144; kód aplikace se od té doby neměnil (jen e2e a docs).
-- CI (Vercel preview) na PR #94 zelené, žádné review komentáře.
+## Hotovo
+- Všechny opravy bodů 1–23 + audit 347 px (Domů, Plán, Zápisy, Témata, Integrace, Správa; správce a účastník FP).
+- c2ee85d: Zpětná vazba v menu na ≤900 px bez oddělovače svislého menu, ≤640 px písmo 13 px –
+  `e2e/menu-telefon.spec.ts` (bez opravy padá). Jiné nálezy audit nenašel.
+- Popis PR obsahuje opravy, testy, vědomé změny (no-JS Zobrazit u Pohledu pryč, Google účet ověřen jen CSS)
+  a otevřené otázky. Před/po screenshoty jen ve scratchpadu relace 59 (ne v repu).
+
+## Ověřeno (c2ee85d)
+- ESLint, `tsc` OK, Vitest 629/629, Playwright 1526 OK / 546 skipped / 0 failed.
+
+## Technika
+- `npm ci`; před `--no-deps` nejdřív `npx playwright test --project=prihlaseni --no-deps --trace off --reporter=line`.
+- Mobilní CSS = bloky na konci `src/app/globals.css`.
 
 ## Další krok
-- Čeká se na vlastníka: kontrola Preview podle popisu PR #94, převedení z draftu a ruční merge.
-- Na reakce v PR #94 (review, CI) reagovat; jinak nic nezačínat.
+- Čeká se na vlastníka: kontrola Preview, odpovědi na otázky, převedení z draftu a ruční merge.
+- Reagovat na review/CI v PR; jinak nic nezačínat.
 
-## Otevřené (firma)
-- C04: mapování nadřízených a retence omluv. F04 živý test s Google Kalendářem (D06). F15 pravidla anonymizace.
-- Neon branch `zaloha-pred-0015-2026-11-26` a `test-migrace-0015-0019` smazat jen se souhlasem vlastníka.
+## Otevřené otázky pro vlastníka
+- Odsazení na telefonu (42 px/stranu) zúženo jen na Plánu – srovnat globálně? „Vybrat návrhy“ do nabídky Filtry?
+- Velká okna přes celou obrazovku – vyhovuje, nebo bottom sheet?
+- „Kalendář: stav neznámý“ (`src/lib/calendar-note.ts`) – pravdivá věta je rozhodnutí vlastníka.
+- Oddělení osobní účasti od editace v okně akce (kompaktní detail + „Upravit akci“) – návrh předložit.
+- Oslovení (`SalutationForm`, D03) do Menu „Účet“, nebo jen odkaz? Co znamená „Domů do účtu“?

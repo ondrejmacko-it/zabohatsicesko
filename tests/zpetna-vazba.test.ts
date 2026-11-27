@@ -301,6 +301,20 @@ describe("brouček: poloha", () => {
     expect(placeBug(DEFAULT_BUG_DOCK, BUG_SIZE, viewport, wall)).toMatchObject({ left: 1280 - BUG_TAB_WIDTH, peek: true });
   });
 
+  test("na telefonu sedí vedle rychlých akcí Plánu ve stejném řádku, schovaný jazýček zůstává u okraje", () => {
+    const phone = { width: 320, height: 800 };
+    const bar = { left: 212, top: 738, right: 308, bottom: 788, beside: true };
+    const placed = placeBug(DEFAULT_BUG_DOCK, 48, phone, [bar], { touch: true });
+    expect(placed).toMatchObject({ left: 212 - 48 - 8, peek: false });
+    expect(placed.top).toBeLessThan(bar.bottom);
+    expect(placed.top + 48).toBeGreaterThan(bar.top);
+    const tucked = placeBug(DEFAULT_BUG_DOCK, BUG_TAB_WIDTH, phone, [bar], { touch: true });
+    expect(tucked.left).toBe(320 - BUG_TAB_WIDTH);
+    const blocked = placeBug(DEFAULT_BUG_DOCK, 48, phone, [bar, { left: 100, top: 730, right: 210, bottom: 790 }], { touch: true });
+    expect(blocked.left).toBe(320 - 48 - 12);
+    expect(blocked.top + 48).toBeLessThanOrEqual(bar.top);
+  });
+
   test("vlevo obejde vysoké levé menu", () => {
     const sidebar = { left: 0, top: 0, right: 240, bottom: 800 };
     expect(placeBug({ side: "left", y: 0.5 }, BUG_SIZE, viewport, [sidebar]).left).toBe(256);

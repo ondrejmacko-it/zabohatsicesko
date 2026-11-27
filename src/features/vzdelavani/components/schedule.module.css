@@ -492,19 +492,37 @@
     color: var(--ink);
   }
 
-  /* Karta: čas a stav na prvním řádku (stav vpravo), pod tím název, Kdo a Téma. */
+  /* Karta: čas a štítky na prvním řádku (štítky vpravo), pod tím název, Vede a Téma. Čas ani štítek se
+     nikdy nezalomí uvnitř; když se štítky vedle času nevejdou, sjedou celé na další řádek. Slova se lámou
+     jen mezi sebou (jméno vedoucího i role v závorce zůstanou celé), uvnitř slova jen když je delší než karta. */
   .agendaEvent {
-    grid-template-columns: minmax(0, 1fr) auto;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: 8px;
+    row-gap: 4px;
+    overflow-wrap: break-word;
+  }
+
+  /* Štítky jdou na další řádek dřív, než se čas zmenší; zalomí se jen vícedenní čas, a to u mezery. */
+  .agendaEvent > .agendaTime {
+    flex: 0 1 auto;
+    overflow-wrap: normal;
   }
 
   .agendaEvent > .agendaMain {
-    grid-column: 1 / -1;
+    flex-basis: 100%;
+    order: 1;
   }
 
   .agendaEvent > .meta {
-    grid-row: 1;
-    grid-column: 2;
-    justify-self: end;
+    flex: 0 1 auto;
+    justify-content: flex-end;
+    margin-left: auto;
+  }
+
+  .agendaEvent > .meta :global(.badge) {
+    white-space: nowrap;
   }
 
   .withHandle {
@@ -621,8 +639,21 @@
 @media (max-width: 760px) {
   /* Telefon: ⋯ vpravo nahoře, úchyt přesunu pod ním vpravo dole. Oba mají vlastní dotykovou plochu. */
   .menuAgendaHandle {
-    top: 8px;
+    top: 4px;
     bottom: auto;
+  }
+
+  /* ⋯ je na telefonu dobře vidět (36×32, tmavší) a jeho dotyková plocha má 44×44. S úchytem ≡ pod ním
+     (44×44 u spodního okraje karty vysoké aspoň 88 px) se plochy nepřekrývají. */
+  :is(.menuAgenda, .menuAgendaHandle) > :global(.menu-card-trigger) {
+    width: 36px;
+    height: 32px;
+    border-color: var(--line-strong);
+    color: var(--ink-soft);
+  }
+
+  :is(.menuAgenda, .menuAgendaHandle) > :global(.menu-card-trigger)::before {
+    inset: -6px -4px;
   }
 
   .withMenu.withHandle {

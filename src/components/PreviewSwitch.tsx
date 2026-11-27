@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { endPreview, startPreview } from "@/app/(wiki)/nahled-actions";
+import { Combobox, type ComboboxOption } from "@/components/Combobox";
 
 type Option = { key: string; label: string };
 
@@ -20,47 +21,34 @@ export function previewApplies(pathname: string): boolean {
 
 /**
  * Volba pohledu v horní liště (jen správce). Oddělená od účtu: mění, čí očima se stránky ukazují, ne kdo je
- * přihlášený. Volba odešle formulář hned, bez JavaScriptu tlačítkem Zobrazit.
+ * přihlášený. Výběr odešle formulář hned. Vlastní nabídka místo nativního <select>: ten na Androidu zakryje
+ * celou obrazovku a skupiny Skupina/Kolega v něm splývají.
  */
 export function PreviewSwitch({ groups, people, active }: { groups: Option[]; people: Option[]; active: string | null }) {
   // Úzký výběr dlouhý název zkrátí, celý je v title a v pruhu náhledu.
   const activeLabel = [...groups, ...people].find((o) => o.key === active)?.label;
+  const options: ComboboxOption[] = [
+    { value: "", label: "Můj pohled" },
+    ...groups.map((o) => ({ value: o.key, label: o.label, group: "Skupina" })),
+    ...people.map((o) => ({ value: o.key, label: o.label, group: "Kolega" })),
+  ];
   return (
     <div className={active ? "view-switch view-switch-active" : "view-switch"}>
       <form action={startPreview} className="view-switch-form">
         <label className="view-switch-label" htmlFor="pohled">
           Pohled
         </label>
-        <select
+        <Combobox
+          key={active ?? ""}
           id="pohled"
           name="pohled"
-          className="select select-small view-select"
+          selectOnly
           defaultValue={active ?? ""}
-          key={active ?? ""}
-          title={activeLabel ?? "Můj pohled"}
-          onChange={(event) => event.currentTarget.form?.requestSubmit()}
-        >
-          <option value="">Můj pohled</option>
-          <optgroup label="Skupina">
-            {groups.map((o) => (
-              <option key={o.key} value={o.key}>
-                {o.label}
-              </option>
-            ))}
-          </optgroup>
-          <optgroup label="Kolega">
-            {people.map((o) => (
-              <option key={o.key} value={o.key}>
-                {o.label}
-              </option>
-            ))}
-          </optgroup>
-        </select>
-        <noscript>
-          <button className="btn btn-small" type="submit">
-            Zobrazit
-          </button>
-        </noscript>
+          options={options}
+          listLabel="Pohledy"
+          onCommit={(_, field) => field.form?.requestSubmit()}
+          inputProps={{ className: "select-small view-select", title: activeLabel ?? "Můj pohled" }}
+        />
       </form>
     </div>
   );

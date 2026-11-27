@@ -96,7 +96,7 @@ test.describe("U08 dialog akce", () => {
     const opened = await openAddEvent(page);
     await expectNoHorizontalScroll(page);
     // Pole jsou na úzkém okně pod sebou (Typ a Datum nejsou vedle sebe).
-    const typeBox = await opened.getByLabel("Typ").boundingBox();
+    const typeBox = await opened.getByRole("combobox", { name: "Typ", exact: true }).boundingBox();
     const dateBox = await opened.getByLabel("Datum").boundingBox();
     expect(dateBox!.y, "Datum pod Typem").toBeGreaterThan(typeBox!.y + typeBox!.height - 1);
     // Jiná akce nemá výchozí název; vyplněný název nechá chybu jen na Datu.

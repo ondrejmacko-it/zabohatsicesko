@@ -70,7 +70,7 @@ test.describe("účast v harmonogramu", () => {
     await expectNoHorizontalScroll(page);
     await dialog.getByRole("button", { name: "Omluvit se" }).click();
     const excused = page.locator('[data-ucast-panel="excused"]');
-    await expect(excused).toContainText("Na této akci jsi omluvený.");
+    await expect(excused).toContainText("Z této akce máš platnou omluvu.");
     await expect(excused).toContainText(`${NOTE}-${info.project.name}`);
 
     // Moje: omluvená akce zůstává, nabídky k přihlášení ne.
@@ -100,7 +100,7 @@ test.describe("účast v harmonogramu", () => {
     await expectCalendar(page, "Kalendář: synchronizováno.");
     await panel.getByRole("button", { name: "Omluvit se" }).click();
     await page.getByRole("dialog", { name: "Omluvit se z akce?" }).getByRole("button", { name: "Omluvit se" }).click();
-    await expect(page.locator('[data-ucast-panel="excused"]')).toContainText("Na této akci jsi omluvený.");
+    await expect(page.locator('[data-ucast-panel="excused"]')).toContainText("Z této akce máš platnou omluvu.");
     await expectCalendar(page, "Kalendář: Wiki tě na akci nezve.");
     await page.locator("[data-ucast-panel]").getByRole("button", { name: "Zrušit omluvu" }).click();
     await page.getByRole("dialog", { name: "Zrušit omluvu?" }).getByRole("button", { name: "Zrušit omluvu" }).click();

@@ -4301,24 +4301,14 @@ body[data-moving] .quick-actions,
   display: none;
 }
 
-/* ——— Telefon: filtry Plánu jako mřížka 2 × 2 se stejně vysokými prvky ——— */
+/* ——— Telefon: filtry Plánu ve dvou až třech řádcích ———
+   Řádek 1: filtr účasti (čtyři pilulky přes celou šířku, pod 347 px 2 × 2). Pod ním souhrn měsíce, Filtry a Vybrat návrhy
+   v přirozené šířce, které se zalomí jen tehdy, když se nevejdou. Všechny prvky mají dotykovou výšku 44 px. */
 @media (max-width: 560px) {
   .plan-filters {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    /* Všechny řádky stejně vysoké: na 320 px se „Vybrat návrhy“ zalomí a krátké štítky souhrnu nad ním by byly nižší. */
-    grid-auto-rows: 1fr;
-    align-items: stretch;
-    gap: 8px;
-  }
-
-  /* Dvouřádkový popisek (320 px) nesmí rozhodit výšky: všechny prvky řádku jsou stejně vysoké. */
-  .plan-filters .filter-menu {
-    display: flex;
-  }
-
-  .plan-filters .filter-menu > summary {
-    flex: 1;
+    /* Panel nabídky Filtry se kotví k celému řádku, ne k tlačítku: u pravého okraje by přetekl okno. */
+    position: relative;
+    gap: 8px 6px;
   }
 
   .plan-filters-start,
@@ -4326,58 +4316,84 @@ body[data-moving] .quick-actions,
     display: contents;
   }
 
-  /* Filtr účasti má na telefonu celý první řádek mřížky; ten má vlastní výšku (stejná výška platí jen pro řádky pod ním). */
-  .plan-filters:has(> .plan-filters-lead) {
-    grid-template-rows: auto;
-  }
-  /* Filtr účasti má na telefonu celý první řádek mřížky. */
-  .plan-filters-lead {
-    grid-column: 1 / -1;
+  .plan-filters-lead,
+  .plan-filters-lead:has(+ .plan-filters-start > *) {
+    flex: 1 1 100%;
     padding-right: 0;
     border-right: 0;
   }
 
-  .plan-filters-lead:has(+ .plan-filters-start > *) {
-    padding-right: 0;
-    border-right: 0;
+  /* Čtyři pilulky účasti potřebují ~266 px. Plán proto na telefonu ubere z vnořených odsazení panelu a sekce,
+     aby se vešly na jeden řádek od 347 px (telefon vlastníka); na užším displeji se zalomí do 2 × 2. */
+  .panel:has(.plan-zone) {
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  .section:has(> .plan-zone) {
+    padding-right: 10px;
+    padding-left: 10px;
+  }
+
+  .participation-filter {
+    flex: 1;
+    gap: 3px;
+  }
+
+  .participation-filter .pill {
+    flex: 1 1 auto;
+    justify-content: center;
+    min-height: 44px;
+    padding: 4px 5px;
+    font-size: 13px;
   }
 
   .plan-filters .pill-count,
-  .plan-filters .filter-button {
+  .plan-filters .filter-button,
+  .plan-filters .filter-reset {
+    flex: 1 1 auto;
     justify-content: center;
-    width: 100%;
     min-height: 44px;
     margin: 0;
     padding: 4px 10px;
     border: 1px solid var(--line-strong);
     border-radius: 999px;
     font-size: 14px;
-  }
-
-  /* Počet se nesmí zalomit („1“ / „1“), zalomit smí jen popisek. */
-  .plan-filters .pill-number {
-    flex-shrink: 0;
     white-space: nowrap;
   }
 
-  .plan-filters [data-wide],
-  .plan-filters .filter-menu[data-wide] {
-    grid-column: 1 / -1;
-  }
-
-  /* Panel se kotví k celému řádku filtrů, ne k tlačítku: v pravém sloupci mřížky by přetekl okraj okna. */
-  .plan-filters {
-    position: relative;
+  .plan-filters .filter-reset {
+    display: inline-flex;
+    align-items: center;
   }
 
   .plan-filters .filter-menu {
+    display: flex;
+    flex: 1 1 auto;
     position: static;
+  }
+
+  .plan-filters .filter-menu > summary {
+    flex: 1;
+  }
+
+  /* Počet se nesmí zalomit („1“ / „1“). */
+  .plan-filters .pill-number {
+    flex-shrink: 0;
+    white-space: nowrap;
   }
 
   .plan-filters .filter-menu-panel {
     right: 0;
     left: 0;
     width: auto;
+  }
+}
+
+/* Pod 347 px se čtyři pilulky účasti nevejdou: 2 × 2 se stejně širokými sloupci místo osamělé „Moje“. */
+@media (max-width: 346px) {
+  .participation-filter .pill {
+    flex-basis: calc(50% - 2px);
   }
 }
 
@@ -4839,10 +4855,13 @@ body[data-moving] .quick-actions,
 }
 
 /* Zpětná vazba (brouček). Okno používá .dialog, tady jen tlačítko, označování a obsah kroků. */
-.sidebar-feedback {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--sidebar-line);
+/* Oddělovač jen ve svislém menu; na ≤900 px je Zpětná vazba v řádku s navigací (blok Shell nahoře). */
+@media (min-width: 901px) {
+  .sidebar-feedback {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--sidebar-line);
+  }
 }
 
 .sidebar-feedback .nav-item {
@@ -5256,4 +5275,179 @@ body[data-moving] .quick-actions,
 }
 .participation-panel .participation-actions {
   flex: 0 0 auto;
+}
+
+/* ——— Horní lišta na telefonu (≤640 px) ———
+   Jedna mřížka místo přeskupování flexu: 1. řádek značka a účet, Pohled vždy na vlastním řádku pod nimi.
+   Účet Google je jen tlačítko Účet (jméno, role, e-mail a Odhlásit jsou v jeho menu), takže se nic nepřekrývá
+   ani na 320 px. Ukázková role má výběr role na celém druhém řádku, Odhlásit je také v menu. */
+.account-menu {
+  display: none;
+}
+
+.account-menu-who {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 10px 4px;
+  overflow-wrap: anywhere;
+}
+
+.account-menu-who .small {
+  padding: 0;
+}
+
+@media (max-width: 640px) {
+  .topbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 6px 8px;
+  }
+
+  .brand {
+    grid-column: 1;
+    grid-row: 1;
+    justify-self: start;
+    min-width: 0;
+  }
+
+  .account {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: auto;
+    min-width: 0;
+    margin-left: 0;
+  }
+
+  .account.account-google {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+  }
+
+  .view-switch {
+    grid-column: 1 / -1;
+    grid-row: 3;
+  }
+
+  .account .account-menu {
+    display: inline-flex;
+    flex: none;
+  }
+
+  .account .account-signout,
+  .account-google .account-name {
+    display: none;
+  }
+
+  /* U účtu Google je v prvním řádku místo, odznak ukázky tam stojí v řadě před tlačítkem Účet. */
+  .account-google .demo-badge {
+    position: static;
+  }
+}
+
+/* Velká okna (akce, téma, rozvrh, měsíc) na telefonu přes celou obrazovku. Vlastník na Androidu viděl
+   v okně akce prosvítat Plán: kolem karty zbýval 12px okraj a pod ní stránka za 40% závojem. */
+@media (max-width: 640px) {
+  .dialog::backdrop {
+    background: rgba(35, 35, 35, 0.6);
+  }
+
+  .dialog.dialog-wide {
+    width: 100%;
+    max-width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    max-height: 100vh;
+    max-height: 100dvh;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .dialog.dialog-wide > .dialog-body {
+    height: 100%;
+    max-height: none;
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  /* Okraj těla 16 + rámeček formuláře 16 nechal poli Téma jen 80 % šířky; dlouhé názvy se nevešly. */
+  .dialog.dialog-wide .dialog-head,
+  .dialog.dialog-wide .dialog-actions {
+    margin-right: -12px;
+    margin-left: -12px;
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  .dialog.dialog-wide .form-main {
+    padding-right: 10px;
+    padding-left: 10px;
+    border-left-width: 3px;
+  }
+}
+
+/* Omluva: volby důvodu v barvách aplikace místo nativní modré, na telefonu řádek 44 px pro prst. */
+.excuse-reason {
+  align-items: center;
+  gap: 10px;
+}
+
+.excuse-reason input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--ochre);
+}
+
+@media (max-width: 640px) {
+  .excuse-reason {
+    min-height: 44px;
+  }
+}
+
+/* Pás stavu v okně akce: na telefonu štítky a text v jednom toku místo sloupce, ať nezabírá první obrazovku. */
+@media (max-width: 640px) {
+  .status-band {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 8px;
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+}
+
+/* Pohled v liště je Combobox (jen z nabídky): pole se chová jako výběr, nabídka je široká i u úzkého pole. */
+.view-switch .combobox-input {
+  cursor: pointer;
+  text-overflow: ellipsis;
+}
+
+.view-switch .combobox-panel {
+  right: auto;
+  min-width: max(100%, 240px);
+  max-height: min(360px, 70dvh);
+}
+
+@media (max-width: 640px) {
+  .view-switch .combobox {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .view-switch .combobox-panel {
+    right: 0;
+    min-width: 0;
+  }
+}
+
+/* Telefon: Zpětná vazba má stejné písmo jako ostatní položky menu. */
+@media (max-width: 640px) {
+  .sidebar-feedback .nav-item {
+    font-size: 13px;
+  }
 }

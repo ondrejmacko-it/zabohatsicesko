@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { authFile, expect, settle, test } from "./support";
+import { authFile, chooseOption, expect, settle, test } from "./support";
 
 const bar = (page: Page) => page.getByRole("region", { name: "Hromadný výběr návrhů" });
 
@@ -81,7 +81,7 @@ test.describe("Plán: výběr návrhů drží jen v jednom kontextu", () => {
     await settle(other);
     await other.getByRole("button", { name: "Přidat akci" }).click();
     const add = other.getByRole("dialog", { name: "Přidat akci" });
-    await add.getByLabel("Typ").selectOption("other");
+    await chooseOption(add, "Typ", { value: "other" });
     await add.getByLabel("Název akce", { exact: true }).fill(title);
     await add.getByLabel("Datum").fill("2027-09-14");
     await add.getByRole("button", { name: "Uložit jako návrh" }).click();

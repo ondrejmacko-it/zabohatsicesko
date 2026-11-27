@@ -8,7 +8,7 @@ import { TYPE_LABELS } from "@/lib/labels";
 import type { EventType } from "@/lib/types";
 import type { PlanState } from "../status";
 import { QuickActions } from "./QuickActions";
-import { SelectToggle, useSelection } from "./PlanSelection";
+import { SelectToggle } from "./PlanSelection";
 
 
 /** Štítek stavu měsíce (jen správce): počet a odkaz, který harmonogram zúží na dotčené termíny. */
@@ -116,13 +116,12 @@ function FilterFields({ keep, types, chips, selected, states }: FieldsProps) {
 /**
  * Jeden řádek pod lištou Plánu: vlevo filtr účasti (`lead`), Návrhy a Chybí údaje (klik zúží plán, znovu klik zruší) a vybraný
  * typ s křížkem, vpravo nabídka Filtry (typ akce, Zobrazit jako) a Vybrat návrhy. Výběr v nabídce se odešle
- * hned, tlačítko Použít zůstává pro prohlížeč bez JavaScriptu. Na telefonu je řádek mřížka 2 × 2 a při posunu
+ * hned, tlačítko Použít zůstává pro prohlížeč bez JavaScriptu. Na telefonu má filtr účasti vlastní řádek, ostatní prvky se zalomí pod něj, a při posunu
  * stránky nabízí stejné filtry a výběr rychlé ovládání (`QuickActions`).
  */
 export function PlanFilters({ lead, keep, types, selectedTypes, resetHref, chips, states, quick }: Props) {
   const menu = useRef<HTMLDetailsElement>(null);
   const row = useRef<HTMLDivElement>(null);
-  const selection = useSelection();
   // Nabídka se zavře klikem mimo ni a klávesou Esc (fokus se vrátí na tlačítko Filtry).
   useEffect(() => {
     const close = (event: Event) => {
@@ -145,10 +144,6 @@ export function PlanFilters({ lead, keep, types, selectedTypes, resetHref, chips
   const typeSelect = types.length > 1;
   const hasMenu = typeSelect || chips.length > 0;
   const active = selectedTypes.length + states.length;
-  const canSelect = Boolean(selection?.available);
-  // Lichý počet prvků: poslední v mřížce 2 × 2 na telefonu zabere celý řádek, aby nezůstala díra.
-  const count = chips.length + selectedTypes.length + (resetHref ? 1 : 0) + (hasMenu ? 1 : 0) + (canSelect ? 1 : 0);
-  const wideLast = count % 2 === 1;
   const fields = { keep, types, chips, selected: selectedTypes.map((s) => s.type), states };
   const quickActions = (
     <QuickActions
@@ -176,7 +171,7 @@ export function PlanFilters({ lead, keep, types, selectedTypes, resetHref, chips
   if (!lead && !chips.length && !selectedTypes.length && !typeSelect) return quickActions;
   return (
     <>
-      <div ref={row} className="plan-filters" data-items={count}>
+      <div ref={row} className="plan-filters">
         {lead && <div className="plan-filters-lead">{lead}</div>}
         <div className="plan-filters-start" role="group" aria-label="Zúžit plán měsíce">
           <ChipLinks chips={chips} states={states} />
@@ -189,14 +184,14 @@ export function PlanFilters({ lead, keep, types, selectedTypes, resetHref, chips
             </Link>
           ))}
           {resetHref && (
-            <Link className="filter-reset small" href={resetHref} data-wide={wideLast && !hasMenu && !canSelect ? true : undefined}>
+            <Link className="filter-reset small" href={resetHref}>
               Zrušit filtry
             </Link>
           )}
         </div>
         <div className="plan-filters-end">
           {hasMenu && (
-            <details ref={menu} className="filter-menu" data-wide={wideLast && !canSelect ? true : undefined}>
+            <details ref={menu} className="filter-menu">
               <summary className="btn btn-small btn-quiet filter-button">
                 <Icon name="filter" />
                 Filtry
@@ -207,7 +202,7 @@ export function PlanFilters({ lead, keep, types, selectedTypes, resetHref, chips
               </form>
             </details>
           )}
-          <SelectToggle wide={wideLast} />
+          <SelectToggle />
         </div>
       </div>
       {quickActions}

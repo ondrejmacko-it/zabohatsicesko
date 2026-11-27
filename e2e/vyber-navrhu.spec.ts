@@ -1,5 +1,5 @@
 import type { Locator } from "@playwright/test";
-import { authFile, expect, settle, test } from "./support";
+import { authFile, chooseOption, expect, settle, test } from "./support";
 
 /** Textové řádky dvou různých karet se nesmí překrývat (dřív se přes návrh změny kreslila zveřejněná verze). */
 async function expectNoTextOverlap(cards: Locator) {
@@ -32,7 +32,7 @@ test.describe("Plán: hromadný výběr návrhů s návrhem změny zveřejněné
     await page.goto("/vzdelavani/harmonogram?mesic=2026-11&akce=ev-11-26");
     await settle(page);
     const window = page.getByRole("dialog").filter({ has: page.getByLabel(/^Vede/) });
-    await window.getByLabel(/^Vede/).selectOption({ label: "Správce ZBC ukázky" });
+    await chooseOption(window, /^Vede/, { label: "Správce ZBC ukázky" });
     await window.getByRole("button", { name: "Uložit jako návrh" }).click();
     await expect(page.getByRole("status").filter({ hasText: "Návrh změny je uložený" })).toBeVisible();
 
