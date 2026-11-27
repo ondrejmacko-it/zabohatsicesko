@@ -10,7 +10,7 @@ test.describe("Plán na telefonu: karta agendy", () => {
       test.use({ storageState: authFile(role) });
 
       for (const width of WIDTHS) {
-        test(`šířka ${width} px: čas i štítky na jednom řádku, nic nepřesahuje kartu`, async ({ page }, info) => {
+        test(`šířka ${width} px: čas i štítky na jednom řádku, nic nepřesahuje kartu, ⋯ a ≡ mají 44 px`, async ({ page }, info) => {
           test.skip(info.project.name !== "telefon-390", "šířky prochází jeden telefonní projekt");
           await page.setViewportSize({ width, height: 800 });
           await page.goto("/vzdelavani/harmonogram?mesic=2026-11");
@@ -43,10 +43,35 @@ test.describe("Plán na telefonu: karta agendy", () => {
               }
               if (card.scrollWidth > card.clientWidth + 1) problems.push(`karta přetéká: ${card.textContent?.slice(0, 40)}`);
             }
-            return { problems, cards: cards.length, withTwoBadges };
+            // ⋯ karty: dotyková plocha (tlačítko + pseudo-prvek ::before) aspoň 44×44, mimo úchyt ≡ a uvnitř karty.
+            const touch = (el: Element) => {
+              const r = el.getBoundingClientRect();
+              const b = getComputedStyle(el, "::before");
+              const px = (v: string) => (v === "auto" ? 0 : parseFloat(v));
+              return { left: r.left + px(b.left), top: r.top + px(b.top), right: r.right - px(b.right), bottom: r.bottom - px(b.bottom) };
+            };
+            let menus = 0;
+            for (const trigger of document.querySelectorAll(".menu-card-trigger")) {
+              if (trigger.getBoundingClientRect().width === 0) continue;
+              menus++;
+              // Viditelné tlačítko, ne jen neviditelná plocha: vlastník ho na Androidu (~30×26, bledé) přehlížel.
+              const v = trigger.getBoundingClientRect();
+              if (v.width < 36 || v.height < 32) problems.push(`⋯ málo viditelné: ${Math.round(v.width)}×${Math.round(v.height)}`);
+              const t = touch(trigger);
+              const name = trigger.getAttribute("aria-label");
+              if (t.right - t.left < 44 || t.bottom - t.top < 44) problems.push(`⋯ malá plocha: ${name} ${Math.round(t.right - t.left)}×${Math.round(t.bottom - t.top)}`);
+              const handle = trigger.closest("[class*=\"cardWrap\"]")?.querySelector("[data-move-handle]");
+              if (handle) {
+                const h = handle.getBoundingClientRect();
+                if (h.width < 44 || h.height < 44) problems.push(`≡ malá plocha: ${name}`);
+                if (t.bottom > h.top + 0.5 && t.top < h.bottom && t.right > h.left && t.left < h.right) problems.push(`⋯ překrývá ≡: ${name}`);
+              }
+            }
+            return { problems, cards: cards.length, withTwoBadges, menus };
           });
           expect(report.problems).toEqual([]);
           expect(report.cards).toBeGreaterThan(3);
+          if (role === "spravce") expect(report.menus, "správce má na kartách ⋯").toBeGreaterThan(0);
           if (role === "ucastnikFp") expect(report.withTwoBadges, "seed má kartu se dvěma štítky").toBeGreaterThan(0);
         });
       }
