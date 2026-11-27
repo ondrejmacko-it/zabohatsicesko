@@ -31,12 +31,13 @@ type Props = {
   enrollment?: boolean;
 };
 
+// Texty bez rodu (vlastník: „jsi omluvený“ neplatí pro každého). Přihlášení nabízí tlačítko, text ho neopakuje.
 const STATE_TEXT: Partial<Record<ParticipationState, string>> = {
   required: "Akce je pro tebe povinná.",
-  optional: "Akce není povinná, můžeš se přihlásit.",
-  voluntary_enrolled: "Jsi přihlášený na dobrovolnou účast.",
-  excused: "Na této akci jsi omluvený.",
-  withdrawn: "Odhlásil ses, můžeš se znovu přihlásit.",
+  optional: "Akce není povinná.",
+  voluntary_enrolled: "Máš přihlášenou dobrovolnou účast.",
+  excused: "Z této akce máš platnou omluvu.",
+  withdrawn: "Přihláška je zrušená, můžeš se znovu přihlásit.",
   cancelled: "Akce je zrušená.",
 };
 
