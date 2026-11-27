@@ -4301,24 +4301,14 @@ body[data-moving] .quick-actions,
   display: none;
 }
 
-/* ——— Telefon: filtry Plánu jako mřížka 2 × 2 se stejně vysokými prvky ——— */
+/* ——— Telefon: filtry Plánu ve dvou až třech řádcích ———
+   Řádek 1: filtr účasti (čtyři pilulky přes celou šířku, pod 347 px 2 × 2). Pod ním souhrn měsíce, Filtry a Vybrat návrhy
+   v přirozené šířce, které se zalomí jen tehdy, když se nevejdou. Všechny prvky mají dotykovou výšku 44 px. */
 @media (max-width: 560px) {
   .plan-filters {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    /* Všechny řádky stejně vysoké: na 320 px se „Vybrat návrhy“ zalomí a krátké štítky souhrnu nad ním by byly nižší. */
-    grid-auto-rows: 1fr;
-    align-items: stretch;
-    gap: 8px;
-  }
-
-  /* Dvouřádkový popisek (320 px) nesmí rozhodit výšky: všechny prvky řádku jsou stejně vysoké. */
-  .plan-filters .filter-menu {
-    display: flex;
-  }
-
-  .plan-filters .filter-menu > summary {
-    flex: 1;
+    /* Panel nabídky Filtry se kotví k celému řádku, ne k tlačítku: u pravého okraje by přetekl okno. */
+    position: relative;
+    gap: 8px 6px;
   }
 
   .plan-filters-start,
@@ -4326,58 +4316,84 @@ body[data-moving] .quick-actions,
     display: contents;
   }
 
-  /* Filtr účasti má na telefonu celý první řádek mřížky; ten má vlastní výšku (stejná výška platí jen pro řádky pod ním). */
-  .plan-filters:has(> .plan-filters-lead) {
-    grid-template-rows: auto;
-  }
-  /* Filtr účasti má na telefonu celý první řádek mřížky. */
-  .plan-filters-lead {
-    grid-column: 1 / -1;
+  .plan-filters-lead,
+  .plan-filters-lead:has(+ .plan-filters-start > *) {
+    flex: 1 1 100%;
     padding-right: 0;
     border-right: 0;
   }
 
-  .plan-filters-lead:has(+ .plan-filters-start > *) {
-    padding-right: 0;
-    border-right: 0;
+  /* Čtyři pilulky účasti potřebují ~266 px. Plán proto na telefonu ubere z vnořených odsazení panelu a sekce,
+     aby se vešly na jeden řádek od 347 px (telefon vlastníka); na užším displeji se zalomí do 2 × 2. */
+  .panel:has(.plan-zone) {
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  .section:has(> .plan-zone) {
+    padding-right: 10px;
+    padding-left: 10px;
+  }
+
+  .participation-filter {
+    flex: 1;
+    gap: 3px;
+  }
+
+  .participation-filter .pill {
+    flex: 1 1 auto;
+    justify-content: center;
+    min-height: 44px;
+    padding: 4px 5px;
+    font-size: 13px;
   }
 
   .plan-filters .pill-count,
-  .plan-filters .filter-button {
+  .plan-filters .filter-button,
+  .plan-filters .filter-reset {
+    flex: 1 1 auto;
     justify-content: center;
-    width: 100%;
     min-height: 44px;
     margin: 0;
     padding: 4px 10px;
     border: 1px solid var(--line-strong);
     border-radius: 999px;
     font-size: 14px;
-  }
-
-  /* Počet se nesmí zalomit („1“ / „1“), zalomit smí jen popisek. */
-  .plan-filters .pill-number {
-    flex-shrink: 0;
     white-space: nowrap;
   }
 
-  .plan-filters [data-wide],
-  .plan-filters .filter-menu[data-wide] {
-    grid-column: 1 / -1;
-  }
-
-  /* Panel se kotví k celému řádku filtrů, ne k tlačítku: v pravém sloupci mřížky by přetekl okraj okna. */
-  .plan-filters {
-    position: relative;
+  .plan-filters .filter-reset {
+    display: inline-flex;
+    align-items: center;
   }
 
   .plan-filters .filter-menu {
+    display: flex;
+    flex: 1 1 auto;
     position: static;
+  }
+
+  .plan-filters .filter-menu > summary {
+    flex: 1;
+  }
+
+  /* Počet se nesmí zalomit („1“ / „1“). */
+  .plan-filters .pill-number {
+    flex-shrink: 0;
+    white-space: nowrap;
   }
 
   .plan-filters .filter-menu-panel {
     right: 0;
     left: 0;
     width: auto;
+  }
+}
+
+/* Pod 347 px se čtyři pilulky účasti nevejdou: 2 × 2 se stejně širokými sloupci místo osamělé „Moje“. */
+@media (max-width: 346px) {
+  .participation-filter .pill {
+    flex-basis: calc(50% - 2px);
   }
 }
 

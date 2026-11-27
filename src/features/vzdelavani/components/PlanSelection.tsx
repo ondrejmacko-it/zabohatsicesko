@@ -295,7 +295,7 @@ export function SelectionZone({
 export const useSelection = () => useContext(SelectionContext);
 
 /** Tlačítko „Vybrat návrhy“ v řádku filtrů. Bez návrhů v měsíci (nebo mimo Plán správce) se nevykreslí. */
-export function SelectToggle({ wide }: { wide?: boolean }) {
+export function SelectToggle() {
   const selection = useContext(SelectionContext);
   // Výběr slouží jen hromadným úpravám návrhů, v náhledu je tlačítko na místě zamčené.
   const lock = lockedProps(usePreviewLock());
@@ -305,7 +305,6 @@ export function SelectToggle({ wide }: { wide?: boolean }) {
       type="button"
       className="btn btn-small btn-quiet filter-button"
       {...lock}
-      data-wide={wide || undefined}
       aria-pressed={selection.active}
       onClick={selection.active ? selection.stop : selection.start}
     >

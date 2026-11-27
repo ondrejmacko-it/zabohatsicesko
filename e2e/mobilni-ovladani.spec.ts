@@ -309,26 +309,9 @@ test.describe("Plán na telefonu: rychlé ovládání, Přejít na datum, filtry
     await expect(page.locator("[data-agenda-day]:focus")).toHaveCount(1);
   });
 
-  test("filtry tvoří mřížku 2 × 2 bez díry a stránka nejde posunout do strany", async ({ page }) => {
+  // Rozložení filtrů (řádky, výška 44 px, přesahy) měří e2e/filtry-planu.spec.ts na čtyřech šířkách.
+  test("filtry Plánu nepřetékají do strany", async ({ page }) => {
     await openPlan(page);
     await expectNoHorizontalScroll(page);
-    const rows = await page.evaluate(() => {
-      const grid = document.querySelector<HTMLElement>(".plan-filters")!;
-      const width = grid.getBoundingClientRect().width;
-      const items = [...grid.querySelectorAll<HTMLElement>(".plan-filters-start > *, .plan-filters-end > *")].filter((el) => el.getBoundingClientRect().width > 0);
-      // Řádek mřížky podle horního okraje (s tolerancí), součet šířek prvků v něm.
-      const rows: { top: number; filled: number }[] = [];
-      for (const el of items) {
-        const r = el.getBoundingClientRect();
-        const row = rows.find((x) => Math.abs(x.top - r.top) < 6);
-        if (row) row.filled += r.width;
-        else rows.push({ top: r.top, filled: r.width });
-      }
-      return { width, rows: rows.map((x) => x.filled), heights: items.map((el) => Math.round(el.getBoundingClientRect().height)) };
-    });
-    expect(rows.rows.length).toBeGreaterThan(0);
-    // Každý řádek mřížky je plný: dva prvky, nebo jeden přes celou šířku (plus mezera 8 px).
-    for (const filled of rows.rows) expect(filled).toBeGreaterThanOrEqual(rows.width - 10);
-    for (const height of rows.heights) expect(height).toBe(rows.heights[0]);
   });
 });
