@@ -62,7 +62,8 @@ export function moveBugDock(dock: BugDock, key: string): BugDock | null {
   return null;
 }
 
-export type ScreenBox = { left: number; top: number; right: number; bottom: number };
+/** `beside`: plovoucí lišta u spodního okraje (rychlé akce Plánu), vedle které se brouček smí posadit do stejného řádku. */
+export type ScreenBox = { left: number; top: number; right: number; bottom: number; beside?: boolean };
 
 /** `peek`: celý brouček se nikam nevešel, aniž by zakryl hlavní akci, proto vykoukne jen jazýček. */
 export type BugPlacement = { left: number; top: number; peek: boolean };
@@ -106,6 +107,18 @@ export function placeBug(
     (box) => box.bottom - box.top < viewport.height * TALL_OBSTACLE_RATIO && box.left < left + width + AVOID_GAP && box.right > left - AVOID_GAP,
   );
   const hit = (top: number) => inColumn.find((box) => box.top < top + size + AVOID_GAP && box.bottom > top - AVOID_GAP);
+
+  // U plovoucí lišty brouček nestojí nad ní, ale vedle ní: oba prvky pak zakrývají jen jeden pruh obsahu.
+  const bar = inColumn.find((box) => box.beside && box.top < desired + 2 * size + AVOID_GAP && box.bottom > desired - size);
+  if (bar && !tucked) {
+    const sideLeft = dock.side === "right" ? bar.left - size - AVOID_GAP : bar.right + AVOID_GAP;
+    const sideTop = clamp((bar.top + bar.bottom) / 2 - size / 2, MIN_TOP, maxTop);
+    const fits = sideLeft >= insets.left + gap && sideLeft + size <= viewport.width - insets.right - gap;
+    const free = obstacles.every(
+      (box) => box === bar || !(box.left < sideLeft + size + AVOID_GAP && box.right > sideLeft - AVOID_GAP && box.top < sideTop + size + AVOID_GAP && box.bottom > sideTop - AVOID_GAP),
+    );
+    if (fits && free) return { left: sideLeft, top: sideTop, peek: false };
+  }
 
   for (const direction of ["up", "down"] as const) {
     let top = desired;

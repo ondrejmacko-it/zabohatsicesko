@@ -22,6 +22,8 @@ export const BUG_STORAGE_KEY = "zbc-broucek";
 const TOUCH_QUERY = "(max-width: 900px), (pointer: coarse)";
 /** Hlavní ovládání, které brouček nesmí zakrýt. */
 const OBSTACLES = "[data-bug-avoid], .select-bar, .move-panel, .flash, .btn-primary, .sidebar, .quick-actions";
+/** Plovoucí lišty u spodního okraje, vedle kterých brouček sedí ve stejném řádku. */
+const BESIDE = ".quick-actions";
 /** Myš: tah delší než pár pixelů je přesun. */
 const DRAG_THRESHOLD = 4;
 /** Prst: přesun až po podržení, aby se brouček nehýbal při rolování stránky. Posun před tím je švihnutí. */
@@ -50,7 +52,7 @@ function measureObstacles(): ScreenBox[] {
     if (element.closest("[data-feedback-ui]")) continue;
     const rect = element.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0 || rect.bottom < 0 || rect.top > window.innerHeight) continue;
-    boxes.push({ left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom });
+    boxes.push({ left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom, beside: element.matches(BESIDE) || undefined });
   }
   return boxes;
 }
