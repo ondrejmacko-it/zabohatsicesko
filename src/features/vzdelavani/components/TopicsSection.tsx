@@ -173,7 +173,7 @@ export async function TopicsSection({ user, readOnly = false, filter: requested 
       <PageCall text={readOnly ? `${PREVIEW_READ_ONLY}. Tady se navrhují témata a podporují návrhy kolegů.` : "Navrhni téma nebo podpoř návrh kolegů."}>
         <ProposeTopicDialog groups={groups} locked={readOnly} />
       </PageCall>
-      {filterable && all.length > 0 && (
+      {filterable && all.length > 0 && topics.length === 0 && (
         <div className="topic-toolbar">
           <TopicFilterToggle filter={filter} />
         </div>
@@ -194,6 +194,7 @@ export async function TopicsSection({ user, readOnly = false, filter: requested 
         <>
           <TopicBoard
             sortable={sortable}
+            filter={filterable ? <TopicFilterToggle filter={filter} /> : undefined}
             guaranteed={guaranteed.map((t, index) => topicItem(t, index, guaranteed.length, ctx))}
             others={others.map((t, index) => topicItem(t, index, others.length, ctx))}
             guaranteedHead={
@@ -202,7 +203,7 @@ export async function TopicsSection({ user, readOnly = false, filter: requested 
                   Garantovaná témata
                 </h3>
                 {/* F10: krátce, co garantované znamená. Pravidlo plánování je v `recommendTopics`. */}
-                <p className="item-meta">Vybírá je správce. Plánují se přednostně, i když o ně nikdo neprojevil zájem.</p>
+                <p className="item-meta">Správce je plánuje přednostně.</p>
               </>
             }
             othersHead={

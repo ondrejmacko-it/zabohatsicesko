@@ -98,7 +98,7 @@ test.describe("Témata: garantovaná a ostatní", () => {
 
   test("F10–F12: vysvětlení garantovaných, filtr Pro mou roli / Všechna, úchyty jen nad celým seznamem, bez „zatím neproběhlo“", async ({ page }) => {
     await openTopics(page);
-    await expect(guaranteedOf(page).getByText("Plánují se přednostně, i když o ně nikdo neprojevil zájem.")).toBeVisible();
+    await expect(guaranteedOf(page).getByText("Správce je plánuje přednostně.")).toBeVisible();
     await expect(page.getByRole("link", { name: "Všechna", exact: true })).toHaveAttribute("aria-current", "page");
     await expect(page.locator(".topic-handle").first()).toBeVisible();
     await expect(page.locator(".topic-guaranteed .topic-rank")).toHaveText(["1", "2"]);
@@ -505,7 +505,7 @@ test.describe("Témata očima účastníka", () => {
 
   test("F10–F12: vysvětlení ano, úchyty, čísla pořadí, správa pořadí ani „zatím neproběhlo“ ne", async ({ page }) => {
     await openTopics(page);
-    await expect(guaranteedOf(page).getByText("Plánují se přednostně, i když o ně nikdo neprojevil zájem.")).toBeVisible();
+    await expect(guaranteedOf(page).getByText("Správce je plánuje přednostně.")).toBeVisible();
     await expect(page.locator(".topic-handle, .topic-rank, .topic-lead")).toHaveCount(0);
     await expect(page.getByRole("button", { name: /^Změnit pořadí/ })).toHaveCount(0);
     await expect(page.getByText("Pořadí upravil správce.")).toHaveCount(0);

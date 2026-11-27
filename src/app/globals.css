@@ -1055,10 +1055,11 @@ fieldset.field > legend {
   width: 26px;
   height: 22px;
   padding: 0;
-  border: 1px solid var(--line);
+  /* Čitelné bez hoveru i na béžové a šedé kartě: vlastní světlé pozadí a plná barva ikony. */
+  border: 1px solid var(--line-strong);
   border-radius: 6px;
-  background: transparent;
-  color: var(--muted);
+  background: var(--surface);
+  color: var(--ink);
   cursor: pointer;
 }
 
@@ -1070,9 +1071,7 @@ fieldset.field > legend {
 
 .menu-card-trigger:hover,
 .menu-card-trigger:focus-visible {
-  border-color: var(--line-strong);
-  background: var(--surface);
-  color: var(--ink);
+  border-color: var(--ink);
 }
 
 .menu-card[data-open] > .menu-card-trigger {
@@ -1101,6 +1100,11 @@ fieldset.field > legend {
 .menu-inline > .menu-card-trigger {
   width: 32px;
   height: 32px;
+}
+
+/* Plocha pro dotyk i myš alespoň 44 × 44 px. */
+.menu-inline > .menu-card-trigger::before {
+  inset: -6px;
 }
 
 /* Při hromadném výběru má přednost checkbox, menu karty se schová stejně jako úchyt přesunu. */
@@ -1837,8 +1841,55 @@ details > summary {
 }
 
 .topic-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1 1 220px;
+  min-width: 0;
   max-width: 360px;
-  margin-bottom: 12px;
+  margin: 0;
+}
+
+.topic-search > svg {
+  position: absolute;
+  left: 12px;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.topic-search .input {
+  width: 100%;
+  min-height: 44px;
+  padding-inline: 36px 44px;
+}
+
+.topic-search .input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.topic-search-clear {
+  position: absolute;
+  right: 0;
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.topic-search-clear:hover,
+.topic-search-clear:focus-visible {
+  color: var(--ink);
+}
+
+.topic-search-empty {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
 }
 
 /* Tabulka témat se na úzkém displeji mění na karty. */
@@ -2716,13 +2767,21 @@ a.brief-link:hover {
   margin: 0;
 }
 
-/* Filtr Pro mou roli / Všechna (F10): stejné pilulky jako Moje / Všechny v Plánu. */
+/* Jedna lišta Témat: filtr Pro mou roli / Všechna (F10, stejné pilulky jako v Plánu) a hledání.
+   Na telefonu dvě záměrné řady: filtr, pod ním hledání přes celou šířku. */
 .topic-toolbar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 8px 12px;
   margin: 0 0 16px;
+}
+
+@media (max-width: 560px) {
+  .topic-search {
+    flex-basis: 100%;
+    max-width: none;
+  }
 }
 
 .topic-filter-note {
@@ -4553,39 +4612,53 @@ body[data-moving] .quick-actions,
   font-weight: 600;
 }
 
-/* Hlavní výzva stránky (PageCall): účel stránky a jediné hlavní tlačítko, výrazně nad obsahem.
+/* Hlavní výzva stránky (PageCall): plochý kompaktní panel, text vlevo a hlavní akce vpravo na ose textu.
+   Grid místo flex-wrap: při zalomení nevznikne diagonála „text nahoře vlevo, tlačítko dole vpravo“.
    Vlastní zelenošedý tón: okrová patří návrhům a konceptům, výzva s nimi nesmí splývat. */
 .page-call {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
   gap: 12px 20px;
   margin: 0 0 20px;
-  padding: 16px 20px;
+  padding: 12px 16px 12px 18px;
   border: 1px solid var(--call-line);
-  border-left: 4px solid var(--call-accent);
+  border-left: 3px solid var(--call-accent);
   border-radius: var(--radius);
   background: var(--call);
 }
 
+.page-call:not(:has(.page-call-action)) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .page-call-text {
   margin: 0;
-  flex: 1 1 22ch;
+  min-width: 0;
   font-family: var(--font-serif);
-  font-size: 1.3rem;
-  line-height: 1.3;
+  font-size: 1.12rem;
+  line-height: 1.35;
   color: var(--ink);
+}
+
+.page-call-action {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .page-call-action .btn {
   min-height: 44px;
   padding-inline: 20px;
+  white-space: nowrap;
 }
 
+/* Úzký telefon: text nad celoplošným tlačítkem, ne vedle sebe stlačené. */
 @media (max-width: 560px) {
   .page-call {
-    padding: 14px 16px;
+    grid-template-columns: minmax(0, 1fr);
+    padding: 12px 14px;
   }
   .page-call-action,
   .page-call-action .btn {
