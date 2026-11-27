@@ -1,8 +1,8 @@
-# Navazující relace (stav 27. 11. 2026, relace 53)
+# Navazující relace (stav 27. 11. 2026, relace 54)
 
 Cíl: finální responzivní audit a mobilní UX (zadání vlastníka body 1–23, zhuštěně v promptu relace 47/48).
 Žádný redesign desktopu, merge, deploy, produkční DB, živý Google ani Make. Na konci draft PR + report.
-Větev `claude/oprava-mobilni-responzivita` z main `01db12f`, HEAD `b43def2` (+ tato předávka). PR zatím není.
+Větev `claude/oprava-mobilni-responzivita` z main `01db12f`, HEAD `b4d1f1c` (+ tato předávka). PR zatím není.
 
 ## Screenshoty vlastníka (16 ks, Android Chrome, ~347 CSS px, zdelavani-demo.vercel.app, správce Google)
 Zip: `/root/.claude/uploads/df1d1066-197f-551e-8282-0e240871cc1e/56421696-ZBC_mobilni_screenshoty_2026-11-27.zip`
@@ -63,13 +63,19 @@ desktop regrese, matice rozlišení, celá sada, před/po screenshoty, draft PR 
   přihlášenou dobrovolnou účast.“, „Přihláška je zrušená…“, nepovinná jen „Akce není povinná.“ Štítek „Omluven/a“
   ponechán. ucast + ucast-karta telefon-390 + windows-1280: 30 OK; tsc, eslint OK.
 
+- b4d1f1c omluva: `.excuse-reason` (konec `globals.css`) radio 20 px `accent-color: var(--ochre)` místo nativní
+  modré 13 px, na ≤640 řádek min. 44 px, klik kamkoli do řádku volí. Okno omluvy je karta uprostřed (ne bottom
+  sheet), vejde se na 320–390. Test `e2e/okno-omluvy.spec.ts` (ukázka účasti 3313, ev-11-24, nic neodesílá;
+  bez opravy 3 padají). tsc, eslint OK. Patička okna akce na 347 px má v Chromiu už jen 2 řádky – hotovo.
+
 ## Další krok
-1. Zbytek bodu 3: omluva – nativní modré radio (`ParticipationPanel.tsx` ~178, `.excuse-reason`; stylovat
-   `accent-color`/vlastní radio 44 px řádek), bottom sheet přes formulář (ConfirmDialog na telefonu). Banner
-   „Zveřejněno · proběhlo“ v okně akce (zelený blok nad formulářem, EventDialog) – zmenšit/zjednodušit na telefonu.
-   Patička okna akce na 347 px má 3 řádky (Další možnosti + Beze změn, Uložit jako návrh, Zveřejnit změny) –
-   zvážit 2 řádky. Useknuté téma v Combobox inputu patří do bodu 4.
-2. Oddělení „Tvoje účast“ od editoru: jen návrh pro vlastníka, neimplementovat bez schválení.
+1. Banner v okně akce = `.status-band` (`EventPeek.tsx` ř. ~58, CSS `globals.css` ř. ~2395, tón
+   `status-regular` zelený). Na ≤640 zkompaktnit: menší padding (6px 10px), 13 px, štítky a text v jednom
+   toku (flex-wrap řádek místo sloupce). Test: výška pásu ≤ ~48 px na 347 px u zveřejněné akce bez textu,
+   nic nepřetéká. Desktop beze změny. Pak předání bodu 3 dál: oddělení „Tvoje účast“ = jen návrh vlastníkovi.
+2. Bod 4: Combobox místo nativních selectů (PreviewSwitch, vedoucí, téma – useknuté, skupina), Domů + oslovení,
+   notice-danger u mimořádného termínu (EventDialog ř. ~475) → info, „Kalendář: stav neznámý“.
+3. Bod 5: audit, desktop regrese, celá sada, před/po screenshoty, draft PR + report.
 
 ## Otevřené otázky pro vlastníka
 - Odsazení na telefonu: tři vnořené okraje (shell 12 + panel 16 + sekce 14) berou 42 px na stranu. Zúženo zatím
