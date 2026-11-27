@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState, useTransition, type KeyboardEvent, type PointerEvent, type ReactNode } from "react";
 import { Icon } from "@/components/Icon";
 import { lockedProps, usePreviewLock } from "@/components/PreviewLock";
@@ -72,12 +72,9 @@ export function TopicBoard({
   const locked = usePreviewLock();
   const serverKey = `${guaranteed.map((i) => i.id).join(",")}|${others.map((i) => i.id).join(",")}`;
   const [order, setOrder] = useState<Order>(() => ({ guaranteed: guaranteed.map((i) => i.id), others: others.map((i) => i.id) }));
-  const [query, setQueryState] = useState("");
   // Dotaz žije v URL (`hledat`), aby se po návratu z detailu nebo po obnovení stránky neztratil.
-  useEffect(() => {
-    const saved = new URLSearchParams(window.location.search).get("hledat");
-    if (saved) setQueryState(saved);
-  }, []);
+  const searchParams = useSearchParams();
+  const [query, setQueryState] = useState(() => searchParams.get("hledat") ?? "");
   function setQuery(value: string) {
     setQueryState(value);
     const url = new URL(window.location.href);
