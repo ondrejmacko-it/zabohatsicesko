@@ -4,6 +4,8 @@ import { useEffect, useId, useRef, useState } from "react";
 
 export type ComboboxOption = {
   value: string;
+  /** Zobrazený název, když se liší od hodnoty (režim `selectOnly`, například klíč pohledu). Výchozí je hodnota. */
+  label?: string;
   /** Nadpis skupiny. Sousední možnosti se stejnou skupinou se vykreslí pod jedním nadpisem. */
   group?: string;
   /** Štítky za názvem (garantované, doporučené). */
@@ -20,6 +22,13 @@ type Props = {
   /** Název nabídky pro čtečky, například „Témata“. */
   listLabel: string;
   maxLength?: number;
+  /**
+   * Jen výběr z nabídky (náhrada nativního <select>): pole nejde přepsat, na telefonu neotevře klávesnici,
+   * hodnota se odesílá ve skrytém poli `name` a zobrazuje se `label`. Bez něj je platný i ručně napsaný text.
+   */
+  selectOnly?: boolean;
+  /** Volá se po výběru možnosti, až je nová hodnota zapsaná ve formuláři (například okamžité odeslání). */
+  onCommit?: (value: string, field: HTMLInputElement) => void;
   /** Další atributy pole (aria-label, aria-describedby, data-*). */
   inputProps?: React.InputHTMLAttributes<HTMLInputElement> & { [key: `data-${string}`]: string | boolean | undefined };
 } & (
@@ -42,6 +51,8 @@ type Props = {
 );
 
 /** Porovnání bez ohledu na velikost písmen a diakritiku: „uvodni“ najde „Úvodní“. */
+const labelOf = (option: ComboboxOption) => option.label ?? option.value;
+
 const normalize = (text: string) =>
   text
     .normalize("NFD")
@@ -57,10 +68,13 @@ const normalize = (text: string) =>
  * zvýrazněnou možnost, Esc zavře jen nabídku. Ručně napsaný text je platná hodnota, nabídka jen pomáhá.
  * Panel je pod polem uvnitř okna, ne v portálu: posouvá se s formulářem a nepřekryje jiná okna.
  */
-export function Combobox({ id, name, value, onChange, defaultValue, options, placeholder, listLabel, maxLength, inputProps }: Props) {
+export function Combobox({ id, name, value, onChange, defaultValue, options, placeholder, listLabel, maxLength, selectOnly, onCommit, inputProps }: Props) {
   const listId = useId();
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  // V režimu selectOnly nese hodnotu skryté pole, viditelné pole jen ukazuje název.
+  const hiddenRef = useRef<HTMLInputElement>(null);
+  const valueRef = selectOnly ? hiddenRef : inputRef;
   const controlled = value !== undefined;
   // Hodnota pole v okamžiku otevření nabídky (u neřízeného pole se čte z DOM, ne při vykreslení).
   const [current, setCurrent] = useState(value ?? defaultValue ?? "");
@@ -70,13 +84,14 @@ export function Combobox({ id, name, value, onChange, defaultValue, options, pla
   const [query, setQuery] = useState<string | null>(null);
   const [active, setActive] = useState(-1);
 
-  const shown = query ? options.filter((o) => normalize(o.value).includes(normalize(query))) : options;
+  const matches = (filter: string) => options.filter((o) => normalize(labelOf(o)).includes(normalize(filter)));
+  const shown = query ? matches(query) : options;
   const optionId = (index: number) => `${listId}-${index}`;
   const visible = open && shown.length > 0;
 
   const show = (filter: string | null) => {
-    const list = filter ? options.filter((o) => normalize(o.value).includes(normalize(filter))) : options;
-    const now = controlled ? value : (inputRef.current?.value ?? "");
+    const list = filter ? matches(filter) : options;
+    const now = controlled ? value : (valueRef.current?.value ?? "");
     setCurrent(now);
     setQuery(filter);
     setActive(filter ? (list.length > 0 ? 0 : -1) : list.findIndex((o) => o.value === now));
@@ -88,12 +103,22 @@ export function Combobox({ id, name, value, onChange, defaultValue, options, pla
     setActive(-1);
   };
   const choose = (option: ComboboxOption) => {
+    if (selectOnly && hiddenRef.current) {
+      // Skryté pole se zapíše hned, aby ho onCommit (odeslání formuláře) četl ještě před překreslením.
+      hiddenRef.current.value = option.value;
+      if (controlled) onChange(option.value);
+      else setCurrent(option.value);
+      close();
+      onCommit?.(option.value, hiddenRef.current);
+      return;
+    }
     if (controlled) onChange(option.value);
     else if (inputRef.current) {
       inputRef.current.value = option.value;
       inputRef.current.dispatchEvent(new Event("input", { bubbles: true }));
     }
     close();
+    if (inputRef.current) onCommit?.(option.value, inputRef.current);
   };
 
   useEffect(() => {
@@ -110,7 +135,11 @@ export function Combobox({ id, name, value, onChange, defaultValue, options, pla
       if (shown.length === 0) return;
       const step = event.key === "ArrowDown" ? 1 : -1;
       setActive((current) => Math.min(shown.length - 1, Math.max(0, current + step)));
-    } else if (event.key === "Enter" && open && active >= 0 && shown[active]) {
+    } else if (selectOnly && !open && (event.key === "Enter" || event.key === " ")) {
+      // Jako u <select>: Enter a mezerník nabídku otevřou, formulář se neodešle.
+      event.preventDefault();
+      show(null);
+    } else if ((event.key === "Enter" || (selectOnly && event.key === " ")) && open && active >= 0 && shown[active]) {
       // Enter vybere možnost, formulář se neodešle.
       event.preventDefault();
       choose(shown[active]);
@@ -138,6 +167,7 @@ export function Combobox({ id, name, value, onChange, defaultValue, options, pla
       role="option"
       aria-selected={index === active}
       className="combobox-option"
+      data-value={option.value}
       data-current={option.value === selected || undefined}
       // Fokus zůstává v poli, jinak by se nabídka zavřela dřív, než klik doběhne.
       onMouseDown={(event) => event.preventDefault()}
@@ -145,7 +175,7 @@ export function Combobox({ id, name, value, onChange, defaultValue, options, pla
       onClick={() => choose(option)}
     >
       <span className="combobox-option-head">
-        <span className="combobox-option-name">{option.value}</span>
+        <span className="combobox-option-name">{labelOf(option)}</span>
         {option.badges}
       </span>
       {option.hint && <span className="field-hint">{option.hint}</span>}
@@ -154,15 +184,20 @@ export function Combobox({ id, name, value, onChange, defaultValue, options, pla
 
   return (
     <div className="combobox">
+      {selectOnly && <input ref={hiddenRef} type="hidden" name={name} value={selected} />}
       <input
         {...inputProps}
         ref={inputRef}
         id={id}
-        className="input combobox-input"
-        name={name}
-        {...(controlled ? { value } : { defaultValue })}
+        className={inputProps?.className ? `input combobox-input ${inputProps.className}` : "input combobox-input"}
+        name={selectOnly ? undefined : name}
+        {...(selectOnly
+          ? { value: labelOf(options.find((o) => o.value === selected) ?? { value: selected }), readOnly: true }
+          : controlled
+            ? { value }
+            : { defaultValue })}
         role="combobox"
-        aria-autocomplete="list"
+        aria-autocomplete={selectOnly ? "none" : "list"}
         aria-expanded={visible}
         aria-controls={listId}
         aria-activedescendant={visible && active >= 0 ? optionId(active) : undefined}
@@ -170,6 +205,7 @@ export function Combobox({ id, name, value, onChange, defaultValue, options, pla
         maxLength={maxLength}
         placeholder={placeholder}
         onChange={(event) => {
+          if (selectOnly) return;
           if (controlled) onChange(event.target.value);
           show(event.target.value);
         }}
@@ -177,6 +213,8 @@ export function Combobox({ id, name, value, onChange, defaultValue, options, pla
         // textu (například kvůli posunu kurzoru) nabídku neschová.
         onClick={() => {
           if (!open) show(null);
+          // Výběr bez psaní se druhým klepnutím zavře jako <select>.
+          else if (selectOnly) close();
         }}
         onKeyDown={onKeyDown}
         onBlur={close}

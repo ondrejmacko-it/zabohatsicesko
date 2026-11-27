@@ -5400,3 +5400,27 @@ body[data-moving] .quick-actions,
     font-size: 13px;
   }
 }
+
+/* Pohled v liště je Combobox (jen z nabídky): pole se chová jako výběr, nabídka je široká i u úzkého pole. */
+.view-switch .combobox-input {
+  cursor: pointer;
+  text-overflow: ellipsis;
+}
+
+.view-switch .combobox-panel {
+  right: auto;
+  min-width: max(100%, 240px);
+  max-height: min(360px, 70dvh);
+}
+
+@media (max-width: 640px) {
+  .view-switch .combobox {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .view-switch .combobox-panel {
+    right: 0;
+    min-width: 0;
+  }
+}

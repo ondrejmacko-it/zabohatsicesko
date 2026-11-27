@@ -86,3 +86,9 @@ export async function expectNoSeriousA11y(page: Page) {
 export async function settle(page: Page) {
   await page.waitForLoadState("networkidle");
 }
+
+/** Správce přepne Pohled v liště (Combobox jen z nabídky) podle klíče, například `skupina-fp`; prázdný = můj. */
+export async function choosePreview(page: Page, key: string) {
+  await page.getByRole("combobox", { name: "Pohled" }).click();
+  await page.getByRole("listbox", { name: "Pohledy" }).locator(`[data-value="${key}"]`).click();
+}

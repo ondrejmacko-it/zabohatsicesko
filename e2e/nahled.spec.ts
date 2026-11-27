@@ -1,4 +1,4 @@
-import { authFile, expect, expectNoHorizontalScroll, settle, test } from "./support";
+import { authFile, choosePreview, expect, expectNoHorizontalScroll, settle, test } from "./support";
 
 // Globální „Zobrazit jako“ v horní liště: správce vidí Domů, Plán, Témata a Zápisy očima skupiny, jen ke čtení.
 // Náhled drží HttpOnly cookie `zbc_nahled` (`id účtu|klíč`), server ji při každém požadavku znovu ověří.
@@ -13,7 +13,7 @@ test.describe("správce: pohled skupiny", () => {
     await page.goto("/vzdelavani/harmonogram");
     await settle(page);
     await expect(page.getByRole("button", { name: "Přidat akci" }).first()).toBeVisible();
-    await page.getByLabel("Pohled").selectOption("skupina-fp");
+    await choosePreview(page, "skupina-fp");
     await expect(bar(page)).toContainText("jen ke čtení");
     await expect(bar(page)).toContainText("Finanční poradci");
     // Vrátí na stejnou stránku a bez ovládání správce.
@@ -59,7 +59,7 @@ test.describe("správce: pohled skupiny", () => {
     await bar(page).getByRole("button", { name: "Ukončit pohled" }).click();
     await expect(bar(page)).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Přidat akci" }).first()).toBeVisible();
-    await expect(page.getByLabel("Pohled")).toHaveValue("");
+    await expect(page.getByLabel("Pohled", { exact: true })).toHaveValue("Můj pohled");
     await expect(page.getByRole("complementary", { name: "Hlavní navigace" }).getByRole("link", { name: /Správa/ })).toBeVisible();
   });
 
@@ -102,7 +102,7 @@ test.describe("správce: pohled skupiny", () => {
     await page.goto("/");
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Ahoj.");
     await expect(page.getByRole("heading", { name: "Co tě čeká" })).toBeVisible();
-    await page.getByLabel("Pohled").selectOption("kolega-demo-ucastnik");
+    await choosePreview(page, "kolega-demo-ucastnik");
     await expect(bar(page)).toContainText("Účastník – finanční poradce");
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Ahoj.");
     await expect(page.getByRole("heading", { level: 1 })).not.toContainText("Správce");
@@ -166,7 +166,7 @@ test.describe("účastník: podvržená cookie náhledu", () => {
     for (const path of ["/", "/vzdelavani/harmonogram", "/vzdelavani/temata", "/vzdelavani/zapisy"]) {
       await page.goto(path);
       await expect(bar(page)).toHaveCount(0);
-      await expect(page.getByLabel("Pohled")).toHaveCount(0);
+      await expect(page.getByLabel("Pohled", { exact: true })).toHaveCount(0);
     }
     // Zveřejněná RM akce je od PR #86 vidět všem (`all-published`), ale cookie z ní neudělá pohled RM:
     // bez pruhu náhledu a panel účasti ukazuje vlastní stav FP (Dobrovolné), ne povinnost z pohledu RM.
@@ -194,9 +194,9 @@ test.describe("lišta s pohledem na telefonu", () => {
   test("Pohled, účet a pruh se vejdou bez vodorovného posunu", async ({ page }) => {
     await page.goto("/");
     await settle(page);
-    await expect(page.getByLabel("Pohled")).toBeVisible();
+    await expect(page.getByLabel("Pohled", { exact: true })).toBeVisible();
     await expectNoHorizontalScroll(page);
-    await page.getByLabel("Pohled").selectOption("skupina-rm");
+    await choosePreview(page, "skupina-rm");
     await expect(bar(page)).toBeVisible();
     await expectNoHorizontalScroll(page);
     // Prvky lišty se nepřekrývají.
