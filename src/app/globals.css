@@ -5388,3 +5388,15 @@ body[data-moving] .quick-actions,
     min-height: 44px;
   }
 }
+
+/* Pás stavu v okně akce: na telefonu štítky a text v jednom toku místo sloupce, ať nezabírá první obrazovku. */
+@media (max-width: 640px) {
+  .status-band {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 8px;
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+}
