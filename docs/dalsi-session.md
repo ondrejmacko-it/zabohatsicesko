@@ -1,4 +1,4 @@
-# Navazující relace (stav 27. 11. 2026, relace 62)
+# Navazující relace (stav 27. 11. 2026, relace 63)
 
 Cíl: finální opravné kolo UI PC + mobil (zadání vlastníka „ZBČ – finální UX/UI a funkční stabilizace“,
 body 0–12). Implementace, ne audit. Desktop i mobil stejně důležité; vzdušně, nezahušťovat, zachovat identitu Wiki.
@@ -18,18 +18,20 @@ Zadání (64 KB) a 82 screenshotů nejsou v repu; zhuštěný seznam bodů je v 
 - Zbývá z bodu 8: hlavička „Zápisy k dokončení · N moje · M celkem“, hledání+Stav v jedné liště, MinutesSourceForm
   (jedno pole přepisu, formáty TXT/MD/VTT/SRT max 1 MB, nápověda o klientech), sdílená hlavička modalu.
 
-- Bod 2 Mobilní menu (relace 62): Zpětná vazba je poslední `<li class="sidebar-feedback">` v `.nav`; ≤900 px
-  `.nav` = grid `repeat(var(--nav-cols), minmax(0,1fr))`, sloupce posílá `Sidebar.tsx` (≤4 v řadě, víc ve 2 řadách),
-  ≤640 ikona nad popiskem (`--nav-cols-phone`), ≤480 se 4 položkami 2×2. `font: inherit` u tlačítka → `font-family`.
-  Test `e2e/menu-telefon.spec.ts` (12 šířek × 2 role): 23/24 zelené. **Padá 641 px role ucastnikFp: stránka
-  662 > 641** – zjistit (`git stash` + rerun), zda je to přetečení menu (5 položek, 3 sloupce) nebo předchozí chyba
-  harmonogramu; opravit u zdroje, pak commit „Mobilní menu: …“ (zatím commitnuto jako WIP).
+- Bod 2 Mobilní menu HOTOVO (`b3e1013` + `0269142`): `.nav` grid se sloupci z `Sidebar.tsx`, Zpětná vazba
+  v mřížce. Přetečení 641 px bylo z účtu v horní liště (nativní select persona) – opraveno v bloku
+  `@media (min-width: 641px)` (sloupec `minmax(0, auto)`, shrink) + 641–900 px krátké „Změnit“, select max 180 px.
+  `e2e/menu-telefon.spec.ts` 24/24 zelené, `zahlavi`/`pohled-vyber` zelené na `0269142`.
 
 ## Pořadí práce (jednotka = změna + cílený test + commit + push)
 1. ~~Zápisy k dokončení~~ hotovo (viz výše).
-2. ~~Mobilní menu~~ téměř hotovo – dořešit 641 px (viz výše), pak bod 3.
-3. Témata: filtr Pro mou roli/Všechna + vyhledávání v jedné liště (jeden zdroj stavu), PageCall text vlevo
-   + CTA vpravo v jedné řadě; ⋯ kontrastní všude (sdílená ikonová akce, 44px hit area).
+2. ~~Mobilní menu~~ hotovo.
+3. **DALŠÍ KROK** Témata: filtr Pro mou roli/Všechna + vyhledávání v jedné liště (jeden zdroj stavu), PageCall
+   text vlevo + CTA vpravo v jedné řadě; ⋯ kontrastní všude (sdílená ikonová akce, 44px hit area).
+   Stav: `src/components/PageCall.tsx` (13 ř.), CSS `.page-call` ~ř. 4558 globals.css = flex-wrap +
+   `.page-call-text { flex: 1 1 22ch }` → při zalomení vzniká diagonála; přestavět na grid
+   `minmax(0,1fr) auto` (≤560 px tlačítko pod textem přes šířku), menší serif, plochý panel. Použití: Témata
+   (`TopicsSection.tsx:173`), Zápisy (`zapisy/page.tsx:67`), Harmonogram prázdný měsíc. Pak `TopicBoard.tsx`.
 4. Náhled role: přepnutí z nepřístupné trasy (Správa/Integrace) → přesměrovat na Domů/Plán; jeden stručný
    banner „Náhled: … · jen ke čtení“ + Ukončit náhled, bez seznamu stránek; oslovovat efektivní osobu.
 5. Plán mobil: filtry Všechny/Povinné/Dobrovolné/Moje 2×2, Dnes k navigaci měsíce, čas nezalomitelný,
