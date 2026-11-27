@@ -1,7 +1,7 @@
 import { authFile, expect, expectNoHorizontalScroll, settle, test } from "./support";
 
-// F18: na užším okně (mezi telefonem a širokým monitorem) zůstane účet v liště na jednom řádku: jméno a Odhlásit
-// vedle sebe. Lišta se smí zalomit jen po celcích (značka, Pohled, účet). Šířky prochází jeden desktopový projekt,
+// F18: na užším okně (mezi telefonem a širokým monitorem) zůstane účet v liště na jednom řádku: jméno a menu Účet
+// (s Odhlásit a oslovením) vedle sebe. Lišta se smí zalomit jen po celcích (značka, Pohled, účet). Šířky prochází jeden desktopový projekt,
 // telefony mají vlastní testy lišty.
 
 const WIDTHS = [1200, 1100, 1024, 960, 900, 820, 768, 700, 641];
@@ -24,10 +24,10 @@ for (const role of ["spravce", "ucastnikFp"] as const) {
       test.skip(testInfo.project.name !== "windows-1280", "šířky prochází jeden projekt");
       await page.goto("/");
       await settle(page);
-      const signOut = page.getByRole("button", { name: "Odhlásit" });
+      const account = page.locator(".account").getByRole("button", { name: "Účet" });
       for (const width of WIDTHS) {
         await page.setViewportSize({ width, height: 800 });
-        await expect(signOut).toBeVisible();
+        await expect(account).toBeVisible();
         expect(await accountRows(page), `řádky účtu při ${width} px`).toHaveLength(1);
         await expectNoHorizontalScroll(page);
       }

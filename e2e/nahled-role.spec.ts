@@ -67,3 +67,25 @@ test.describe("náhled 1:1 proti skutečnému účtu @desktop", () => {
     });
   }
 });
+
+// Bod 4: v náhledu menu Účet patří skutečnému účtu (výslovně označenému) a oslovení se v něm nemění.
+test.describe("menu Účet v náhledu @desktop", () => {
+  test.use({ storageState: authFile("spravce") });
+
+  test("skutečný účet je označený a oslovení se nenabízí", async ({ page, context }) => {
+    const menu = page.locator(".account-menu");
+    await page.goto("/");
+    await menu.getByRole("button", { name: "Účet" }).click();
+    await expect(menu.getByText("Upravit oslovení")).toBeVisible();
+    await expect(menu.getByText("Skutečný účet")).toHaveCount(0);
+
+    await context.addCookies([
+      { name: "zbc_nahled", value: "demo-spravce|kolega-demo-ucastnik", domain: "localhost", path: "/", httpOnly: true, sameSite: "Lax" },
+    ]);
+    await page.goto("/");
+    await menu.getByRole("button", { name: "Účet" }).click();
+    await expect(menu.getByText("Skutečný účet")).toBeVisible();
+    await expect(menu.getByText("Upravit oslovení")).toHaveCount(0);
+    await expect(page.locator("main").getByText("Upravit oslovení")).toHaveCount(0);
+  });
+});

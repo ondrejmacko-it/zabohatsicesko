@@ -6,11 +6,20 @@ import { ROLE_LABELS } from "@/lib/labels";
 import { isLiveWiki } from "@/server/config";
 import { Menu } from "./Menu";
 import { PreviewSwitch } from "./PreviewSwitch";
+import { SalutationForm } from "./SalutationForm";
 
 type PreviewMenu = { groups: { key: string; label: string }[]; people: { key: string; label: string }[]; active: string | null };
 
 /** Horní lišta: vlevo značka, vpravo zvlášť „Pohled“ (jen správce) a skutečně přihlášený účet. */
-export function Topbar({ user, personas, preview }: { user: CurrentUser; personas: Persona[]; preview: PreviewMenu | null }) {
+export function Topbar({ user, personas, preview, inPreview = false, salutation = null }: {
+  user: CurrentUser;
+  personas: Persona[];
+  preview: PreviewMenu | null;
+  /** Běží náhled role: menu Účet pak výslovně říká, že jde o skutečný účet, ne o zobrazenou osobu. */
+  inPreview?: boolean;
+  /** Vlastní oslovení skutečného účtu; null = funkce vypnutá nebo běží náhled. */
+  salutation?: { current: string | null } | null;
+}) {
   return (
     <header className="topbar">
       <Link className="brand" href="/">
@@ -52,18 +61,15 @@ export function Topbar({ user, personas, preview }: { user: CurrentUser; persona
         <span className="account-name" title={user.signedInWith === "google" ? `Přihlášení účtem Google: ${user.email}` : undefined}>
           {user.signedInWith === "google" ? `${user.name} · ${ROLE_LABELS[user.role]}` : ROLE_LABELS[user.role]}
         </span>
-        <form action={signOut} className="account-signout">
-          <button className="btn btn-small" type="submit">
-            Odhlásit
-          </button>
-        </form>
-        {/* Telefon: jméno, role a Odhlásit v jednom menu, lišta pak má jen dva krátké řádky. Na širším okně skryté. */}
+        {/* Menu Účet: jméno, role, oslovení a Odhlásit. Na telefonu je to jediný prvek účtu v liště. */}
         <Menu small label="Účet" className="account-menu">
           <div className="account-menu-who">
+            {inPreview && <span className="small muted">Skutečný účet</span>}
             <strong>{user.name}</strong>
             <span className="small muted">{ROLE_LABELS[user.role]}</span>
             {user.signedInWith === "google" && <span className="small muted account-menu-email">{user.email}</span>}
           </div>
+          {salutation && <SalutationForm current={salutation.current} error={false} />}
           <hr className="menu-divider" />
           <form action={signOut}>
             <button className="btn" type="submit">

@@ -1,4 +1,5 @@
-import { isLiveWiki } from "@/server/config";
+import { isLiveWiki, salutationsEnabled } from "@/server/config";
+import { getSalutation } from "@/server/services/salutation";
 import { FeedbackRoot } from "@/components/feedback/FeedbackRoot";
 import { FlashMessage } from "@/components/FlashMessage";
 import { Sidebar } from "@/components/Sidebar";
@@ -25,9 +26,11 @@ export default async function WikiLayout({ children }: { children: React.ReactNo
     organizer ? listPreviewOptions(user) : null,
     currentPreview(user),
   ]);
+  // Oslovení je nastavení skutečného účtu, proto je v menu Účet; v náhledu se nenabízí (nic se tam neukládá).
+  const salutation = salutationsEnabled() && !preview ? { current: await getSalutation(user.id) } : null;
   return (
     <>
-      <Topbar user={user} personas={personas} preview={options && { ...options, active: preview?.key ?? null }} />
+      <Topbar user={user} personas={personas} inPreview={Boolean(preview)} salutation={salutation} preview={options && { ...options, active: preview?.key ?? null }} />
       {preview && <PreviewBar label={preview.label} />}
       <div className="shell">
         {/* V náhledu navigace odpovídá pohledu, který se ukazuje: poradce Správu systému nevidí (F16). Stránka /sprava

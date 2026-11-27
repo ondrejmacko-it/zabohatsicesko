@@ -5422,7 +5422,8 @@ body[data-moving] .quick-actions,
    Účet Google je jen tlačítko Účet (jméno, role, e-mail a Odhlásit jsou v jeho menu), takže se nic nepřekrývá
    ani na 320 px. Ukázková role má výběr role na celém druhém řádku, Odhlásit je také v menu. */
 .account-menu {
-  display: none;
+  display: inline-flex;
+  flex: none;
 }
 
 .account-menu-who {
@@ -5471,12 +5472,6 @@ body[data-moving] .quick-actions,
     grid-row: 3;
   }
 
-  .account .account-menu {
-    display: inline-flex;
-    flex: none;
-  }
-
-  .account .account-signout,
   .account-google .account-name {
     display: none;
   }

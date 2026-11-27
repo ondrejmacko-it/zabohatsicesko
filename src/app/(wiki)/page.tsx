@@ -87,7 +87,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       <h1>
         <span data-feedback-redact="">{greeting(preview ? preview.personName : user.name, preview ? null : salutation)}</span>.
       </h1>
-      {salutationsEnabled() && <SalutationForm current={salutation} error={!preview && salutationError} locked={Boolean(preview)} />}
+      {/* Oslovení se mění v menu Účet; sem se vrátí jen chybné uložení, aby bylo vidět, co opravit. */}
+      {salutationsEnabled() && !preview && salutationError && <SalutationForm current={salutation} error inputId="osloveni-oprava" />}
       <ShotGrant page="/" />
       {personal && <PersonalCalendarStatus state={personal} />}
       {/* Odpověď na pozvánku se dává v Gmailu, po návratu do okna se úkol obnoví. */}
