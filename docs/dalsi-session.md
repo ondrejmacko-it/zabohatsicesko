@@ -1,8 +1,8 @@
-# Navazující relace (stav 27. 11. 2026, relace 52)
+# Navazující relace (stav 27. 11. 2026, relace 53)
 
 Cíl: finální responzivní audit a mobilní UX (zadání vlastníka body 1–23, zhuštěně v promptu relace 47/48).
 Žádný redesign desktopu, merge, deploy, produkční DB, živý Google ani Make. Na konci draft PR + report.
-Větev `claude/oprava-mobilni-responzivita` z main `01db12f`, HEAD `9b701b6` (+ tato předávka). PR zatím není.
+Větev `claude/oprava-mobilni-responzivita` z main `01db12f`, HEAD `b43def2` (+ tato předávka). PR zatím není.
 
 ## Screenshoty vlastníka (16 ks, Android Chrome, ~347 CSS px, zdelavani-demo.vercel.app, správce Google)
 Zip: `/root/.claude/uploads/df1d1066-197f-551e-8282-0e240871cc1e/56421696-ZBC_mobilni_screenshoty_2026-11-27.zip`
@@ -54,15 +54,24 @@ desktop regrese, matice rozlišení, celá sada, před/po screenshoty, draft PR 
   S zpetna-vazba, rychle-akce, karta-agendy na telefon-390/320 + windows-1280: 49 passed; tsc a eslint OK.
   Pozn.: rychlé akce se ukazují až po odrolování pod `.plan-head`.
 
+- 4aed6d4 okna: v Chromiu je `.dialog` plně neprůhledný (#fff, opacity 1, jediný dialog); „prosvítání“ = 12px okraj
+  a stránka pod patičkou za 40% závojem. Na ≤640 px `.dialog.dialog-wide` přes celou obrazovku (100dvh, bez rámu),
+  závoj 60 % pro všechna okna; malá okna a `confirm-dialog` zůstávají kartou. Blok na konci `globals.css`.
+  Test `e2e/okno-akce.spec.ts` (320/347/390 + windows-1280; bez opravy 3 padají). S mobilni-ovladani, okna,
+  plan-planovani, priprava-mesice, pristupnost, rychle-akce, zpetna-vazba, domu-ukoly na telefon-390/320: 119 OK.
+- b43def2 texty účasti bez rodu (`ParticipationPanel.tsx` STATE_TEXT): „Z této akce máš platnou omluvu.“, „Máš
+  přihlášenou dobrovolnou účast.“, „Přihláška je zrušená…“, nepovinná jen „Akce není povinná.“ Štítek „Omluven/a“
+  ponechán. ucast + ucast-karta telefon-390 + windows-1280: 30 OK; tsc, eslint OK.
+
 ## Další krok
-1. Bod 3 plánu: průsvitný dialog akce. Zjištěno: `.dialog` má `background: var(--surface)` = #fff, backdrop
-   `rgba(35,35,35,.4)` (globals.css ~895–935), mobilní úpravy ~2187, animace `dialog-in` (opacity) ~4636.
-   Příčina z CSS není zřejmá: bez screenshotu ověř v Playwright (telefon-390, Plán → akce) `getComputedStyle`
-   dialogu, `.dialog-body`, `.event-*` sekcí (EventDialog.tsx ~642) a zda se otevírá přes `showModal()`
-   (Modal.tsx ~118). Možná jde o slabý backdrop kolem dialogu na telefonu → zvážit plnou výšku/sheet a silnější
-   backdrop. Pak useknuté téma v selectu, patička, banner „Zveřejněno“, omluva (radio, rod „omluvený“).
+1. Zbytek bodu 3: omluva – nativní modré radio (`ParticipationPanel.tsx` ~178, `.excuse-reason`; stylovat
+   `accent-color`/vlastní radio 44 px řádek), bottom sheet přes formulář (ConfirmDialog na telefonu). Banner
+   „Zveřejněno · proběhlo“ v okně akce (zelený blok nad formulářem, EventDialog) – zmenšit/zjednodušit na telefonu.
+   Patička okna akce na 347 px má 3 řádky (Další možnosti + Beze změn, Uložit jako návrh, Zveřejnit změny) –
+   zvážit 2 řádky. Useknuté téma v Combobox inputu patří do bodu 4.
 2. Oddělení „Tvoje účast“ od editoru: jen návrh pro vlastníka, neimplementovat bez schválení.
 
 ## Otevřené otázky pro vlastníka
 - Odsazení na telefonu: tři vnořené okraje (shell 12 + panel 16 + sekce 14) berou 42 px na stranu. Zúženo zatím
   jen na Plánu; má se srovnat globálně? „Vybrat návrhy“ přesunout do nabídky Filtry (ušetří řádek)?
+- Velká okna na telefonu přes celou obrazovku (4aed6d4) – vyhovuje, nebo radši bottom sheet s kouskem stránky?
