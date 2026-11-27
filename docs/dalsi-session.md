@@ -27,7 +27,7 @@ Screenshoty vlastníka (Android ~347 px) v relaci už nejsou; pro další dialog
 - okno-akce-*, okna, pas-stavu, mobilni-ovladani, okno-omluvy, pristupnost, vyber-kontext, mimoradny-termin,
   klavesnice, priprava-mesice, rychle-akce, plan-planovani, temata-planovani (+ zapis-temat) na windows-1280
   a telefon-390/320 OK. tsc, eslint OK. Prettier v repu nevynucován (globals.css nepřeformátovávat).
-- Celá sada (Vitest + Playwright) spuštěna v relaci 58 na c304fa1; výsledek v relaci 59 ověřit znovu, pokud chybí zde.
+- Celá sada na c304fa1: Vitest 629/629, Playwright 1523 OK, 528 skipped, 0 failed. Před PR znovu jen při změně kódu.
 
 ## Technika
 - `npm ci`; Playwright si server spustí sám (build + 3310/3311/3313). Před `--no-deps` nejdřív
