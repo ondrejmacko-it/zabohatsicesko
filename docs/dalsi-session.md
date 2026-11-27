@@ -37,23 +37,25 @@ Větev `claude/gallant-bohr-m1lyna`, draft PR #94 (nezakládat další, nemergov
     výsledky testů vč. přeskočených, překážky se závažností, postup kontroly Preview před merge.
 Další související chybu opravit a doložit regresním testem. Cíl: funkční, bezpečné, sjednocené, ne jen zelené CI.
 
-## Stav (relace 44)
+## Stav (relace 45)
 - PR #94 draft; nová relace: subscribe_pr_activity #94, `npm ci`. Body 1–8 hotové (karta účasti, dialog omluvy,
-  Kalendář, StatusBadge, náhled 1:1, e2e `ucast-karta.spec.ts`, screenshoty `docs/screenshots/ucast-karta/` + `pred/`).
-- Bod 7 HOTOVÝ: `docs/matice-f01-f18.md` + opravené věty F04 v `docs/pozadavky-f01-f18.md` (d5379e7).
-- Ověřeno: lint 0, tsc OK, vitest 628 OK, build OK. Celá e2e na d5379e7: 1468 OK, **2 chyby**, 291 skip, 6 nespuštěno:
-  1) `[windows-1920] pristupnost.spec.ts:121` U08 Typ s Pro koho a Datum s časem vedle sebe
-  2) `[telefon-390] ucast.spec.ts:93` F04 pozvánka v Kalendáři podle povinnosti, omluvy a přihlášky
-- Návrh popisu PR #94 je v `docs/pr94-popis.md` (zatím NEnahrán do PR; soubor po nahrání z repa smazat).
-- Preview b9721d8 READY (dpl_9da2u3g5bBVGmQCv87bRn6oMmiLK), CI na d5379e7 zelené.
+  Kalendář, StatusBadge, náhled 1:1, e2e `ucast-karta.spec.ts`, screenshoty `docs/screenshots/ucast-karta/` + `pred/`),
+  matice `docs/matice-f01-f18.md`.
+- Relace 45 (e24cf40): 2 padající e2e opraveny, obě chyby byly v testech, ne v aplikaci:
+  1) `ucast.spec.ts:93` F04 telefon-390: kolize dat. `ucast-karta.spec.ts` (windows-1280) měnil účast RM souběžně
+     s telefonem; odhlášení ev-11-18 vzalo F04 poslední budoucí nepovinnou akci → otevřel proběhlou ev-11-10 bez akcí
+     (bez věty Kalendáře). Reprodukováno během ucast+ucast-karta+zapisy souběžně; po přepnutí karta-testu na FP 33/33 OK.
+  2) `pristupnost.spec.ts:121` U08 windows-1920: samostatně vždy OK (5×); jednorázové boundingBox nahrazeno
+     `expect.poll` po ustálení okna. Pod zátěží celé sady zatím neověřeno.
+- Lint + tsc čisté na změněných souborech. Screenshoty „ucastnik-*“ v docs vznikly ještě jako RM (vzhled shodný).
 
 ## Další krok
-1. Spustit jen 2 padající testy (`npx playwright test e2e/pristupnost.spec.ts:121 --project=windows-1920`,
-   `e2e/ucast.spec.ts:93 --project=telefon-390`, `--trace off --reporter=line | tail -40`). Zjistit, zda jde o
-   regresi z PR #94 (EventDialog/ParticipationPanel/calendar-note texty), opravit kořen + test, commit, push.
-2. Doplnit výsledky do `docs/pr94-popis.md`, nahrát jako popis PR #94 (update_pull_request body), smazat soubor z repa.
+1. Celou e2e sadu jednou (`npx playwright test --trace off --reporter=dot 2>&1 | tail -30`), vitest/lint/build jen
+   pokud by se měnil kód aplikace (neměnil). Pokud zeleno, pokračuj.
+2. Doplnit výsledky (sekce testů: relace 45 + výsledek celé sady) do `docs/pr94-popis.md`, nahrát jako body PR #94
+   (mcp__github__update_pull_request), smazat soubor z repa, commit + push.
 3. Report vlastníkovi v chatu (česky, tykat): opravy, změněné soubory, screenshoty před/po, matice, testy vč.
-   přeskočených, překážky se závažností, postup kontroly Preview (vše je v `docs/pr94-popis.md`).
+   přeskočených, překážky se závažností, postup kontroly Preview (vše v `docs/pr94-popis.md`).
 
 ## Otevřené (firma)
 - C04: mazat vazby i při deaktivaci podřízeného? Mapování nadřízených a retence omluv.
