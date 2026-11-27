@@ -286,7 +286,7 @@ test.describe("okno akce: zahození neveřejných změn se potvrzuje @desktop", 
     await settle(page);
     const draftCard = page.locator('a[data-move-id="ev-11-26"]');
     await expect(draftCard).toContainText("Návrh změny");
-    await expect(draftCard).toContainText("Mění vedoucí");
+    await expect(draftCard).toContainText("Změna vedoucího");
     const original = page.locator('[data-original-of="ev-11-26"]');
     await expect(original).toContainText("Zveřejněná verze");
     await expect(original).toContainText("Vedoucí akce");
@@ -308,7 +308,7 @@ test.describe("okno akce: zahození neveřejných změn se potvrzuje @desktop", 
     const notice = window.getByText("Kolegové a Kalendář zatím vidí zveřejněnou verzi.");
     await expect(notice).toBeVisible();
     // Panel návrhu změny říká, co se mění, a rozbalí zveřejněnou verzi (originál).
-    await expect(window.getByText(/Mění vedoucí\./)).toBeVisible();
+    await expect(window.getByText(/Změna vedoucího\./)).toBeVisible();
     await window.getByText("Zveřejněná verze", { exact: true }).click();
     await expect(window.locator(".change-original-facts")).toContainText("Vedoucí akce");
 

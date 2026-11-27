@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Icon } from "@/components/Icon";
-import { eventContext, eventTitle } from "@/lib/labels";
+import { changeSummary, eventContext, eventTitle } from "@/lib/labels";
 import {
   addDays,
   formatDayMonth,
@@ -182,13 +182,12 @@ const pickAttr = (card: EventCard, managing: boolean) =>
 /** Návrh změny zveřejněné akce se kreslí jako návrh (okrově), i když je akce zveřejněná. */
 const toneOf = (card: EventCard) => (card.original ? "draft" : cardTone(card));
 
-const changesText = (card: EventCard) =>
-  card.original?.changes.length ? `Mění ${card.original.changes.join(", ")}` : "Liší se od zveřejněné verze";
+const changesText = (card: EventCard) => changeSummary(card.original?.changes ?? []) ?? "Liší se od zveřejněné verze";
 
 /**
  * Zveřejněná verze za kartou návrhu změny („stoh“). Vykukuje nad kartou jako pruh; při najetí myší se vysune
  * dopředu a karta návrhu ustoupí. Klik otevře totéž okno akce, kde je originál i rozhodnutí. Pro čtečky
- * a klávesnici je skrytá: okno akce i řádek „Mění …“ na kartě říkají totéž slovy. V režimu výběru jen
+ * a klávesnici je skrytá: okno akce i řádek „Změna …“ na kartě říkají totéž slovy. V režimu výběru jen
  * řekne proč (`data-pick-reason`), okno neotevře.
  */
 function OriginalLayer({ card, href }: { card: EventCard; href: string }) {

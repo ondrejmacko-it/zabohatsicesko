@@ -82,7 +82,7 @@ test.describe("Plán: hromadný výběr návrhů s návrhem změny zveřejněné
       await expect(page.locator("[data-selecting]")).toHaveCount(0);
       await changeCard.click();
       await expect(page).toHaveURL(/akce=ev-11-26/);
-      await expect(page.getByRole("dialog").getByText(/Mění vedoucí\./)).toBeVisible();
+      await expect(page.getByRole("dialog").getByText(/Změna vedoucího\./)).toBeVisible();
     } finally {
       // Úklid: zrušit návrh změny, ať ostatní testy vidí seed.
       await page.goto("/vzdelavani/harmonogram?mesic=2026-11&akce=ev-11-26");
