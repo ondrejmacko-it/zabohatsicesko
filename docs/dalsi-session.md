@@ -1,8 +1,8 @@
-# Navazující relace (stav 27. 11. 2026, relace 50)
+# Navazující relace (stav 27. 11. 2026, relace 51)
 
 Cíl: finální responzivní audit a mobilní UX (zadání vlastníka body 1–23, zhuštěně v promptu relace 47/48).
 Žádný redesign desktopu, merge, deploy, produkční DB, živý Google ani Make. Na konci draft PR + report.
-Větev `claude/oprava-mobilni-responzivita` z main `01db12f`, HEAD `657a248` (+ tato předávka). PR zatím není.
+Větev `claude/oprava-mobilni-responzivita` z main `01db12f`, HEAD `bb7d94a` (+ tato předávka). PR zatím není.
 
 ## Screenshoty vlastníka (16 ks, Android Chrome, ~347 CSS px, zdelavani-demo.vercel.app, správce Google)
 Zip: `/root/.claude/uploads/df1d1066-197f-551e-8282-0e240871cc1e/56421696-ZBC_mobilni_screenshoty_2026-11-27.zip`
@@ -41,12 +41,17 @@ desktop regrese, matice rozlišení, celá sada, před/po screenshoty, draft PR 
   (320/347/360/390, správce + ucastnikFp; bez opravy padá). Spolu s mobilni-ovladani, kdo-tema, rychle-akce,
   ucast-karta na telefon-390/320 zelené; tsc a eslint OK. Desktop nedotčen (vše v `@media max-width: 760px`).
 
+- bb7d94a filtry Plánu (≤560: flex místo 2 × 2, účast vlastní řádek 13 px, od 347 px 4 pilulky vedle sebe, pod
+  347 px 2 × 2; `.panel:has(.plan-zone)` 12 px a `.section:has(> .plan-zone)` 10 px po stranách; `data-wide` a
+  `wideLast` odstraněny). Test `e2e/filtry-planu.spec.ts` (bez opravy padá). Spolu s mobilni-ovladani,
+  harmonogram-rozlozeni, plan-planovani, vyber-navrhu, rychle-akce, karta-agendy na telefon-390/320 + windows-1280:
+  79 passed; tsc a eslint OK. Správce na 320 px = 4 řádky (účast 2 × 2), od 347 px nejvýš 3.
+
 ## Další krok
-1. Filtry Plánu na telefonu (`globals.css` ~ř. 4303 „mřížka 2 × 2“, `PlanFilters.tsx`, lead = `participationNav`
-   v `src/app/(wiki)/vzdelavani/harmonogram/page.tsx:199`). Naměřeno správce 320–390: 4 řádky, výška 207–223 px,
-   pilulky účasti (Všechny/Povinné/Dobrovolné/Moje) jen 41 px (< 44). Hotový měřicí test je ve scratchpadu
-   předchozí relace (asi chybí) – napsat znovu `e2e/filtry-planu.spec.ts`: řádky ≤ 2–3, výška ≥ 44, bez přetečení.
-   Návrh: lead na 1 řádek (4 pilulky flex 1, 44 px), pod ním jeden řádek Návrhy · Doplnit · Filtry (přirozená
-   šířka, flex-wrap místo 2 × 2); „Vybrat návrhy“ zvážit přesun do nabídky Filtry (změna UX → zeptat se vlastníka).
-2. Brouček (zpětná vazba) vs. quick actions (+ …) vpravo dole překrývají kartu.
-3. Pak bod 3 plánu (dialogy).
+1. Brouček (zpětná vazba, `.bug-dock`) vs. quick actions (+ …) vpravo dole překrývají kartu; na 320 px `.bug-dock`
+   sahá do x=341 (mimo okno, fixed – ověřit, zda je oříznutý, nebo vyčnívá). Napsat geometrický test.
+2. Pak bod 3 plánu (dialogy).
+
+## Otevřené otázky pro vlastníka
+- Odsazení na telefonu: tři vnořené okraje (shell 12 + panel 16 + sekce 14) berou 42 px na stranu. Zúženo zatím
+  jen na Plánu; má se srovnat globálně? „Vybrat návrhy“ přesunout do nabídky Filtry (ušetří řádek)?
