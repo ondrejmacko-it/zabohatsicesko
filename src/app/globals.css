@@ -5429,23 +5429,13 @@ body[data-moving] .quick-actions,
   color: #fff;
 }
 
-/* Karta účasti v detailu: nadpis se štítkem, jedna věta, hlavní tlačítko vpravo. Bez dlouhých odstavců.
-   Jemné podbarvení a boční linka z tokenů --ucast-* (stejné jako štítek); význam nese vždy i text štítku.
-   Proběhlá akce (data-ucast-closed) zůstává neutrální. */
+/* Karta účasti v detailu: jedna řada, vlevo nadpis a stavová věta, vpravo akce na středové ose.
+   Na úzkém telefonu se akce zalomí pod text. Jemné podbarvení a boční linka z tokenů --ucast-* nesou stav,
+   význam vždy i věta. Proběhlá akce (data-ucast-closed) zůstává neutrální. */
 .participation-panel[data-ucast-panel]:not([data-ucast-closed]) {
   background: color-mix(in srgb, var(--ucast-bg) 55%, var(--surface));
   border-color: color-mix(in srgb, var(--ucast) 30%, var(--line));
   border-left: 4px solid var(--ucast);
-}
-.participation-panel .participation-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 12px;
-  margin-bottom: 8px;
-}
-.participation-panel .participation-head > h2 {
-  margin: 0;
 }
 .participation-panel .participation-body {
   display: flex;
@@ -5457,6 +5447,9 @@ body[data-moving] .quick-actions,
 .participation-panel .participation-info {
   flex: 1 1 280px;
   min-width: 0;
+}
+.participation-panel .participation-info > h2 {
+  margin: 0 0 4px;
 }
 .participation-panel .participation-info > p {
   margin: 0 0 4px;

@@ -170,7 +170,6 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
         <ParticipationPanel
           eventId={card.id}
           state={participation.state}
-          label={participation.label}
           actions={participation.actions}
           excuse={participation.excuse}
           calendar={participation.calendar}

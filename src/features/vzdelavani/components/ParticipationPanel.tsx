@@ -1,11 +1,10 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useRef, useState } from "react";
 import { ActionForm, ActionMessage, callAction } from "@/components/ActionForm";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { changeParticipationAction, type ActionResult } from "@/features/vzdelavani/actions";
 import { calendarNote, type OwnCalendar } from "@/lib/calendar-note";
-import { StatusBadge } from "./StatusBadge";
 import { EXCUSE_REASON_LABELS } from "@/lib/labels";
 import { EXCUSE_NOTE_MAX, EXCUSE_REASONS, type ExcuseReason, type ParticipationState } from "@/lib/types";
 import { lockedProps, usePreviewLock } from "@/components/PreviewLock";
@@ -16,7 +15,6 @@ type Action = "enroll" | "withdraw" | "excuse" | "revoke_excuse";
 type Props = {
   eventId: string;
   state: ParticipationState;
-  label: string | null;
   actions: Action[];
   /** Vlastní omluva, jen pro omluveného samotného. */
   excuse: { reason: ExcuseReason; note: string | null } | null;
@@ -31,20 +29,21 @@ type Props = {
   enrollment?: boolean;
 };
 
-// Texty bez rodu (vlastník: „jsi omluvený“ neplatí pro každého). Přihlášení nabízí tlačítko, text ho neopakuje.
+// Stav jako jedna krátká věta bez rodu (vlastník: „jsi omluvený“ neplatí pro každého). Nahrazuje dřívější
+// štítek v hlavičce, který větu jen opakoval; barvu stavu nese podbarvení a boční linka karty.
 const STATE_TEXT: Partial<Record<ParticipationState, string>> = {
-  required: "Akce je pro tebe povinná.",
-  optional: "Akce není povinná.",
-  voluntary_enrolled: "Máš přihlášenou dobrovolnou účast.",
-  excused: "Z této akce máš platnou omluvu.",
-  withdrawn: "Přihláška je zrušená, můžeš se znovu přihlásit.",
+  required: "Povinné pro tebe.",
+  optional: "Dobrovolné, můžeš se přihlásit.",
+  voluntary_enrolled: "Přihlášeno.",
+  excused: "Omluva zaznamenána.",
+  withdrawn: "Odhlášeno, můžeš se znovu přihlásit.",
   cancelled: "Akce je zrušená.",
 };
 
 /** Přihlášky ve Wiki vypnuté: jen co vyplývá z rolí, nic se nenabízí. */
 const READ_ONLY_TEXT: Partial<Record<ParticipationState, string>> = {
-  required: "Akce je pro tebe povinná.",
-  optional: "Akce není povinná.",
+  required: "Povinné pro tebe.",
+  optional: "Dobrovolné.",
   cancelled: "Akce je zrušená.",
 };
 
@@ -62,10 +61,10 @@ const CLOSED_TEXT: Partial<Record<ParticipationState, string>> = {
 };
 
 /**
- * Tvoje účast u akce: stav, štítek a akce Přihlásit se / Odhlásit se / Omluvit se / Zrušit omluvu.
- * Každá změna se potvrzuje v samostatném okně. Server znovu ověří session, stav i čas akce.
+ * Tvoje účast u akce: nadpis se stavovou větou vlevo, akce Přihlásit se / Odhlásit se / Omluvit se / Zrušit omluvu.
+ * vpravo na stejné ose. Každá změna se potvrzuje v samostatném okně. Server znovu ověří session, stav i čas akce.
  */
-export function ParticipationPanel({ eventId, state, label, actions, excuse, calendar = null, preview, enrollment = true }: Props) {
+export function ParticipationPanel({ eventId, state, actions, excuse, calendar = null, preview, enrollment = true }: Props) {
   // Se zapnutými přihláškami jsou akce prázdné jen u akce, která už začala (i v náhledu, akce se počítají 1:1).
   const closed = enrollment && actions.length === 0 && state !== "cancelled";
   const note = preview || closed ? null : calendarNote(state, calendar);
@@ -78,14 +77,11 @@ export function ParticipationPanel({ eventId, state, label, actions, excuse, cal
       data-ucast-closed={closed || undefined}
       data-kalendar-stav={calendar ? `${calendar.link}:${calendar.inCalendar}` : "neznamy"}
     >
-      {/* Hlavička: nadpis a jeden stavový štítek vedle sebe (na mobilu se zalomí). */}
-      <div className="participation-head">
-        {/* V náhledu nejde o účast přihlášeného, proto ani „Tvoje“, ani vysvětlení vlastní omluvy. */}
-        <h2 id="ucast">{preview ? "Účast v náhledu" : "Tvoje účast"}</h2>
-        {label && <StatusBadge ucast={state} label={label} />}
-      </div>
+      {/* Jedna řada: vlevo nadpis a stavová věta, vpravo akce (na úzkém telefonu pod textem). */}
       <div className="participation-body">
         <div className="participation-info">
+          {/* V náhledu nejde o účast přihlášeného, proto ani „Tvoje“, ani vysvětlení vlastní omluvy. */}
+          <h2 id="ucast">{preview ? "Účast v náhledu" : "Tvoje účast"}</h2>
           {/* Náhled ukáže stejný text jako kolegovi; „tebe“ v něm znamená kolegu, za kterého se správce dívá. */}
           <p className="participation-text">{stateText}</p>
           {preview === "group" && <p className="small muted">Jen podle rolí, bez přihlášek a omluv.</p>}
@@ -154,10 +150,18 @@ export function ParticipationPanel({ eventId, state, label, actions, excuse, cal
 function ExcuseButton({ eventId }: { eventId: string }) {
   const [open, setOpen] = useState(false);
   const lock = lockedProps(usePreviewLock());
+  // Dvojklik na Omluvit se odešle formulář dřív, než React stihne tlačítko zakázat: druhé odeslání se zahodí.
+  const inFlight = useRef(false);
   const [state, formAction, pending] = useActionState(async (prev: ActionResult | null, formData: FormData) => {
-    const result = await callAction(changeParticipationAction, prev, formData);
-    if (result.ok) setOpen(false);
-    return result;
+    if (inFlight.current) return prev;
+    inFlight.current = true;
+    try {
+      const result = await callAction(changeParticipationAction, prev, formData);
+      if (result.ok) setOpen(false);
+      return result;
+    } finally {
+      inFlight.current = false;
+    }
   }, null);
   const formId = `omluva-${eventId}`;
   return (
