@@ -37,27 +37,23 @@ Větev `claude/gallant-bohr-m1lyna`, draft PR #94 (nezakládat další, nemergov
     výsledky testů vč. přeskočených, překážky se závažností, postup kontroly Preview před merge.
 Další související chybu opravit a doložit regresním testem. Cíl: funkční, bezpečné, sjednocené, ne jen zelené CI.
 
-## Stav (relace 43, HEAD viz git log)
-- PR #94 draft; nová relace: subscribe_pr_activity #94, `npm ci`. Úvodní kontext ~120 tis. → 1–2 malé jednotky/relace.
-- Body 1–6 hotové; bod 8 HOTOVÝ: `e2e/ucast-karta.spec.ts` (+ karta se musí dát doscrollovat do zobrazení),
-  screenshoty PO 24 PNG `docs/screenshots/ucast-karta/` (cb655cc), PŘED 24 PNG `…/pred/` z 948ea18 (15fc144;
-  pořízeno kopií specu s expect.soft – před úpravou: karta nad formulářem, bez podbarvení, bez info o Kalendáři).
-  Správce je ve všech skupinách → „správce dobrovolná“ v seedu nejde (uvést v reportu).
-- Ověřeno na cb655cc/15fc144: lint 0 chyb, tsc OK, vitest 69 souborů / 628 testů OK, build OK,
-  ucast-karta 15 passed. Celá e2e (1767 testů) NEDOBĚHLA (přerušena kvůli limitu kontextu) → spustit na pozadí jako první: `npx playwright test --trace off --reporter=dot > log` a vyhodnotit tail.
-- Matice bod 7 rozpracovaná (nic necommitnuto): mapování F01–F18 → testy v `docs/pozadavky-f01-f18.md` ř. 106–130
-  platí (soubory existují); POZOR texty F04 v ř. 132–140 jsou zastaralé (bod 4 změnil `calendar-note.ts`).
-  Zvlášť nalezeno: hromadný výběr `priprava-mesice.spec.ts:142`, F08 `…f06-f09.spec.ts:67/93`; souběh výběru
-  `vyber-kontext.spec.ts:75`; filtry `plan-planovani.spec.ts:148`, `harmonogram-rozlozeni.spec.ts:87`,
-  `mobilni-ovladani.spec.ts:312`; oslovení `osloveni.spec.ts:7`; lišta `zahlavi.spec.ts:23`, `nahled.spec.ts:221`;
-  mobil `mobilni-ovladani.spec.ts`. NENALEZENO grepem názvů testů: ≥5 garantovaných témat přes UI + reload,
-  animace při najetí na návrh, kolize v přípravě měsíce (hledat v tělech testů: `garant`, `priority`, `animation`,
-  `kolid`, `collision` v e2e/ a tests/). Chybějící doplnit krátkým e2e/unit testem, nebo v matici uvést „netestováno“.
-- Další krok: (d) dopsat matici jako `docs/matice-f01-f18.md` (sloupce: implementováno / auto test / vizuálně /
-  PostgreSQL / Preview / produkce / čeká na integraci-firmu; F04 jen simulace, F15 jen heuristika) + opravit
-  zastaralé texty F04; (e) bod 10: update popisu PR #94 (opravy, soubory `git diff --stat main...HEAD`, odkazy na
-  screenshoty před/po, matice, testy vč. přeskočených, překážky se závažností, postup kontroly Preview před merge)
-  a report vlastníkovi v chatu (česky, tykat) – jen v poslední relaci.
+## Stav (relace 44)
+- PR #94 draft; nová relace: subscribe_pr_activity #94, `npm ci`. Body 1–8 hotové (karta účasti, dialog omluvy,
+  Kalendář, StatusBadge, náhled 1:1, e2e `ucast-karta.spec.ts`, screenshoty `docs/screenshots/ucast-karta/` + `pred/`).
+- Bod 7 HOTOVÝ: `docs/matice-f01-f18.md` + opravené věty F04 v `docs/pozadavky-f01-f18.md` (d5379e7).
+- Ověřeno: lint 0, tsc OK, vitest 628 OK, build OK. Celá e2e na d5379e7: 1468 OK, **2 chyby**, 291 skip, 6 nespuštěno:
+  1) `[windows-1920] pristupnost.spec.ts:121` U08 Typ s Pro koho a Datum s časem vedle sebe
+  2) `[telefon-390] ucast.spec.ts:93` F04 pozvánka v Kalendáři podle povinnosti, omluvy a přihlášky
+- Návrh popisu PR #94 je v `docs/pr94-popis.md` (zatím NEnahrán do PR; soubor po nahrání z repa smazat).
+- Preview b9721d8 READY (dpl_9da2u3g5bBVGmQCv87bRn6oMmiLK), CI na d5379e7 zelené.
+
+## Další krok
+1. Spustit jen 2 padající testy (`npx playwright test e2e/pristupnost.spec.ts:121 --project=windows-1920`,
+   `e2e/ucast.spec.ts:93 --project=telefon-390`, `--trace off --reporter=line | tail -40`). Zjistit, zda jde o
+   regresi z PR #94 (EventDialog/ParticipationPanel/calendar-note texty), opravit kořen + test, commit, push.
+2. Doplnit výsledky do `docs/pr94-popis.md`, nahrát jako popis PR #94 (update_pull_request body), smazat soubor z repa.
+3. Report vlastníkovi v chatu (česky, tykat): opravy, změněné soubory, screenshoty před/po, matice, testy vč.
+   přeskočených, překážky se závažností, postup kontroly Preview (vše je v `docs/pr94-popis.md`).
 
 ## Otevřené (firma)
 - C04: mazat vazby i při deaktivaci podřízeného? Mapování nadřízených a retence omluv.
