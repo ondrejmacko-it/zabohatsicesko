@@ -1,8 +1,8 @@
-# Navazující relace (stav 27. 11. 2026, relace 49)
+# Navazující relace (stav 27. 11. 2026, relace 50)
 
 Cíl: finální responzivní audit a mobilní UX (zadání vlastníka body 1–23, zhuštěně v promptu relace 47/48).
 Žádný redesign desktopu, merge, deploy, produkční DB, živý Google ani Make. Na konci draft PR + report.
-Větev `claude/oprava-mobilni-responzivita` z main `01db12f`, HEAD `bb7a92d` (+ tato předávka). PR zatím není.
+Větev `claude/oprava-mobilni-responzivita` z main `01db12f`, HEAD `657a248` (+ tato předávka). PR zatím není.
 
 ## Screenshoty vlastníka (16 ks, Android Chrome, ~347 CSS px, zdelavani-demo.vercel.app, správce Google)
 Zip: `/root/.claude/uploads/df1d1066-197f-551e-8282-0e240871cc1e/56421696-ZBC_mobilni_screenshoty_2026-11-27.zip`
@@ -35,9 +35,18 @@ desktop regrese, matice rozlišení, celá sada, před/po screenshoty, draft PR 
   `windows-1280`. Cíleně: `npx playwright test e2e/<soubor> --project=telefon-390 --trace off --reporter=line`.
 
 ## Ověřeno
-bb7a92d: `e2e/zahlavi.spec.ts` na telefon-390/320 + windows-1280 OK (13 passed), tsc a eslint OK.
+- bb7a92d: `e2e/zahlavi.spec.ts` telefon-390/320 + windows-1280 OK, tsc a eslint OK.
+- 5195ef5 karta agendy (≤760: flex-wrap, čas nezalomený po znacích, štítky `nowrap` jako celky, `overflow-wrap:
+  break-word`) + 657a248 ⋯ 36×32 tmavší, plocha 44×44, bez překryvu s ≡. Test `e2e/karta-agendy.spec.ts`
+  (320/347/360/390, správce + ucastnikFp; bez opravy padá). Spolu s mobilni-ovladani, kdo-tema, rychle-akce,
+  ucast-karta na telefon-390/320 zelené; tsc a eslint OK. Desktop nedotčen (vše v `@media max-width: 760px`).
 
 ## Další krok
-Jednotka 2: `.agendaEvent` v `src/features/vzdelavani/components/schedule.module.css` (čas „09:00–10:30“
-na 1 řádku, štítky pod ním jako celky, role vedoucího bez lámání závorky) + test výšky času = 1 řádek
-na 320–390 px. Pak zbytek bodu 2 plánu (filtry, tři tečky 44×44, brouček vs. quick actions).
+1. Filtry Plánu na telefonu (`globals.css` ~ř. 4303 „mřížka 2 × 2“, `PlanFilters.tsx`, lead = `participationNav`
+   v `src/app/(wiki)/vzdelavani/harmonogram/page.tsx:199`). Naměřeno správce 320–390: 4 řádky, výška 207–223 px,
+   pilulky účasti (Všechny/Povinné/Dobrovolné/Moje) jen 41 px (< 44). Hotový měřicí test je ve scratchpadu
+   předchozí relace (asi chybí) – napsat znovu `e2e/filtry-planu.spec.ts`: řádky ≤ 2–3, výška ≥ 44, bez přetečení.
+   Návrh: lead na 1 řádek (4 pilulky flex 1, 44 px), pod ním jeden řádek Návrhy · Doplnit · Filtry (přirozená
+   šířka, flex-wrap místo 2 × 2); „Vybrat návrhy“ zvážit přesun do nabídky Filtry (změna UX → zeptat se vlastníka).
+2. Brouček (zpětná vazba) vs. quick actions (+ …) vpravo dole překrývají kartu.
+3. Pak bod 3 plánu (dialogy).
