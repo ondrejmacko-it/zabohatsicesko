@@ -80,3 +80,21 @@ test.describe("Řádek tématu", () => {
     }
   });
 });
+
+test.describe("Plán: filtr účasti", () => {
+  test.use({ storageState: authFile("spravce") });
+  test("čtyři volby v jedné řadě nebo 2 × 2, nikdy 3 + osamocená", async ({ page }) => {
+    await page.goto("/vzdelavani/harmonogram");
+    await settle(page);
+    const pills = page.locator(".participation-filter .pill");
+    await expect(pills).toHaveCount(4);
+    for (const width of [320, 346, 347, 360, 390, 412, 430, 480, 560, 640, 641, 768, 1024]) {
+      await page.setViewportSize({ width, height: 800 });
+      const tops = await pills.evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().top)));
+      const rows = [...new Set(tops)].map((top) => tops.filter((t) => t === top).length);
+      expect([[4], [2, 2]], `řádky voleb při ${width} px: ${rows.join("+")}`).toContainEqual(rows);
+      for (let i = 0; i < 4; i++) expect(await lineCount(pills.nth(i)), `volba na jednom řádku při ${width} px`).toBe(1);
+      await expectNoHorizontalScroll(page);
+    }
+  });
+});
