@@ -1,4 +1,4 @@
-# Navazující relace (stav 27. 11. 2026, relace 73)
+# Navazující relace (stav 27. 11. 2026, relace 74)
 
 Cíl: finální opravné kolo UI PC + mobil (zadání vlastníka „ZBČ – finální UX/UI a funkční stabilizace“,
 body 0–12). Implementace, ne audit. Desktop i mobil stejně důležité; vzdušně, nezahušťovat, zachovat identitu Wiki.
@@ -7,7 +7,7 @@ Bez merge, deploye, produkční DB, živého Googlu a Make. Screenshoty ani zad�
 Větev `claude/finalni-vyladeni-ui-pc-mobil` z main `7e9b886` (PR #95 už je v main). PR zatím není.
 Zadání (64 KB) a 82 screenshotů nejsou v repu; zhuštěný seznam bodů je v promptu navazující relace.
 
-## Hotovo (HEAD `2bfc009`, pushnuto)
+## Hotovo (HEAD `b8e9e9b`, pushnuto)
 - Body 1–3 HOTOVO a ověřené e2e. `e2e/geometrie.spec.ts` + helper `lineCount()` v `e2e/support.ts` – sem geometrické regrese.
 - Bod 4 Náhled role HOTOVO: `9eeea4b` (přesměrování po přepnutí, jeden pruh), `4e82546` – menu Účet na každé
   šířce (jméno, role, oslovení `SalutationForm`, Odhlásit; samostatné Odhlásit v liště pryč), na Domů jen pozdrav
@@ -34,10 +34,17 @@ Zadání (64 KB) a 82 screenshotů nejsou v repu; zhuštěný seznam bodů je v 
   popiskem, `.event-actions` na ≤640 px pomocná řada (⋯, stav) + 2 stejně široké akce. e2e pas-stavu + nahled
   zelené na telefon-390/360 + windows-1280.
 
+- Krok 7 (Přidat akci / příprava měsíce) ověřen v kódu jako HOTOVO: `duplicateFormValues` kopíruje jen pole
+  formuláře, předvyplnění dne `?den=`, `publishBlockedReason` „Doplň téma u N a vedoucího u M akcí“, přehled
+  `PrepareOverview` = klikatelné filtry, Combobox místo datalist. Neměnit.
+- Krok 8 částečně (`b8e9e9b`): `calendar-note.ts` neutrální stavy (potvrzena systémem / aktualizuje se /
+  nepodařil se / nelze ověřit / ručně spravovaná pozvánka), důvod omluvy nepředvybraný (e2e vybírají „Nemoc“).
+  vitest kalendar-f04 + e2e ucast, ucast-karta, okno-omluvy zelené na windows-1280.
+
 ## Pořadí práce (jednotka = změna + cílený test + commit + push)
-7. Přidat akci: (skupiny a „Doporučená témata“ HOTOVO v f0c8b4f) – předvyplnění data z plus dne, duplikace bez
-   omluv/registrací/zápisů; průvodce přípravou měsíce (`PrepareMonthDialog.tsx`, step-no tam zůstává jako kroky).
-8. Účast: stav jako jedna věta + akce vpravo; „Kalendář: stav neznámý“ → neutrální pravdivý text.
+8. Účast zbytek: `ParticipationPanel.tsx` stav jako jedna věta + akce vpravo (štítek v hlavičce duplikuje větu –
+   zvážit sloučit hlavičku a tělo do jedné řady: vlevo h2+věta, vpravo akce; CSS `.participation-*` ~ř. 5435
+   globals.css), blok dvojkliku omluvy (ExcuseButton už má `pending`). Report: checklist živého ověření.
 9. Brouček: společná bezpečná zóna s plovoucím panelem/hromadným výběrem (rozšířit `BugButton`).
 10. Správa: karty kolegů (e-mail nezalamovat uprostřed domény). Zbytek bodu 8 Zápisy. Čeština (skloňování počtů).
 11. Report `docs/report-finalni-ui-pc-mobil.md`, celá sada testů, draft PR.
