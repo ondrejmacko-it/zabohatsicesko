@@ -1,4 +1,4 @@
-# Navazující relace (stav 27. 11. 2026, relace 66)
+# Navazující relace (stav 27. 11. 2026, relace 67)
 
 Cíl: finální opravné kolo UI PC + mobil (zadání vlastníka „ZBČ – finální UX/UI a funkční stabilizace“,
 body 0–12). Implementace, ne audit. Desktop i mobil stejně důležité; vzdušně, nezahušťovat, zachovat identitu Wiki.
@@ -37,11 +37,17 @@ Zadání (64 KB) a 82 screenshotů nejsou v repu; zhuštěný seznam bodů je v 
   → „Zveřejněné akce · změnu potvrdíš v okně akce“ (vysvětlení jednou u skupiny, `reason` jen „téma je pro všechny“),
   tlačítka „Přiřadit k akci“, datum nowrap. vitest temata-priority, tsc, e2e temata-planovani (1280, 360) zelené.
 
+- Bod 3 HOTOVO (`6cce1ce`): Správa = h1 + PageCall (popis + Pozvat), Domů „Co tě čeká“ + „Zobrazit celý plán“
+  v jedné řadě (`spread section-head`), `.page-head` align-items:center; Výš/Níž v ⋯ tématu skryté při `hledat`
+  (useSearchParams v TopicManage), filtr Pro mou roli: „Ve filtru Pro mou roli nejde měnit pořadí. Zobrazit všechna“.
+  Ověřeno jen tsc + eslint. NEOVĚŘENO e2e: spusť `e2e` sady temata-planovani, geometrie, sprava*, domu*
+  (windows-1280, telefon-360) – testy hledající starý text „Pořadí měníš v zobrazení Všechna“ nebo
+  `.section-actions` na Domů případně upravit.
+
 ## Pořadí práce (jednotka = změna + cílený test + commit + push)
 1. ~~Zápisy k dokončení~~ hotovo (viz výše).
 2. ~~Mobilní menu~~ hotovo.
-3. Témata ČÁSTEČNĚ (viz Hotovo). Zbývá: PageCall (`src/components/PageCall.tsx`, grid hotový)
-   nasadit i na Domů a Správa. DnD při filtru/hledání zakázané (TopicsSection.tsx:29) – ověřit hlášku + reset.
+3. ~~Témata~~ hotovo; nejdřív jen ověřit e2e z bodu výše.
 4. Náhled role: přepnutí z nepřístupné trasy (Správa/Integrace) → přesměrovat na Domů/Plán; jeden stručný
    banner „Náhled: … · jen ke čtení“ + Ukončit náhled, bez seznamu stránek; oslovovat efektivní osobu.
 5. Plán mobil: filtry Všechny/Povinné/Dobrovolné/Moje 2×2, Dnes k navigaci měsíce, čas nezalomitelný,
