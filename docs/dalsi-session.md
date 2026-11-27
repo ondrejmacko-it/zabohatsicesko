@@ -44,7 +44,7 @@ Další související chybu opravit a doložit regresním testem. Cíl: funkčn�
   pořízeno kopií specu s expect.soft – před úpravou: karta nad formulářem, bez podbarvení, bez info o Kalendáři).
   Správce je ve všech skupinách → „správce dobrovolná“ v seedu nejde (uvést v reportu).
 - Ověřeno na cb655cc/15fc144: lint 0 chyb, tsc OK, vitest 69 souborů / 628 testů OK, build OK,
-  ucast-karta 15 passed. Celá e2e (1767 testů): E2E_VYSLEDEK.
+  ucast-karta 15 passed. Celá e2e (1767 testů) NEDOBĚHLA (přerušena kvůli limitu kontextu) → spustit na pozadí jako první: `npx playwright test --trace off --reporter=dot > log` a vyhodnotit tail.
 - Matice bod 7 rozpracovaná (nic necommitnuto): mapování F01–F18 → testy v `docs/pozadavky-f01-f18.md` ř. 106–130
   platí (soubory existují); POZOR texty F04 v ř. 132–140 jsou zastaralé (bod 4 změnil `calendar-note.ts`).
   Zvlášť nalezeno: hromadný výběr `priprava-mesice.spec.ts:142`, F08 `…f06-f09.spec.ts:67/93`; souběh výběru
