@@ -5369,3 +5369,22 @@ body[data-moving] .quick-actions,
     max-height: none;
   }
 }
+
+/* Omluva: volby důvodu v barvách aplikace místo nativní modré, na telefonu řádek 44 px pro prst. */
+.excuse-reason {
+  align-items: center;
+  gap: 10px;
+}
+
+.excuse-reason input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--ochre);
+}
+
+@media (max-width: 640px) {
+  .excuse-reason {
+    min-height: 44px;
+  }
+}
