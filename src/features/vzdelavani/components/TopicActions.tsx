@@ -35,8 +35,10 @@ export function InterestButton({ topicId, interested, titleId, locked = false }:
   if (locked || previewLocked) {
     // Náhled: stejné tlačítko a stav zájmu jako u kolegy, jen zamčené (server změnu v náhledu stejně odmítne).
     return (
-      <button type="button" className={interested ? "btn btn-small interest-on" : "btn btn-small"} aria-pressed={interested} aria-describedby={titleId} disabled title={PREVIEW_READ_ONLY}>
-        {interested && <Icon name="check" />}
+      <button type="button" className={interested ? "btn btn-small interest-btn interest-on" : "btn btn-small interest-btn"} aria-pressed={interested} aria-describedby={titleId} disabled title={PREVIEW_READ_ONLY}>
+        <span className="interest-check" aria-hidden="true">
+          <Icon name="check" />
+        </span>
         Mám zájem
       </button>
     );
@@ -47,12 +49,14 @@ export function InterestButton({ topicId, interested, titleId, locked = false }:
       <input type="hidden" name="interested" value={interested ? "false" : "true"} />
       <button
         type="submit"
-        className={interested ? "btn btn-small interest-on" : "btn btn-small"}
+        className={interested ? "btn btn-small interest-btn interest-on" : "btn btn-small interest-btn"}
         aria-pressed={interested}
         aria-describedby={titleId}
         disabled={pending}
       >
-        {interested && <Icon name="check" />}
+        <span className="interest-check" aria-hidden="true">
+          <Icon name="check" />
+        </span>
         Mám zájem
       </button>
       {state && !state.ok && <ActionMessage state={state} />}

@@ -1833,6 +1833,15 @@ details > summary {
   list-style: none;
 }
 
+/* Fajfka je v tlačítku vždy, mimo zájem jen neviditelná: přepnutí nemění šířku a řádek neposkočí. */
+.interest-btn:not(.interest-on) > .interest-check {
+  visibility: hidden;
+}
+
+.interest-check {
+  display: inline-flex;
+}
+
 .interest-on {
   /* Aktivní zájem je plný zelený, neaktivní obrysový: rozdíl je vidět i na okrovém řádku garantovaného tématu. */
   border-color: var(--ok);
@@ -2887,7 +2896,8 @@ a.brief-link:hover {
   }
 }
 
-/* Nejužší telefony: počet zájemců a tlačítka by se do jednoho řádku nevešly, tlačítka jdou pod něj. */
+/* Nejužší telefony: počet zájemců a tlačítka by se do jednoho řádku nevešly, tlačítka jdou pod něj.
+   Platí i u správce: spodní řádky začínají u levého okraje, pod úchytem nezůstává prázdný pruh. */
 @media (max-width: 360px) {
   .topic-row > .topic-interest {
     grid-column: 1 / -1;
@@ -2896,11 +2906,6 @@ a.brief-link:hover {
   .topic-row > .topic-actions {
     grid-column: 1 / -1;
     justify-content: flex-start;
-  }
-
-  .topic-has-lead > .topic-interest,
-  .topic-has-lead > .topic-actions {
-    grid-column: 2 / -1;
   }
 }
 

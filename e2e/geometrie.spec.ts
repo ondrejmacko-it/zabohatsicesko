@@ -56,3 +56,27 @@ test.describe("Témata: hlavička a lišta", () => {
     await expectNoHorizontalScroll(page);
   });
 });
+
+test.describe("Řádek tématu", () => {
+  test.use({ storageState: authFile("spravce") });
+  test("Mám zájem nemění šířku a spodní řádek správce začíná u levého okraje", async ({ page }) => {
+    await page.goto("/vzdelavani/temata?filtr=vse");
+    await settle(page);
+    // Řádek se drží podle id: filtr podle stavu tlačítka by po kliknutí ukázal na jiné téma.
+    const id = await page.locator(".topic-row.topic-has-lead").filter({ has: page.locator(".interest-btn:not(.interest-on)") }).first().getAttribute("data-topic");
+    const row = page.locator(`.topic-row[data-topic="${id}"]`);
+    const button = row.locator(".interest-btn");
+    const before = (await button.boundingBox())!;
+    await button.click();
+    await expect(row.locator(".interest-btn")).toHaveAttribute("aria-pressed", "true");
+    const after = (await row.locator(".interest-btn").boundingBox())!;
+    expect(Math.abs(after.width - before.width), "šířka bez skoku").toBeLessThan(1);
+    await row.locator(".interest-btn").click();
+    await expect(row.locator(".interest-btn")).toHaveAttribute("aria-pressed", "false");
+    if (page.viewportSize()!.width <= 360) {
+      const rowBox = (await row.boundingBox())!;
+      const interest = (await row.locator(".topic-interest").boundingBox())!;
+      expect(interest.x - rowBox.x, "bez prázdného pruhu vlevo").toBeLessThan(20);
+    }
+  });
+});
