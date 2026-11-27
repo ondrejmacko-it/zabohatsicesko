@@ -1,8 +1,8 @@
-import { eq } from "drizzle-orm";
+import { and, eq, isNotNull, ne } from "drizzle-orm";
 import { beforeEach, describe, expect, test } from "vitest";
 import { syncEvent } from "@/server/calendar/sync";
 import { getDb } from "@/server/db/client";
-import { calendarLinks, minutes, simCalendarEvents, users } from "@/server/db/schema";
+import { calendarLinks, events, minutes, simCalendarEvents, users } from "@/server/db/schema";
 import { config } from "@/server/config";
 import { listPublishedMinutes, listTasks } from "@/server/services/journey";
 import { processTranscriptionJob, approveMinutes, uploadRecording } from "@/server/services/recordings";
@@ -56,6 +56,20 @@ describe("Moje cesta a Zápisy", () => {
     await db.update(calendarLinks).set({ syncStatus: "attention", errorCode: "calendar_revoked" }).where(eq(calendarLinks.eventId, any!.eventId));
     expect((await listTasks(organizer)).map((t) => t.action)).toContain("Vyřešit pozvánku");
     expect((await listTasks(participant)).map((t) => t.action)).not.toContain("Vyřešit pozvánku");
+  });
+
+  test("víc zaseknutých pozvánek se sloučí do jednoho úkolu s počtem", async () => {
+    const db = await getDb();
+    const [link] = await db.select().from(calendarLinks).limit(1);
+    // Ukázková data mají jednu vazbu, druhou zaseknutou pozvánku přidá test k jiné zveřejněné akci.
+    const [other] = await db.select({ id: events.id }).from(events).where(and(eq(events.orgId, config.orgId), ne(events.id, link!.eventId), isNotNull(events.published))).limit(1);
+    await db.insert(calendarLinks).values({ ...link!, eventId: other!.id, externalEventId: null });
+    await db.update(calendarLinks).set({ syncStatus: "attention", errorCode: "calendar_revoked" });
+    const links = await db.select().from(calendarLinks);
+    const tasks = await listTasks(organizer);
+    expect(tasks.filter((t) => t.key.startsWith("kalendar-") && t.key !== "kalendar-propojeni")).toEqual([
+      expect.objectContaining({ key: "kalendar-pozvanky", title: `Pozvánky k vyřešení: ${links.length}`, count: links.length, action: "Vyřešit pozvánky" }),
+    ]);
   });
 });
 

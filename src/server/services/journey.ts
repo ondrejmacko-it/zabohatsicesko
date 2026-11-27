@@ -273,8 +273,15 @@ export async function listTasks(viewer: Viewer): Promise<JourneyTask[]> {
       .from(calendarLinks)
       .innerJoin(events, eq(events.id, calendarLinks.eventId))
       .where(and(eq(events.orgId, config.orgId), eq(calendarLinks.syncStatus, "attention")));
-    for (const { event } of stuck) {
-      tasks.push({ key: `kalendar-${event.id}`, title: event.published?.label ?? "Akce", detail: "Pozvánka v Kalendáři neodpovídá Wiki a čeká na tvůj zásah.", href: `/vzdelavani/akce/${event.id}?odkud=prehled#kalendar`, action: "Vyřešit pozvánku", eventType: event.published?.type });
+    const inviteHref = (id: string) => `/vzdelavani/akce/${id}?odkud=prehled#kalendar`;
+    if (stuck.length === 1) {
+      const { event } = stuck[0]!;
+      tasks.push({ key: `kalendar-${event.id}`, title: event.published?.label ?? "Akce", detail: "Pozvánka v Kalendáři neodpovídá Wiki a čeká na tvůj zásah.", href: inviteHref(event.id), action: "Vyřešit pozvánku", eventType: event.published?.type });
+    } else if (stuck.length > 1) {
+      // Víc zaseknutých pozvánek má obvykle jednu příčinu (odvolaný Kalendář), proto jeden řádek místo seznamu.
+      const labels = stuck.slice(0, 3).map(({ event }) => event.published?.label ?? "Akce").join(", ");
+      const more = stuck.length > 3 ? " a další" : "";
+      tasks.push({ key: "kalendar-pozvanky", title: `Pozvánky k vyřešení: ${stuck.length}`, detail: `Neodpovídají Wiki: ${labels}${more}. Začni první, další najdeš v jejich akcích.`, href: inviteHref(stuck[0]!.event.id), action: "Vyřešit pozvánky", count: stuck.length });
     }
     // Bez garantovaných témat doporučení i doplnění měsíce vychází jen ze zájmu. Úkol zmizí po nastavení prvního.
     const [topicState] = await db
