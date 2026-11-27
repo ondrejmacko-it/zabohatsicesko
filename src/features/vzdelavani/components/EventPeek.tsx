@@ -67,7 +67,6 @@ export async function EventPeek({ user, eventId, preview, closeHref, presetTopic
       </div>
       {card.planStatus === "draft" && <span>Kolegové ho zatím nevidí.</span>}
       {advice && <span>{advice}</span>}
-      {preview && <span>Pohled: {preview.label} · jen ke čtení.</span>}
       {card.planStatus === "cancelled" && detail.cancelReason && <span>Důvod: {detail.cancelReason}</span>}
     </div>
   );

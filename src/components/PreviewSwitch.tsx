@@ -54,7 +54,7 @@ export function PreviewSwitch({ groups, people, active }: { groups: Option[]; pe
   );
 }
 
-/** Pruh pod lištou při aktivním náhledu: čí pohled to je, že je jen ke čtení a kde platí. */
+/** Jeden stručný pruh pod lištou při aktivním náhledu: čí pohled to je a že je jen ke čtení. */
 export function PreviewBar({ label }: { label: string }) {
   const pathname = usePathname();
   const applies = previewApplies(pathname);
@@ -63,18 +63,17 @@ export function PreviewBar({ label }: { label: string }) {
       <p>
         {applies ? (
           <>
-            Pohled: <strong>{label}</strong> · jen ke čtení
+            Náhled: <strong>{label}</strong> · jen ke čtení
           </>
         ) : (
           <>
             Náhled <strong>{label}</strong> tu neplatí, stránka používá tvůj účet
           </>
         )}
-        <span className="preview-bar-where"> · Domů, Plán, Témata, Zápisy, detail akce, Správa a Integrace</span>
       </p>
       <form action={endPreview}>
         <button className="btn btn-small" type="submit">
-          Ukončit pohled
+          Ukončit náhled
         </button>
       </form>
     </div>

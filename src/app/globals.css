@@ -4962,10 +4962,6 @@ body[data-moving] .quick-actions,
   margin: 0;
 }
 
-.preview-bar-where {
-  color: var(--ink-soft);
-}
-
 @media (max-width: 640px) {
   /* Na telefonu má Pohled vlastní řádek pod značkou: celá šířka, bez oddělovače, dlouhý název se zkrátí. */
   .view-switch {
@@ -4987,8 +4983,7 @@ body[data-moving] .quick-actions,
     text-overflow: ellipsis;
   }
 
-  .view-switch-label,
-  .preview-bar-where {
+  .view-switch-label {
     display: none;
   }
 
