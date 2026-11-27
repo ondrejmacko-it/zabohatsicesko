@@ -114,7 +114,10 @@ test.describe("správce: karta účasti po formuláři editace", () => {
 });
 
 test.describe("účastník: stavy karty účasti", () => {
-  test.use({ storageState: authFile("ucastnikRm") });
+  // Desktop zapisuje jako účastník FP (jako `ucast.spec.ts`): telefon tam mění účast RM a bere jeho poslední
+  // nepovinnou akci. Odhlášení RM odsud by mu ji vzalo a F04 by otevřel už proběhlou akci bez akcí.
+  // FP tu bere první budoucí akce (tr-rm-1112, ev-11-18), `ucast.spec.ts` poslední (ev-11-20, ev-11-24, ev-11-26).
+  test.use({ storageState: authFile("ucastnikFp") });
 
   test("povinná, omluva, omluveno, přihlášení a odhlášení", async ({ page }, info) => {
     let dialog = await openByClick(page, { state: "required" });
