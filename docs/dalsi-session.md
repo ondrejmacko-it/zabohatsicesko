@@ -1,8 +1,8 @@
-# Navazující relace (stav 27. 11. 2026, relace 54)
+# Navazující relace (stav 27. 11. 2026, relace 55)
 
 Cíl: finální responzivní audit a mobilní UX (zadání vlastníka body 1–23, zhuštěně v promptu relace 47/48).
 Žádný redesign desktopu, merge, deploy, produkční DB, živý Google ani Make. Na konci draft PR + report.
-Větev `claude/oprava-mobilni-responzivita` z main `01db12f`, HEAD `b4d1f1c` (+ tato předávka). PR zatím není.
+Větev `claude/oprava-mobilni-responzivita` z main `01db12f`, HEAD `c81ca59` (+ tato předávka). PR zatím není.
 
 ## Screenshoty vlastníka (16 ks, Android Chrome, ~347 CSS px, zdelavani-demo.vercel.app, správce Google)
 Zip: `/root/.claude/uploads/df1d1066-197f-551e-8282-0e240871cc1e/56421696-ZBC_mobilni_screenshoty_2026-11-27.zip`
@@ -68,16 +68,26 @@ desktop regrese, matice rozlišení, celá sada, před/po screenshoty, draft PR 
   sheet), vejde se na 320–390. Test `e2e/okno-omluvy.spec.ts` (ukázka účasti 3313, ev-11-24, nic neodesílá;
   bez opravy 3 padají). tsc, eslint OK. Patička okna akce na 347 px má v Chromiu už jen 2 řádky – hotovo.
 
+- 0b3e8f1 pás stavu okna akce (≤640: řádek s flex-wrap, 6px 10px, 13 px). Test `e2e/pas-stavu.spec.ts`
+  (320/347/390 + desktop sloupec; bez opravy padá). S okno-akce, mobilni-ovladani telefon-390/320 + windows: 29 OK.
+- c81ca59 mimořádný den v `EventDialog.tsx` = `.notice` (okrová) `role="status"` místo `notice-danger`/alert.
+  Test `e2e/mimoradny-termin.spec.ts` (ev-11-27, datum 23. 11., nic neukládá; bez opravy padá). tsc, eslint OK.
+- Pozn.: `--no-deps` potřebuje `e2e/.auth/*.json` – v nové relaci nejdřív
+  `npx playwright test --project=prihlaseni --no-deps --trace off --reporter=line`.
+
 ## Další krok
-1. Banner v okně akce = `.status-band` (`EventPeek.tsx` ř. ~58, CSS `globals.css` ř. ~2395, tón
-   `status-regular` zelený). Na ≤640 zkompaktnit: menší padding (6px 10px), 13 px, štítky a text v jednom
-   toku (flex-wrap řádek místo sloupce). Test: výška pásu ≤ ~48 px na 347 px u zveřejněné akce bez textu,
-   nic nepřetéká. Desktop beze změny. Pak předání bodu 3 dál: oddělení „Tvoje účast“ = jen návrh vlastníkovi.
-2. Bod 4: Combobox místo nativních selectů (PreviewSwitch, vedoucí, téma – useknuté, skupina), Domů + oslovení,
-   notice-danger u mimořádného termínu (EventDialog ř. ~475) → info, „Kalendář: stav neznámý“.
+1. Bod 4: Combobox místo nativních selectů. `Combobox.tsx` je volnotextový – doplnit prop pro režim „jen z
+   nabídky“ (value ≠ label, hodnota v hidden input, skupiny už umí). Pořadí: `PreviewSwitch.tsx` (optgroup,
+   auto-submit `requestSubmit`), pak `EventDialog.tsx` ř. 424 vedoucí, ř. 440 Pro koho, ř. 509 schvalovatel;
+   téma (useknuté) ověřit, zda už je Combobox. Každý zvlášť jako jednotka s e2e testem.
+2. Domů + oslovení do účtu (Menu „Účet“ v `Topbar.tsx`).
 3. Bod 5: audit, desktop regrese, celá sada, před/po screenshoty, draft PR + report.
 
 ## Otevřené otázky pro vlastníka
 - Odsazení na telefonu: tři vnořené okraje (shell 12 + panel 16 + sekce 14) berou 42 px na stranu. Zúženo zatím
   jen na Plánu; má se srovnat globálně? „Vybrat návrhy“ přesunout do nabídky Filtry (ušetří řádek)?
 - Velká okna na telefonu přes celou obrazovku (4aed6d4) – vyhovuje, nebo radši bottom sheet s kouskem stránky?
+- „Kalendář: stav neznámý“ (`src/lib/calendar-note.ts`): null vrací `ownCalendarState` v osobním režimu
+  (`CALENDAR_DELIVERY=personal`, dočasný) a u allowlistu testovacích příjemců. Pravdivá věta pro tyto režimy =
+  doménové rozhodnutí (např. „Kalendář: Wiki tě do pozvánky nezve, akce se zapisuje do tvého kalendáře
+  Vzdělávání ZBC“ jen když je propojený). Nechat na vlastníkovi; zatím beze změny.
