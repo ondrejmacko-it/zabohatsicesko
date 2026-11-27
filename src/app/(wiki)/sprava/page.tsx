@@ -268,7 +268,18 @@ function AccountHead({
             !a.editable && a.status === "active" && <span className="small muted"> · tvůj účet</span>
           )}
         </p>
-        <p className="item-meta account-email">{a.email}</p>
+        {/* Zalomení jen před zavináčem, doména zůstane celá (pokud se vejde). */}
+        <p className="item-meta account-email">
+          {a.email.includes("@") ? (
+            <>
+              {a.email.slice(0, a.email.indexOf("@"))}
+              <wbr />
+              {a.email.slice(a.email.indexOf("@"))}
+            </>
+          ) : (
+            a.email
+          )}
+        </p>
         {/* Role štítkem (správce okrovým), skupiny vedle ní obyčejným textem: jméno, role, e-mail a skupiny
             se tak rozliší na první pohled. */}
         <p className="item-meta account-role">
