@@ -115,3 +115,37 @@ test.describe("Plán: čas na kartě agendy", () => {
     await expect(page.locator(".month-nav").getByRole("link", { name: "Dnes" })).toBeVisible();
   });
 });
+
+test.describe("Brouček nepřekrývá ovladače", () => {
+  test.use({ storageState: authFile("spravce") });
+  const overlaps = async (page: import("@playwright/test").Page, selector: string) =>
+    page.evaluate((sel) => {
+      const bug = document.querySelector<HTMLElement>("[data-testid=broucek]");
+      if (!bug || bug.offsetParent === null) return [];
+      const b = bug.getBoundingClientRect();
+      return Array.from(document.querySelectorAll<HTMLElement>(sel))
+        .filter((el) => el.offsetParent !== null)
+        .map((el) => el.getBoundingClientRect())
+        .filter((r) => r.left < b.right && r.right > b.left && r.top < b.bottom && r.bottom > b.top)
+        .map((r) => `${Math.round(r.left)},${Math.round(r.top)}`);
+    }, selector);
+
+  test("otevřené menu ⋯ ve Správě", async ({ page }) => {
+    await page.goto("/sprava");
+    await settle(page);
+    await page.getByRole("button", { name: /Možnosti účtu/ }).last().click();
+    await expect(page.locator(".menu-list:not([hidden])")).toBeVisible();
+    await page.waitForTimeout(300);
+    expect(await overlaps(page, ".menu-list:not([hidden]) .btn")).toEqual([]);
+  });
+
+  test("lišta Vybrat návrhy v Plánu", async ({ page }) => {
+    await page.goto("/vzdelavani/harmonogram");
+    await settle(page);
+    await page.getByRole("button", { name: "Vybrat návrhy" }).click();
+    const bar = page.getByRole("region", { name: "Hromadný výběr návrhů" });
+    await expect(bar).toBeVisible();
+    await page.waitForTimeout(300);
+    expect(await overlaps(page, '[aria-label="Hromadný výběr návrhů"] .btn')).toEqual([]);
+  });
+});
