@@ -78,6 +78,7 @@ test.describe("Plán: přidání akce na den @desktop", () => {
     // Cesta bez myši: okno akce → datum rovnou v poli → Uložit jako návrh. Vrátí akci na původní den.
     await cell(page, "2026-11-24").locator('[data-move-id="ev-11-25"]').click();
     const win = page.getByRole("dialog", { name: "Trénink poradců" });
+    await win.getByRole("link", { name: "Upravit akci" }).click();
     await win.getByLabel("Datum", { exact: true }).fill("2026-11-25");
     await win.getByRole("button", { name: "Uložit jako návrh" }).click();
     await expect(win).toBeHidden();

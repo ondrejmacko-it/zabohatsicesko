@@ -254,7 +254,7 @@ test.describe("okno akce: ochrana neuložených změn", () => {
   });
 
   test("okno akce: změna se při zavření ohlásí, Zahodit změny je zahodí", async ({ page }) => {
-    await page.goto("/vzdelavani/harmonogram?mesic=2026-11&akce=ev-11-24");
+    await page.goto("/vzdelavani/harmonogram?mesic=2026-11&akce=ev-11-24&upravit=1");
     await settle(page);
     const window = page.getByRole("dialog").filter({ has: page.getByLabel(/^Téma/) });
     await window.getByLabel(/^Téma/).fill("Neuložená změna");
@@ -263,7 +263,7 @@ test.describe("okno akce: ochrana neuložených změn", () => {
     await expect(confirm).toBeVisible();
     await confirm.getByRole("button", { name: "Zahodit změny" }).click();
     await expect(window).toBeHidden();
-    await page.goto("/vzdelavani/harmonogram?mesic=2026-11&akce=ev-11-24");
+    await page.goto("/vzdelavani/harmonogram?mesic=2026-11&akce=ev-11-24&upravit=1");
     await settle(page);
     await expect(page.getByRole("dialog").getByLabel(/^Téma/)).toHaveValue("");
   });
@@ -274,7 +274,7 @@ test.describe("okno akce: zahození neveřejných změn se potvrzuje @desktop", 
 
   test("Zahodit změny se nejdřív zeptá, Zpět nic nezahodí, potvrzení vrátí zveřejněnou verzi", async ({ page }, info) => {
     test.skip(info.project.name !== "windows-1280", "Zapisuje do sdílených dat ukázky, stačí jeden projekt.");
-    await page.goto("/vzdelavani/harmonogram?mesic=2026-11&akce=ev-11-26");
+    await page.goto("/vzdelavani/harmonogram?mesic=2026-11&akce=ev-11-26&upravit=1");
     await settle(page);
     const window = page.getByRole("dialog").filter({ has: page.getByLabel(/^Vede/) });
     await chooseOption(window, /^Vede/, { label: "Správce ZBC ukázky" });
@@ -303,7 +303,7 @@ test.describe("okno akce: zahození neveřejných změn se potvrzuje @desktop", 
     await expect(original).toHaveCSS("transition-duration", "0s");
     await page.emulateMedia({ reducedMotion: null });
     await page.mouse.move(0, 0);
-    await page.goto("/vzdelavani/harmonogram?mesic=2026-11&akce=ev-11-26");
+    await page.goto("/vzdelavani/harmonogram?mesic=2026-11&akce=ev-11-26&upravit=1");
     await settle(page);
     const notice = window.getByText("Kolegové a Kalendář zatím vidí zveřejněnou verzi.");
     await expect(notice).toBeVisible();

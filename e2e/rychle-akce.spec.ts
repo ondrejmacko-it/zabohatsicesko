@@ -125,7 +125,7 @@ test.describe("Rychlé akce ⋯ u návrhu @desktop", () => {
     expect(newId).not.toBe("ev-11-18");
     const win = page.getByRole("dialog", { name: "Portfolio tým" });
     await expect(win).toContainText("Kolegové ho zatím nevidí");
-    await expect(win.getByLabel(/^Téma/)).toHaveValue("Porovnání dvou postupů");
+    await expect(win).toContainText("Porovnání dvou postupů");
   });
 });
 

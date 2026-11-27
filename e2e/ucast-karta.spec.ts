@@ -95,6 +95,7 @@ test.describe("správce: karta účasti po formuláři editace", () => {
 
   test("změna účasti neuloží ani nezahodí rozpracovanou editaci akce", async ({ page }) => {
     const dialog = await openByClick(page, { id: "ev-11-24", state: "required" });
+    await dialog.getByRole("link", { name: "Upravit akci" }).click();
     // Název v plánu je u některých typů jen pro čtení, rozpracovaná je proto poznámka/čas konce.
     const label = dialog.locator('input[name="endTime"]');
     const draft = "11:45";

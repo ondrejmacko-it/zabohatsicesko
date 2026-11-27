@@ -6,7 +6,7 @@ test.use({ storageState: authFile("spravce") });
 
 test("mimořádný den v okně akce je informace, ne chyba", async ({ page }) => {
   // Budoucí akce: proběhlé mají termín jen ke čtení.
-  await page.goto("/vzdelavani/harmonogram?akce=ev-11-27");
+  await page.goto("/vzdelavani/harmonogram?akce=ev-11-27&upravit=1");
   await settle(page);
   const dialog = page.locator("dialog[open]");
   await dialog.getByLabel("Datum", { exact: true }).fill("2026-11-23");

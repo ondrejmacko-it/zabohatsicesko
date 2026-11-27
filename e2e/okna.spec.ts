@@ -204,7 +204,7 @@ test.describe("okna správce", () => {
   });
 
   test("Zveřejnit změny termínu: dopad v samostatném potvrzení @desktop", async ({ page }) => {
-    await page.goto("/vzdelavani/harmonogram?akce=ev-11-18");
+    await page.goto("/vzdelavani/harmonogram?akce=ev-11-18&upravit=1");
     await settle(page);
     const win = dialog(page, "Portfolio tým");
     await expect(win).toBeVisible();
@@ -445,7 +445,7 @@ test.describe("technické informace jen pro správu", () => {
       const count = await items.count();
       expect(count).toBeGreaterThan(1);
       for (let i = 0; i < count; i++) await expect(items.nth(i).locator("svg")).toHaveCount(1);
-      await expect(list.getByRole("link", { name: "Technické informace" })).toBeVisible();
+      await expect(list.getByRole("link", { name: "Otevřít podrobnosti" })).toBeVisible();
       // Zrušení akce je až za oddělovačem, na konci nabídky.
       await expect(list.locator(".menu-divider + .menu-danger")).toContainText("Zrušit akci");
     });
