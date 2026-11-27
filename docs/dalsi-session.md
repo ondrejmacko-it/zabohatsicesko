@@ -1,8 +1,8 @@
-# Navazující relace (stav 27. 11. 2026, relace 57)
+# Navazující relace (stav 27. 11. 2026, relace 58)
 
 Cíl: finální responzivní audit a mobilní UX (zadání vlastníka body 1–23, zhuštěně v promptu relace 47/48).
 Žádný redesign desktopu, merge, deploy, produkční DB, živý Google ani Make. Na konci draft PR + report.
-Větev `claude/oprava-mobilni-responzivita` z main `01db12f`, HEAD `c5cbb13` (+ tato předávka). PR zatím není.
+Větev `claude/oprava-mobilni-responzivita` z main `01db12f`, HEAD `c304fa1` (+ tato předávka). PR zatím není.
 Screenshoty vlastníka (Android ~347 px) v relaci už nejsou; pro další dialogy požádat o nové (do repa nedávat).
 
 ## Hotovo (commity, vše s cíleným e2e testem, který bez opravy padá)
@@ -18,13 +18,16 @@ Screenshoty vlastníka (Android ~347 px) v relaci už nejsou; pro další dialog
   helper `choosePreview`.
 - c5cbb13 okno akce: Vede, Pro koho, Kdo zkontroluje zápis = `Combobox selectOnly` (div.field + label htmlFor,
   „Jen vedoucí“ = value ""), helper `chooseOption(scope, label, {value}|{label})` v `e2e/support.ts` –
-  `e2e/okno-akce-vyber.spec.ts`. Typ zůstává nativní select.
+  `e2e/okno-akce-vyber.spec.ts`.
+- e88847b velké okno ≤640: okraj těla 12, `.form-main` 10 px → Téma 86 % šířky – `e2e/okno-akce-sirka.spec.ts`.
+- c304fa1 Typ v okně akce = Combobox selectOnly; testy volí Typ přes `chooseOption` (okna, vyber-kontext,
+  pristupnost, temata-planovani). V okně akce už žádný nativní select.
 
-## Ověřeno (c5cbb13)
-- okno-akce-vyber, priprava-mesice, temata-planovani, pristupnost, okna, okno-akce, mimoradny-termin, pas-stavu,
-  mobilni-ovladani na windows-1280 + telefon-390/320: 185 OK; rychle-akce, vyber-kontext, kdo-tema,
-  plan-planovani 30 OK; temata-planovani + vyber-navrhu v `zapis-temat` 4 OK. tsc, eslint OK.
-- Celá sada naposledy jen na main (1475 OK, Vitest 628/628) – před PR spustit celou.
+## Ověřeno (c304fa1)
+- okno-akce-*, okna, pas-stavu, mobilni-ovladani, okno-omluvy, pristupnost, vyber-kontext, mimoradny-termin,
+  klavesnice, priprava-mesice, rychle-akce, plan-planovani, temata-planovani (+ zapis-temat) na windows-1280
+  a telefon-390/320 OK. tsc, eslint OK. Prettier v repu nevynucován (globals.css nepřeformátovávat).
+- Celá sada (Vitest + Playwright) spuštěna v relaci 58 na c304fa1; výsledek v relaci 59 ověřit znovu, pokud chybí zde.
 
 ## Technika
 - `npm ci`; Playwright si server spustí sám (build + 3310/3311/3313). Před `--no-deps` nejdřív
@@ -33,11 +36,9 @@ Screenshoty vlastníka (Android ~347 px) v relaci už nejsou; pro další dialog
   Zápisové testy témat jen v projektu `zapis-temat`. Mobilní CSS = bloky na konci `src/app/globals.css`.
 
 ## Další krok
-1. Téma v okně akce na 347 px: input má clientWidth jen 236 px (scrollWidth 402 u dlouhého názvu). Zjistit proč
-   (form-grid, padding, sloupec?), na ≤640 dát poli celou šířku těla okna; test šířka pole ≥ 85 % `.dialog-body`.
-   Případně Typ (`EventDialog.tsx` ~ř. 371) taky na Combobox selectOnly.
-2. Domů + oslovení do účtu (Menu „Účet“ v `Topbar.tsx`; „Upravit oslovení“ teď pod pozdravem na Domů).
-3. Bod 5: audit ostatních obrazovek, desktop regrese, celá sada, před/po screenshoty, draft PR + report.
+1. Bod 5: krátký audit ostatních obrazovek na 347 px (jen nálezy, malé opravy), před/po screenshoty do
+   scratchpadu (ne do repa), draft PR podle `.github/pull_request_template.md` + report vlastníkovi.
+   Do PR: Google účet v liště ověřen jen CSS; no-JS Zobrazit u Pohledu pryč; simulace vs. živý test.
 
 ## Otevřené otázky pro vlastníka
 - Odsazení na telefonu (shell 12 + panel 16 + sekce 14 = 42 px/stranu) zúženo jen na Plánu – srovnat globálně?
@@ -46,3 +47,5 @@ Screenshoty vlastníka (Android ~347 px) v relaci už nejsou; pro další dialog
 - „Kalendář: stav neznámý“ (`src/lib/calendar-note.ts`, osobní režim / allowlist) – pravdivá věta je doménové
   rozhodnutí vlastníka; zatím beze změny.
 - Oddělení osobní účasti od editace v okně akce (EventPeek → kompaktní detail + „Upravit akci“) – návrh předložit.
+- Domů + oslovení do účtu: `SalutationForm` je dle komentáře záměrně pod pozdravem (D03, zamčený v náhledu
+  D4 1:1). Přesunout do Menu „Účet“, nebo jen přidat odkaz? Co přesně znamená „Domů do účtu“? Zatím beze změny.
