@@ -101,6 +101,7 @@ test.describe("správce: karta účasti po formuláři editace", () => {
     const draft = "11:45";
     await label.fill(draft);
     await dialog.locator("[data-ucast-panel]").getByRole("button", { name: "Omluvit se" }).click();
+    await page.getByRole("dialog", { name: "Omluvit se z akce?" }).getByLabel("Nemoc").check();
     await page.getByRole("dialog", { name: "Omluvit se z akce?" }).getByRole("button", { name: "Omluvit se" }).click();
     await expect(dialog.locator('[data-ucast-panel="excused"]')).toBeVisible();
     await expect(label).toHaveValue(draft);
@@ -129,6 +130,8 @@ test.describe("účastník: stavy karty účasti", () => {
     const excuse = page.getByRole("dialog", { name: "Omluvit se z akce?" });
     for (const reason of ["Nemoc", "Dovolená", "Jiné"]) await expect(excuse.getByLabel(reason)).toBeVisible();
     await expect(excuse).toContainText("Důvod a poznámku vidíš ty a tvůj oprávněný nadřízený. Do Google Kalendáře se neposílají.");
+    // Důvod není předvybraný: omluva bez vědomé volby neprojde.
+    await expect(excuse.locator('input[name="reason"]:checked')).toHaveCount(0);
     await excuse.getByLabel("Nemoc").focus();
     await page.keyboard.press("ArrowDown");
     await expect(excuse.getByLabel("Dovolená")).toBeChecked();

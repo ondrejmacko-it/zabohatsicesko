@@ -150,7 +150,7 @@ export function ParticipationPanel({ eventId, state, label, actions, excuse, cal
   );
 }
 
-/** Omluva: důvod (Nemoc / Dovolená / Jiné) a volitelná poznámka v samostatném okně. */
+/** Omluva: důvod (Nemoc / Dovolená / Jiné, záměrně nepředvybraný) a volitelná poznámka v samostatném okně. */
 function ExcuseButton({ eventId }: { eventId: string }) {
   const [open, setOpen] = useState(false);
   const lock = lockedProps(usePreviewLock());
@@ -174,9 +174,9 @@ function ExcuseButton({ eventId }: { eventId: string }) {
             <input type="hidden" name="change" value="excuse" />
             <fieldset className="field">
               <legend className="field-label">Důvod</legend>
-              {EXCUSE_REASONS.map((reason, index) => (
+              {EXCUSE_REASONS.map((reason) => (
                 <label key={reason} className="row excuse-reason">
-                  <input type="radio" name="reason" value={reason} defaultChecked={index === 0} required /> {EXCUSE_REASON_LABELS[reason]}
+                  <input type="radio" name="reason" value={reason} required /> {EXCUSE_REASON_LABELS[reason]}
                 </label>
               ))}
             </fieldset>

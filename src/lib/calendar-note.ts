@@ -8,14 +8,14 @@ import type { ParticipationState } from "@/lib/types";
  */
 export type OwnCalendar = { link: "none" | "synced" | "pending" | "attention"; inCalendar: boolean };
 
-const FAILED = "Kalendář: synchronizace selhala, Wiki ji zkusí znovu.";
-const SYNCED = "Kalendář: synchronizováno.";
-const PENDING = "Kalendář: synchronizace čeká.";
-const UNKNOWN = "Kalendář: stav neznámý.";
+const FAILED = "Kalendář: zápis se nepodařil, Wiki to zkusí znovu.";
+const SYNCED = "Kalendář: pozvánka potvrzena systémem.";
+const PENDING = "Kalendář: aktualizuje se.";
+const UNKNOWN = "Kalendář: stav nelze ověřit.";
 
 /**
  * Věta o Kalendáři v panelu „Tvoje účast“. Účast se ukládá ve Wiki hned; Kalendář se k ní jen synchronizuje,
- * proto věta říká stav synchronizace (synchronizováno / čeká / selhalo / neznámý), ne slib doručení pozvánky.
+ * proto věta říká stav synchronizace (potvrzeno systémem / aktualizuje se / nepodařilo se / nelze ověřit / ručně spravovaná), ne slib doručení pozvánky.
  * Povinná a dobrovolně přihlášená akce v Kalendáři má být, omluvená a nepřihlášená ne. Bez vazby (osobní
  * kalendáře, pevný seznam testovacích příjemců, výpadek) Wiki stav nezná a řekne to. Zrušená akce: null.
  *
@@ -31,10 +31,10 @@ export function calendarNote(state: ParticipationState, calendar: OwnCalendar | 
   if (guest) {
     if (inCalendar && link === "synced") return SYNCED;
     // Odesláno, a přesto mezi spravovanými hosty nejsi: v pozvánce jsi nejspíš ručně, Wiki to neověří.
-    if (link === "synced") return "Kalendář: stav neznámý, Wiki tvoji pozvánku nespravuje.";
+    if (link === "synced") return "Kalendář: ručně spravovaná pozvánka, Wiki ji neověřuje.";
     return PENDING;
   }
   if (inCalendar) return PENDING;
-  if (state === "optional") return "Kalendář: zatím tě Wiki nezve. Po přihlášení se synchronizuje.";
+  if (state === "optional") return "Kalendář: po přihlášení se pozvánka zapíše.";
   return "Kalendář: Wiki tě na akci nezve.";
 }
