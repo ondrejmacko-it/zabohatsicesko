@@ -116,7 +116,6 @@ export function AddMinutesPicker({
         </div>
       ) : (
         <>
-          <p className="hint">Vyber akci a dokonči její zápis.</p>
           <MissingMinutesList rows={rows} othersLabel={othersLabel} />
         </>
       )}

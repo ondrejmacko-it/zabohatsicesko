@@ -3103,8 +3103,23 @@ a.brief-link:hover {
   font-size: 15px;
 }
 
+/* Hledání a Stav v jedné liště i na telefonu: pole se zúží, nezalomí se pod sebe. */
 .missing-filter {
+  flex-wrap: nowrap;
   margin-bottom: 8px;
+}
+
+.missing-filter .filter-grow {
+  flex: 1 1 0;
+}
+
+.missing-filter .field:not(.filter-grow) {
+  flex: 0 1 150px;
+  min-width: 0;
+}
+
+.missing-filter .select {
+  width: 100%;
 }
 
 @media (max-width: 640px) {

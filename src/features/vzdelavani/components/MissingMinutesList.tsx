@@ -52,8 +52,13 @@ export function MissingMinutesList({ rows, othersLabel }: { rows: MissingRow[]; 
   const grouped = rows.some((r) => !r.mine);
   const hasMine = rows.some((r) => r.mine);
 
+  const mineTotal = rows.filter((r) => r.mine).length;
   return (
     <>
+      {/* Počty jednou nahoře, nadpisy skupin je neopakují. */}
+      <p className="hint missing-summary">
+        {grouped && mineTotal > 0 ? `${mineTotal} moje · ${rows.length} celkem.` : `Celkem ${rows.length}.`} Vyber akci a dokonči její zápis.
+      </p>
       {searchable && (
         <div className="filter-bar missing-filter" role="search">
           <label className="field filter-grow">
@@ -101,7 +106,7 @@ function MissingGroup({ title, rows }: { title: string; rows: MissingRow[] }) {
   return (
     <section className="missing-group" aria-label={title}>
       <h3 className="missing-group-title">
-        {title} <span className="count-badge">{rows.length}</span>
+        {title}
       </h3>
       <MissingTable rows={rows} />
     </section>
