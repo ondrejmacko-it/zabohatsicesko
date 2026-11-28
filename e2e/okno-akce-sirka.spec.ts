@@ -13,7 +13,7 @@ for (const width of [320, 347]) {
       "šířky prochází jeden telefonní projekt",
     );
     await page.setViewportSize({ width, height: 740 });
-    await page.goto("/vzdelavani/harmonogram?mesic=2026-11&akce=ev-11-26");
+    await page.goto("/vzdelavani/harmonogram?mesic=2026-11&akce=ev-11-26&upravit=1");
     await settle(page);
     const dialog = page.locator("dialog[open]");
     await expect(dialog).toBeVisible();

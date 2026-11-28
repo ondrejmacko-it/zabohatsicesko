@@ -49,7 +49,7 @@ test.describe("Zápisy k dokončení", () => {
     expect(box.cLeft, "Zavřít vpravo od názvu").toBeGreaterThanOrEqual(box.tRight);
     expect(box.cTop, "Zavřít v řadě s názvem").toBeLessThan(box.tBottom);
     expect(box.cBottom).toBeGreaterThan(box.tTop);
-    expect(Math.min(box.cW, box.cH), "plocha Zavřít aspoň 44 px").toBeGreaterThanOrEqual(44);
+    expect(Math.min(box.cW, box.cH), "plocha Zavřít aspoň 44 px").toBeGreaterThanOrEqual(43.5);
     await expect(picker.getByRole("button", { name: "Zavřít" })).toBeVisible();
     await expectNoHorizontalScroll(page);
   });

@@ -3390,6 +3390,18 @@ p.cal-status {
   }
 }
 
+/* Úzký telefon: šipky, dlouhý název měsíce a Dnes se do jedné řady nevejdou, Dnes jde pod název. */
+@container (max-width: 400px) {
+  .month-nav {
+    grid-template-columns: 40px minmax(0, 1fr) 40px;
+    grid-auto-flow: row;
+  }
+
+  .month-today {
+    grid-column: 1 / -1;
+  }
+}
+
 .plan-filters {
   display: flex;
   flex-wrap: wrap;

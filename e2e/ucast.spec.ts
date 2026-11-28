@@ -198,7 +198,7 @@ test.describe("náhled kolegy s omluvou (audit 23. 11.)", () => {
     await settle(page);
     const panel = page.locator('[data-ucast-panel="excused"]');
     await expect(panel.getByRole("heading", { name: "Účast v náhledu" })).toBeVisible();
-    await expect(panel).toContainText("Omluven/a");
+    await expect(panel).toContainText("Omluva zaznamenána.");
     await expect(panel).not.toContainText("Důvod vidíš jen ty");
     await expect(panel).not.toContainText(note);
     // Stejná tlačítka jako kolega, ale zamčená s vysvětlením; server změnu v náhledu stejně odmítne.
