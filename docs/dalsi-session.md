@@ -1,4 +1,4 @@
-# Navazující relace (stav 28. 11. 2026, relace 111)
+# Navazující relace (stav 28. 11. 2026, relace 112)
 
 Cíl: dokončit PR #97, ověřit skutečnou funkčnost (živý Google Kalendář), připravit bezpečné ostré nasazení.
 Plné zadání vlastníka (body 1–11) je v promptu navazující relace; drž se ho. Bez merge do main, bez produkčního
@@ -36,11 +36,27 @@ nezastavuje ostatní.
 4. Aktualizovat report (8 kategorií) + popis PR #97 (draft), finální testy, report vlastníkovi až na konci.
 
 ## Stav
-HEAD ee6f6ce. Ověřeno na ee6f6ce: tsc 0, eslint změněných souborů 0, next build OK, e2e menu-telefon 28/28
-(telefon-390), nahled+zpetna-vazba na telefon-390/320/windows-1280 prošly. Celá sada e2e/vitest po změně menu
-ještě NEběžela (spustit před předáním). PR body: oprav odkaz session v patičce (překlep).
+HEAD f1c1cb3 (beze změn kódu v relaci 112). Workflow referencí run 46172197766 (větev reference-vizual/pr97-menu)
+běžel od 17:45 UTC; po doběhnutí převzít snímky dle úkolu 1. Celá sada e2e/vitest po změně menu ještě NEběžela.
+PR body: oprav odkaz session v patičce (překlep).
+
+## Zjištění relace 112 (pro úkol 2–3, neověřovat znovu)
+- Vercel Production demo (zbc-vzdelavani-demo.vercel.app) běží z `main` (fa5e67f, PR #96), NE z PR #97. Production
+  env: CALENDAR_MODE/LOGIN_MODE=google-test, CALENDAR_ATTENDEES=audience, PARTICIPATION=on, CALENDAR_DELIVERY
+  (encrypted, hodnota neznámá), APPROVED_MIGRATIONS do 0019, FEEDBACK_WEBHOOK_URL (Make hook eu1) + SECRET.
+  CHYBÍ CRON_SECRET a CALENDAR_WORKER_TOKEN (čte `src/server/config.ts:195`).
+- Preview env: CALENDAR_MODE=simulation, WIKI_MODE=demo, vlastní DB proměnné, GOOGLE_* existují (OAuth redirect na
+  preview URL neověřen). Nejčistší živý test PR #97 = nasadit větev na Production demo (create_deployment
+  gitSource ref=claude/oprava-kalendare-a-prehled-ucasti, target production), doplnit APPROVED_MIGRATIONS o
+  migrace PR #97 (zjistit v `src/server/db/migrations.ts`), CRON_SECRET+CALENDAR_WORKER_TOKEN (sensitive,
+  vygenerovat `openssl rand -hex 32`, nevypisovat), CALENDAR_DELIVERY=personal. Rollback = promote dpl_DVApGnJwmapSmAnP44rLysRnd6zH.
+  Před tím přes Neon run_sql ověřit uživatele (jen testovací účty → audience bezpečné).
+- Neon projekt id `still-shadow-86247101` (výchozí větev = demo produkce).
+- Plánovač `kalendar-fronta.yml` čte vars.WIKI_URL, secrets.CALENDAR_WORKER_TOKEN, vars.CALENDAR_QUEUE_SCHEDULER;
+  schedule běží jen z default větve (ověřit, zda soubor je na main; jinak workflow_dispatch / ruční volání).
+- Výpis env Vercelu je obří: filtrovat v pythonu, nevypisovat celý.
 
 ## Technika
 - NEPOUŽÍVAT prettier. `npm ci`, `npx next build`. Playwright si server spouští sám.
 - Force push (i --force-with-lease) klasifikátor zakazuje → nové větve místo přepisu.
-- Nová relace má hned ~100k+ kontextu ze schémat MCP → kroky malé, předávat brzy.
+- Nová relace má hned ~100k+ kontextu ze schémat MCP (ToolSearch select nač. jen potřebné) → kroky malé, předávat brzy.
