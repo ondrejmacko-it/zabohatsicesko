@@ -22,7 +22,8 @@ Vše ověřeno na fiktivních datech a simulovaném Googlu. Živý Google, Make 
 - ESLint a `tsc --noEmit` bez chyb.
 - Vitest: 75 souborů, 665 testů prošlo (nové: `kalendar-osobni-ucast`, `ucet-kalendar`, `osloveni`, testy přehledu a detailu účasti).
 - Build `next build` OK.
-- Playwright: viz popis PR (celá sada nad buildem, PC i telefon).
+- Playwright nad buildem, všechny projekty (PC, telefon 390/360, setup): 1639 prošlo, 703 přeskočeno
+  (testy vyřazené pro daný projekt značkami, např. `@desktop` na telefonu), 0 selhalo, 16,7 min.
 
 ## Simulace oproti živému testu
 
