@@ -3,7 +3,7 @@ import type { OwnCalendar } from "@/lib/calendar-note";
 import type { EventSnapshot, SimAttendee } from "@/lib/types";
 import { attendeeSource, config, googleCalendarConfig, now, participationEnabled, participationSchemaReady, personalDelivery, type AttendeeSource } from "@/server/config";
 import type { Executor } from "@/server/db/client";
-import { calendarLinks, eventParticipation, events, userIdentities, users } from "@/server/db/schema";
+import { calendarLinks, eventParticipation, events, personalCalendarEntries, personalCalendars, userIdentities, users } from "@/server/db/schema";
 import { desiredGuestIds, type ParticipationRecord } from "@/server/domain/participation";
 import { CalendarError } from "./provider";
 
@@ -95,12 +95,13 @@ export async function participationInputs(db: Executor, eventId: string): Promis
 
 /**
  * Stav pozvánky jednoho člověka podle vazby akce (F04): je mezi hosty, které spravuje Wiki? Null = Wiki
- * to nezná: osobní kalendáře (nezve se), pevný seznam testovacích příjemců, starší vazba bez
+ * to nezná: pevný seznam testovacích příjemců, starší vazba bez
  * spravovaných hostů nebo účet bez adresy. Do Googlu se kvůli tomu nic neposílá ani nečte.
  */
 export async function ownCalendarState(db: Executor, eventId: string, userId: string): Promise<OwnCalendar | null> {
   const cfg = googleCalendarConfig();
-  if (personalDelivery() || (cfg && attendeeSource() === "allowlist")) return null;
+  if (personalDelivery()) return ownPersonalState(db, eventId, userId);
+  if (cfg && attendeeSource() === "allowlist") return null;
   const [link] = await db
     .select({ syncStatus: calendarLinks.syncStatus, managed: calendarLinks.managedAttendees })
     .from(calendarLinks)
@@ -111,6 +112,27 @@ export async function ownCalendarState(db: Executor, eventId: string, userId: st
   const [me] = await listRecipients(db, cfg !== null, userId);
   if (!me) return null;
   return { link: link.syncStatus, inCalendar: (link.managed ?? []).includes(me.email) };
+}
+
+/**
+ * Osobní režim: stav synchronizace kalendáře člověka a jestli v něm akce je, jen z databáze Wiki.
+ * Kalendář bez platného přístupu (odvolaný, smazaný, odmítnutý) = nepropojený.
+ */
+async function ownPersonalState(db: Executor, eventId: string, userId: string): Promise<OwnCalendar> {
+  const [row] = await db
+    .select({ status: personalCalendars.status, errorCode: personalCalendars.errorCode, requested: personalCalendars.syncRequestedAt, synced: personalCalendars.syncedAt })
+    .from(personalCalendars)
+    .where(and(eq(personalCalendars.orgId, config.orgId), eq(personalCalendars.userId, userId)))
+    .limit(1);
+  if (!row || row.status !== "active") return { link: "none", inCalendar: false, personal: true };
+  const [entry] = await db
+    .select({ eventId: personalCalendarEntries.eventId })
+    .from(personalCalendarEntries)
+    .where(and(eq(personalCalendarEntries.userId, userId), eq(personalCalendarEntries.eventId, eventId)))
+    .limit(1);
+  const stale = !row.synced || (row.requested !== null && row.requested > row.synced);
+  const link = row.errorCode ? "attention" : stale ? "pending" : "synced";
+  return { link, inCalendar: Boolean(entry), personal: true };
 }
 
 export type GuestPlan = {

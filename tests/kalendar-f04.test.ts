@@ -282,6 +282,18 @@ describe("calendarNote: věta panelu podle stavu", () => {
     ["required", cal("attention", true), "Kalendář: zápis se nepodařil, Wiki to zkusí znovu."],
   ] as const)("%s + %j", (state, calendar, text) => expect(calendarNote(state, calendar)).toBe(text));
 
+  test.each([
+    ["required", "synced", true, "Kalendář: akce je zapsaná ve tvém kalendáři „Vzdělávání ZBC“."],
+    ["required", "pending", false, "Kalendář: aktualizuje se."],
+    ["excused", "synced", false, "Kalendář: akce ve tvém kalendáři není."],
+    ["excused", "synced", true, "Kalendář: aktualizuje se."],
+    ["optional", "synced", false, "Kalendář: po přihlášení se akce zapíše do tvého kalendáře."],
+    ["required", "attention", true, "Kalendář: zápis se nepodařil, Wiki to zkusí znovu."],
+    ["required", "none", false, "Kalendář: osobní Kalendář Google nemáš propojený, propojíš ho na Úvodu."],
+  ] as const)("osobní kalendář: %s + %s/%s", (state, link, inCalendar, text) =>
+    expect(calendarNote(state, { link, inCalendar, personal: true })).toBe(text),
+  );
+
   test("bez znalosti stavu (osobní kalendáře, testovací příjemci) a u zrušené akce nic netvrdí", () => {
     expect(calendarNote("required", null)).toBe("Kalendář: stav nelze ověřit.");
     expect(calendarNote("cancelled", cal("synced", true))).toBeNull();

@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
+import { ownCalendarState } from "@/server/calendar/attendees";
 import { PERSONAL_SCOPE, savePersonalGrant, syncPersonalCalendar } from "@/server/calendar/personal";
 import { eventParticipation, events, personalCalendarEntries, personalCalendars } from "@/server/db/schema";
 import { config } from "@/server/config";
@@ -136,5 +137,19 @@ describe("osobní kalendář podle účasti", () => {
     await updateAccess(admin, participant.id, { role: "member", groups: ["vsichni", "fp", "rm"], status: "active" });
     const [row] = await db.select({ requested: personalCalendars.syncRequestedAt }).from(personalCalendars).where(eq(personalCalendars.userId, participant.id));
     expect(row?.requested).toBeInstanceOf(Date);
+  });
+
+  test("stav vlastní akce v osobním kalendáři: zapsaná, čeká na srovnání, chyba, nepropojený", async () => {
+    await setRecord(PUBLISHED_RM, "voluntary_enrolled");
+    await request();
+    await syncPersonalCalendar(db, participant.id, deps(fakeGoogle()));
+    // Hodiny testu jsou v minulosti: požadavek srovnání posuneme před čas zápisu.
+    await db.update(personalCalendars).set({ syncRequestedAt: new Date("2026-11-01T00:00:00Z") }).where(eq(personalCalendars.userId, participant.id));
+    expect(await ownCalendarState(db, PUBLISHED_RM, participant.id)).toEqual({ link: "synced", inCalendar: true, personal: true });
+    await request();
+    expect((await ownCalendarState(db, PUBLISHED_RM, participant.id))?.link).toBe("pending");
+    await db.update(personalCalendars).set({ errorCode: "rate_limited" }).where(eq(personalCalendars.userId, participant.id));
+    expect((await ownCalendarState(db, PUBLISHED_RM, participant.id))?.link).toBe("attention");
+    expect(await ownCalendarState(db, PUBLISHED_RM, "demo-mimo-skupinu")).toEqual({ link: "none", inCalendar: false, personal: true });
   });
 });
