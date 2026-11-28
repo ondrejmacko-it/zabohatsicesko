@@ -1,4 +1,4 @@
-# Navazující relace (stav 28. 11. 2026, relace 97)
+# Navazující relace (stav 28. 11. 2026, relace 98)
 
 Cíl: připravit bezpečné, opakovatelné živé ověření PR #97 před mergem (testovací prostředí, živé scénáře
 proti skutečnému Google Kalendáři, vizuální ověření 320–3440 px v Chromiu, WebKitu a Firefoxu, report nálezů).
@@ -19,8 +19,12 @@ Preview PR #97: `zbc-vzdelavani-demo-eedvobxq1-maci.vercel.app` (demo, simulace,
 - Zkušební běh Chromium 390: kandidáti „přetéká fieldset.filter-group“ (plán, moje cesta) a „uříznutý label
   Přepnout ukázkovou roli“ – pravděpodobně skrytý panel / sr-only, OVĚŘIT na screenshotu, nezapisovat naslepo.
 
+- Relace 98: K8 doplněn o minimální opravu; ověřeno, že WebKit potřebuje `npx playwright install-deps webkit firefox`
+  (apt, ~2 min) před `install`. Server startuje ~2 min; čekat na `curl -s -o /dev/null -w '%{http_code}'`
+  (NIKDY nevypisovat tělo odpovědi – stojí desítky tisíc tokenů).
+
 ## Další krok
-1. `npm ci`, instalace prohlížečů, `E2E_WEBKIT=1 node e2e/server.mjs` na pozadí, pak po prohlížečích
+1. `npm ci`, `npx playwright install-deps webkit firefox`, instalace prohlížečů, `E2E_WEBKIT=1 node e2e/server.mjs` na pozadí, pak po prohlížečích
    `PROHLIZEC=chromium node scripts/vizualni-sada.mjs . <scratchpad>/out` (potom firefox, webkit).
 2. Prohlížet koláže (`montage` je k dispozici: jedna stránka × 10 šířek na obrázek, malé rozlišení), ne stovky
    souborů. Falešné kandidáty odfiltrovat úpravou kontroly ve skriptu, skutečné nálezy do reportu (reprodukce,
