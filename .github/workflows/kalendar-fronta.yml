@@ -27,7 +27,8 @@ jobs:
       - name: Zavolat Wiki
         env:
           SCHEDULER: ${{ vars.CALENDAR_QUEUE_SCHEDULER }}
-          WIKI_URL: ${{ vars.WIKI_URL }}
+          # Výchozí je vývojové demo, proměnná repa WIKI_URL ji přepíše.
+          WIKI_URL: ${{ vars.WIKI_URL || 'https://zbc-vzdelavani-demo.vercel.app' }}
           TOKEN: ${{ secrets.CALENDAR_WORKER_TOKEN }}
           # Jen pro preview za ochranou Vercel Authentication (Protection Bypass for Automation), jinak prázdné.
           BYPASS: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
