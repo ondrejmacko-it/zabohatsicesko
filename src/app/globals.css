@@ -466,6 +466,11 @@ a.item-card:hover {
   border-color: var(--line-strong);
 }
 
+/* Odkaz zpět nad nadpisem detailu (Účast): odstup od řádku nad nadpisem. */
+.back-row {
+  margin-bottom: 12px;
+}
+
 .eyebrow {
   margin-bottom: 2px;
   color: var(--ochre-dark);
@@ -4217,6 +4222,27 @@ p.cal-status {
     margin-bottom: 4px;
     color: var(--muted);
     font-size: 13px;
+  }
+
+  /* Počty v řádku vedle sebe, s viditelným popiskem místo skrytého záhlaví sloupce. */
+  .table-stack td.stack-count {
+    display: inline-block;
+    margin-right: 12px;
+    font-size: 13px;
+  }
+
+  /* Prázdná buňka (pomlčka) by ve skládaném řádku visela bez popisku. */
+  .table-stack td.stack-empty {
+    display: none;
+  }
+
+  .table-stack .stack-label {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip: auto;
+    color: var(--muted);
   }
 }
 

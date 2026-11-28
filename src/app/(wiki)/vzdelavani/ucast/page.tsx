@@ -94,7 +94,7 @@ export default async function AttendancePage({ searchParams }: { searchParams: S
       .filter((p) => matches(p.name) && (!stateKey || p.state === STATES[stateKey].state) && (!calendarOnly || p.status?.problem));
     return (
       <section className="section" aria-labelledby="ucast-akce">
-        <div className="row">{back}</div>
+        <div className="row back-row">{back}</div>
         <p className="eyebrow">{[when(detail.startsAt), GROUP_LABELS[detail.audience]].join(" · ")}</p>
         <h2 id="ucast-akce">{detail.title}</h2>
         {detail.cancelled && <p className="badge badge-danger">Akce je zrušená</p>}
@@ -120,8 +120,15 @@ export default async function AttendancePage({ searchParams }: { searchParams: S
                     <Link href={link({ clovek: p.id })}>{p.name}</Link>
                   </td>
                   <td>{STATE_LABELS[p.state] ?? "—"}</td>
-                  <td>{p.excuse ? [EXCUSE_REASON_LABELS[p.excuse.reason], p.excuse.note].filter(Boolean).join(": ") : p.state === "excused" ? "Důvod vidí určený nadřízený" : "—"}</td>
-                  <td>{p.status ? <span className={`badge ${p.status.problem ? "badge-danger" : "badge-outline"}`}>{p.status.label}</span> : "—"}</td>
+                  {p.excuse || p.state === "excused" ? (
+                    <td>
+                      <span className="visually-hidden stack-label">Omluva: </span>
+                      {p.excuse ? [EXCUSE_REASON_LABELS[p.excuse.reason], p.excuse.note].filter(Boolean).join(": ") : "Důvod vidí určený nadřízený"}
+                    </td>
+                  ) : (
+                    <td className="stack-empty">—</td>
+                  )}
+                  <td className={p.status ? undefined : "stack-empty"}>{p.status ? <span className={`badge ${p.status.problem ? "badge-danger" : "badge-outline"}`}>{p.status.label}</span> : "—"}</td>
                 </tr>
               ))}
             </tbody>
@@ -138,7 +145,7 @@ export default async function AttendancePage({ searchParams }: { searchParams: S
     if (!history || !person) notFound();
     return (
       <section className="section" aria-labelledby="ucast-clovek">
-        <div className="row">{back}</div>
+        <div className="row back-row">{back}</div>
         <h2 id="ucast-clovek">{person.name}</h2>
         <p className="small muted">Období {formatDate(from)} – {formatDate(to)}{person.active ? "" : " · bez aktivního přístupu"}</p>
         <CountsLine counts={person.counts} />
@@ -265,11 +272,11 @@ function EventsTable({ rows, link }: { rows: Awaited<ReturnType<typeof attendanc
               {e.cancelled && <> <span className="badge badge-danger">Zrušeno</span></>}
             </td>
             <td>{[when(e.startsAt), GROUP_LABELS[e.audience]].join(" · ")}</td>
-            <td><span className="visually-hidden">Očekává se </span>{e.counts.expected}</td>
-            <td><span className="visually-hidden">Povinní </span>{e.counts.required}</td>
-            <td><span className="visually-hidden">Přihlášení </span>{e.counts.enrolled}</td>
-            <td><span className="visually-hidden">Omluvení </span>{e.counts.excused}</td>
-            <td><span className="visually-hidden">Odhlášení </span>{e.counts.withdrawn}</td>
+            <td className="stack-count"><span className="visually-hidden stack-label">Očekává se </span>{e.counts.expected}</td>
+            <td className="stack-count"><span className="visually-hidden stack-label">Povinní </span>{e.counts.required}</td>
+            <td className="stack-count"><span className="visually-hidden stack-label">Přihlášení </span>{e.counts.enrolled}</td>
+            <td className="stack-count"><span className="visually-hidden stack-label">Omluvení </span>{e.counts.excused}</td>
+            <td className="stack-count"><span className="visually-hidden stack-label">Odhlášení </span>{e.counts.withdrawn}</td>
             <td>
               <span className="visually-hidden">Kalendář </span>
               {e.calendarProblems > 0 ? <Link className="badge badge-danger" href={link({ akce: e.id, kalendar: "1" })}>Problémy: {e.calendarProblems}</Link> : "—"}
@@ -304,11 +311,11 @@ function PeopleTable({ rows, link }: { rows: Awaited<ReturnType<typeof attendanc
               {!p.active && <> <span className="badge badge-outline">Bez přístupu</span></>}
             </td>
             <td>{p.groups.map((g) => GROUP_LABELS[g as Group] ?? g).join(", ") || "—"}</td>
-            <td><span className="visually-hidden">Očekává se </span>{p.counts.expected}</td>
-            <td><span className="visually-hidden">Povinné </span>{p.counts.required}</td>
-            <td><span className="visually-hidden">Přihlášen/a </span>{p.counts.enrolled}</td>
-            <td><span className="visually-hidden">Omluven/a </span>{p.counts.excused}</td>
-            <td><span className="visually-hidden">Odhlášen/a </span>{p.counts.withdrawn}</td>
+            <td className="stack-count"><span className="visually-hidden stack-label">Očekává se </span>{p.counts.expected}</td>
+            <td className="stack-count"><span className="visually-hidden stack-label">Povinné </span>{p.counts.required}</td>
+            <td className="stack-count"><span className="visually-hidden stack-label">Přihlášen/a </span>{p.counts.enrolled}</td>
+            <td className="stack-count"><span className="visually-hidden stack-label">Omluven/a </span>{p.counts.excused}</td>
+            <td className="stack-count"><span className="visually-hidden stack-label">Odhlášen/a </span>{p.counts.withdrawn}</td>
           </tr>
         ))}
       </tbody>
