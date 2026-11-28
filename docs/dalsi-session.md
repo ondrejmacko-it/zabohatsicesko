@@ -1,26 +1,35 @@
-# Navazující relace (stav 28. 11. 2026, relace 95)
+# Navazující relace (stav 28. 11. 2026, relace 96)
 
-Cíl: zadání vlastníka „Opravy po živém uživatelském testování, synchronizace Kalendáře a správa účasti“
-(body 0–12). Zadání do repa nedávat. Bez merge, deploye, produkční DB, živého Googlu a Make.
+Cíl: připravit bezpečné, opakovatelné živé ověření PR #97 před mergem (testovací prostředí, živé scénáře
+proti skutečnému Google Kalendáři, vizuální ověření 320–3440 px v Chromiu, WebKitu a Firefoxu, report nálezů).
+Bez redesignu a velkých UI změn. Bez merge, deploye do produkce, produkční DB, Make a změn živé konfigurace
+bez výslovného souhlasu vlastníka. Tajemství nečíst ani nevypisovat.
 
-Větev `claude/oprava-kalendare-a-prehled-ucasti` z main `fa5e67f`. Draft PR založený v relaci 95
-(číslo v GitHubu). Merge provádí uživatel ručně.
+Větev `claude/gallant-knuth-ydgzxz` = HEAD PR #97 `e3c92b3` + report. PR #97 (větev
+`claude/oprava-kalendare-a-prehled-ucasti`) je draft, nic do něj nepushovat bez souhlasu.
+Vercel: tým `team_PtkXmFd9hI7UeUYovGkbwZQG`, projekt `prj_MYpwzB5KekzHAVwbiUDrZv6CG12i`.
+Preview PR #97: `zbc-vzdelavani-demo-eedvobxq1-maci.vercel.app` (demo, simulace, účast vypnutá).
 
-## Stav
-- Všechny body zadání hotové, přehled s commity v `docs/report-oprava-kalendare-ucasti.md`.
-- Poslední funkční změna: `b1082c8` (bod 10, filtr Témat viditelný na telefonu, e2e `temata-filtr`).
-
-## Ověřeno (HEAD po `7f2a542`)
-- ESLint, `tsc --noEmit` bez chyb; vitest 665/665; `next build` OK.
-- Playwright celá sada: 1639 prošlo, 703 přeskočeno značkami projektů, 0 selhalo.
+## Hotovo
+- Konfigurace Vercelu přečtená (jen názvy a cíle), nálezy K1–K7 a návrh izolovaného testu:
+  `docs/report-zive-overeni-pr97.md`. Hlavní nález: Production nemá `CRON_SECRET` ani
+  `CALENDAR_WORKER_TOKEN`, takže plánovač fronty Kalendáře v produkci nefunguje (401).
 
 ## Další krok
-- Čekat na připomínky uživatele k draft PR. Živé ověření na preview s testovacím Google účtem
-  (`CALENDAR_DELIVERY=personal`, připomínky, zápisy) dělá uživatel, hodnoty tajemství se nečtou.
-
-## Otevřené otázky
-- Proměnné nasazení (CALENDAR_DELIVERY, účast) neověřené proti preview.
-- Chování starší verze nad událostmi `EVENT_FORMAT = 4` po případném revertu neověřené.
+1. Ověřit běhy workflow `kalendar-fronta.yml` (GitHub actions_list: „není nastavený“ / HTTP 401?) a doplnit K1.
+2. Neon: najít projekt Preview DB (Neon MCP, jen čtení) a ověřit, že jde vytvořit větev schema-only. Nic nezakládat.
+3. Vizuální sada lokálně nad buildem: `npx playwright install webkit firefox` (do /opt/pw-browsers), pak
+   skript screenshotů v scratchpadu pro šířky 320, 360, 390, 430, 768, 1024, 1280, 1440, 1920, 3440, všechny
+   stránky a role (vzor `scripts/audit-screenshoty.mjs`), skutečně prohlédnout, nálezy do reportu.
+   `E2E_WEBKIT=1` cíleně na webkit/firefox projekty.
+4. Návrh udržitelné vizuální regrese (`toHaveScreenshot`, pevný seed a DEMO_CLOCK, jen pár stránek).
+5. Doplnit report a poslat vlastníkovi návod k bodu „Navržený postup“ ke schválení.
 
 ## Technika
-- NEPOUŽÍVAT prettier. e2e server jede nad buildem. Celá e2e sada trvá ~17 min (background timeout ≥ 30 min).
+- NEPOUŽÍVAT prettier. e2e server jede nad buildem (`npx next build`). Celá e2e ~17 min.
+- Výpis env proměnných z Vercelu je velký: zpracovat skriptem, vypsat jen klíč, cíl, větev, typ.
+
+## Otevřené otázky pro vlastníka
+- Schválení izolovaného testu (testovací větev, branch-scoped proměnné, Neon větev, redirect URI).
+- Které testovací účty Google smím použít (správce, 2 členové)?
+- Nastavit `CRON_SECRET` v Production (K1)?
