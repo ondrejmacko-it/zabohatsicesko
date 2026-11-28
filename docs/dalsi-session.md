@@ -1,4 +1,4 @@
-# Navazující relace (stav 28. 11. 2026, relace 113)
+# Navazující relace (stav 28. 11. 2026, relace 114)
 
 Cíl: dokončit PR #97, ověřit skutečnou funkčnost (živý Google Kalendář), připravit bezpečné ostré nasazení.
 Plné zadání vlastníka (body 1–11) je v promptu navazující relace; drž se ho. Bez merge do main, bez produkčního
@@ -22,14 +22,17 @@ Vlastník nechce návody ani checklisty. Jen při nepřekonatelné překážce: 
 nezastavuje ostatní.
 
 ## Úkoly (pořadí)
-1. HOTOVO: hamburger menu (ee6f6ce) + vizuální reference převzaté z CI (ff5b12f). ZBÝVÁ jen ověřit CI PR #97
-   (actions_list na větvi claude/oprava-kalendare-a-prehled-ucasti, commit ff5b12f).
-2. Nastavit demo (Vercel prj_MYpwzB5KekzHAVwbiUDrZv6CG12i, Production): vygenerovat `openssl rand -hex 32` do
-   scratchpadu (umask 077, nevypisovat), create_project_env upsert type=sensitive target=production:
-   CRON_SECRET, CALENDAR_WORKER_TOKEN; CALENDAR_DELIVERY (id L0RzHDHLkWWXwCd4) edit → personal. GitHub:
-   var WIKI_URL (=APP_URL demo) + secret CALENDAR_WORKER_TOKEN (pokud MCP neumí secrets → workflow_dispatch/ruční
-   volání /api/kalendar/fronta s Bearer). Pak create_deployment gitSource github ref=claude/oprava-kalendare-a-
-   prehled-ucasti target=production (projekt zbc-vzdelavani-demo). Rollback: promote dpl_DVApGnJwmapSmAnP44rLysRnd6zH.
+1. HOTOVO: CI PR #97 zelené na ff5b12f (Kontrola kódu + bezpečnosti).
+2. ČÁSTEČNĚ (relace 114): Vercel Production env nastaveno – CRON_SECRET a CALENDAR_WORKER_TOKEN (sensitive,
+   hodnoty nikde neuložené mimo Vercel; pro ruční volání /api/kalendar/fronta je potřeba nový token → vygeneruj
+   nový a upsertni ho, starý se tím nahradí), CALENDAR_DELIVERY=personal. BLOKUJE: create_deployment vrací 402
+   `api-deployments-free-per-day` (free plán, >100 nasazení/den, retryAfter 24 h od 28. 11. ~18:19 UTC). Neplatit,
+   neupgradovat. Po uvolnění: create_deployment gitSource {type github, org ondrejmacko-it, repo zabohatsicesko,
+   ref claude/oprava-kalendare-a-prehled-ucasti} target=production, project prj_MYpwzB5KekzHAVwbiUDrZv6CG12i.
+   Rollback: promote dpl_DVApGnJwmapSmAnP44rLysRnd6zH. Každý push vytváří 2 preview nasazení (obě větve) a žere
+   kvótu → před nasazením NEPUSHOVAT; zvaž update_project commandForIgnoringBuildStep pro preview (bez nákladů).
+   Preview běží v CALENDAR_MODE=simulation → pro živý test nepoužitelný. GitHub secret CALENDAR_WORKER_TOKEN přes
+   MCP nejde → volat endpoint ručně s Bearer (POST /api/kalendar/fronta).
 3. Živé E2E (kap. 6 docs/report-zive-overeni-pr97.md, scripts/overeni-kalendare-google.ts --sledovat=N).
 4. Report (8 kategorií) + popis PR #97 (oprav odkaz session v patičce), finální testy, report vlastníkovi na konci.
 
