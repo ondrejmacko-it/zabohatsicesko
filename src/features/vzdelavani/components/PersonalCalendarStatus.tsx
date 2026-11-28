@@ -1,5 +1,7 @@
 import { formatDayMonth, toDateKey, toTimeKey } from "@/lib/time";
+import { ActionForm } from "@/components/ActionForm";
 import type { PersonalCalendarState } from "@/server/calendar/personal";
+import { syncOwnCalendarAction } from "../actions";
 
 // Stav osobního kalendáře „Vzdělávání ZBC“ (režim `CALENDAR_DELIVERY=personal`): co se děje a nejvýš
 // jedna akce k nápravě. Akce vede přes přihlášení Googlem, které o Kalendář požádá znovu.
@@ -83,6 +85,32 @@ export function PersonalCalendarStatus({ state }: { state: PersonalCalendarState
         </a>
       )}
     </div>
+  );
+}
+
+/**
+ * Sekce „Google Kalendář“ v menu Účet: stav propojení vždy (i funkční), ruční synchronizace jen u funkčního
+ * propojení, jinak odkaz na propojení. V náhledu se nevykresluje (layout ji nepředá).
+ */
+export function AccountCalendar({ state }: { state: PersonalCalendarState }) {
+  const view = personalCalendarView(state);
+  const badgeClass = view.tone === "ok" ? " badge-ok" : view.tone === "alert" ? " badge-danger" : " badge-ochre";
+  return (
+    <section className="account-calendar" aria-labelledby="ucet-kalendar" data-testid="ucet-kalendar">
+      <h3 id="ucet-kalendar" className="account-calendar-title">
+        Google Kalendář <span className={`badge${badgeClass}`}>{view.badge}</span>
+      </h3>
+      <p className="small muted">{view.text}</p>
+      {state.status === "active" ? (
+        <ActionForm action={syncOwnCalendarAction} label="Synchronizovat teď" pendingLabel="Synchronizuji…" small />
+      ) : (
+        view.action && (
+          <a className="btn btn-primary btn-small" href={PERSONAL_CONNECT_HREF}>
+            {view.action}
+          </a>
+        )
+      )}
+    </section>
   );
 }
 

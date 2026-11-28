@@ -5761,3 +5761,27 @@ body[data-moving] .quick-actions,
     position: static;
   }
 }
+
+/* Sekce Google Kalendář v menu Účet. */
+.account-calendar {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 4px 10px 6px;
+  overflow-wrap: anywhere;
+}
+
+.account-calendar-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.account-calendar .small {
+  margin: 0;
+  padding: 0;
+}

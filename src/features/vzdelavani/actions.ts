@@ -11,7 +11,7 @@ import { simulateManualEdit } from "@/server/calendar/simulated";
 import { pairWithExisting, requestNewInvite, requestRetry, syncEvent, syncParticipation, syncPublished } from "@/server/calendar/sync";
 import { calendarMode, isLiveWiki, participationEnabled } from "@/server/config";
 import { getDb } from "@/server/db/client";
-import { loadCalendarStatus } from "@/server/services/calendar-status";
+import { loadCalendarStatus, syncOwnCalendarNow } from "@/server/services/calendar-status";
 import { isOrganizer } from "@/server/policy";
 import { resetDatabase } from "@/server/seed";
 import { DomainError } from "@/server/services/errors";
@@ -758,5 +758,17 @@ export async function changeParticipationAction(_prev: ActionResult | null, form
     // F04 + D01: omluva i přihláška platí ve Wiki hned, Kalendář se upraví hned po odpovědi.
     after(() => syncParticipation(data.id, user.id));
     return { ok: true, message: PARTICIPATION_MESSAGES[change.kind] };
+  });
+}
+
+/** Ruční synchronizace vlastního osobního Kalendáře z menu Účet. Náhled odmítne `runAction`. */
+export async function syncOwnCalendarAction(): Promise<ActionResult> {
+  return runAction(async (user) => {
+    const result = await syncOwnCalendarNow(user);
+    if (result === "synced") return { ok: true, message: "Kalendář je srovnaný s Wiki." };
+    // Souběžný běh (plánovač, změna účasti) drží zámek a změnu dožene sám.
+    if (result === "skipped") return { ok: true, message: "Synchronizace právě běží, za chvilku bude hotová." };
+    if (result === "retry") return { ok: false, error: "Google teď zápis nepřijal. Wiki to zkusí znovu sama." };
+    return { ok: false, error: "Kalendář už není propojený. Propoj ho prosím znovu." };
   });
 }
