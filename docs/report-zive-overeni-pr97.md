@@ -26,8 +26,8 @@ Lokálně nad HEAD relace 107 (`a53c972`, bez změny kódu aplikace po něm):
 | `next build` | OK |
 | Playwright, plné `npm run e2e` (Chromium, Firefox, WebKit, telefon, tablet, zápisy) | 1660 passed, 745 skipped (záměrně jen v jednom projektu), 0 failed, 14,8 min |
 
-CI PR #97 (běh 46163734788): lint, typy, testy, build, audit závislostí, citlivé cesty a smoke E2E zelené.
-Vizuální regrese: viz kapitola 5, bod R1.
+CI PR #97 na `783c592` (běhy 46165521065 Kontrola kódu, 46165521067 Kontrola bezpečnosti): vše zelené –
+lint, typy, testy, build, audit závislostí, citlivé cesty, smoke E2E i vizuální regrese 15/15.
 
 Pokryté oblasti:
 - **Účast (V1, c5db69d):** tabulka na 768 a 1024 px v posuvném obalu, bez vodorovného posunu stránky,
@@ -69,7 +69,7 @@ Pokryté oblasti:
 | K8 | GitHub cron `*/10` reálně běží 2–4× denně. Je to jen záloha; spoléhá se na `after()` + Vercel cron 5:17. Oba plánovače ponechány: jsou nezávislé a fronta je idempotentní, souběh neškodí. | střední |
 | K2 | Preview PR #97 má `PARTICIPATION` vypnuté (proměnná jen pro starou větev), změny v něm nejde proklikat. | střední (test) |
 | K6 | `FEEDBACK_WEBHOOK_URL` (Make) je i v Preview; testovací větev ho musí přepsat prázdnou hodnotou. | střední (izolace) |
-| R1 | Vizuální regrese v CI: reference z cloudového kontejneru se liší fonty od ubuntu-latest (~1 % pixelů na každém snímku, 15/15 FAIL). Nejde o regresi UI. Řeší workflow `vizualni-reference.yml` (stav viz popis PR). | nízká |
+| R1 | VYŘEŠENO 783c592: reference z cloudového kontejneru se lišily fonty od ubuntu-latest (15/15 FAIL, nešlo o regresi UI). Nové reference vygeneroval workflow `vizualni-reference.yml` na runneru CI (běh 46165244474); CI 46165521065 zelené. Pomocná větev `reference-vizual/pr97` ponechána, smazání je na vlastníkovi. Při změně vzhledu se reference obnoví pushem na `reference-vizual/**`. | vyřešeno |
 | R2 | Skript `scripts/overeni-kalendare-google.ts` (porovnání Wiki ↔ Google API, měření latence) je napsaný a typově ověřený, ale nikdy neběžel proti Googlu. | střední |
 
 ## 6. Blokované testy
@@ -113,4 +113,4 @@ Po testu: smazat proměnné větve, větev Neon, testovací větev v Gitu a udá
 **Není připraveno na ostrý provoz.** Kód je ověřen automatickými testy a simulací, ale integrace s Google
 Kalendářem a přihlášení Googlem nebyly ani jednou ověřeny živě a produkční záložní plánovač je bez
 `CRON_SECRET` nefunkční (K1). Podmínky: provést blokované scénáře kapitoly 6 v izolovaném prostředí, nastavit
-K1, zelené CI včetně vizuální regrese, poté ruční merge vlastníkem přes PR.
+K1 (CI včetně vizuální regrese je zelené), poté ruční merge vlastníkem přes PR.
