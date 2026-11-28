@@ -78,7 +78,7 @@ describe("přehled účasti podle akcí", () => {
     const scope = (await attendanceScope(lead, false))!;
     const managed = (await attendanceDetail(lead, scope, fp.id))!;
     expect(managed.people.map((p) => p.id)).toEqual([participant.id]);
-    expect(managed.people[0].excuse).toEqual({ reason: "illness", note: "chřipka" });
+    expect(managed.people[0]?.excuse).toEqual({ reason: "illness", note: "chřipka" });
 
     expect(await attendanceDetail(admin, { kind: "all" }, "neexistuje")).toBeNull();
   });
