@@ -1,11 +1,13 @@
 import { and, eq, gte, inArray, isNotNull, lt, sql } from "drizzle-orm";
 import { eventTitle } from "@/lib/labels";
-import type { Group } from "@/lib/types";
+import type { OwnCalendar } from "@/lib/calendar-note";
+import type { ExcuseReason, Group, ParticipationState } from "@/lib/types";
+import { ownCalendarState } from "@/server/calendar/attendees";
 import { config, participationEnabled } from "@/server/config";
 import { getDb } from "@/server/db/client";
 import { eventParticipation, events, users } from "@/server/db/schema";
 import { participationState, type ParticipationRecord } from "@/server/domain/participation";
-import { canManageUsers, type Viewer } from "@/server/policy";
+import { canManageUsers, canReadExcuseDetails, type Viewer } from "@/server/policy";
 import { managedEmployeeIds } from "@/server/services/excuse-managers";
 
 // Záložka Účast (bod 6 zadání vlastníka). Stav účasti počítá výhradně doména (`participationState`), tady se
@@ -82,4 +84,67 @@ export async function attendanceByEvent(scope: AttendanceScope, from: Date, to: 
       counts,
     };
   });
+}
+
+export type AttendancePerson = {
+  id: string;
+  name: string;
+  state: ParticipationState;
+  /** Důvod a poznámka omluvy jen pro omluveného a výslovně určeného nadřízeného (`canReadExcuseDetails`). */
+  excuse: { reason: ExcuseReason; note: string | null } | null;
+  /** Stav akce v Kalendáři člověka, null = Wiki ho nezná (viz `ownCalendarState`). */
+  calendar: OwnCalendar | null;
+};
+
+export type EventAttendanceDetail = Omit<EventAttendance, "counts"> & { counts: AttendanceCounts; people: AttendancePerson[] };
+
+/** Detail jedné akce: lidé v rozsahu, kterých se akce týká, s jejich stavem. Null = akce neexistuje nebo nejde o zveřejněnou akci. */
+export async function attendanceDetail(viewer: Viewer, scope: AttendanceScope, eventId: string): Promise<EventAttendanceDetail | null> {
+  const db = await getDb();
+  const [row] = await db
+    .select({ published: events.published })
+    .from(events)
+    .where(and(eq(events.orgId, config.orgId), eq(events.id, eventId)))
+    .limit(1);
+  const snapshot = row?.published;
+  if (!snapshot || snapshot.type === "holiday") return null;
+  const people = (await db
+    .select({ id: users.id, name: users.name, status: users.status, groups: users.groups })
+    .from(users)
+    .where(eq(users.orgId, config.orgId))
+    .orderBy(users.name, users.id)).filter((p) => scope.kind === "all" || scope.ids.has(p.id));
+  const recordRows = await db
+    .select({ userId: eventParticipation.userId, kind: eventParticipation.kind, excuseReason: eventParticipation.excuseReason, excuseNote: eventParticipation.excuseNote })
+    .from(eventParticipation)
+    .where(and(eq(eventParticipation.orgId, config.orgId), eq(eventParticipation.eventId, eventId)));
+  const records = new Map(recordRows.map((r) => [r.userId, r]));
+  // Důvody omluv smí i správce číst jen u lidí, u kterých je výslovně určeným nadřízeným.
+  const managed = scope.kind === "managed" ? scope.ids : await managedEmployeeIds(db, viewer.id);
+
+  const counts: AttendanceCounts = { required: 0, excused: 0, enrolled: 0, withdrawn: 0, expected: 0 };
+  const result: AttendancePerson[] = [];
+  for (const person of people) {
+    const record = records.get(person.id) ?? null;
+    const state = participationState(person, snapshot, record);
+    if (state === null || state === "optional") continue;
+    if (state === "required") counts.required++;
+    else if (state === "excused") counts.excused++;
+    else if (state === "voluntary_enrolled") counts.enrolled++;
+    else if (state === "withdrawn") counts.withdrawn++;
+    const excuse =
+      state === "excused" && record?.excuseReason && canReadExcuseDetails(viewer, person.id, managed)
+        ? { reason: record.excuseReason, note: record.excuseNote }
+        : null;
+    result.push({ id: person.id, name: person.name, state, excuse, calendar: await ownCalendarState(db, eventId, person.id) });
+  }
+  counts.expected = counts.required + counts.enrolled;
+  return {
+    id: eventId,
+    title: eventTitle(snapshot.label, snapshot.topicTitle),
+    startsAt: snapshot.startsAt,
+    audience: snapshot.audience,
+    cancelled: snapshot.status === "cancelled",
+    counts,
+    people: result,
+  };
 }
