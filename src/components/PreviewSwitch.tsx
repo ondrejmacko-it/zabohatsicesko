@@ -47,7 +47,8 @@ export function PreviewSwitch({ groups, people, active }: { groups: Option[]; pe
           options={options}
           listLabel="Pohledy"
           onCommit={(_, field) => field.form?.requestSubmit()}
-          inputProps={{ className: "select-small view-select", title: activeLabel ?? "Můj pohled" }}
+          // Na telefonu je viditelný popisek skrytý (CSS), jméno pole proto nese i aria-label.
+          inputProps={{ className: "select-small view-select", title: activeLabel ?? "Můj pohled", "aria-label": "Pohled" }}
         />
       </form>
     </div>
