@@ -8,7 +8,7 @@ import { formatDayMonth, isValidDateKey, isValidMonthKey, isValidTime } from "@/
 import { audit, withinRateLimit } from "@/server/audit";
 import { disconnect as disconnectCalendar } from "@/server/calendar/google-auth";
 import { simulateManualEdit } from "@/server/calendar/simulated";
-import { pairWithExisting, requestNewInvite, requestRetry, syncEvent, syncPublished } from "@/server/calendar/sync";
+import { pairWithExisting, requestNewInvite, requestRetry, syncEvent, syncParticipation, syncPublished } from "@/server/calendar/sync";
 import { calendarMode, isLiveWiki, participationEnabled } from "@/server/config";
 import { getDb } from "@/server/db/client";
 import { loadCalendarStatus } from "@/server/services/calendar-status";
@@ -755,8 +755,8 @@ export async function changeParticipationAction(_prev: ActionResult | null, form
       throw new DomainError("rate_limited");
     }
     await changeOwnParticipation(user, data.id, change);
-    // F04 + D01: omluva i přihláška platí ve Wiki hned, pozvánka v Kalendáři se upraví hned po odpovědi.
-    after(() => syncEvent(data.id));
+    // F04 + D01: omluva i přihláška platí ve Wiki hned, Kalendář se upraví hned po odpovědi.
+    after(() => syncParticipation(data.id, user.id));
     return { ok: true, message: PARTICIPATION_MESSAGES[change.kind] };
   });
 }

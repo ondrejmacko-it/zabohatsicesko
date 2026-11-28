@@ -4,7 +4,8 @@ import { PERSONAL_SCOPE, savePersonalGrant, syncPersonalCalendar } from "@/serve
 import { eventParticipation, events, personalCalendarEntries, personalCalendars } from "@/server/db/schema";
 import { config } from "@/server/config";
 import type { EventSnapshot } from "@/lib/types";
-import { PUBLISHED_RM, participant, resetDemo } from "./helpers";
+import { syncParticipation } from "@/server/calendar/sync";
+import { PUBLISHED_RM, lead, participant, resetDemo } from "./helpers";
 
 // Regrese z živého testu 28. 11.: osobní kalendář se řídil jen publikem akce, přihláška ani omluva
 // z `event_participation` se do Googlu nepropsaly. Kontroluje skutečné požadavky na Google API.
@@ -95,5 +96,22 @@ describe("osobní kalendář podle účasti", () => {
     const g3 = fakeGoogle();
     await syncPersonalCalendar(db, participant.id, deps(g3));
     expect(g3.calls.filter((c) => c.url.pathname.includes("/events") && c.method !== "GET").length).toBe(0);
+  });
+
+  test("po změně účasti se srovná jen kalendář toho, kdo účast změnil", async () => {
+    await savePersonalGrant(db, lead.id, { refreshToken: "rt2", scopes: `openid email ${PERSONAL_SCOPE}`, accountEmail: "vedouci@example.com" });
+    await db.update(personalCalendars).set({ syncRequestedAt: null, syncedAt: null }).where(eq(personalCalendars.userId, lead.id));
+    await setRecord(PUBLISHED_RM, "voluntary_enrolled");
+    await request();
+    const g = fakeGoogle();
+    vi.stubGlobal("fetch", g.fetchImpl);
+    try {
+      await syncParticipation(PUBLISHED_RM, participant.id);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+    expect(await entryIds()).toContain(PUBLISHED_RM);
+    const [other] = await db.select({ syncedAt: personalCalendars.syncedAt, requested: personalCalendars.syncRequestedAt }).from(personalCalendars).where(eq(personalCalendars.userId, lead.id));
+    expect(other).toEqual({ syncedAt: null, requested: null });
   });
 });
