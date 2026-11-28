@@ -1,9 +1,9 @@
-# Navazující relace (stav 28. 11. 2026, relace 90)
+# Navazující relace (stav 28. 11. 2026, relace 91)
 
 Cíl: zadání vlastníka „Opravy po živém uživatelském testování, synchronizace Kalendáře a správa účasti“
 (body 0–12). Zadání do repa nedávat. Bez merge, deploye, produkční DB, živého Googlu a Make.
 
-Větev `claude/oprava-kalendare-a-prehled-ucasti` z main `fa5e67f`, HEAD `5bef7f7` (+ tato předávka).
+Větev `claude/oprava-kalendare-a-prehled-ucasti` z main `fa5e67f`, HEAD `fc05f98` (+ tato předávka).
 PR zatím není (draft až na konci, spolu se závěrečným reportem uživateli).
 
 ## Hotovo (shrnutí, detaily v `git log`)
@@ -17,6 +17,8 @@ PR zatím není (draft až na konci, spolu se závěrečným reportem uživateli
 - Bod 7: správce smí být nadřízeným jiných, sám sobě ne.
 
 ## Ověřeno
+- `fc05f98`: tsc + eslint OK, build OK; vitest `osloveni` 4/4; e2e `osloveni`, `zahlavi`, `nahled-role`
+  (windows-1280, telefon-390) 18/18, `menu-ucet` (+ telefon-360) 3/3. Fresh kontejner: e2e poprvé bez `--no-deps`.
 - `5bef7f7`: tsc + eslint OK, build OK; e2e `ucast-prehled` + `nahled` (windows-1280, telefon-390, telefon-360) prošly.
 - Dříve `891f3e3`: vitest `kalendar*`, `ucast*` 152/152.
 
@@ -30,28 +32,17 @@ Oslovení: 5. pád, vlastní hodnota, neutrální náhrada, žádné oslovení z
 dlouhá/neobvyklá jména a náhled za kolegu.
 
 ## Další kroky (pořadí)
-1. Bod 8 – diagnóza hotová (relace 90, screenshot PC 1280 + telefon 390), kód zatím beze změn:
-   - Vady: `Menu.tsx` počítá pozici jen při otevření; rozbalení `<details>` „Upravit oslovení“ pak panel
-     vytlačí za pravý okraj okna (oříznutý popisek i pole, PC i telefon). `resize` menu zavře → na telefonu
-     ho zavře vysunutí klávesnice při psaní oslovení (ověřeno změnou výšky okna). Menu nemá Kalendář
-     (stav, propojení, ruční synchronizace) ani reset oslovení tlačítkem.
-   - Návrh (dle zadání PC = kompaktní nabídka, telefon = samostatné okno): nový klientský `AccountMenu`
-     místo obecného `Menu` v `Topbar.tsx`. Jeden panel, vzhled jen CSS: PC `position:absolute; right:0;
-     top:100%` pod tlačítkem, šířka ~340 px, `max-height` + vlastní scroll; telefon (<720 px) fixní okno přes
-     celou obrazovku s hlavičkou „Účet“ a křížkem, zamčený scroll stránky, past fokusu. Zavírá Esc, klik mimo
-     (PC), křížek; NE resize/scroll. Panel zůstává v DOM → rozepsané oslovení přežije zavření. Fokus po
-     otevření do panelu, po zavření zpět na tlačítko. Sekce: kdo (jméno, role, e-mail, „Skutečný účet“
-     v náhledu) · Oslovení (aktuální tvar, pole, Uložit, „Vrátit podle jména“) · Google Kalendář (z
-     `personalCalendarView()` v `PersonalCalendarStatus.tsx`, odkaz `PERSONAL_CONNECT_HREF`, nové
-     „Synchronizovat teď“ = server akce s `requestPersonalSync(db,[user.id])` z `server/calendar/personal.ts`,
-     jen ve stavu active, ne v náhledu) · Odhlásit. Stav kalendáře načíst v `src/app/(wiki)/layout.tsx`
-     přes `loadPersonalCalendar(user)` (jen mimo náhled; mimo režim personal null → sekce skrytá).
-   - Oslovení (`src/lib/greeting.ts`): porovnávat jméno NFC a bez ohledu na velikost písmen („ANNA“ → Anno);
-     v náhledu kolegy (`page.tsx:88`) použít jeho uložené oslovení `getSalutation(preview.viewer.id)`, jen
-     u `preview.personName`. Systémové názvy účtů slovník nepropustí (ověřit vitest `tests/osloveni.test.ts`).
-   - Upravit e2e: `e2e/osloveni.spec.ts`, `e2e/zahlavi.spec.ts:70` (`.account-menu .menu-list`),
-     `e2e/nahled-role.spec.ts:76`; nový scénář: změna výšky okna nezavře panel, Esc/křížek vrátí fokus,
-     panel v okně (PC i 360/390), rozepsaná hodnota přežije zavření.
+1. Bod 8 – zbývá sekce Google Kalendář v menu Účet. Hotovo v relaci 91 (`5905210`, `10195c2`, `fc05f98`):
+   `src/components/AccountMenu.tsx` (panel CSS `.account-panel`: PC absolutně pod tlačítkem 340 px, telefon
+   ≤640 px fixní okno, zámek scrollu `:root.account-panel-open`, past fokusu jen na telefonu, Esc/křížek vrátí
+   fokus, resize nezavírá, obsah zůstává v DOM), `Topbar.tsx` ho používá místo `Menu`; „Vrátit podle jména“
+   (`name="vratit"` v `SalutationForm`, `osloveni-actions.ts`); `greeting.ts` NFC + bez ohledu na velikost
+   písmen; náhled za kolegu bere `getSalutation(preview.viewer.id)` (`page.tsx`). e2e `e2e/menu-ucet.spec.ts`.
+   Zbývá: v `src/app/(wiki)/layout.tsx` načíst `loadPersonalCalendar(user)` (jen mimo náhled; mimo režim
+   personal null) a předat do `Topbar` → sekce „Google Kalendář“ v panelu (stav z `personalCalendarView()`
+   v `PersonalCalendarStatus.tsx`, odkaz `PERSONAL_CONNECT_HREF`, tlačítko „Synchronizovat teď“ = server akce
+   s `requestPersonalSync(db,[user.id])` + cílená synchronizace, jen ve stavu active, ne v náhledu). Test akce
+   (oprávnění, náhled odmítne) + rozšířit `e2e/menu-ucet.spec.ts`.
 2. Bod 9 barvy Správy (zelená/červená/modrá/neutrální/varovná, i v dialozích a zprávách), bod 10 filtry Témat.
 3. Zkontrolovat zbytky bodu 4 (ruční synchronizace vlastního kalendáře, přehled problémů pro správce) a bodu 3
    (první synchronizace po propojení, dry-run inventura) – ověřit grepem, co už existuje, nedomýšlet.
