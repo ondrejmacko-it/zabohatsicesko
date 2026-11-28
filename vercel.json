@@ -1,4 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "git": { "deploymentEnabled": { "claude/gallant-knuth-ydgzxz": false } },
   "crons": [{ "path": "/api/kalendar/fronta", "schedule": "17 5 * * *" }]
 }

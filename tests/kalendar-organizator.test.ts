@@ -381,12 +381,12 @@ describe("plánovač a endpoint fronty", () => {
     expect(JSON.stringify(body)).not.toContain("@");
   });
 
-  test("krátký token se nepřijme, bez nastavení neprojde nic", () => {
+  test("krátký token se nepřijme, bez nastavení neprojde nic", async () => {
     vi.stubEnv("CALENDAR_WORKER_TOKEN", "kratky");
     vi.stubEnv("CRON_SECRET", "");
     try {
-      expect(workerRequestAuthorized("Bearer kratky")).toBe(false);
-      expect(workerRequestAuthorized(null)).toBe(false);
+      expect(await workerRequestAuthorized("Bearer kratky")).toBe(false);
+      expect(await workerRequestAuthorized(null)).toBe(false);
     } finally {
       vi.stubEnv("CALENDAR_WORKER_TOKEN", WORKER_TOKEN);
     }

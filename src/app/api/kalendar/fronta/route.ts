@@ -4,7 +4,7 @@ import { runCalendarWorker } from "@/server/calendar/worker";
 import type { WorkerSource } from "@/server/db/schema";
 
 // Zpracování fronty Kalendáře pro plánovače. GET volá denní cron Vercelu (posílá `CRON_SECRET`),
-// POST plánovač v GitHub Actions (`CALENDAR_WORKER_TOKEN`). Obojí v hlavičce `Authorization: Bearer`.
+// POST plánovač v GitHub Actions (OIDC token workflow, případně `CALENDAR_WORKER_TOKEN`). Vše v `Authorization: Bearer`.
 // Odpověď nese jen počty, nikdy názvy akcí ani adresy.
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -16,7 +16,7 @@ const reply = (status: number, body?: object) => {
 };
 
 async function handle(request: NextRequest, source: WorkerSource) {
-  if (!workerRequestAuthorized(request.headers.get("authorization"))) return reply(401);
+  if (!(await workerRequestAuthorized(request.headers.get("authorization")))) return reply(401);
   const result = await runCalendarWorker(source);
   return reply(result.status === "failed" ? 503 : 200, result);
 }

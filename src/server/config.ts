@@ -198,6 +198,15 @@ export function calendarWorkerTokens(): string[] {
 }
 
 /**
+ * Repozitář (`vlastník/název`), jehož workflow `kalendar-fronta.yml` se smí k frontě prokázat GitHub
+ * OIDC tokenem místo sdíleného `CALENDAR_WORKER_TOKEN`. Prázdné = OIDC vypnuté.
+ */
+export function calendarWorkerOidcRepository(): string | null {
+  const value = process.env.CALENDAR_WORKER_OIDC_REPOSITORY?.trim() ?? "";
+  return /^[\w.-]+\/[\w.-]+$/.test(value) ? value : null;
+}
+
+/**
  * Zkušební režim upozornění v osobním kalendáři (`CALENDAR_PERSONAL_NOTIFY=self-invite`, výchozí vypnuto):
  * akce v kalendáři „Vzdělávání ZBC“ nese jako hosta účet samotného účastníka a zapisuje se se
  * `sendUpdates=all`, aby Google poslal e-mail o nové, změněné a zrušené akci. Dokumentace Googlu chování

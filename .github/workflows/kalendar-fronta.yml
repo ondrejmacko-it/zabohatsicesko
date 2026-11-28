@@ -20,6 +20,9 @@ jobs:
     name: Zpracovat frontu
     runs-on: ubuntu-latest
     timeout-minutes: 3
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - name: Zavolat Wiki
         env:
@@ -36,9 +39,16 @@ jobs:
             echo "::notice::Plánovač je záměrně vypnutý (CALENDAR_QUEUE_SCHEDULER=off), nic se nevolá."
             exit 0
           fi
+          # Bez secretu se workflow prokáže krátkodobým GitHub OIDC tokenem (endpoint ho přijme, když má
+          # Wiki nastavené CALENDAR_WORKER_OIDC_REPOSITORY na toto repo). Secret zůstává jako záložní cesta.
+          if [ -z "$TOKEN" ] && [ -n "$ACTIONS_ID_TOKEN_REQUEST_URL" ]; then
+            TOKEN=$(curl -sS --max-time 20 -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+              "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=zbc-kalendar-fronta" | jq -r '.value // empty') || TOKEN=""
+            [ -z "$TOKEN" ] || echo "::add-mask::$TOKEN"
+          fi
           missing=()
           [ -n "$WIKI_URL" ] || missing+=("proměnná WIKI_URL")
-          [ -n "$TOKEN" ] || missing+=("secret CALENDAR_WORKER_TOKEN")
+          [ -n "$TOKEN" ] || missing+=("OIDC token ani secret CALENDAR_WORKER_TOKEN")
           if [ ${#missing[@]} -gt 0 ]; then
             echo "::error::Plánovač není nastavený, chybí: ${missing[*]}. Doplň je v Settings → Secrets and variables → Actions, nebo plánovač záměrně vypni proměnnou CALENDAR_QUEUE_SCHEDULER=off."
             exit 1
