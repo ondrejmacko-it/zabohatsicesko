@@ -196,10 +196,10 @@ export async function syncDuePersonalCalendars(db: Db, deps: PersonalDeps = {}):
 
 /**
  * Verze podoby zapsané akce. Zvýšení přepíše všechny akce v kalendářích a znovu zkusí nastavení kalendáře
- * (2 = připomínky přímo v akci, 3 = oprava nastavení kalendáře po 401 na `calendarList.patch`). Kalendář si pamatuje verzi v `event_format`, `personalSyncNeeded` podle ní
+ * (2 = připomínky přímo v akci, 3 = oprava nastavení kalendáře po 401 na `calendarList.patch`, 4 = pět připomínek 7 d / 1 d / 60 / 30 / 10 min). Kalendář si pamatuje verzi v `event_format`, `personalSyncNeeded` podle ní
  * pozná, že po nasazení je co přepisovat.
  */
-export const EVENT_FORMAT = 3;
+export const EVENT_FORMAT = 4;
 const hashOf = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex").slice(0, 32);
 export const personalEventId = (eventId: string) => eventIdForKey(`personal:${config.orgId}:${eventId}`);
 

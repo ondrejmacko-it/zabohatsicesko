@@ -38,7 +38,7 @@ export function personalCalendarView(state: PersonalCalendarState): PersonalCale
         badge: "Propojeno",
         text: `Akce najdeš v kalendáři „Vzdělávání ZBC“ (${state.accountEmail ?? "tvůj účet Google"}). ${
           state.syncedAt ? `Aktualizováno ${when(state.syncedAt)}.` : "Akce se tam objeví během chvilky."
-        } Den před akcí přijde připomínka e-mailem.`,
+        } Připomínka přijde e-mailem týden a den před akcí a v Kalendáři hodinu, půl hodiny a 10 minut předem.`,
         action: null,
       };
     case "revoked":

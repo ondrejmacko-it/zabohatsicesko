@@ -153,7 +153,7 @@ describe("stav osobního kalendáře", () => {
     expect(active.action).toBeNull();
     expect(active.text).toContain("ucastnik@example.com");
     expect(active.text).toContain("16. 11. v 09:05");
-    expect(active.text).toContain("připomínka e-mailem");
+    expect(active.text).toContain("Připomínka přijde e-mailem týden a den před akcí");
     expect(personalCalendarView({ ...base, status: "active", retrying: true }).tone).toBe("warn");
     const blocked = personalCalendarView({ ...base, status: "active", blocked: true });
     expect(blocked.action).toBe("Připojit Kalendář znovu");
