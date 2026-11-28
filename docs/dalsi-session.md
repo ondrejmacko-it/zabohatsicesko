@@ -20,7 +20,7 @@ Architektura plánovačů: `after()` + návštěva Wiki, GitHub */10 (nespolehli
 
 ## Relace 107
 - Test `tests/kalendar-osobni-cteni.test.ts` (listEvents: stránkování, 404/503) – commity aadfec6 + následující.
-- Lokálně na HEAD: eslint 0, tsc 0, vitest 668/668, `next build` OK. Plné `npm run e2e`: viz výsledek níže/ověřit.
+- Lokálně na HEAD: eslint 0, tsc 0, vitest 668/668, `next build` OK. Plné `npm run e2e`: 1660 passed, 745 skipped, 0 failed (14,8 min).
 - CI PR #97 (běh 46163734788): lint/typy/testy/build ZELENÉ, citlivé cesty ZELENÉ, smoke E2E ZELENÉ (9 passed),
   **vizuální regrese 15/15 FAIL**, každý snímek ~1 % pixelů. Příčina: reference vznikly v cloudovém kontejneru,
   CI renderuje na ubuntu-latest jinými systémovými fonty (Playwright 1.63.0 shodně). Není to regrese UI.
@@ -33,7 +33,7 @@ Architektura plánovačů: `after()` + návštěva Wiki, GitHub */10 (nespolehli
    `e2e/vizualni.spec.ts-snapshots/*.png` zpět na tu pomocnou větev. Pushnout větev `reference-vizual/pr97`,
    počkat na běh, fetch, 2–3 PNG porovnat (Read) s lokálními, zkopírovat do pracovní větve, push → CI zelené.
    Alternativa bez nového workflow: vlastník stáhne artefakt a commitne `*-actual.png` jako reference.
-2. Plné lokální E2E, pokud v relaci 107 nedoběhlo (`npm run e2e -- --reporter=dot | tail`).
+2. (Plné lokální E2E hotovo v relaci 107, znovu jen po změně kódu.)
 3. Přepsat `docs/report-zive-overeni-pr97.md` (85 ř.) do kategorií bodu 11 (odkaz na promenne-prostredi.md a skript,
    scénáře bodu 5 jako Blokované s přesným seznamem, co dodat), aktualizovat popis PR #97.
 4. Report vlastníkovi + žádost o oprávnění pro maximální automatizaci (Google testovací účty 3×, testovací OAuth
