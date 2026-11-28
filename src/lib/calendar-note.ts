@@ -59,3 +59,21 @@ function personalNote(state: ParticipationState, { link, inCalendar }: OwnCalend
   }
   return PENDING;
 }
+
+/**
+ * Krátký stav Kalendáře člověka pro přehled účasti (správce, nadřízený). `problem` = akce v Kalendáři chybí,
+ * přebývá, zápis selhal nebo osobní kalendář není propojený, ač by v něm akce být měla. Null = zrušená akce
+ * nebo se akce člověka netýká.
+ */
+export function calendarStatus(state: ParticipationState, calendar: OwnCalendar | null): { label: string; problem: boolean } | null {
+  if (state === "cancelled" || state === "optional") return null;
+  if (!calendar) return { label: "Nelze ověřit", problem: false };
+  const guest = state === "required" || state === "voluntary_enrolled";
+  if (calendar.link === "attention") return { label: "Zápis selhal", problem: true };
+  if (calendar.link === "none") return calendar.personal ? { label: "Nepropojený Kalendář", problem: guest } : { label: "Pozvánka nevznikla", problem: guest };
+  if (calendar.link === "pending") return { label: "Aktualizuje se", problem: false };
+  if (guest === calendar.inCalendar) return { label: guest ? "V Kalendáři" : "Mimo Kalendář", problem: false };
+  // Odeslaná pozvánka bez spravovaného hosta: u pozvánek může jít o ručního hosta, Wiki to neověří.
+  if (!calendar.personal && guest) return { label: "Ručně spravováno", problem: false };
+  return { label: guest ? "V Kalendáři chybí" : "V Kalendáři přebývá", problem: true };
+}

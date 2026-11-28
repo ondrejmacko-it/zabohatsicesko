@@ -103,7 +103,7 @@ export async function attendanceByEvent(scope: AttendanceScope, from: Date, to: 
   });
 }
 
-export type PersonAttendance = { id: string; name: string; active: boolean; counts: AttendanceCounts };
+export type PersonAttendance = { id: string; name: string; active: boolean; groups: string[]; counts: AttendanceCounts };
 
 /** Přehled podle lidí v období [from, to): u každého člověka v rozsahu počty akcí podle stavu. Zrušené akce se nepočítají. */
 export async function attendanceByPerson(scope: AttendanceScope, from: Date, to: Date): Promise<PersonAttendance[]> {
@@ -111,7 +111,7 @@ export async function attendanceByPerson(scope: AttendanceScope, from: Date, to:
   return people.map((person) => {
     const counts = emptyCounts();
     for (const { id, published } of rows) addState(counts, participationState(person, published, records.get(`${id}|${person.id}`) ?? null));
-    return { id: person.id, name: person.name, active: person.status === "active", counts };
+    return { id: person.id, name: person.name, active: person.status === "active", groups: person.groups, counts };
   });
 }
 
