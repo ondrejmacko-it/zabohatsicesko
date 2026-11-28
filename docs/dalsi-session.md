@@ -1,4 +1,4 @@
-# Navazující relace (stav 28. 11. 2026, relace 89)
+# Navazující relace (stav 28. 11. 2026, relace 90)
 
 Cíl: zadání vlastníka „Opravy po živém uživatelském testování, synchronizace Kalendáře a správa účasti“
 (body 0–12). Zadání do repa nedávat. Bez merge, deploye, produkční DB, živého Googlu a Make.
@@ -30,8 +30,28 @@ Oslovení: 5. pád, vlastní hodnota, neutrální náhrada, žádné oslovení z
 dlouhá/neobvyklá jména a náhled za kolegu.
 
 ## Další kroky (pořadí)
-1. Bod 8: začít `src/components/Topbar.tsx`, `src/components/SalutationForm.tsx`, `e2e/osloveni.spec.ts`
-   (grep, ne celé soubory). Nejdřív zjistit stav a vady (screenshot PC + telefon-390 přes dočasný spec, nepřidávat do repa).
+1. Bod 8 – diagnóza hotová (relace 90, screenshot PC 1280 + telefon 390), kód zatím beze změn:
+   - Vady: `Menu.tsx` počítá pozici jen při otevření; rozbalení `<details>` „Upravit oslovení“ pak panel
+     vytlačí za pravý okraj okna (oříznutý popisek i pole, PC i telefon). `resize` menu zavře → na telefonu
+     ho zavře vysunutí klávesnice při psaní oslovení (ověřeno změnou výšky okna). Menu nemá Kalendář
+     (stav, propojení, ruční synchronizace) ani reset oslovení tlačítkem.
+   - Návrh (dle zadání PC = kompaktní nabídka, telefon = samostatné okno): nový klientský `AccountMenu`
+     místo obecného `Menu` v `Topbar.tsx`. Jeden panel, vzhled jen CSS: PC `position:absolute; right:0;
+     top:100%` pod tlačítkem, šířka ~340 px, `max-height` + vlastní scroll; telefon (<720 px) fixní okno přes
+     celou obrazovku s hlavičkou „Účet“ a křížkem, zamčený scroll stránky, past fokusu. Zavírá Esc, klik mimo
+     (PC), křížek; NE resize/scroll. Panel zůstává v DOM → rozepsané oslovení přežije zavření. Fokus po
+     otevření do panelu, po zavření zpět na tlačítko. Sekce: kdo (jméno, role, e-mail, „Skutečný účet“
+     v náhledu) · Oslovení (aktuální tvar, pole, Uložit, „Vrátit podle jména“) · Google Kalendář (z
+     `personalCalendarView()` v `PersonalCalendarStatus.tsx`, odkaz `PERSONAL_CONNECT_HREF`, nové
+     „Synchronizovat teď“ = server akce s `requestPersonalSync(db,[user.id])` z `server/calendar/personal.ts`,
+     jen ve stavu active, ne v náhledu) · Odhlásit. Stav kalendáře načíst v `src/app/(wiki)/layout.tsx`
+     přes `loadPersonalCalendar(user)` (jen mimo náhled; mimo režim personal null → sekce skrytá).
+   - Oslovení (`src/lib/greeting.ts`): porovnávat jméno NFC a bez ohledu na velikost písmen („ANNA“ → Anno);
+     v náhledu kolegy (`page.tsx:88`) použít jeho uložené oslovení `getSalutation(preview.viewer.id)`, jen
+     u `preview.personName`. Systémové názvy účtů slovník nepropustí (ověřit vitest `tests/osloveni.test.ts`).
+   - Upravit e2e: `e2e/osloveni.spec.ts`, `e2e/zahlavi.spec.ts:70` (`.account-menu .menu-list`),
+     `e2e/nahled-role.spec.ts:76`; nový scénář: změna výšky okna nezavře panel, Esc/křížek vrátí fokus,
+     panel v okně (PC i 360/390), rozepsaná hodnota přežije zavření.
 2. Bod 9 barvy Správy (zelená/červená/modrá/neutrální/varovná, i v dialozích a zprávách), bod 10 filtry Témat.
 3. Zkontrolovat zbytky bodu 4 (ruční synchronizace vlastního kalendáře, přehled problémů pro správce) a bodu 3
    (první synchronizace po propojení, dry-run inventura) – ověřit grepem, co už existuje, nedomýšlet.
@@ -41,5 +61,5 @@ dlouhá/neobvyklá jména a náhled za kolegu.
 ## Technika
 - NEPOUŽÍVAT prettier. e2e server jede nad buildem (po změně UI `npx next build`). Před prací `npm ci`.
 - Cílené e2e: `npx playwright test <soubor> --project=windows-1280 --project=telefon-390 --no-deps --reporter=dot --trace off`.
-- Hook hlásí 140 tis. brzy (velký systémový prompt): malé jednotky, commit + push po každé.
+- Hook hlásí 140 tis. velmi brzy (systémový prompt ~110 tis.): bez průzkumu rovnou implementovat podle bodu 1, malé jednotky, commit + push po každé.
 - Před začátkem `git fetch` a ověřit, že na větvi nepracuje jiná relace; spouštět jen jednu navazující relaci.
