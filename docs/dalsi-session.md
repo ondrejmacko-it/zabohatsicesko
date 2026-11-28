@@ -1,4 +1,4 @@
-# Navazující relace (stav 28. 11. 2026, relace 87)
+# Navazující relace (stav 28. 11. 2026, relace 88)
 
 Cíl: zadání vlastníka „Opravy po živém uživatelském testování, synchronizace Kalendáře a správa účasti“
 (body 0–12: osobní Kalendář podle účasti, stavy synchronizace, připomínky, záložka Účast, nadřízení,
@@ -48,6 +48,11 @@ Větev `claude/oprava-kalendare-a-prehled-ucasti` z main `fa5e67f`. PR zatím ne
   `calendarStatus(state, calendar)` v `src/lib/calendar-note.ts` (label + problem), test `ucast-stav-kalendare`.
   `PersonAttendance.groups` přidáno.
 
+- Bod 6 (c) dokončeno (`891f3e3`): `calendarStates(db, eventIds, userIds)` v `attendees.ts` (hromadně, konstantní
+  počet dotazů; `ownCalendarState` ho volá pro jednu akci). `EventAttendance.calendarProblems` (zrušená akce = 0),
+  sloupec „Kalendář“ s odkazem na detail `kalendar=1`, filtr `kalendar=1` filtruje i pohled akcí.
+- Menu (`2fcd34f`): `layout.tsx` vzdělávání = `requireUser` + `attendanceScope` → `SubNav showAttendance` (pill „Účast“).
+
 ## Ověřeno
 - HEAD `4c7fbf6`: tsc + eslint OK; vitest `kalendar-osobni*`, `kalendar-organizator`, `users` OK (49+14).
 - HEAD `3664e50`: tsc + eslint OK; vitest `kalendar-osobni*`, `kalendar-uklid` 30/30.
@@ -58,18 +63,17 @@ Větev `claude/oprava-kalendare-a-prehled-ucasti` z main `fa5e67f`. PR zatím ne
 - HEAD `e7a38c6`: tsc + eslint OK; vitest `ucast-prehled` 5/5.
 - HEAD `d5f66ff`: tsc + eslint OK; vitest `ucast-stav-kalendare`, `ucast-prehled` 9/9. Stránka zatím neotevřená v prohlížeči.
 
+- HEAD `891f3e3`: tsc + eslint OK; vitest `kalendar*`, `ucast*` 152/152. `2fcd34f`: tsc + eslint OK.
+
 ## Zadání
 Plné znění = první zpráva uživatele v relaci `session_01HpUirxBfw13jo5FXzPsfP2` (list_events, kinds `user`,
 before_id `1c2d91e3-70a5-48e2-aad8-bf9e5819fbb2`; výstup je velký, číst jen bod, na kterém se pracuje).
 
 ## Další kroky (pořadí)
-1. Bod 6 (c) dokončit: filtr `kalendar=1` v pohledu akcí zatím jen hláška (problémy se filtrují v detailu).
-   Přidat hromadný počet problémů za akci do `attendanceByEvent` (osobní režim: jeden dotaz na
-   `personal_calendars` + `personal_calendar_entries` pro akce období; jinak `calendar_links`) a sloupec/filtr.
-2. Pill „Účast“ v `SubNav.tsx` jen s propem `showAttendance` z `layout.tsx` (server: `requireUser` +
-   `currentPreview` + `attendanceScope(user, Boolean(preview))` ≠ null). Pak e2e scénář stránky (správce vidí,
-   zaměstnanec 404, nadřízený jen své lidi) a kontrola v prohlížeči PC + mobil.
-3. Účet/oslovení (bod 8), barvy Správy (bod 9), Témata filtry (bod 10), e2e, report, draft PR.
+1. e2e scénář stránky Účast (nový `e2e/ucast-prehled.spec.ts`, vzor `e2e/ucast.spec.ts` = server `UCAST_PORT`
+   s PARTICIPATION=on, `authFile(...)` role): správce vidí pill i stránku, zaměstnanec pill nemá a `/vzdelavani/ucast`
+   = 404, nadřízený jen své lidi. Pak kontrola v prohlížeči PC + mobil.
+2. Účet/oslovení (bod 8), barvy Správy (bod 9), Témata filtry (bod 10), e2e, report, draft PR.
 - Diagnostika nasazení (CALENDAR_DELIVERY, PARTICIPATION…): neověřeno, jen názvy proměnných, bez hodnot tajemství.
 
 ## Technika
