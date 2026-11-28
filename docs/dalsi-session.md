@@ -57,7 +57,7 @@ F. Po uvolnění limitu: jedno ucelené ověřené nasazení (nejdřív lokáln�
 - E ZJIŠTĚNO: schedule na main běží reálně po 5–9 h (GitHub throttling, běhy 22:48, 04:19, 13:14 UTC) a
   dosud nic nevolá (log 46148649291: WIKI_URL i TOKEN prázdné; main nemá OIDC) → začne fungovat až po merge.
   Vercel cron 17 5 * * * (Hobby = 1×/den) ověřit v F přes calendar_worker_runs (source cron) / runtime logs.
-- Kontroly na 344f876: eslint 0, tsc 0, vitest 678/678; build + e2e: VYSLEDEK_E2E.
+- Kontroly na 344f876: eslint 0, tsc 0, vitest 678/678; build OK, e2e 1655 passed, 715 skipped, 0 failed (15,2 min).
 - F: limit Vercelu podle relace 114 do ~29. 11. 18:20 UTC (nezkoušeno). Po něm create_deployment (viz úkol 2),
   pak push gallant→PR větev, živé testy, report.
 
