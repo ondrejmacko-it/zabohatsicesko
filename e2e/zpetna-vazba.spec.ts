@@ -1,6 +1,6 @@
 import type { Page, TestInfo } from "@playwright/test";
 import { FEEDBACK_HOOK_PORT } from "./constants.mjs";
-import { authFile, expect, settle, test } from "./support";
+import { authFile, expect, openMainMenu, settle, test } from "./support";
 
 // Zpětná vazba (brouček). Ukázka posílá na falešný webhook Make.com z e2e/server.mjs, který hlášení vrací
 // přes GET /hlaseni. Živý Make.com se v testech nevolá.
@@ -143,7 +143,7 @@ test.describe("brouček na počítači", () => {
     await settle(page);
     await expect(bug(page)).toHaveCount(0);
 
-    await page.locator(".sidebar").getByRole("button", { name: "Zpětná vazba" }).click();
+    await (await openMainMenu(page)).getByRole("button", { name: "Zpětná vazba" }).click();
     await expect(dialog(page)).toBeVisible();
     await dialog(page).getByRole("button", { name: "Zavřít" }).click();
     await expect(bug(page)).toBeVisible();
@@ -431,7 +431,7 @@ test.describe("zpětná vazba: citlivý obsah, snímek a odesílání", () => {
     await dialog(page).getByRole("button", { name: "Skrýt broučka" }).click();
     await expect(dialog(page)).toHaveCount(0);
     await expect(page.getByRole("alertdialog")).toHaveCount(0);
-    await page.locator(".sidebar").getByRole("button", { name: "Zpětná vazba" }).click();
+    await (await openMainMenu(page)).getByRole("button", { name: "Zpětná vazba" }).click();
     await dialog(page).getByRole("button", { name: "Pokračovat" }).click();
     await expect(dialog(page).getByLabel("Co se stalo?")).toHaveValue("Rozepsáno před skrytím");
   });
@@ -460,7 +460,7 @@ test.describe("brouček na telefonu", () => {
       }
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     }
-    await expect(page.locator(".sidebar").getByRole("button", { name: "Zpětná vazba" })).toBeVisible();
+    await expect((await openMainMenu(page)).getByRole("button", { name: "Zpětná vazba" })).toBeVisible();
   });
 
   test("telefon: otevře, vyplní, vrací se mezi kroky, bezpečně zavře a odešle", async ({ page }, testInfo) => {
@@ -490,7 +490,7 @@ test.describe("brouček na telefonu", () => {
     await dialog(page).getByRole("button", { name: "Zpět" }).tap();
     await dialog(page).getByRole("button", { name: "Skrýt broučka" }).tap();
     await expect(dialog(page)).toHaveCount(0);
-    await page.locator(".sidebar").getByRole("button", { name: "Zpětná vazba" }).tap();
+    await (await openMainMenu(page)).getByRole("button", { name: "Zpětná vazba" }).tap();
     await dialog(page).getByRole("button", { name: "Pokračovat" }).tap();
     await expect(dialog(page).getByLabel("Co se stalo?")).toHaveValue(text);
 

@@ -131,17 +131,6 @@ textarea {
 
 /* ——— Shell ——— */
 
-/* Na nejužších telefonech se „Správa systému“ zkrátí na „Správa“, ať se vejde vedle ostatních položek. */
-@media (max-width: 380px) {
-  .nav-label-tail {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    white-space: nowrap;
-  }
-}
 
 /* Lišta se na užším okně zalomí po celcích (značka, Pohled, účet), nikdy uvnitř účtu: jméno a Odhlásit zůstanou
    vedle sebe (F18). */
@@ -227,6 +216,11 @@ textarea {
   background: var(--sidebar);
   border-radius: var(--radius);
   color: var(--sidebar-text);
+}
+
+/* Tlačítko menu je jen na telefonu (blok max-width: 640px). */
+.nav-toggle {
+  display: none;
 }
 
 .nav {
@@ -2243,26 +2237,73 @@ details > summary {
     display: none;
   }
 
-  /* Telefon: ikona nad popiskem, všechny položky v jedné řadě stejně široké. */
+  /* Telefon: hamburger menu. Tlačítko ukazuje aktuální sekci, rozbalený seznam je svislý jako na počítači. */
+  .nav-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 44px;
+    padding: 8px 10px;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: none;
+    color: var(--sidebar-text);
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .nav-toggle svg {
+    flex: none;
+    width: 20px;
+    height: 20px;
+  }
+
+  .nav-toggle:hover {
+    background: #262626;
+  }
+
+  .nav-toggle-current {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--sidebar-muted);
+    font-weight: 400;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .nav-toggle-current::before {
+    content: "· ";
+  }
+
+  .nav-toggle .nav-badge {
+    margin-left: auto;
+  }
+
   .nav {
-    grid-template-columns: repeat(var(--nav-cols-phone, 4), minmax(0, 1fr));
+    display: flex;
+    flex-direction: column;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid var(--sidebar-line);
+  }
+
+  .nav:not([data-open="true"]) {
+    display: none;
   }
 
   .nav-item {
-    position: relative;
-    flex-direction: column;
-    gap: 4px;
-    min-height: 52px;
-    padding: 8px 4px;
-    font-size: 13px;
-    line-height: 1.2;
-    text-align: center;
+    justify-content: flex-start;
+    min-height: 44px;
+    padding: 10px 12px;
+    font-size: 15px;
   }
 
   .nav-badge {
-    position: absolute;
-    top: 4px;
-    right: 6px;
+    margin-left: auto;
   }
 
   h1 {
@@ -5186,6 +5227,12 @@ body[data-moving] .quick-actions,
   background: #262626;
 }
 
+@media (max-width: 640px) {
+  .sidebar-feedback .nav-item {
+    font-size: 15px;
+  }
+}
+
 .bug-dock {
   position: fixed;
   z-index: 40;
@@ -5789,31 +5836,6 @@ body[data-moving] .quick-actions,
   .view-switch .combobox-panel {
     right: 0;
     min-width: 0;
-  }
-}
-
-/* Telefon: Zpětná vazba má stejné písmo a zarovnání jako ostatní položky menu. */
-@media (max-width: 640px) {
-  .sidebar-feedback .nav-item {
-    font-size: 13px;
-    text-align: center;
-  }
-}
-
-/* Úzký telefon se čtyřmi položkami: 2×2 s ikonou vedle popisku místo čtyř stísněných sloupců. */
-@media (max-width: 480px) {
-  .nav[data-phone-count="4"] {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .nav[data-phone-count="4"] .nav-item {
-    flex-direction: row;
-    gap: 8px;
-    min-height: 44px;
-  }
-
-  .nav[data-phone-count="4"] .nav-badge {
-    position: static;
   }
 }
 
