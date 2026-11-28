@@ -422,13 +422,13 @@ describe("plánovač a endpoint fronty", () => {
     expect(runs.map((r) => r.source)).toEqual(["visit"]);
   });
 
-  test("osobní režim: plánovač, odpovědi ani karta pozvánek nic nedělají (žádný souběh)", async () => {
+  test("osobní režim: plánovač bez osobních kalendářů, odpovědi ani karta pozvánek nic nedělají (žádný souběh)", async () => {
     await invited();
     vi.stubEnv("CALENDAR_DELIVERY", "personal");
     try {
       const db = await getDb();
       const calls = google.requests.length;
-      expect(await runCalendarWorker("github")).toMatchObject({ status: "off" });
+      expect(await runCalendarWorker("github")).toMatchObject({ status: "done", pending: 0, responses: null });
       expect(await syncResponses(db, calendarProvider(db))).toBe("skipped");
       expect(await invitationsFor(db, await viewerOf(KOLEGA))).toBeNull();
       expect(await workerHealth(db)).toBeNull();

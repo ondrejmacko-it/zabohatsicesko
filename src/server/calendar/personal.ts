@@ -144,14 +144,9 @@ export async function requestPersonalSync(db: Executor, userIds?: readonly strin
     .where(userIds ? and(where, inArray(personalCalendars.userId, [...userIds])) : where);
 }
 
-/**
- * Je co dohánět? Aktivní kalendář po přechodné chybě, se změnou novější než poslední zápis, ještě nikdy
- * nezapsaný, nebo kalendář účtu, který už není aktivní (úklid). Jeden levný dotaz bez volání Googlu,
- * proto ho smí položit každé otevření Úvodu.
- */
-export async function personalSyncNeeded(db: Executor): Promise<boolean> {
-  if (!personalDelivery()) return false;
-  const [row] = await db
+/** Kalendáře, které je potřeba srovnat (výběr pro `personalSyncNeeded` i plánovač). */
+const dueQuery = (db: Executor) =>
+  db
     .select({ userId: personalCalendars.userId })
     .from(personalCalendars)
     .leftJoin(users, eq(users.id, personalCalendars.userId))
@@ -175,9 +170,28 @@ export async function personalSyncNeeded(db: Executor): Promise<boolean> {
           ne(users.status, "active"),
         ),
       ),
-    )
-    .limit(1);
+    );
+
+/**
+ * Je co dohánět? Aktivní kalendář po přechodné chybě, se změnou novější než poslední zápis, ještě nikdy
+ * nezapsaný, nebo kalendář účtu, který už není aktivní (úklid). Jeden levný dotaz bez volání Googlu,
+ * proto ho smí položit každé otevření Úvodu.
+ */
+export async function personalSyncNeeded(db: Executor): Promise<boolean> {
+  if (!personalDelivery()) return false;
+  const [row] = await dueQuery(db).limit(1);
   return Boolean(row);
+}
+
+/**
+ * Srovná jen kalendáře, které to potřebují (stejný výběr jako `personalSyncNeeded`). Pro plánovač:
+ * opakování po chybě a změny čekající ve frontě se doženou i bez návštěvy Wiki. Vrací, kolik jich zbývá.
+ */
+export async function syncDuePersonalCalendars(db: Db, deps: PersonalDeps = {}): Promise<number> {
+  if (!personalDelivery()) return 0;
+  const rows = await dueQuery(db);
+  for (const row of rows) await syncPersonalCalendar(db, row.userId, deps);
+  return (await dueQuery(db)).length;
 }
 
 /**

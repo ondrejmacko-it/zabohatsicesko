@@ -4,7 +4,8 @@ import { GROUPS, type Group, type Role, type UserOrigin, type UserStatus } from 
 import { audit } from "@/server/audit";
 import { createInvite, inviteOnlyLogin, listUserAccess, pruneOldAccess, revokeDevice, revokeInvites, revokeUserDevices, type UserAccess } from "@/server/auth/devices";
 import { requeueAttendeeSync } from "@/server/calendar/attendees";
-import { config, isPrimaryAdmin } from "@/server/config";
+import { requestPersonalSync } from "@/server/calendar/personal";
+import { config, isPrimaryAdmin, personalDelivery } from "@/server/config";
 import { getDb, type Executor } from "@/server/db/client";
 import { userIdentities, users } from "@/server/db/schema";
 import { canManageAccount, canManageUsers, type Viewer } from "@/server/policy";
@@ -198,6 +199,8 @@ export async function updateAccess(
     // Publikum se mohlo změnit ve starých i nových skupinách, u akcí pro všechny i u přihlášek a omluv.
     // Budoucí spravované pozvánky člověka se podle toho přepočítají (i po deaktivaci).
     await requeueAttendeeSync(tx, { id: userId, groups: [...new Set([...target.groups, ...input.groups])] });
+    // Osobní režim: nové skupiny mění, které akce patří do jeho kalendáře. Dožene to plánovač i návštěva.
+    if (personalDelivery()) await requestPersonalSync(tx, [userId]);
   });
 }
 

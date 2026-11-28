@@ -5,7 +5,9 @@ import { eventParticipation, events, personalCalendarEntries, personalCalendars 
 import { config } from "@/server/config";
 import type { EventSnapshot } from "@/lib/types";
 import { syncParticipation } from "@/server/calendar/sync";
-import { PUBLISHED_RM, lead, participant, resetDemo } from "./helpers";
+import { runCalendarWorker } from "@/server/calendar/worker";
+import { updateAccess } from "@/server/services/users";
+import { PUBLISHED_RM, admin, lead, participant, resetDemo } from "./helpers";
 
 // Regrese z živého testu 28. 11.: osobní kalendář se řídil jen publikem akce, přihláška ani omluva
 // z `event_participation` se do Googlu nepropsaly. Kontroluje skutečné požadavky na Google API.
@@ -113,5 +115,26 @@ describe("osobní kalendář podle účasti", () => {
     expect(await entryIds()).toContain(PUBLISHED_RM);
     const [other] = await db.select({ syncedAt: personalCalendars.syncedAt, requested: personalCalendars.syncRequestedAt }).from(personalCalendars).where(eq(personalCalendars.userId, lead.id));
     expect(other).toEqual({ syncedAt: null, requested: null });
+  });
+
+  test("plánovač v osobním režimu dožene čekající změnu bez návštěvy Wiki", async () => {
+    await setRecord(PUBLISHED_RM, "withdrawn");
+    await request();
+    const g = fakeGoogle();
+    vi.stubGlobal("fetch", g.fetchImpl);
+    try {
+      expect(await runCalendarWorker("github")).toMatchObject({ status: "done", pending: 0 });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+    expect(await entryIds()).not.toContain(PUBLISHED_RM);
+    expect(g.calls.some((c) => c.method === "DELETE" && c.url.pathname.includes("/events/"))).toBe(true);
+  });
+
+  test("změna skupin zařadí osobní kalendář dotčeného k synchronizaci", async () => {
+    await db.update(personalCalendars).set({ syncRequestedAt: null }).where(eq(personalCalendars.userId, participant.id));
+    await updateAccess(admin, participant.id, { role: "member", groups: ["vsichni", "fp", "rm"], status: "active" });
+    const [row] = await db.select({ requested: personalCalendars.syncRequestedAt }).from(personalCalendars).where(eq(personalCalendars.userId, participant.id));
+    expect(row?.requested).toBeInstanceOf(Date);
   });
 });

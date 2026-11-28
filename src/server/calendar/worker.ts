@@ -1,9 +1,10 @@
 import { and, count, eq, gt, isNotNull, lt, sql } from "drizzle-orm";
 import { logError } from "@/server/audit";
-import { calendarMode, config, googleCalendarConfig, organizerDelivery } from "@/server/config";
+import { calendarMode, config, googleCalendarConfig, organizerDelivery, personalDelivery } from "@/server/config";
 import { getDb, type Db } from "@/server/db/client";
 import { calendarLinks, calendarSyncState, calendarWorkerRuns, events, type WorkerSource } from "@/server/db/schema";
 import { connectionStatus } from "./google-auth";
+import { syncDuePersonalCalendars } from "./personal";
 import { CalendarError } from "./provider";
 import { syncResponses, type ResponsesSyncResult } from "./rsvp";
 import { calendarProvider, errorKind, syncPublished, type ErrorKind } from "./sync";
@@ -43,10 +44,20 @@ async function queueCounts(db: Db) {
 }
 
 /**
- * Jeden běh zpracování. V režimu osobních kalendářů nedělá nic (žádný souběh se starým režimem).
- * Do `calendar_worker_runs` zapíše začátek, úspěch nebo kód chyby, nikdy obsah.
+ * Jeden běh zpracování. Do `calendar_worker_runs` zapíše začátek, úspěch nebo kód chyby, nikdy obsah.
+ * V režimu osobních kalendářů dožene jen osobní kalendáře, které to potřebují (opakování po chybě,
+ * změny účasti a skupin). Pozvánky ani odpovědi starého režimu se nečtou ani neposílají.
  */
 export async function runCalendarWorker(source: WorkerSource): Promise<WorkerResult> {
+  if (personalDelivery()) {
+    try {
+      const n = await syncDuePersonalCalendars(await getDb());
+      return { status: "done", pending: n, attention: 0, responses: null };
+    } catch {
+      logError("calendar.worker", `${source}_personal_failed`);
+      return { status: "failed", pending: 0, attention: 0, responses: null };
+    }
+  }
   if (!organizerDelivery()) return { status: "off", pending: 0, attention: 0, responses: null };
   const db = await getDb();
   await db
