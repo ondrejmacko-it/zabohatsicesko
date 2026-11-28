@@ -23,10 +23,11 @@ describe("PersonalCalendarApi.listEvents", () => {
     const { api, requests } = fakeGoogle([{ items: [{ id: "a" }, { id: "b" }], nextPageToken: "p2" }, { items: [{ id: "c" }] }]);
     expect((await api.listEvents("cal@group.calendar.google.com")).map((event) => event.id)).toEqual(["a", "b", "c"]);
     expect(requests).toHaveLength(2);
-    expect(requests[0].pathname).toBe("/calendar/v3/calendars/cal%40group.calendar.google.com/events");
-    expect(requests[0].searchParams.get("showDeleted")).toBe("false");
-    expect(requests[0].searchParams.has("pageToken")).toBe(false);
-    expect(requests[1].searchParams.get("pageToken")).toBe("p2");
+    const [first, second] = requests as [URL, URL];
+    expect(first.pathname).toBe("/calendar/v3/calendars/cal%40group.calendar.google.com/events");
+    expect(first.searchParams.get("showDeleted")).toBe("false");
+    expect(first.searchParams.has("pageToken")).toBe(false);
+    expect(second.searchParams.get("pageToken")).toBe("p2");
   });
 
   test("prázdný kalendář vrátí prázdný seznam", async () => {
