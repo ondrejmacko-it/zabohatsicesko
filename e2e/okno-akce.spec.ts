@@ -10,7 +10,7 @@ async function openEvent(page: Page) {
   await settle(page);
   // Na desktopu je agenda skrytá za mřížkou měsíce, odkaz akce je ale stejný.
   const href = await page.locator("a[class*=agendaEvent]").first().getAttribute("href");
-  await page.goto(href!);
+  await page.goto(`${href}&upravit=1`);
   const dialog = page.locator("dialog[open]");
   await expect(dialog).toBeVisible();
   // Doběhnutí animace otevření (150 ms).

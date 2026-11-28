@@ -108,7 +108,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
                 Upravit akci
               </button>
             ) : (
-              <Link className={handler && card.past ? "btn" : "btn btn-primary"} href={`${planHref}&akce=${encodeURIComponent(card.id)}`}>
+              <Link className={handler && card.past ? "btn" : "btn btn-primary"} href={`${planHref}&akce=${encodeURIComponent(card.id)}&upravit=1`}>
                 Upravit akci
               </Link>
             ))}
@@ -127,7 +127,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
           eventId={card.id}
           revision={detail.revision}
           original={card.original}
-          publishHref={`/vzdelavani/harmonogram?mesic=${monthOf(toDateKey(new Date(card.startsAt)))}&akce=${encodeURIComponent(card.id)}`}
+          publishHref={`/vzdelavani/harmonogram?mesic=${monthOf(toDateKey(new Date(card.startsAt)))}&akce=${encodeURIComponent(card.id)}&upravit=1`}
         />
       )}
 
@@ -170,7 +170,6 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
         <ParticipationPanel
           eventId={card.id}
           state={participation.state}
-          label={participation.label}
           actions={participation.actions}
           excuse={participation.excuse}
           calendar={participation.calendar}

@@ -21,7 +21,7 @@ export const BUG_STORAGE_KEY = "zbc-broucek";
 /** Telefon nebo dotyková obrazovka: větší brouček blíž okraji a přesun podržením (jako v Novi). */
 const TOUCH_QUERY = "(max-width: 900px), (pointer: coarse)";
 /** Hlavní ovládání, které brouček nesmí zakrýt. */
-const OBSTACLES = "[data-bug-avoid], .select-bar, .move-panel, .flash, .btn-primary, .sidebar, .quick-actions";
+const OBSTACLES = "[data-bug-avoid], .select-bar, .move-panel, .flash, .btn-primary, .sidebar, .quick-actions, .menu[data-open] .menu-list, [role=\"listbox\"]";
 /** Plovoucí lišty u spodního okraje, vedle kterých brouček sedí ve stejném řádku. */
 const BESIDE = ".quick-actions";
 /** Myš: tah delší než pár pixelů je přesun. */
@@ -110,7 +110,7 @@ export function BugButton({ dock, onDockChange, onOpen, busy }: Props) {
     cancelAnimationFrame(frame.current);
     frame.current = requestAnimationFrame(() => {
       setCovered(coveredByUi());
-      const viewport = { width: window.innerWidth, height: window.innerHeight };
+      const viewport = { width: window.innerWidth, height: window.visualViewport?.height ?? window.innerHeight };
       const size = touch ? BUG_SIZE_TOUCH : BUG_SIZE;
       setPlacement(placeBug(dock, tucked ? BUG_TAB_WIDTH : size, viewport, measureObstacles(), { touch, insets: measureInsets() }));
     });
@@ -122,11 +122,14 @@ export function BugButton({ dock, onDockChange, onOpen, busy }: Props) {
     const observer = new MutationObserver(measure);
     observer.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ["open", "data-moving", "class", "hidden"] });
     window.addEventListener("resize", measure);
+    // Softwarová klávesnice zmenší jen visualViewport: brouček se pak drží nad ní, ne pod ní.
+    window.visualViewport?.addEventListener("resize", measure);
     window.addEventListener("scroll", measure, { capture: true, passive: true });
     return () => {
       cancelAnimationFrame(frame.current);
       observer.disconnect();
       window.removeEventListener("resize", measure);
+      window.visualViewport?.removeEventListener("resize", measure);
       window.removeEventListener("scroll", measure, { capture: true });
     };
   }, [ready, dock.mode, measure]);

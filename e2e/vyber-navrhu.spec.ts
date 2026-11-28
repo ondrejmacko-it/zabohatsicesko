@@ -29,7 +29,7 @@ test.describe("Plán: hromadný výběr návrhů s návrhem změny zveřejněné
     // Mění sdílenou akci ev-11-26 (jako test v priprava-mesice), proto běží v sériovém projektu zápisů po ostatních.
     test.skip(info.project.name !== "zapis-temat", "Zapisuje do sdílených dat ukázky, běží jen v projektu zápisů.");
     // 1. Návrh změny zveřejněné akce (vedoucí).
-    await page.goto("/vzdelavani/harmonogram?mesic=2026-11&akce=ev-11-26");
+    await page.goto("/vzdelavani/harmonogram?mesic=2026-11&akce=ev-11-26&upravit=1");
     await settle(page);
     const window = page.getByRole("dialog").filter({ has: page.getByLabel(/^Vede/) });
     await chooseOption(window, /^Vede/, { label: "Správce ZBC ukázky" });
@@ -82,10 +82,11 @@ test.describe("Plán: hromadný výběr návrhů s návrhem změny zveřejněné
       await expect(page.locator("[data-selecting]")).toHaveCount(0);
       await changeCard.click();
       await expect(page).toHaveURL(/akce=ev-11-26/);
-      await expect(page.getByRole("dialog").getByText(/Mění vedoucí\./)).toBeVisible();
+      await expect(page.getByRole("dialog").getByRole("status")).toContainText("Návrh změny");
+      await expect(page.getByRole("dialog").getByRole("definition").filter({ hasText: "Správce ZBC ukázky" })).toBeVisible();
     } finally {
       // Úklid: zrušit návrh změny, ať ostatní testy vidí seed.
-      await page.goto("/vzdelavani/harmonogram?mesic=2026-11&akce=ev-11-26");
+      await page.goto("/vzdelavani/harmonogram?mesic=2026-11&akce=ev-11-26&upravit=1");
       await settle(page);
       const editor = page.getByRole("dialog").filter({ has: page.getByLabel(/^Vede/) });
       await editor.getByRole("button", { name: "Zrušit návrh" }).click();

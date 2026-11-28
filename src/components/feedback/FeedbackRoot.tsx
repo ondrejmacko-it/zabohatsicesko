@@ -211,7 +211,7 @@ export function FeedbackRoot() {
                 Pokračovat
               </button>
             </div>
-            {dock.mode !== "hidden" && <p className="small muted">Skrytého broučka vrátí položka „Zpětná vazba“ v levém menu.</p>}
+            {dock.mode !== "hidden" && <p className="small muted">Skrytého broučka vrátí položka „Zpětná vazba“ v navigaci.</p>}
           </div>
         )}
 

@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import type { EventSnapshot } from "@/lib/types";
 import { changedParts } from "@/server/services/events";
+import { changeSummary } from "@/lib/labels";
 
 const published: EventSnapshot = {
   type: "training-fp",
@@ -34,6 +35,15 @@ describe("changedParts: co návrh mění proti zveřejněné verzi", () => {
   });
 
   test("publikum, typ (i jen popisek) a kontrolor", () => {
-    expect(changedParts({ ...published, audience: "tym-a", label: "Jiný název", reviewerId: "u3" }, published)).toEqual(["publikum", "typ", "kontrolor"]);
+    expect(changedParts({ ...published, audience: "tym-a", label: "Jiný název", reviewerId: "u3" }, published)).toEqual(["skupina", "typ", "kontrolor"]);
+  });
+});
+
+describe("changeSummary", () => {
+  test("pojmenuje změny v 2. pádě a spojí je spojkou a", () => {
+    expect(changeSummary(["vedoucí", "skupina"])).toBe("Změna vedoucího a skupiny");
+    expect(changeSummary(["termín", "téma", "kontrolor"])).toBe("Změna termínu, tématu a kontrolora");
+    expect(changeSummary(["typ"])).toBe("Změna typu");
+    expect(changeSummary([])).toBeNull();
   });
 });

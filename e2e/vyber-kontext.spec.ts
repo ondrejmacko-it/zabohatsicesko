@@ -99,6 +99,7 @@ test.describe("Plán: výběr návrhů drží jen v jednom kontextu", () => {
     await other.goto("/vzdelavani/harmonogram?mesic=2027-09&pohled=seznam");
     await settle(other);
     await other.locator("a[data-pick-id]").filter({ hasText: title }).click();
+    await other.getByRole("dialog").getByRole("link", { name: "Upravit akci" }).click();
     const edit = other.getByRole("dialog").filter({ has: other.getByLabel("Název akce", { exact: true }) });
     await edit.getByLabel("Název akce", { exact: true }).fill(`${title} 2`);
     await edit.getByRole("button", { name: "Uložit jako návrh" }).click();

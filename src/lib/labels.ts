@@ -147,3 +147,16 @@ export function eventContext(title: string, type: EventType, audience?: Group): 
 export const PREVIEW_READ_ONLY = "Náhled je jen ke čtení";
 
 export const EXCUSE_REASON_LABELS: Record<import("@/lib/types").ExcuseReason, string> = { illness: "Nemoc", vacation: "Dovolená", other: "Jiné" };
+
+/** Části akce v 2. pádě pro větu „Změna vedoucího a skupiny“ (klíče z `changedParts`). */
+const CHANGE_GENITIVE: Record<string, string> = {
+  termín: "termínu", téma: "tématu", vedoucí: "vedoucího", skupina: "skupiny", typ: "typu", kontrolor: "kontrolora",
+};
+
+/** Krátká věta o rozdílu návrhu proti zveřejněné verzi; null, když rozdíl nejde pojmenovat. */
+export function changeSummary(changes: string[]): string | null {
+  const words = changes.map((c) => CHANGE_GENITIVE[c] ?? c);
+  if (words.length === 0) return null;
+  const last = words.pop();
+  return `Změna ${words.length ? `${words.join(", ")} a ${last}` : last}`;
+}

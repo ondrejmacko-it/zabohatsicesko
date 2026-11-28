@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { PageCall } from "@/components/PageCall";
 import {
   AccountActions,
   InviteButton,
@@ -69,15 +70,10 @@ export default async function AdminPage() {
 
   return (
     <>
-      <div className="page-head">
-        <div>
-          <h1>Správa systému</h1>
-          <p className="page-sub">
-            Role určuje, co člověk smí, skupiny, které akce a zápisy uvidí.
-          </p>
-        </div>
+      <h1>Správa systému</h1>
+      <PageCall text="Role určuje, co člověk smí, skupiny, které akce a zápisy uvidí.">
         <InviteButton roles={roles} />
-      </div>
+      </PageCall>
 
       {pending.length > 0 && (
         <section className="section stack" aria-labelledby="zadosti">
@@ -272,7 +268,18 @@ function AccountHead({
             !a.editable && a.status === "active" && <span className="small muted"> · tvůj účet</span>
           )}
         </p>
-        <p className="item-meta account-email">{a.email}</p>
+        {/* Zalomení jen před zavináčem, doména zůstane celá (pokud se vejde). */}
+        <p className="item-meta account-email">
+          {a.email.includes("@") ? (
+            <>
+              {a.email.slice(0, a.email.indexOf("@"))}
+              <wbr />
+              {a.email.slice(a.email.indexOf("@"))}
+            </>
+          ) : (
+            a.email
+          )}
+        </p>
         {/* Role štítkem (správce okrovým), skupiny vedle ní obyčejným textem: jméno, role, e-mail a skupiny
             se tak rozliší na první pohled. */}
         <p className="item-meta account-role">

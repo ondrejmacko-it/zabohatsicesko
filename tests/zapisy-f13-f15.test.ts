@@ -49,7 +49,7 @@ describe("F13: kdo zápis schvaluje a kdo má úkol ho napsat", () => {
 
   test("úkol napsat zápis má vedoucí, ne účastník ani kontrolor; kontrolor jen kontrolu hotového návrhu", async () => {
     await setPublished(PAST_FP, { reviewerId: reviewer.id });
-    expect((await tasksFor(lead)).map((t) => t.action)).toEqual(["Dokončit zápis"]);
+    expect((await tasksFor(lead)).map((t) => t.action)).toEqual(["Připravit zápis"]);
     expect(await tasksFor(reviewer)).toEqual([]);
     expect(await tasksFor(participant)).toEqual([]);
     // Správce má u akce s vedoucím zápis jen v „Zápisy k dokončení“, úkol ne.
@@ -62,11 +62,11 @@ describe("F13: kdo zápis schvaluje a kdo má úkol ho napsat", () => {
 
   test("akce bez vedoucího: úkol napsat zápis má správce, u hotového návrhu doplnit vedoucího", async () => {
     await setPublished(PAST_FP, { leadId: null, reviewerId: reviewer.id });
-    expect((await tasksFor(admin)).map((t) => t.action)).toEqual(["Dokončit zápis"]);
-    expect((await tasksFor(organizer)).map((t) => t.action)).toEqual(["Dokončit zápis"]);
+    expect((await tasksFor(admin)).map((t) => t.action)).toEqual(["Připravit zápis"]);
+    expect((await tasksFor(organizer)).map((t) => t.action)).toEqual(["Připravit zápis"]);
     expect(await tasksFor(reviewer)).toEqual([]);
     await createMinutesDraft(admin, PAST_FP, { source: "notes", text: "Shrnutí: Rozbor schůzky." }, null);
-    expect((await tasksFor(admin)).map((t) => t.action)).toEqual(["Doplnit vedoucího"]);
+    expect((await tasksFor(admin)).map((t) => t.action)).toEqual(["Přiřadit vedoucího"]);
   });
 
   test("pravidlo minutesTaskRole", () => {

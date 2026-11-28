@@ -113,7 +113,7 @@ export function MinutesSourceForm({ eventId, eventLabel, hasRecording, canUpload
       >
         {/* F15: pravidla pro citlivá data říká formulář dřív, než vedoucí text vloží. Krátce nahoře, podrobnosti rozbalovací. */}
         <div className="notice" data-testid="citliva-data">
-          <p>Nevkládej jména, kontakty ani čísla smluv klientů. Návrh vždy zkontroluj.</p>
+          <p>Nevkládej jména ani jiné údaje klientů. Návrh vždy zkontroluj.</p>
           <details className="small">
             <summary>Jak Wiki s textem zachází</summary>
             <p>

@@ -263,13 +263,8 @@ export function planCandidates(
     .map(({ e }) => ({
       ...e,
       draft: e.status === "draft",
-      // Krátce, jeden řádek: podrobnosti dopadu ukáže až potvrzení zveřejnění v okně akce.
-      reason: [
-        e.status === "draft" ? "návrh" : "zveřejněno, změnu potvrdíš",
-        e.audience === topic.audience ? null : "téma je pro všechny",
-      ]
-        .filter(Boolean)
-        .join(" · "),
+      // Jen to, čím se akce liší: návrh / zveřejněná vysvětlí okno jednou u skupiny, ne u každé karty.
+      reason: e.audience === topic.audience ? "" : "téma je pro všechny",
     }));
   return { scheduled, candidates };
 }

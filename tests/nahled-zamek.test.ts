@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test, vi } from "vitest";
 
 const path = vi.hoisted(() => ({ current: "/" }));
-vi.mock("next/navigation", () => ({ usePathname: () => path.current, useRouter: () => ({ refresh() {}, push() {} }) }));
+vi.mock("next/navigation", () => ({ usePathname: () => path.current, useRouter: () => ({ refresh() {}, push() {} }), useSearchParams: () => new URLSearchParams() }));
 
 import { ActionForm } from "@/components/ActionForm";
 import { LockedLink, PreviewLockProvider } from "@/components/PreviewLock";

@@ -34,7 +34,7 @@ test.describe("Pohled v liště: výběr z nabídky", () => {
       await expect(bar(page)).toContainText("Finanční poradci");
       await expect(page).toHaveURL(/\/vzdelavani\/harmonogram/);
       await expect(page.getByRole("combobox", { name: "Pohled" })).not.toHaveValue("Můj pohled");
-      await bar(page).getByRole("button", { name: "Ukončit pohled" }).click();
+      await bar(page).getByRole("button", { name: "Ukončit náhled" }).click();
       await expect(bar(page)).toHaveCount(0);
     });
   }
@@ -56,7 +56,7 @@ test.describe("Pohled v liště: výběr z nabídky", () => {
     await page.keyboard.press("ArrowDown");
     await page.keyboard.press("Enter");
     await expect(bar(page)).toBeVisible();
-    await bar(page).getByRole("button", { name: "Ukončit pohled" }).click();
+    await bar(page).getByRole("button", { name: "Ukončit náhled" }).click();
     await expect(bar(page)).toHaveCount(0);
   });
 });

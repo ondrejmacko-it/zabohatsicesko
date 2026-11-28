@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState, useTransition, type KeyboardEvent, type PointerEvent, type ReactNode } from "react";
 import { Icon } from "@/components/Icon";
 import { lockedProps, usePreviewLock } from "@/components/PreviewLock";
@@ -57,6 +57,7 @@ export function TopicBoard({
   sortable: sortableProp,
   guaranteedHead,
   othersHead,
+  filter,
 }: {
   guaranteed: TopicOrderItem[];
   others: TopicOrderItem[];
@@ -64,12 +65,23 @@ export function TopicBoard({
   sortable: boolean;
   guaranteedHead: ReactNode;
   othersHead: ReactNode;
+  /** Filtr Pro mou roli / Všechna ze serveru; stojí ve stejné liště jako hledání. */
+  filter?: ReactNode;
 }) {
   const router = useRouter();
   const locked = usePreviewLock();
   const serverKey = `${guaranteed.map((i) => i.id).join(",")}|${others.map((i) => i.id).join(",")}`;
   const [order, setOrder] = useState<Order>(() => ({ guaranteed: guaranteed.map((i) => i.id), others: others.map((i) => i.id) }));
-  const [query, setQuery] = useState("");
+  // Dotaz žije v URL (`hledat`), aby se po návratu z detailu nebo po obnovení stránky neztratil.
+  const searchParams = useSearchParams();
+  const [query, setQueryState] = useState(() => searchParams.get("hledat") ?? "");
+  function setQuery(value: string) {
+    setQueryState(value);
+    const url = new URL(window.location.href);
+    if (value.trim()) url.searchParams.set("hledat", value);
+    else url.searchParams.delete("hledat");
+    window.history.replaceState(window.history.state, "", url);
+  }
   const needle = normalizeName(query.trim());
   // Při hledání se pořadí nemění: posun o jedno místo by přeskočil skrytá témata.
   const sortable = sortableProp && !needle;
@@ -364,18 +376,39 @@ export function TopicBoard({
   const total = visible.guaranteed.length + visible.others.length;
   return (
     <div ref={boardRef} className={dragId ? "topic-board topic-dragging" : "topic-board"} aria-busy={pending || undefined}>
-      {total > 1 && (
-        <label className="field topic-search">
-          <span className="visually-hidden">Hledat téma</span>
-          <input className="input" type="search" placeholder="Hledat téma podle názvu" value={query} onChange={(e) => setQuery(e.target.value)} />
-        </label>
+      {(filter || total > 1) && (
+        <div className="topic-toolbar">
+          {filter}
+          {total > 1 && (
+            <label className="field topic-search">
+              <span className="visually-hidden">Hledat téma</span>
+              <Icon name="search" size={16} />
+              <input className="input" type="search" placeholder="Hledat téma" value={query} onChange={(e) => setQuery(e.target.value)} />
+              {query && (
+                <button type="button" className="topic-search-clear" aria-label="Vymazat hledání" onClick={() => setQuery("")}>
+                  <Icon name="close" size={16} />
+                </button>
+              )}
+            </label>
+          )}
+        </div>
       )}
       {needle && !showGuaranteed && !showOthers && (
-        <p className="item-meta topic-search-empty" role="status">
-          Žádné téma neodpovídá hledání „{query.trim()}“.
+        <div className="empty-state topic-search-empty" role="status">
+          <p className="item-title">Žádné téma neodpovídá hledání „{query.trim()}“.</p>
+          <button type="button" className="btn btn-small" onClick={() => setQuery("")}>
+            Zrušit hledání
+          </button>
+        </div>
+      )}
+      {sortableProp && needle && (showGuaranteed || showOthers) && (
+        <p className="item-meta topic-filter-note">
+          Při hledání nejde měnit pořadí.{" "}
+          <button type="button" className="link-button" onClick={() => setQuery("")}>
+            Zrušit hledání
+          </button>
         </p>
       )}
-      {sortableProp && needle && <p className="item-meta">Při hledání nejde měnit pořadí. Vymaž hledání a přetáhni téma v celém seznamu.</p>}
       {showGuaranteed && (
         <div className="topic-group topic-group-guaranteed" aria-labelledby="temata-garantovana">
           {guaranteedHead}

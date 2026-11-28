@@ -87,20 +87,22 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       <h1>
         <span data-feedback-redact="">{greeting(preview ? preview.personName : user.name, preview ? null : salutation)}</span>.
       </h1>
-      {salutationsEnabled() && <SalutationForm current={salutation} error={!preview && salutationError} locked={Boolean(preview)} />}
+      {/* Oslovení se mění v menu Účet; sem se vrátí jen chybné uložení, aby bylo vidět, co opravit. */}
+      {salutationsEnabled() && !preview && salutationError && <SalutationForm current={salutation} error inputId="osloveni-oprava" />}
       <ShotGrant page="/" />
       {personal && <PersonalCalendarStatus state={personal} />}
       {/* Odpověď na pozvánku se dává v Gmailu, po návratu do okna se úkol obnoví. */}
       {invite && <RefreshOnReturn />}
       <div className={tasks.length > 0 ? "home-columns" : undefined}>
         <section className="section" aria-labelledby="nejblizsi">
-          <h2 id="nejblizsi">Co tě čeká</h2>
-          <NextEventsList cards={upcoming} todayKey={toDateKey(now())} hrefFor={(card) => `/?akce=${encodeURIComponent(card.id)}`} />
-          <p className="section-actions">
+          {/* Nadpis a akce v jedné řadě (vzor hlavičky sekce), na úzkém telefonu se akce zalomí pod nadpis. */}
+          <div className="spread section-head">
+            <h2 id="nejblizsi">Co tě čeká</h2>
             <Link className="btn" href="/vzdelavani/harmonogram">
               Zobrazit celý plán
             </Link>
-          </p>
+          </div>
+          <NextEventsList cards={upcoming} todayKey={toDateKey(now())} hrefFor={(card) => `/?akce=${encodeURIComponent(card.id)}`} />
         </section>
         {/* Náhled 1:1: stejné nadpisy jako u zobrazeného, „jen ke čtení“ říká pruh náhledu. */}
         <TasksCard tasks={tasks} readOnly={Boolean(preview)} />

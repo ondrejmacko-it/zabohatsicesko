@@ -1,6 +1,6 @@
 import { ActionForm } from "@/components/ActionForm";
 import { LockedLink } from "@/components/PreviewLock";
-import { GROUP_LABELS, eventTitle } from "@/lib/labels";
+import { GROUP_LABELS, changeSummary, eventTitle } from "@/lib/labels";
 import { formatEventWhen } from "@/lib/time";
 import type { EventOriginal } from "@/server/services/events";
 import { discardChangesAction } from "../actions";
@@ -21,7 +21,8 @@ export function ChangeBanner({
   original: EventOriginal;
   publishHref?: string;
 }) {
-  const changes = original.changes.length ? `Mění ${original.changes.join(", ")}.` : "Obsah se liší od zveřejněné verze.";
+  const summary = changeSummary(original.changes);
+  const changes = summary ? `${summary}.` : "Obsah se liší od zveřejněné verze.";
   return (
     <section className="change-banner" aria-label="Návrh změny zveřejněné akce">
       <div className="change-banner-head">

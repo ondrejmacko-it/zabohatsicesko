@@ -37,7 +37,7 @@ import { ShotGrant } from "@/components/feedback/ShotGrant";
 
 export const metadata: Metadata = { title: "Plán vzdělávání" };
 
-type SearchParams = Promise<{ mesic?: string; pohled?: string; ucast?: string; typ?: string | string[]; stav?: string | string[]; akce?: string; den?: string; kopie?: string; tema?: string }>;
+type SearchParams = Promise<{ mesic?: string; pohled?: string; ucast?: string; typ?: string | string[]; stav?: string | string[]; akce?: string; upravit?: string; den?: string; kopie?: string; tema?: string }>;
 
 /** Nejbližší zveřejněná akce: z již načteného aktuálního měsíce, jinak jedním dotazem dopředu. */
 async function nearestEvent(viewer: Parameters<typeof nextEventFor>[0], monthCards: EventCard[]): Promise<EventCard | null> {
@@ -94,7 +94,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   // samy, jakmile správce otevře Plán. Souběh hlídá zámek u každé vazby v `syncPending`.
   if (managing && !preview) after(() => syncPublished());
 
-  type Current = { mesic: string; pohled?: string; ucast?: string; typ: string[]; stav: string[]; akce?: string; den?: string; kopie?: string };
+  type Current = { mesic: string; pohled?: string; ucast?: string; typ: string[]; stav: string[]; akce?: string; upravit?: string; den?: string; kopie?: string };
   const current: Current = { mesic: monthKey, pohled: listView ? "seznam" : undefined, ucast: attendanceFilter, typ: selectedTypes, stav: states };
   const link = (change: Partial<Current>) => {
     const query = new URLSearchParams();
@@ -107,6 +107,9 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   // Klik na akci otevře náhled v okně nad Plánem. Měsíc, pohled i filtry zůstávají v adrese.
   const peekHref = (card: EventCard) => link({ akce: card.id });
   const peekId = (params.akce ?? "").slice(0, 120);
+  // Volba Upravit (nabídka ⋯, deeplink) otevře rovnou formulář; obyčejný klik na kartu čtecí detail.
+  const editHref = (card: EventCard) => link({ akce: card.id, upravit: "1" });
+  const editing = params.upravit === "1";
   // „+“ na dni v mřížce otevře Přidat akci s předvyplněným datem (`?den=`). Server datum ověří jako vždy.
   const addDay = managing && params.den && isValidDateKey(params.den) ? params.den : null;
   const addHref = (day: string) => link({ den: day });
@@ -123,7 +126,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
   // Menu ⋯ na kartách: položky podle stavu a role (`cardActions`), adresy se zachovaným měsícem a filtry.
   const fullHref = (card: EventCard) => `/vzdelavani/akce/${encodeURIComponent(card.id)}`;
   const actionHref: Partial<Record<CardActionKind, (card: EventCard) => string>> = {
-    edit: peekHref,
+    edit: editHref,
     duplicate: (card) => link({ kopie: card.id }),
     details: fullHref,
     minutes: (card) => `/vzdelavani/zapisy?zapis=${encodeURIComponent(card.id)}`,
@@ -221,7 +224,7 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
     <>
       <ShotGrant page="/vzdelavani/harmonogram" />
       <AutoRefresh active={syncing} />
-      {peekId && <EventPeek key={`${peekId}|${topicParam ?? ""}`} user={user} eventId={peekId} preview={preview} closeHref={link({})} presetTopicId={topicParam ?? undefined} />}
+      {peekId && <EventPeek key={`${peekId}|${editing}|${topicParam ?? ""}`} user={user} eventId={peekId} preview={preview} closeHref={link({})} presetTopicId={topicParam ?? undefined} edit={editing} editHref={link({ akce: peekId, upravit: "1" })} />}
       {/* V režimu osobních kalendářů se do kalendáře správce nezapisuje, jeho propojení Plán nehlídá. */}
       {calendar && !personal && <CalendarAlert status={calendar} now={now()} />}
       {personal && <PersonalCalendarStatus state={personal} />}
@@ -258,11 +261,6 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
                   Seznam
                 </Link>
               </span>
-              {monthKey !== thisMonth && (
-                <Link className="btn btn-small btn-quiet" href={link({ mesic: thisMonth })}>
-                  Dnes
-                </Link>
-              )}
             </div>
             <div className="month-nav">
               <Link className="btn btn-icon" href={link({ mesic: shiftMonth(monthKey, -1) })} aria-label="Předchozí měsíc">
@@ -274,6 +272,12 @@ export default async function PlanPage({ searchParams }: { searchParams: SearchP
               <Link className="btn btn-icon" href={link({ mesic: shiftMonth(monthKey, 1) })} aria-label="Další měsíc">
                 <Icon name="chevronRight" />
               </Link>
+              {/* Návrat na aktuální měsíc patří k navigaci měsíce, ne k přepínači zobrazení. */}
+              {monthKey !== thisMonth && (
+                <Link className="btn btn-small btn-quiet month-today" href={link({ mesic: thisMonth })}>
+                  Dnes
+                </Link>
+              )}
             </div>
             <div className="toolbar-end">
               {prepareMonth}

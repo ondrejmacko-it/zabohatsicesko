@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { Icon } from "./Icon";
 
 type Props = {
   open: boolean;
@@ -140,10 +141,10 @@ export function Modal({ open, title, onRequestClose, children, wide, selfGuarded
           if ((event.target as HTMLElement).closest("[data-modal-close]")) requestClose();
         }}
       >
-        <div className="spread dialog-head">
+        <div className="dialog-head">
           <h2 id={titleId}>{title}</h2>
-          <button type="button" className="btn btn-small" onClick={requestClose}>
-            Zavřít
+          <button type="button" className="btn btn-icon dialog-close" aria-label="Zavřít" title="Zavřít" onClick={requestClose}>
+            <Icon name="close" size={20} />
           </button>
         </div>
         <MarkSavedContext.Provider value={markSaved}>{children}</MarkSavedContext.Provider>

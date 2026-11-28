@@ -12,7 +12,6 @@ import type { PlanPreview } from "@/server/services/preview";
 import { listTopics } from "@/server/services/topics";
 import { loadInviteRecipients } from "@/server/services/calendar-status";
 import { cardTone, detailBadges, primaryStatus, statusAdvice } from "../status";
-import { StatusBadge } from "./StatusBadge";
 import { ChangeBanner } from "./ChangeBanner";
 import { EventWindow } from "./EventDialog";
 import { EventMenu } from "./EventMenu";
@@ -29,14 +28,18 @@ type Props = {
   closeHref: string;
   /** Naplánovat téma u zveřejněné akce: téma je ve formuláři předvyplněné, uloží se až běžným uložením. */
   presetTopicId?: string;
+  /** Rovnou editace (volba Upravit z nabídky, deeplink `upravit=1`). Jinak i správce dostane nejdřív čtecí detail. */
+  edit?: boolean;
+  /** Adresa editace se zachovaným měsícem a filtry. Bez ní vede „Upravit akci“ do Plánu na měsíc akce. */
+  editHref?: string;
 };
 
 /**
- * Okno akce nad Plánem nebo Úvodem. Správce v něm akci rovnou upravuje a ukládá (jediné místo úprav),
- * ostatní vidí údaje a odkaz na zápis. Nahrávka a stav v Kalendáři zůstávají na celé stránce akce.
+ * Okno akce nad Plánem nebo Úvodem. Všichni nejdřív vidí kompaktní čtecí detail; správce z něj přejde
+ * do úprav („Upravit akci“, jediné místo úprav). Volba Upravit z nabídky otevře rovnou formulář. Nahrávka a stav v Kalendáři zůstávají na celé stránce akce.
  * Neviditelná nebo neexistující akce ukáže neutrální „Akce není dostupná“.
  */
-export async function EventPeek({ user, eventId, preview, closeHref, presetTopicId }: Props) {
+export async function EventPeek({ user, eventId, preview, closeHref, presetTopicId, edit = false, editHref }: Props) {
   const detail = await getEventDetail(preview?.viewer ?? user, eventId);
   if (!detail) return <UnavailableModal title="Akce není dostupná" closeHref={closeHref} backLabel="Zpět na plán" />;
   const { card } = detail;
@@ -55,21 +58,22 @@ export async function EventPeek({ user, eventId, preview, closeHref, presetTopic
   const handlesRecording = detail.recording.access === "handler" && !preview && card.past;
   const minutesLabel = detail.recording.access === "handler" ? minutesSectionLabel(detail.recording) : "Zápis";
 
+  // Jeden kompaktní stav místo pásu se štítky: tečka v tónu hlavního stavu a jedna věta. Chyba Kalendáře nikdy
+  // nesmí vypadat jako úspěch (S-01). Osobní účast má vlastní řádek v „Tvoje účast“.
+  const tone = status?.tone === "danger" ? "danger" : status?.tone === "ochre" && card.planStatus === "published" ? "attention" : cardTone(card);
+  const statusNotes = [
+    card.planStatus === "draft" ? "Kolegové ho zatím nevidí." : null,
+    advice,
+    card.planStatus === "cancelled" && detail.cancelReason ? `Důvod: ${detail.cancelReason}` : null,
+  ].filter(Boolean);
   const statusBand = (
-    // Tón pásu se řídí hlavním stavem: chyba Kalendáře nikdy nesmí vypadat jako úspěch (S-01).
-    <div className={`status-band status-${status?.tone === "danger" ? "danger" : status?.tone === "ochre" && card.planStatus === "published" ? "attention" : cardTone(card)}`} role="status">
-      {/* Stejné štítky jako v hlavičce stránky detailu: životní stav akce a nejvýš jeden doplněk. Osobní účast
-          má vlastní štítek jen v kartě „Tvoje účast“. */}
-      <div className="row">
-        {detailBadges(card).map((badge) => (
-          <StatusBadge key={badge.label} tone={badge.tone} label={badge.label} />
-        ))}
-      </div>
-      {card.planStatus === "draft" && <span>Kolegové ho zatím nevidí.</span>}
-      {advice && <span>{advice}</span>}
-      {preview && <span>Pohled: {preview.label} · jen ke čtení.</span>}
-      {card.planStatus === "cancelled" && detail.cancelReason && <span>Důvod: {detail.cancelReason}</span>}
-    </div>
+    <p className={`status-line status-${tone}`} role="status">
+      <span className="status-dot" aria-hidden="true" />
+      <strong>{detailBadges(card).map((badge) => badge.label).join(" · ")}</strong>
+      {statusNotes.map((note) => (
+        <span key={note}>{note}</span>
+      ))}
+    </p>
   );
 
   // Vlastní účast (jen PARTICIPATION=on): stav a akce přímo v okně, potvrzení v samostatném okně. Správce ji vidí
@@ -79,7 +83,6 @@ export async function EventPeek({ user, eventId, preview, closeHref, presetTopic
     <ParticipationPanel
       eventId={card.id}
       state={participation.state}
-      label={participation.label}
       actions={participation.actions}
       excuse={participation.excuse}
       calendar={participation.calendar}
@@ -92,7 +95,19 @@ export async function EventPeek({ user, eventId, preview, closeHref, presetTopic
   const managed = holiday ? [] : await managedExcusesAt(user, card.id, Boolean(preview));
   const managedPanel = <ManagedExcuses excuses={managed} />;
 
-  if (editable) {
+  const monthKey = toDateKey(new Date(card.startsAt)).slice(0, 7);
+  const copyHref = `/vzdelavani/harmonogram?mesic=${monthKey}&kopie=${encodeURIComponent(card.id)}`;
+  // Diagnostika (stav v Kalendáři, nahrávka) je na celé stránce akce: v okně jen jako položka nabídky ⋯.
+  const menuLinks = card.past
+    ? [{ href: `${fullHref}#nahravka`, label: minutesLabel, icon: "file" as const }]
+    : card.syncStatus === "attention"
+      ? [{ href: `${fullHref}#kalendar`, label: "Opravit v Kalendáři", icon: "calendar" as const }]
+      : [{ href: fullHref, label: "Otevřít podrobnosti", icon: "file" as const }];
+  const eventMenu = (
+    <EventMenu id={card.id} revision={detail.revision} canCancel={detail.canCancel} canDelete={detail.canDelete} links={menuLinks} copyHref={copyHref} />
+  );
+
+  if (editable && (edit || presetTopicId)) {
     const [people, topics, template, invite] = await Promise.all([
       listPeople(user),
       listTopics(user),
@@ -121,12 +136,6 @@ export async function EventPeek({ user, eventId, preview, closeHref, presetTopic
         {managedPanel}
       </>
     );
-    // Funkční Kalendář se v okně neukazuje. Oprava je odkaz jen při chybě, technické informace jsou v nabídce.
-    const links = card.past
-      ? [{ href: `${fullHref}#nahravka`, label: minutesLabel, icon: "file" as const }]
-      : card.syncStatus === "attention"
-        ? [{ href: `${fullHref}#kalendar`, label: "Opravit v Kalendáři", icon: "calendar" as const }]
-        : [{ href: fullHref, label: "Technické informace", icon: "settings" as const }];
     return (
       <EventWindow
         // Nová revize (zahození, uložení jinde) = čerstvý formulář, jinak by okno drželo staré hodnoty.
@@ -135,16 +144,7 @@ export async function EventPeek({ user, eventId, preview, closeHref, presetTopic
         closeHref={closeHref}
         intro={intro}
         afterFields={afterFields}
-        menu={
-          <EventMenu
-            id={card.id}
-            revision={detail.revision}
-            canCancel={detail.canCancel}
-            canDelete={detail.canDelete}
-            links={links}
-            copyHref={`/vzdelavani/harmonogram?mesic=${toDateKey(new Date(card.startsAt)).slice(0, 7)}&kopie=${encodeURIComponent(card.id)}`}
-          />
-        }
+        menu={eventMenu}
         id={card.id}
         revision={detail.revision}
         initial={preset ? { ...detail.form!, topicTitle: preset.name } : detail.form!}
@@ -161,12 +161,11 @@ export async function EventPeek({ user, eventId, preview, closeHref, presetTopic
 
   const links = [
     ...(minutesReady ? [{ href: `/vzdelavani/zapisy?zapis=${encodeURIComponent(card.id)}`, label: "Zobrazit zápis" }] : []),
-    ...(handlesRecording ? [{ href: `${fullHref}#nahravka`, label: minutesLabel }] : []),
-    // Zrušení do Kalendáře nedošlo: správce dostane opravu. Jinak se technický stav v okně neukazuje.
-    ...(managing && !holiday && card.syncStatus === "attention" ? [{ href: `${fullHref}#kalendar`, label: "Opravit v Kalendáři" }] : []),
+    // Nahrávku a opravu v Kalendáři má správce v nabídce ⋯, hlavní akcí jeho okna je Upravit akci.
+    ...(handlesRecording && !editable ? [{ href: `${fullHref}#nahravka`, label: minutesLabel }] : []),
+    ...(managing && !editable && !holiday && card.syncStatus === "attention" ? [{ href: `${fullHref}#kalendar`, label: "Opravit v Kalendáři" }] : []),
   ];
-  // Technické informace jsou pro správce jen tichý odkaz, nikdy hlavní tlačítko okna.
-  const technical = planView && !holiday && links.length === 0;
+  const editLink = editable ? (editHref ?? `/vzdelavani/harmonogram?mesic=${monthKey}&akce=${encodeURIComponent(card.id)}&upravit=1`) : null;
 
   return (
     <RouteModal title={card.label} closeHref={closeHref}>
@@ -198,18 +197,19 @@ export async function EventPeek({ user, eventId, preview, closeHref, presetTopic
       {holiday && <p className="hint">Jen pro přehled, do Kalendáře se neposílá.</p>}
       {participationPanel}
       {managedPanel}
-      {technical && (
-        <p className="small peek-tech">
-          <Link href={fullHref}>Technické informace</Link>
-        </p>
-      )}
-      {links.length > 0 && (
+      {(links.length > 0 || editLink) && (
         <div className="dialog-actions peek-actions">
           {links.map((link, index) => (
-            <Link key={link.href} className={index === 0 ? "btn btn-primary" : "btn"} href={link.href}>
+            <Link key={link.href} className={index === 0 && !editLink ? "btn btn-primary" : "btn"} href={link.href}>
               {link.label}
             </Link>
           ))}
+          {editLink && (
+            <Link className="btn btn-primary" href={editLink} scroll={false}>
+              Upravit akci
+            </Link>
+          )}
+          {editLink && eventMenu}
         </div>
       )}
     </RouteModal>

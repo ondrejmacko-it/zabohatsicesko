@@ -74,7 +74,7 @@ function topicItem(t: RankedTopic, index: number, count: number, ctx: RowContext
               {" · "}
               <Link
                 className="topic-in-draft"
-                href={`/vzdelavani/harmonogram?mesic=${t.nextDraft.slice(0, 7)}${t.nextDraftId ? `&akce=${encodeURIComponent(t.nextDraftId)}` : ""}`}
+                href={`/vzdelavani/harmonogram?mesic=${t.nextDraft.slice(0, 7)}${t.nextDraftId ? `&akce=${encodeURIComponent(t.nextDraftId)}&upravit=1` : ""}`}
                 title={`Návrh akce ${formatDayMonth(t.nextDraft)}`}
               >
                 termín se potvrzuje
@@ -173,7 +173,7 @@ export async function TopicsSection({ user, readOnly = false, filter: requested 
       <PageCall text={readOnly ? `${PREVIEW_READ_ONLY}. Tady se navrhují témata a podporují návrhy kolegů.` : "Navrhni téma nebo podpoř návrh kolegů."}>
         <ProposeTopicDialog groups={groups} locked={readOnly} />
       </PageCall>
-      {filterable && all.length > 0 && (
+      {filterable && all.length > 0 && topics.length === 0 && (
         <div className="topic-toolbar">
           <TopicFilterToggle filter={filter} />
         </div>
@@ -194,6 +194,7 @@ export async function TopicsSection({ user, readOnly = false, filter: requested 
         <>
           <TopicBoard
             sortable={sortable}
+            filter={filterable ? <TopicFilterToggle filter={filter} /> : undefined}
             guaranteed={guaranteed.map((t, index) => topicItem(t, index, guaranteed.length, ctx))}
             others={others.map((t, index) => topicItem(t, index, others.length, ctx))}
             guaranteedHead={
@@ -202,7 +203,7 @@ export async function TopicsSection({ user, readOnly = false, filter: requested 
                   Garantovaná témata
                 </h3>
                 {/* F10: krátce, co garantované znamená. Pravidlo plánování je v `recommendTopics`. */}
-                <p className="item-meta">Vybírá je správce. Plánují se přednostně, i když o ně nikdo neprojevil zájem.</p>
+                <p className="item-meta">Správce je plánuje přednostně.</p>
               </>
             }
             othersHead={
@@ -233,7 +234,14 @@ export async function TopicsSection({ user, readOnly = false, filter: requested 
               Pořadí změníš přetažením úchytu, i mezi garantovanými a ostatními tématy. Šipkami nahoru a dolů posuneš téma o jedno místo, přes okraj skupiny do druhé skupiny.
             </p>
           )}
-          {organizer && !sortable && <p className="item-meta topic-filter-note">Pořadí měníš v zobrazení Všechna.</p>}
+          {organizer && !sortable && (
+            <p className="item-meta topic-filter-note">
+              Ve filtru Pro mou roli nejde měnit pořadí.{" "}
+              <Link className="link-button" href="/vzdelavani/temata?filtr=vse">
+                Zobrazit všechna
+              </Link>
+            </p>
+          )}
         </>
       )}
 

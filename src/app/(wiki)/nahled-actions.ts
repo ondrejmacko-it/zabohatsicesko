@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireUser } from "@/server/auth/session";
 import { isOrganizer } from "@/server/policy";
+import { previewLanding } from "@/lib/preview-landing";
 import { resolvePreview } from "@/server/services/preview";
 import {
   PREVIEW_COOKIE,
@@ -39,9 +40,13 @@ export async function startPreview(formData: FormData): Promise<void> {
     redirect(back);
   }
   const preview = await resolvePreview(user, parsed.data);
-  if (preview) jar.set(PREVIEW_COOKIE, encodePreviewCookie(user.id, parsed.data), previewCookieOptions);
-  else jar.set(PREVIEW_COOKIE, "", expiredPreviewCookieOptions);
-  redirect(back);
+  if (!preview) {
+    jar.set(PREVIEW_COOKIE, "", expiredPreviewCookieOptions);
+    redirect(back);
+  }
+  jar.set(PREVIEW_COOKIE, encodePreviewCookie(user.id, parsed.data), previewCookieOptions);
+  // Ze stránky, kterou zobrazený nevidí (Správa, detail akce, otevřené okno), vede náhled na Domů nebo Plán.
+  redirect(previewLanding(back, isOrganizer(preview.viewer)));
 }
 
 /** Ukončí náhled a vrátí správce na vlastní pohled stejné stránky. */

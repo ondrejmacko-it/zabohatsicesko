@@ -56,7 +56,7 @@ test.describe("správce: pohled skupiny", () => {
     await expect(page.locator("[data-account-id], .account-row")).toHaveCount(0);
 
     await page.goto("/vzdelavani/harmonogram");
-    await bar(page).getByRole("button", { name: "Ukončit pohled" }).click();
+    await bar(page).getByRole("button", { name: "Ukončit náhled" }).click();
     await expect(bar(page)).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Přidat akci" }).first()).toBeVisible();
     await expect(page.getByLabel("Pohled", { exact: true })).toHaveValue("Můj pohled");
@@ -107,7 +107,7 @@ test.describe("správce: pohled skupiny", () => {
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Ahoj.");
     await expect(page.getByRole("heading", { level: 1 })).not.toContainText("Správce");
     await expect(page.getByRole("complementary", { name: "Hlavní navigace" }).getByRole("link", { name: /Správa/ })).toHaveCount(0);
-    await bar(page).getByRole("button", { name: "Ukončit pohled" }).click();
+    await bar(page).getByRole("button", { name: "Ukončit náhled" }).click();
     await expect(page.getByRole("complementary", { name: "Hlavní navigace" }).getByRole("link", { name: /Správa/ })).toBeVisible();
   });
 
@@ -152,7 +152,7 @@ test.describe("správce: náhled kolegy-správce 1:1", () => {
     // Okno akce: stav a rady jako u správce, uložení úprav zamčené.
     await page.locator("a[href*='akce=']").filter({ visible: true }).first().click();
     const dialog = page.getByRole("dialog");
-    await expect(dialog.locator(".status-band")).toContainText("jen ke čtení");
+    await expect(dialog.locator(".status-line")).not.toContainText("jen ke čtení"); // říká to jen pruh náhledu
     for (const submit of await dialog.locator("button[type=submit]").all()) await expect(submit).toBeDisabled();
     await page.screenshot({ path: info.outputPath("nahled-kolegy-spravce.png"), fullPage: true });
   });

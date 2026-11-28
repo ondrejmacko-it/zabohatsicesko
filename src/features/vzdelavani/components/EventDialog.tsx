@@ -1,7 +1,14 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { startTransition, useActionState, useEffect, useId, useRef, useState } from "react";
+import {
+  startTransition,
+  useActionState,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from "react";
 import { ActionMessage } from "@/components/ActionForm";
 import { Combobox, type ComboboxOption } from "@/components/Combobox";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -12,11 +19,20 @@ import { GROUP_LABELS, TYPE_LABELS } from "@/lib/labels";
 import { isoWeekday } from "@/lib/time";
 import { EVENT_TYPES, GROUPS } from "@/lib/types";
 import { defaultAudience } from "@/server/domain/generation";
-import { interestedLabel, isGuaranteed, recommendTopics, topicFitsAudience } from "@/server/domain/topics";
+import {
+  interestedLabel,
+  isGuaranteed,
+  recommendTopics,
+  topicFitsAudience,
+} from "@/server/domain/topics";
 import type { InviteRecipients } from "@/server/services/calendar-status";
 import type { EventFormValues } from "@/server/services/detail";
 import type { ChangeImpact } from "@/server/services/impact";
-import { previewImpactAction, saveEventAction, type ActionResult } from "../actions";
+import {
+  previewImpactAction,
+  saveEventAction,
+  type ActionResult,
+} from "../actions";
 import { lockedProps, usePreviewLock } from "@/components/PreviewLock";
 
 type FormField = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
@@ -24,14 +40,21 @@ type FormField = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
 function invalidFields(form: HTMLFormElement): FormField[] {
   return Array.from(form.elements).filter(
     (element): element is FormField =>
-      (element instanceof HTMLInputElement || element instanceof HTMLSelectElement || element instanceof HTMLTextAreaElement) && !element.validity.valid,
+      (element instanceof HTMLInputElement ||
+        element instanceof HTMLSelectElement ||
+        element instanceof HTMLTextAreaElement) &&
+      !element.validity.valid,
   );
 }
 
 /** Název pole pro souhrn chyb: popisek pole, jinak jeho přístupný název. */
 function fieldName(field: FormField): string {
-  const label = field.closest(".field, .check")?.querySelector(".field-label, span")?.textContent;
-  return (label || field.getAttribute("aria-label") || field.name).replace("změněno", "").trim();
+  const label = field
+    .closest(".field, .check")
+    ?.querySelector(".field-label, span")?.textContent;
+  return (label || field.getAttribute("aria-label") || field.name)
+    .replace("změněno", "")
+    .trim();
 }
 
 export type Person = { id: string; name: string };
@@ -76,7 +99,10 @@ type FormProps = {
   saved?: EventFormValues;
 };
 
-type CreateProps = Omit<FormProps, "mode" | "id" | "revision" | "published" | "saved"> & {
+type CreateProps = Omit<
+  FormProps,
+  "mode" | "id" | "revision" | "published" | "saved"
+> & {
   /** Okno se otevře hned (odkaz „+“ na dni v Plánu). Po zavření se adresa vrátí na `closeHref`. */
   openOnMount?: boolean;
   closeHref?: string;
@@ -113,7 +139,13 @@ export function EventDialog(props: CreateProps) {
         Přidat akci
       </button>
       {open && (
-        <Modal open title={props.duplicateOf ? "Duplikovat akci" : "Přidat akci"} onRequestClose={close} wide hasUnsavedChanges={() => edited.current}>
+        <Modal
+          open
+          title={props.duplicateOf ? "Duplikovat akci" : "Přidat akci"}
+          onRequestClose={close}
+          wide
+          hasUnsavedChanges={() => edited.current}
+        >
           <EventForm
             key={session}
             {...props}
@@ -126,7 +158,10 @@ export function EventDialog(props: CreateProps) {
               setOpen(false);
               // Nová akce se ukáže v měsíci, do kterého patří. Žádná další potvrzovací stránka. Kopie rovnou
               // otevře okno nové akce, aby ji správce zkontroloval a zveřejnil.
-              router.replace(copyHref(values, props.duplicateOf ? id : undefined), { scroll: false });
+              router.replace(
+                copyHref(values, props.duplicateOf ? id : undefined),
+                { scroll: false },
+              );
             }}
           />
         </Modal>
@@ -146,12 +181,24 @@ export function EventWindow({
   afterFields,
   menu,
   ...props
-}: Omit<FormProps, "mode"> & { title: string; closeHref: string; intro: React.ReactNode; afterFields?: React.ReactNode; menu: React.ReactNode }) {
+}: Omit<FormProps, "mode"> & {
+  title: string;
+  closeHref: string;
+  intro: React.ReactNode;
+  afterFields?: React.ReactNode;
+  menu: React.ReactNode;
+}) {
   const router = useRouter();
   const close = () => router.replace(closeHref, { scroll: false });
   const edited = useRef(false);
   return (
-    <Modal open title={title} onRequestClose={close} wide hasUnsavedChanges={() => edited.current}>
+    <Modal
+      open
+      title={title}
+      onRequestClose={close}
+      wide
+      hasUnsavedChanges={() => edited.current}
+    >
       {intro}
       <EventForm
         {...props}
@@ -168,17 +215,42 @@ export function EventWindow({
 }
 
 /** Pole, jejichž změna zasáhne pozvané. Přesný dopad počítá a potvrzení ověřuje server. */
-const SIGNIFICANT: Array<keyof EventFormValues> = ["label", "topicTitle", "date", "endDate", "startTime", "endTime", "audience"];
+const SIGNIFICANT: Array<keyof EventFormValues> = [
+  "label",
+  "topicTitle",
+  "date",
+  "endDate",
+  "startTime",
+  "endTime",
+  "audience",
+];
 
-const ON_WEEKDAY = ["", "V pondělí", "V úterý", "Ve středu", "Ve čtvrtek", "V pátek", "V sobotu", "V neděli"];
+const ON_WEEKDAY = [
+  "",
+  "V pondělí",
+  "V úterý",
+  "Ve středu",
+  "Ve čtvrtek",
+  "V pátek",
+  "V sobotu",
+  "V neděli",
+];
 
-const peopleCount = (n: number) => (n === 1 ? "1 člověka" : `${n} lidí`);
+const peopleCount = (n: number) => (n === 1 ? "1 člověka" : n < 5 ? `${n} lidi` : `${n} lidí`);
 
 /** Jedna věta o tom, co zveřejnění změní: „Změníš termín akce pro 12 lidí.“ */
 function impactHeadline(impact: ChangeImpact): string {
   const fields = impact.changes.map((c) => c.field);
-  const what = fields.includes("Termín") ? "termín" : fields.includes("Publikum") ? "skupinu" : fields.includes("Téma") ? "téma" : "název";
-  return impact.affected ? `Změníš ${what} akce pro ${peopleCount(impact.affected)}.` : `Změníš ${what} zveřejněné akce.`;
+  const what = fields.includes("Termín")
+    ? "termín"
+    : fields.includes("Pro koho")
+      ? "skupinu"
+      : fields.includes("Téma")
+        ? "téma"
+        : "název";
+  return impact.affected
+    ? `Změníš ${what} akce pro ${peopleCount(impact.affected)}.`
+    : `Změníš ${what} zveřejněné akce.`;
 }
 
 type Ask = "incomplete" | "impact" | null;
@@ -214,26 +286,38 @@ function EventForm({
   const [values, setValues] = useState(initial);
   const [multiDay, setMultiDay] = useState(initial.endDate !== null);
   // Méně časté údaje jsou sbalené. Otevřené jsou, když je správce už vyplnil jinak než výchozím způsobem.
-  const [moreOpen, setMoreOpen] = useState(initial.reviewerId !== "" || multiDay || (initial.type !== "other" && initial.label !== TYPE_LABELS[initial.type]));
-  const [impact, setImpact] = useState<{ key: string; data: ChangeImpact } | null>(null);
-  const [acceptedIncomplete, setAcceptedIncomplete] = useState<string | null>(null);
-  const [askState, setAskState] = useState<{ ask: Ask; key: string } | null>(null);
+  const [impact, setImpact] = useState<{
+    key: string;
+    data: ChangeImpact;
+  } | null>(null);
+  const [acceptedIncomplete, setAcceptedIncomplete] = useState<string | null>(
+    null,
+  );
+  const [askState, setAskState] = useState<{ ask: Ask; key: string } | null>(
+    null,
+  );
   const [previewError, setPreviewError] = useState<ActionResult | null>(null);
   const [checking, setChecking] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const actionsRef = useRef<HTMLDivElement>(null);
   // Souhrn chyb z kontroly prohlížeče: názvy polí, která je potřeba opravit (U08).
   const [invalid, setInvalid] = useState<string[]>([]);
-  const valuesKey = JSON.stringify({ ...values, endDate: multiDay ? values.endDate : null });
+  const valuesKey = JSON.stringify({
+    ...values,
+    endDate: multiDay ? values.endDate : null,
+  });
   const lock = lockedProps(usePreviewLock());
-  const [state, action, pending] = useActionState(async (prev: ActionResult | null, formData: FormData) => {
-    const result = await saveEventAction(prev, formData);
-    if (result.ok) {
-      flash(result.message);
-      onDone(values, result.id);
-    }
-    return result;
-  }, null);
+  const [state, action, pending] = useActionState(
+    async (prev: ActionResult | null, formData: FormData) => {
+      const result = await saveEventAction(prev, formData);
+      if (result.ok) {
+        flash(result.message);
+        onDone(values, result.id);
+      }
+      return result;
+    },
+    null,
+  );
 
   const dirty = valuesKey !== JSON.stringify(saved ?? initial);
   // Dotaz při zavření porovnává s tím, co okno ukázalo při otevření. Předvyplnění (kopie, téma) je výchozí
@@ -244,31 +328,45 @@ function EventForm({
   }, [edited, onEditedChange]);
   // Potvrzení dopadu platí jen pro hodnoty, pro které vzniklo. Jakákoli další úprava formuláře ho zruší.
   const confirmed = impact?.key === valuesKey ? impact.data : null;
-  const missing = [!values.topicTitle.trim() && "téma", !values.leadId && "vedoucí"].filter((m): m is string => Boolean(m));
+  const missing = [
+    !values.topicTitle.trim() && "téma",
+    !values.leadId && "vedoucí",
+  ].filter((m): m is string => Boolean(m));
   const changed = (key: keyof EventFormValues) =>
-    published !== null && (key === "endDate" ? (multiDay ? values.endDate : null) : values[key]) !== published[key];
+    published !== null &&
+    (key === "endDate" ? (multiDay ? values.endDate : null) : values[key]) !==
+      published[key];
   const significant = SIGNIFICANT.some(changed);
-  const unpublishedChanges = published !== null && SIGNIFICANT.concat(["leadId", "reviewerId", "type"]).some(changed);
+  const unpublishedChanges =
+    published !== null &&
+    SIGNIFICANT.concat(["leadId", "reviewerId", "type"]).some(changed);
 
   // Rozpracované potvrzení platí jen pro hodnoty, které správce viděl. Další úprava formuláře ho schová.
   const ask = askState?.key === valuesKey ? askState.ask : null;
-  const setAsk = (next: Ask) => setAskState(next ? { ask: next, key: valuesKey } : null);
+  const setAsk = (next: Ask) =>
+    setAskState(next ? { ask: next, key: valuesKey } : null);
   // Potvrzení je samostatné okno nad formulářem (`ConfirmDialog`). Po „Zpět k úpravám“ vrátí fokus samo.
   const back = () => setAsk(null);
   // Tlačítka potvrzení jsou v portálu mimo <form>, k formuláři je váže atribut `form`.
   const formId = useId();
-  const publishButton = () => actionsRef.current?.querySelector<HTMLButtonElement>('button[value="publish"]');
+  const publishButton = () =>
+    actionsRef.current?.querySelector<HTMLButtonElement>(
+      'button[value="publish"]',
+    );
 
   // Formulář se neodesílá přes <form action>: React by po akci vrátil výběry (typ, publikum) na první
   // možnost. Ruční odeslání nechá po chybě všechna pole tak, jak je správce vyplnil.
   const submit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const submitter = (event.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null;
+    const submitter = (event.nativeEvent as SubmitEvent)
+      .submitter as HTMLButtonElement | null;
     const formData = new FormData(event.currentTarget, submitter);
     setPreviewError(null);
     setInvalid([]);
     if (formData.get("intent") === "publish") {
-      const incompleteOk = acceptedIncomplete === valuesKey || submitter?.dataset.confirm === "incomplete";
+      const incompleteOk =
+        acceptedIncomplete === valuesKey ||
+        submitter?.dataset.confirm === "incomplete";
       if (missing.length > 0 && !incompleteOk) return setAsk("incomplete");
       if (missing.length > 0) {
         setAcceptedIncomplete(valuesKey);
@@ -293,8 +391,14 @@ function EventForm({
     setAsk(null);
     startTransition(() => action(formData));
   };
-  const weekday = /^\d{4}-\d{2}-\d{2}$/.test(values.date) ? isoWeekday(values.date) : null;
-  const unusualDay = planDays !== undefined && planDays.length > 0 && weekday !== null && !planDays.includes(weekday);
+  const weekday = /^\d{4}-\d{2}-\d{2}$/.test(values.date)
+    ? isoWeekday(values.date)
+    : null;
+  const unusualDay =
+    planDays !== undefined &&
+    planDays.length > 0 &&
+    weekday !== null &&
+    !planDays.includes(weekday);
   // Pořadí doporučení: garantovaná témata skupiny, pak témata přímo pro skupinu, pak zájem (`recommendTopics`).
   const recommended = recommendTopics(topics, values.audience);
   const suggestions = recommended.slice(0, 3);
@@ -305,14 +409,32 @@ function EventForm({
     ...recommended.map((t) => ({
       value: t.name,
       group: `Doporučená pro ${GROUP_LABELS[values.audience]}`,
-      badges: isGuaranteed(t) ? <span className="badge badge-ok">Garantované</span> : <span className="badge badge-outline">Doporučené</span>,
+      badges: isGuaranteed(t) ? (
+        <span className="badge badge-ok">Garantované</span>
+      ) : (
+        <span className="badge badge-outline">Doporučené</span>
+      ),
       hint: interestedLabel(t.interestCount),
     })),
-    ...topics.filter((t) => !recommendedIds.has(t.id)).map((t) => ({ value: t.name, group: "Ostatní témata", hint: interestedLabel(t.interestCount) })),
-  ].filter((option, index, all) => all.findIndex((o) => o.value === option.value) === index);
+    ...topics
+      .filter((t) => !recommendedIds.has(t.id))
+      .map((t) => ({
+        value: t.name,
+        group: "Ostatní témata",
+        hint: interestedLabel(t.interestCount),
+      })),
+  ].filter(
+    (option, index, all) =>
+      all.findIndex((o) => o.value === option.value) === index,
+  );
   // Vybrané téma je pro jinou skupinu: jen upozornění, rozhoduje správce (téma se uloží i tak).
-  const chosenTopic = topics.find((t) => t.name.toLowerCase() === values.topicTitle.trim().toLowerCase());
-  const audienceMismatch = chosenTopic && !topicFitsAudience(chosenTopic.audience, values.audience) ? chosenTopic : null;
+  const chosenTopic = topics.find(
+    (t) => t.name.toLowerCase() === values.topicTitle.trim().toLowerCase(),
+  );
+  const audienceMismatch =
+    chosenTopic && !topicFitsAudience(chosenTopic.audience, values.audience)
+      ? chosenTopic
+      : null;
 
   useEffect(() => {
     if (!dirty) return;
@@ -321,21 +443,27 @@ function EventForm({
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty]);
 
-  const set = <K extends keyof EventFormValues>(key: K, value: EventFormValues[K]) => setValues((v) => ({ ...v, [key]: value }));
+  const set = <K extends keyof EventFormValues>(
+    key: K,
+    value: EventFormValues[K],
+  ) => setValues((v) => ({ ...v, [key]: value }));
 
   const changeType = (type: EventFormValues["type"]) =>
     setValues((v) => ({
       ...v,
       type,
       // Výchozí název přebírá typ. U jiné akce žádný výchozí název není, správce ho napíše sám.
-      label: v.label === TYPE_LABELS[v.type] || !v.label ? (type === "other" ? "" : TYPE_LABELS[type]) : v.label,
+      label:
+        v.label === TYPE_LABELS[v.type] || !v.label
+          ? type === "other"
+            ? ""
+            : TYPE_LABELS[type]
+          : v.label,
       audience: mode === "create" ? defaultAudience(type) : v.audience,
     }));
 
-  // Neplatné pole může být ve sbalených „Dalších možnostech“. Ty se otevřou, po vykreslení se ukáže souhrn
-  // a fokus skočí na první chybné pole (prohlížeč by na skryté pole fokus dát nemohl).
+  // Po vykreslení se ukáže souhrn chyb a fokus skočí na první chybné pole.
   const onInvalid = () => {
-    setMoreOpen(true);
     requestAnimationFrame(() => {
       const fields = formRef.current ? invalidFields(formRef.current) : [];
       setInvalid([...new Set(fields.map(fieldName))]);
@@ -343,14 +471,13 @@ function EventForm({
     });
   };
 
-  const mark = (key: keyof EventFormValues) => changed(key) && <span className="changed-mark">změněno</span>;
-  // U jiné akce je název hlavní údaj, jinak jen volitelná úprava v dalších možnostech.
+  const mark = (key: keyof EventFormValues) =>
+    changed(key) && <span className="changed-mark">změněno</span>;
+  // Typ a název jsou nahoře vedle sebe: typ předvyplní název, vlastní název nepřepíše (`changeType`).
   const labelInMain = values.type === "other";
   const labelField = (
-    <label className={labelInMain ? "field span-2" : "field"}>
-      <span className="field-label">
-        {labelInMain ? "Název akce" : "Název v plánu"} {mark("label")}
-      </span>
+    <label className="field">
+      <span className="field-label">Název akce {mark("label")}</span>
       <input
         className="input"
         name="label"
@@ -376,7 +503,10 @@ function EventForm({
         selectOnly
         value={values.type}
         onChange={(type) => changeType(type as EventFormValues["type"])}
-        options={FORM_TYPES.map((type) => ({ value: type, label: TYPE_LABELS[type] }))}
+        options={FORM_TYPES.map((type) => ({
+          value: type,
+          label: TYPE_LABELS[type],
+        }))}
         listLabel="Typy akcí"
       />
     </div>
@@ -400,24 +530,41 @@ function EventForm({
       </div>
       {suggestions.length > 0 && !values.topicTitle.trim() && (
         <div className="span-2 suggestions" aria-label="Doporučená témata">
-          <span className="field-hint">Doporučená témata pro {GROUP_LABELS[values.audience]}:</span>
+          <span className="field-hint">Doporučená témata:</span>
           {suggestions.map((t) => (
-            <button key={t.name} type="button" className="suggestion" onClick={() => set("topicTitle", t.name)}>
+            <button
+              key={t.name}
+              type="button"
+              className="suggestion"
+              onClick={() => set("topicTitle", t.name)}
+            >
               <span className="suggestion-head">
                 <span className="suggestion-name">{t.name}</span>
-                {isGuaranteed(t) ? <span className="badge badge-ok">Garantované</span> : <span className="badge badge-outline">Doporučené</span>}
-                <span className="badge badge-ochre">{interestedLabel(t.interestCount)}</span>
+                {isGuaranteed(t) ? (
+                  <span className="badge badge-ok">Garantované</span>
+                ) : (
+                  <span className="badge badge-outline">Doporučené</span>
+                )}
+                <span className="badge badge-ochre">
+                  {interestedLabel(t.interestCount)}
+                </span>
               </span>
               {/* Počet zájemců je v odznaku, v podtextu zůstává jen historie tématu. */}
-              <span className="field-hint">{t.reason.split(" · ").slice(1).join(" · ")}</span>
+              <span className="field-hint">
+                {t.reason.split(" · ").slice(1).join(" · ")}
+              </span>
             </button>
           ))}
         </div>
       )}
       {audienceMismatch && (
         <p className="notice span-2" role="status">
-          Téma „{audienceMismatch.name}“ je pro skupinu {GROUP_LABELS[audienceMismatch.audience as keyof typeof GROUP_LABELS] ?? audienceMismatch.audience}, akce je pro{" "}
-          {GROUP_LABELS[values.audience]}. Zkontroluj skupinu nebo téma.
+          Téma „{audienceMismatch.name}“ je pro skupinu{" "}
+          {GROUP_LABELS[
+            audienceMismatch.audience as keyof typeof GROUP_LABELS
+          ] ?? audienceMismatch.audience}
+          , akce je pro {GROUP_LABELS[values.audience]}. Zkontroluj skupinu nebo
+          téma.
         </p>
       )}
     </>
@@ -456,11 +603,13 @@ function EventForm({
         name="audience"
         selectOnly
         value={values.audience}
-        onChange={(audience) => set("audience", audience as EventFormValues["audience"])}
+        onChange={(audience) =>
+          set("audience", audience as EventFormValues["audience"])
+        }
         options={GROUPS.map((g) => ({ value: g, label: GROUP_LABELS[g] }))}
         listLabel="Skupiny"
       />
-      {invite && <InviteeList invite={invite} audience={values.audience} />}
+      {invite && <InviteeList invite={invite} audience={values.audience} pending={published === null} />}
     </div>
   );
   const termFields = (
@@ -468,68 +617,103 @@ function EventForm({
       <div className="form-grid form-term span-2">
         <label className="field">
           <span className="field-label">Datum {mark("date")}</span>
-          <input className="input" type="date" name="date" value={values.date} onChange={(e) => set("date", e.target.value)} required readOnly={termLocked} />
+          <input
+            className="input"
+            type="date"
+            name="date"
+            value={values.date}
+            onChange={(e) => set("date", e.target.value)}
+            required
+            readOnly={termLocked}
+          />
         </label>
         <label className="field">
           <span className="field-label">Od {mark("startTime")}</span>
-          <input className="input" type="time" name="startTime" value={values.startTime} onChange={(e) => set("startTime", e.target.value)} required readOnly={termLocked} />
+          <input
+            className="input"
+            type="time"
+            name="startTime"
+            value={values.startTime}
+            onChange={(e) => set("startTime", e.target.value)}
+            required
+            readOnly={termLocked}
+          />
         </label>
         <label className="field">
           <span className="field-label">Do {mark("endTime")}</span>
-          <input className="input" type="time" name="endTime" value={values.endTime} onChange={(e) => set("endTime", e.target.value)} required readOnly={termLocked} />
+          <input
+            className="input"
+            type="time"
+            name="endTime"
+            value={values.endTime}
+            onChange={(e) => set("endTime", e.target.value)}
+            required
+            readOnly={termLocked}
+          />
         </label>
       </div>
-      {termLocked && <p className="field-hint span-2">Akce už proběhla, termín zůstává.</p>}
-      {duplicateOf && <p className="field-hint field-hint-key span-2">Navržené datum, zkontroluj.</p>}
+      {termLocked && (
+        <p className="field-hint span-2">Akce už proběhla, termín zůstává.</p>
+      )}
+      {duplicateOf && (
+        <p className="field-hint field-hint-key span-2">
+          Navržené datum, zkontroluj.
+        </p>
+      )}
       {unusualDay && !termLocked && (
         // Mimořádný den je dovolený, jen méně obvyklý: informace, ne chyba (screenshoty vlastníka 27. 11. 2026).
         <p className="notice span-2" role="status">
-          <strong>{ON_WEEKDAY[weekday!]} se vzdělávání běžně nekoná.</strong> V Plánu bude akce jako řádek pod týdnem.
+          <strong>{ON_WEEKDAY[weekday!]} se vzdělávání běžně nekoná.</strong> V
+          Plánu bude akce jako řádek pod týdnem.
         </p>
       )}
     </>
   );
-  const moreFields = (
-    <details className="more-settings" open={moreOpen} onToggle={(e) => setMoreOpen(e.currentTarget.open)}>
-      <summary>Další údaje</summary>
-      <div className="form-grid">
-        {mode === "edit" && typeField}
-        {!labelInMain && labelField}
-        <label className="check span-2">
-          <input type="checkbox" name="multiDay" checked={multiDay} onChange={(e) => setMultiDay(e.target.checked)} disabled={termLocked} />
-          <span>Akce trvá více dní</span>
-        </label>
-        {multiDay && (
-          <label className="field">
-            <span className="field-label">Poslední den {mark("endDate")}</span>
-            <input
-              className="input"
-              type="date"
-              name="endDate"
-              min={values.date}
-              value={values.endDate ?? values.date}
-              onChange={(e) => set("endDate", e.target.value)}
-              required
-              readOnly={termLocked}
-            />
-          </label>
-        )}
-        <div className="field">
-          <label className="field-label" htmlFor={`${formId}-reviewer`}>
-            Kdo zkontroluje zápis {mark("reviewerId")}
-          </label>
-          <Combobox
-            id={`${formId}-reviewer`}
-            name="reviewerId"
-            selectOnly
-            value={values.reviewerId}
-            onChange={(reviewer) => set("reviewerId", reviewer)}
-            options={personOptions("Jen vedoucí")}
-            listLabel="Kontroloři zápisu"
+  // Více dní patří k termínu, kontrolor zápisu k vedení: základ akce není schovaný v dalších možnostech.
+  const multiDayFields = (
+    <>
+      <label className="check span-2">
+        <input
+          type="checkbox"
+          name="multiDay"
+          checked={multiDay}
+          onChange={(e) => setMultiDay(e.target.checked)}
+          disabled={termLocked}
+        />
+        <span>Akce trvá více dní</span>
+      </label>
+      {multiDay && (
+        <label className="field">
+          <span className="field-label">Poslední den {mark("endDate")}</span>
+          <input
+            className="input"
+            type="date"
+            name="endDate"
+            min={values.date}
+            value={values.endDate ?? values.date}
+            onChange={(e) => set("endDate", e.target.value)}
+            required
+            readOnly={termLocked}
           />
-        </div>
-      </div>
-    </details>
+        </label>
+      )}
+    </>
+  );
+  const reviewerField = (
+    <div className="field">
+      <label className="field-label" htmlFor={`${formId}-reviewer`}>
+        Kdo zkontroluje zápis {mark("reviewerId")}
+      </label>
+      <Combobox
+        id={`${formId}-reviewer`}
+        name="reviewerId"
+        selectOnly
+        value={values.reviewerId}
+        onChange={(reviewer) => set("reviewerId", reviewer)}
+        options={personOptions("Jen vedoucí")}
+        listLabel="Kontroloři zápisu"
+      />
+    </div>
   );
 
   const busy = pending || checking;
@@ -539,62 +723,64 @@ function EventForm({
 
   return (
     <>
-      <form ref={formRef} id={formId} onSubmit={submit} onInvalidCapture={onInvalid} className="stack event-form">
+      <form
+        ref={formRef}
+        id={formId}
+        onSubmit={submit}
+        onInvalidCapture={onInvalid}
+        className="stack event-form"
+      >
         {invalid.length > 0 && (
           <div className="notice notice-danger" role="alert">
-            <strong>Akci zatím nejde uložit.</strong> Doplň nebo oprav: {invalid.join(", ")}.
+            <strong>Akci zatím nejde uložit.</strong> Doplň nebo oprav:{" "}
+            {invalid.join(", ")}.
           </div>
         )}
-        {confirmed && <input type="hidden" name="confirmToken" value={confirmed.token} />}
-        {acceptedIncomplete === valuesKey && missing.length > 0 && <input type="hidden" name="allowIncomplete" value="on" />}
-        {id && <input type="hidden" name="id" value={id} />}
-        {duplicateOf && <input type="hidden" name="duplicateOf" value={duplicateOf} />}
-        {revision !== undefined && <input type="hidden" name="revision" value={revision} />}
-
-        {mode === "create" ? (
-          <>
-            <fieldset className="form-main form-step">
-              <legend>
-                <span className="step-no">1</span> Akce
-              </legend>
-              <div className="form-grid">
-                {typeField}
-                {audienceField}
-                {labelInMain && labelField}
-                {topicField}
-              </div>
-            </fieldset>
-            <fieldset className="form-main form-step">
-              <legend>
-                <span className="step-no">2</span> Termín a vedení
-              </legend>
-              <div className="form-grid">
-                {termFields}
-                {leadField}
-              </div>
-              {moreFields}
-            </fieldset>
-          </>
-        ) : (
-          <fieldset className="form-main">
-            <legend className="visually-hidden">Údaje akce</legend>
-            <div className="form-grid">
-              {labelInMain && labelField}
-              {topicField}
-              {leadField}
-              {audienceField}
-              {termFields}
-            </div>
-            {moreFields}
-          </fieldset>
+        {confirmed && (
+          <input type="hidden" name="confirmToken" value={confirmed.token} />
         )}
+        {acceptedIncomplete === valuesKey && missing.length > 0 && (
+          <input type="hidden" name="allowIncomplete" value="on" />
+        )}
+        {id && <input type="hidden" name="id" value={id} />}
+        {duplicateOf && (
+          <input type="hidden" name="duplicateOf" value={duplicateOf} />
+        )}
+        {revision !== undefined && (
+          <input type="hidden" name="revision" value={revision} />
+        )}
+
+        <fieldset className="form-section">
+          <legend>Akce</legend>
+          <div className="form-grid">
+            {typeField}
+            {labelField}
+            {topicField}
+            {audienceField}
+          </div>
+        </fieldset>
+        <fieldset className="form-section">
+          <legend>Termín a vedení</legend>
+          <div className="form-grid">
+            {termFields}
+            {multiDayFields}
+            {leadField}
+            {reviewerField}
+          </div>
+        </fieldset>
 
         <ActionMessage state={previewError ?? state} />
 
         <ConfirmDialog
           open={ask === "incomplete"}
           title={`Zveřejnit bez ${missing.length > 1 ? "tématu a vedoucího" : missing[0] === "téma" ? "tématu" : "vedoucího"}?`}
-          description={<p>Kolegové uvidí obecný název „{values.label.trim() || TYPE_LABELS[values.type]}“. Doplnit to půjde i později.</p>}
+          description={
+            <p>
+              Kolegové uvidí obecný název „
+              {values.label.trim() || TYPE_LABELS[values.type]}“. Doplnit to
+              půjde i později.
+            </p>
+          }
           onCancel={back}
           returnFocusTo={publishButton}
           busy={busy}
@@ -602,8 +788,21 @@ function EventForm({
           <button type="button" className="btn" onClick={back} autoFocus>
             Zpět k úpravám
           </button>
-          <button type="submit" form={formId} name="intent" value="publish" data-confirm="incomplete" className="btn btn-primary" disabled={busy} {...lock}>
-            {checking ? "Ověřuji…" : pending ? "Zveřejňuji…" : "Zveřejnit bez nich"}
+          <button
+            type="submit"
+            form={formId}
+            name="intent"
+            value="publish"
+            data-confirm="incomplete"
+            className="btn btn-primary"
+            disabled={busy}
+            {...lock}
+          >
+            {checking
+              ? "Ověřuji…"
+              : pending
+                ? "Zveřejňuji…"
+                : "Zveřejnit bez nich"}
           </button>
         </ConfirmDialog>
         <ConfirmDialog
@@ -623,14 +822,27 @@ function EventForm({
                       {c.field}: <s>{c.from}</s> → <strong>{c.to}</strong>
                     </li>
                   ))}
-                  {confirmed.guests.add.length > 0 && <li>Do pozvánky přibude: {confirmed.guests.add.join(", ")}</li>}
-                  {confirmed.guests.remove.length > 0 && <li>Z pozvánky ubude: {confirmed.guests.remove.join(", ")}</li>}
+                  {confirmed.guests.add.length > 0 && (
+                    <li>
+                      Do pozvánky přibude: {confirmed.guests.add.join(", ")}
+                    </li>
+                  )}
+                  {confirmed.guests.remove.length > 0 && (
+                    <li>
+                      Z pozvánky ubude: {confirmed.guests.remove.join(", ")}
+                    </li>
+                  )}
                 </ul>
                 {confirmed.notes.length > 0 && (
                   <details className="small">
                     <summary>Podrobnosti</summary>
                     <ul className="prose-list">
-                      {confirmed.guests.manual.length > 0 && <li>Ručně přidaní hosté zůstanou: {confirmed.guests.manual.join(", ")}</li>}
+                      {confirmed.guests.manual.length > 0 && (
+                        <li>
+                          Ručně přidaní hosté zůstanou:{" "}
+                          {confirmed.guests.manual.join(", ")}
+                        </li>
+                      )}
                       {confirmed.notes.map((note) => (
                         <li key={note}>{note}</li>
                       ))}
@@ -645,7 +857,16 @@ function EventForm({
           <button type="button" className="btn" onClick={back} autoFocus>
             Zpět k úpravám
           </button>
-          <button type="submit" form={formId} name="intent" value="publish" data-confirm="impact" className="btn btn-primary" disabled={busy} {...lock}>
+          <button
+            type="submit"
+            form={formId}
+            name="intent"
+            value="publish"
+            data-confirm="impact"
+            className="btn btn-primary"
+            disabled={busy}
+            {...lock}
+          >
             {pending ? "Zveřejňuji…" : "Potvrdit zveřejnění"}
           </button>
         </ConfirmDialog>
@@ -655,14 +876,37 @@ function EventForm({
           návrh (první tlačítko formuláře). Zveřejnění je vždy vědomá volba. */}
       <div ref={actionsRef} className="dialog-actions event-actions">
         {menu && <div className="event-actions-menu">{menu}</div>}
-        {unchanged && <span className="small muted event-actions-note">Beze změn</span>}
-        {duplicateOf && <span className="small muted event-actions-note">Kopie se uloží jako návrh, zveřejníš ji po kontrole.</span>}
-        <button type="submit" form={formId} name="intent" value="draft" data-confirm-save="Uložit jako návrh" className={duplicateOf ? "btn btn-primary" : "btn"} disabled={busy || (mode === "edit" && !dirty)} {...lock}>
+        {unchanged && (
+          <span className="small muted event-actions-note">Beze změn</span>
+        )}
+        {duplicateOf && (
+          <span className="small muted event-actions-note">
+            Kopie se uloží jako návrh, zveřejníš ji po kontrole.
+          </span>
+        )}
+        <button
+          type="submit"
+          form={formId}
+          name="intent"
+          value="draft"
+          data-confirm-save="Uložit jako návrh"
+          className={duplicateOf ? "btn btn-primary" : "btn"}
+          disabled={busy || (mode === "edit" && !dirty)}
+          {...lock}
+        >
           Uložit jako návrh
         </button>
         {duplicateOf ? null : (
           // Primární vzhled jen tehdy, když je skutečně co zveřejnit; bez změn tlačítko k ničemu nevybízí.
-          <button type="submit" form={formId} name="intent" value="publish" className={unchanged ? "btn" : "btn btn-primary"} disabled={busy || unchanged} {...lock}>
+          <button
+            type="submit"
+            form={formId}
+            name="intent"
+            value="publish"
+            className={unchanged ? "btn" : "btn btn-primary"}
+            disabled={busy || unchanged}
+            {...lock}
+          >
             {checking ? "Ověřuji…" : pending ? "Ukládám…" : publishLabel}
           </button>
         )}
@@ -673,29 +917,50 @@ function EventForm({
 
 const SHOWN_GUESTS = 8;
 
-function guestCountLabel(count: number): string {
-  if (count === 1) return "1 příjemce pozvánky";
-  if (count < 5) return `${count} příjemci pozvánky`;
-  return `${count} příjemců pozvánky`;
+function guestCountLabel(count: number, pending: boolean): string {
+  // Před zveřejněním je to jen odhad podle skupiny: pozvánka zatím nikomu neodešla.
+  const label = count === 1 ? "1 příjemce pozvánky" : count < 5 ? `${count} příjemci pozvánky` : `${count} příjemců pozvánky`;
+  return pending ? `${label} po zveřejnění` : label;
 }
 
 /**
  * Kdo dostane pozvánku podle vybraného publika. Počet je jen sbalený řádek; bez příjemců stačí krátká
  * poznámka, protože zveřejnění pak nikoho nepozve. V testovacím režimu jen povolené adresy.
  */
-function InviteeList({ invite, audience }: { invite: InviteRecipients; audience: EventFormValues["audience"] }) {
+function InviteeList({
+  invite,
+  audience,
+  pending,
+}: {
+  invite: InviteRecipients;
+  audience: EventFormValues["audience"];
+  /** Akce ještě není zveřejněná: příjemci jsou jen předpoklad, ne odeslané pozvánky. */
+  pending: boolean;
+}) {
   const guests = invite.recipients[audience];
-  if (guests.length === 0) return <p className="field-hint field-hint-key invitees-none">Ze skupiny {GROUP_LABELS[audience]} zatím pozvánku nedostane nikdo.</p>;
+  if (guests.length === 0)
+    return (
+      <p className="field-hint field-hint-key invitees-none">
+        Ze skupiny {GROUP_LABELS[audience]} zatím pozvánku {pending ? "po zveřejnění " : ""}nedostane nikdo.
+      </p>
+    );
   const names = guests.map((g) => g.name || g.email);
   const shown = names.slice(0, SHOWN_GUESTS);
   const rest = names.slice(SHOWN_GUESTS);
   return (
     <details className="invitees" aria-live="polite">
-      <summary className="invitees-head">{guestCountLabel(guests.length)}</summary>
+      <summary className="invitees-head">
+        {guestCountLabel(guests.length, pending)}
+      </summary>
       <div className="invitees-names">
         {shown.join(", ")}
         {rest.length > 0 && <> a další {rest.length}</>}
-        {invite.attendeeSource === "allowlist" && <span className="field-hint field-hint-key"> · testovací režim, jen povolené adresy</span>}
+        {invite.attendeeSource === "allowlist" && (
+          <span className="field-hint field-hint-key">
+            {" "}
+            · testovací režim, jen povolené adresy
+          </span>
+        )}
       </div>
     </details>
   );

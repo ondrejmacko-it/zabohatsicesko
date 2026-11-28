@@ -74,7 +74,7 @@ export type EventOriginal = {
   allDay: boolean;
   audience: Group;
   leadName: string | null;
-  /** Co návrh mění, česky pro kartu: termín, téma, vedoucí, publikum, typ, kontrolor. */
+  /** Co návrh mění, česky pro kartu: termín, téma, vedoucí, skupina, typ, kontrolor. */
   changes: string[];
 };
 
@@ -84,7 +84,7 @@ export function changedParts(view: Pick<EventSnapshot, "type" | "label" | "topic
   if (view.startsAt !== last.startsAt || view.endsAt !== last.endsAt || view.allDay !== last.allDay) parts.push("termín");
   if ((view.topicTitle ?? null) !== (last.topicTitle ?? null)) parts.push("téma");
   if ((view.leadId ?? null) !== (last.leadId ?? null)) parts.push("vedoucí");
-  if (view.audience !== last.audience) parts.push("publikum");
+  if (view.audience !== last.audience) parts.push("skupina");
   if (view.type !== last.type || view.label !== last.label) parts.push("typ");
   if ((view.reviewerId ?? null) !== (last.reviewerId ?? null)) parts.push("kontrolor");
   return parts;

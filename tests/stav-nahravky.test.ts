@@ -37,7 +37,7 @@ describe("stav nahrávky napříč obrazovkami", () => {
     const jobId = await uploadRecording(lead, PAST_FP, asFile(fixtureWav(), "trenink.wav"));
     await processTranscriptionJob(jobId);
     expect((await listMissingMinutes(lead)).items.find((i) => i.eventId === PAST_FP)?.state).toBe("draft");
-    expect((await listTasks(lead)).find((t) => t.href.includes(PAST_FP))?.action).toBe("Dokončit zápis");
+    expect((await listTasks(lead)).find((t) => t.href.includes(PAST_FP))?.action).toBe("Schválit zápis");
   });
 });
 

@@ -98,7 +98,7 @@ test.describe("Témata: garantovaná a ostatní", () => {
 
   test("F10–F12: vysvětlení garantovaných, filtr Pro mou roli / Všechna, úchyty jen nad celým seznamem, bez „zatím neproběhlo“", async ({ page }) => {
     await openTopics(page);
-    await expect(guaranteedOf(page).getByText("Plánují se přednostně, i když o ně nikdo neprojevil zájem.")).toBeVisible();
+    await expect(guaranteedOf(page).getByText("Správce je plánuje přednostně.")).toBeVisible();
     await expect(page.getByRole("link", { name: "Všechna", exact: true })).toHaveAttribute("aria-current", "page");
     await expect(page.locator(".topic-handle").first()).toBeVisible();
     await expect(page.locator(".topic-guaranteed .topic-rank")).toHaveText(["1", "2"]);
@@ -111,7 +111,7 @@ test.describe("Témata: garantovaná a ostatní", () => {
     await expect(page.getByRole("link", { name: "Pro mou roli", exact: true })).toHaveAttribute("aria-current", "page");
     await expect(page.locator(".topic-handle")).toHaveCount(0);
     await expect(page.locator(".topic-rank")).toHaveCount(0);
-    await expect(page.getByText("Pořadí měníš v zobrazení Všechna.")).toBeVisible();
+    await expect(page.getByText("Ve filtru Pro mou roli nejde měnit pořadí.", { exact: false })).toBeVisible();
     await menuOf(page, "Otevřené otázky na schůzce").click();
     await expect(openMenu(page).locator("a, button")).toHaveText(["Naplánovat téma", "Upravit téma", "Zrušit prioritu", "Archivovat…"]);
     await page.keyboard.press("Escape");
@@ -152,13 +152,16 @@ test.describe("Témata: garantovaná a ostatní", () => {
     // Stávající termín je nahoře s hlavním odkazem, další termín je vedlejší volba (nejdřív nejvýš tři akce).
     await expect(plan.getByText(/^Naplánováno na 26\. 11\./)).toBeVisible();
     await expect(plan.getByRole("link", { name: "Otevřít stávající akci" })).toHaveClass(/btn-primary/);
-    await expect(plan.getByRole("heading", { name: "Další termín" })).toBeVisible();
+    // Návrhy jsou první skupina, vysvětlení dopadu je jednou u nadpisu skupiny, ne pod kartou.
+    const drafts = plan.getByRole("region", { name: "Návrhy bez tématu" });
+    await expect(drafts.getByRole("heading", { name: /uloží se jen návrh/ })).toBeVisible();
     await expect(plan.getByRole("link", { name: "Vytvořit novou akci" })).not.toHaveClass(/btn-primary/);
-    const items = plan.getByRole("list", { name: "Vhodné akce" }).getByRole("listitem");
+    const items = plan.getByRole("listitem");
     expect(await items.count()).toBeLessThanOrEqual(3);
     await expect(items.first()).toContainText("Firemní vzdělávání FP · 13. 11.");
     // D-01: skupinu už říká typ „Firemní vzdělávání FP“, proto se neopakuje.
-    await expect(items.first()).toContainText("návrh");
+    await expect(drafts.getByRole("listitem").first()).toContainText("Firemní vzdělávání FP · 13. 11.");
+    await expect(items.first()).not.toContainText("návrh");
     await expect(items.first()).not.toContainText("Finanční poradci");
     const more = plan.getByRole("button", { name: /^Zobrazit další/ });
     if (await more.isVisible()) {
@@ -188,7 +191,7 @@ test.describe("Témata: garantovaná a ostatní", () => {
     await page.keyboard.press("Escape");
     // Zavření okna odebere akci z adresy. Bez čekání by ji WebKit přepsal až po dalším goto.
     await expect(page).not.toHaveURL(/akce=/);
-    await page.goto("/vzdelavani/harmonogram?mesic=2026-11&akce=ev-11-24");
+    await page.goto("/vzdelavani/harmonogram?mesic=2026-11&akce=ev-11-24&upravit=1");
     await settle(page);
     await expect(page.getByRole("dialog").getByLabel(/^Téma/)).toHaveValue("");
   });
@@ -422,8 +425,7 @@ test.describe("Témata: zápis priority, pořadí a návrhu @desktop @zapis-tema
     await expect(plan.getByRole("listitem").first()).toBeVisible();
     if (await more.isVisible()) await more.click();
     const item = plan.getByRole("listitem").filter({ hasText: "· 4. 12." });
-    await expect(item).toContainText("návrh");
-    await item.getByRole("button", { name: /^Přidat do návrhu/ }).click();
+    await item.getByRole("button", { name: /^Přiřadit k akci/ }).click();
     await expect(plan).toBeHidden();
     await expect(page.getByText(/Téma „Otevřené otázky na schůzce“ je v návrhu akce 4\. 12\. Termín se potvrzuje, kolegové ho uvidí po zveřejnění\./)).toBeVisible();
     await openTopics(page);
@@ -505,7 +507,7 @@ test.describe("Témata očima účastníka", () => {
 
   test("F10–F12: vysvětlení ano, úchyty, čísla pořadí, správa pořadí ani „zatím neproběhlo“ ne", async ({ page }) => {
     await openTopics(page);
-    await expect(guaranteedOf(page).getByText("Plánují se přednostně, i když o ně nikdo neprojevil zájem.")).toBeVisible();
+    await expect(guaranteedOf(page).getByText("Správce je plánuje přednostně.")).toBeVisible();
     await expect(page.locator(".topic-handle, .topic-rank, .topic-lead")).toHaveCount(0);
     await expect(page.getByRole("button", { name: /^Změnit pořadí/ })).toHaveCount(0);
     await expect(page.getByText("Pořadí upravil správce.")).toHaveCount(0);

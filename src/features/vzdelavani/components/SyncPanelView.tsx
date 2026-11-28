@@ -50,7 +50,7 @@ function PersonalSyncView({ sync }: { sync: SyncPanel }) {
         <p className="small muted">Návrh se do kalendářů nezapisuje.</p>
       ) : (
         <dl className="dl">
-          <dt>Publikum</dt>
+          <dt>Pro koho</dt>
           <dd>{people(delivery.audience)}</dd>
           {delivery.expected ? (
             <>
@@ -156,7 +156,7 @@ export function SyncPanelView({ eventId, sync }: { eventId: string; sync: SyncPa
       <div className="spread">
         <h2 id="kalendar">Google Kalendář</h2>
         <span className="row">
-          <span className="badge badge-outline">{sync.mode === "simulation" ? "simulace" : sync.attendeeSource === "allowlist" ? "test Google · jen testovací příjemci" : "test Google · publikum akce"}</span>
+          <span className="badge badge-outline">{sync.mode === "simulation" ? "simulace" : sync.attendeeSource === "allowlist" ? "test Google · jen testovací příjemci" : "test Google · skupina akce"}</span>
           <span className={statusBadge} role="status">
             {statusLabel}
           </span>

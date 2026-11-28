@@ -14,7 +14,7 @@ const redacted = (html: string) =>
 describe("C03: redakce omluv na snímku", () => {
   test("vlastní omluva v panelu účasti", () => {
     const html = renderToStaticMarkup(
-      createElement(ParticipationPanel, { eventId: "e1", state: "excused", label: "Omluven", actions: [], excuse: { reason: "illness", note: NOTE } }),
+      createElement(ParticipationPanel, { eventId: "e1", state: "excused", actions: [], excuse: { reason: "illness", note: NOTE } }),
     );
     const parts = redacted(html);
     expect(parts.some((text) => text.includes(NOTE))).toBe(true);

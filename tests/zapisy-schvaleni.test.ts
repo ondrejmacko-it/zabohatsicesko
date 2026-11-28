@@ -313,18 +313,18 @@ describe("neúplný návrh a souběh schválení (finální kontrola 4A–4C)", 
   });
 });
 
-describe("úkol Dokončit zápis", () => {
+describe("úkol zápisu podle stavu", () => {
   test("vedoucí má jeden úkol k akci bez zápisu i s neschváleným návrhem, kontrolor kontrolu", async () => {
     const forEvent = async (viewer: Viewer) => (await listTasks(viewer)).filter((t) => t.href.includes(PAST_FP));
-    expect((await forEvent(lead)).map((t) => t.action)).toEqual(["Dokončit zápis"]);
+    expect((await forEvent(lead)).map((t) => t.action)).toEqual(["Připravit zápis"]);
     const row = await notesDraft();
-    expect((await forEvent(lead)).map((t) => [t.key, t.action])).toEqual([[`zapis-${PAST_FP}`, "Dokončit zápis"]]);
+    expect((await forEvent(lead)).map((t) => [t.key, t.action])).toEqual([[`zapis-${PAST_FP}`, "Schválit zápis"]]);
     await setPublished(PAST_FP, { reviewerId: reviewer.id });
     expect((await forEvent(reviewer)).map((t) => t.action)).toEqual(["Zkontrolovat zápis"]);
     await approveMinutes(lead, PAST_FP, row.id, 1);
     expect(await forEvent(lead)).toEqual([]);
     await updateMinutes(admin, PAST_FP, row.id, 1, { ...row.content, summary: "Po schválení" });
-    expect((await forEvent(lead)).map((t) => t.action)).toEqual(["Dokončit zápis"]);
+    expect((await forEvent(lead)).map((t) => t.action)).toEqual(["Schválit zápis"]);
   });
 });
 
