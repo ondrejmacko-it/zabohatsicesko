@@ -1,4 +1,4 @@
-# Navazující relace (stav 28. 11. 2026, relace 114)
+# Navazující relace (stav 28. 11. 2026, relace 115)
 
 Cíl: dokončit PR #97, ověřit skutečnou funkčnost (živý Google Kalendář), připravit bezpečné ostré nasazení.
 Plné zadání vlastníka (body 1–11) je v promptu navazující relace; drž se ho. Bez merge do main, bez produkčního
@@ -38,6 +38,20 @@ E. Ruční volání /api/kalendar/fronta ≠ důkaz plánovače. Ověř obě vě
    GitHub schedule */10 – ten běží jen z výchozí větve main; zdokumentuj omezení, do main NIC nemergovat).
 F. Po uvolnění limitu: jedno ucelené ověřené nasazení (nejdřív lokální testy, nepushovat drobnosti zbytečně),
    pak všechny živé testy, opravy, dokumentace, finální kontrola.
+
+## Stav bodů A–F (relace 115, HEAD 2c965ac + předávka)
+- A HOTOVO v kódu: vercel.json `git.deploymentEnabled {"claude/gallant-knuth-ydgzxz": false}` (docs: při více
+  shodách stačí jedno true → nasadí se; nepasující větve se nasazují). PR větev nechána zapnutá (1 preview/push).
+  commandForIgnoringBuildStep NEpoužit (ignorovaný build stále vytváří nasazení a platil by i pro ruční deploy).
+  Neověřeno: že create_deployment API vypnutí neovlivní (podle docs se týká jen Git pushů) → ověř v F.
+  Pushnuto JEN na gallant (vypnutá) – na PR větev pushni až s F (vytvoří 1 preview).
+- B HOTOVO v kódu: endpoint přijímá GitHub OIDC (src/server/calendar/worker-auth.ts, tests/kalendar-oidc.test.ts
+  10/10 zelených, tsc+eslint OK); workflow má id-token: write, audience zbc-kalendar-fronta. ZBÝVÁ: nastavit
+  Vercel Production env CALENDAR_WORKER_OIDC_REPOSITORY=ondrejmacko-it/zabohatsicesko (nesecretní, plain)
+  a GitHub var WIKI_URL (zjisti, jestli existuje). GitHub secret už není nutný. Schedule běží jen z main →
+  do nasazení/merge ověřit jen ručním workflow_dispatch na PR větvi (actions_run_trigger).
+- C, D, E: NEZAČATO. Pak F (limit Vercelu do ~29. 11. 18:20 UTC) a úkoly 3–4 níže.
+- Celou sadu testů (vitest s DB, e2e) před F spustit jednou.
 
 ## Úkoly (pořadí)
 1. HOTOVO: CI PR #97 zelené na ff5b12f (Kontrola kódu + bezpečnosti).
