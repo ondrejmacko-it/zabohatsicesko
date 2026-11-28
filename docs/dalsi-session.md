@@ -1,4 +1,4 @@
-# Navazující relace (stav 28. 11. 2026, relace 101)
+# Navazující relace (stav 28. 11. 2026, relace 102)
 
 Cíl: dokončit opravy PR #97, ověřit skutečnou funkčnost (živý Google Kalendář), připravit bezpečné ostré nasazení.
 Plné zadání vlastníka (body 1–11) je v promptu navazující relace; drž se ho. Bez merge do main, bez produkčního
@@ -12,32 +12,31 @@ Větve: `claude/gallant-knuth-ydgzxz` (report, HEAD viz `git log -1`), PR #97 dr
 `git fetch` + merge. Vercel tým `team_PtkXmFd9hI7UeUYovGkbwZQG`, projekt `prj_MYpwzB5KekzHAVwbiUDrZv6CG12i`.
 Neon projekt `neon-zbz-vzdelavani-demo` (main = produkce, NEDOTÝKAT SE).
 
-## Hotovo (relace 100)
-- `docs/report-zive-overeni-pr97.md`: K1–K9, postup izolovaného testu, scénáře, vizuální sada ve 3 prohlížečích
-  (jen V1), návrh vizuální regrese, souhrn. `scripts/vizualni-sada.mjs` funguje (Chromium/Firefox/WebKit).
-- V1: `/vzdelavani/ucast` správce 768/1024 px, `.table-stack` (globals.css ~4250) se skládá jen do 480 px,
-  tabulka bez posuvného obalu → vodorovný posun 18/26 px.
+## Hotovo
+- Relace 100: report K1–K9, postup izolovaného testu, `scripts/vizualni-sada.mjs` (3 prohlížeče), nález V1.
+- Relace 102: větev `claude/gallant-knuth-ydgzxz` sjednocena s PR #97 (fast-forward, obě větve = stejný HEAD,
+  pushuj na obě: `git push origin HEAD:claude/oprava-kalendare-a-prehled-ucasti HEAD:claude/gallant-knuth-ydgzxz`).
+  CI PR #97 na b4362a8 zelené. V1 OPRAVENO v c5db69d: `src/components/TableScroll.tsx` (role=region,
+  tabindex, `position:relative` kvůli absolutním `.visually-hidden` popiskům), CSS `.table-scroll` na konci
+  globals.css, `e2e/ucast-sirka.spec.ts` (768/1024/1280, akce/lidé/detail, klávesnice) prošel v
+  windows-1280, firefox-1280, webkit-1440 (E2E_WEBKIT=1); TLS proxy i pro UCAST (3413). ucast*.spec prošly.
 
 ## Další kroky (po malých jednotkách, commit + push po každé)
-1. Stav: PR #97, CI (GitHub actions_list), větve. Sjednotit auditní/testovací změny z této větve do PR #97,
-   pokud bez konfliktů (skript vizuální sady, report).
-2. V1 v PR #97: posuvný obal tabulky (`overflow-x:auto`, `tabindex=0`, `role=region` + aria-label, viditelný
-   focus, náznak posunu), geometrický e2e test bez vodorovného posunu na 768/1024 (`expectNoHorizontalScroll`).
-   Ověřit Chromium/Firefox/WebKit skriptem.
-3. Ověřit: výchozí filtr témat „Všechna“, mobilní hamburger menu (e2e `menu-telefon.spec.ts`). Dokončit jen chybějící.
-4. Vizuální regrese: malý projekt `toHaveScreenshot` (4–5 stránek × 390/1024/1440, Chromium, CI Linux),
-   reference generovat v CI (ne lokálně jiné fonty), postup Firefox/WebKit do README/reportu.
-5. Plánovač K1/K8: proč `kalendar-fronta.yml` končí success bez konfigurace → rozlišit vypnuto vs. chyba
-   (chyba = fail). Posoudit, zda stačí jeden plánovač (návrh nejdřív zdůvodnit). Tabulka všech env proměnných
-   (kde, k čemu, prostředí, jak vytvořit, jak ověřit, následky absence) do reportu.
-6. Účast/oprávnění: cílené testy (nadřízený jen své lidi, účastník, přímé volání API).
-7. Izolovaný test: připravit skript ověřující stav přes Google Calendar API + měření latence; nesecretní
-   proměnné testovací větve nastavit až po potvrzení účtů. Sepsat přesně, co má vlastník dodat.
-8. Finální běh lint/typecheck/unit/e2e/vizuál, report rozdělit do kategorií z bodu 11 zadání, PR popis.
-9. Na konci požádat vlastníka o oprávnění pro maximální automatizaci a testování (přístupy, účty, secrets).
+1. Zkontrolovat CI PR #97 na c5db69d. Do reportu (V1) doplnit opravu a výsledky.
+2. Ověřit: výchozí filtr témat „Všechna“ (commit b1082c8, `e2e/temata-filtr.spec.ts`), mobilní hamburger menu
+   (`e2e/menu-telefon.spec.ts`). Dokončit jen chybějící.
+3. Vizuální regrese: malý projekt `toHaveScreenshot` (4–5 stránek × 390/1024/1440, Chromium, CI Linux),
+   reference generovat v CI, postup Firefox/WebKit do README/reportu.
+4. Plánovač K1/K8: proč `kalendar-fronta.yml` končí success bez konfigurace → rozlišit vypnuto vs. chyba
+   (chyba = fail). Posoudit jeden vs. dva plánovače (návrh nejdřív zdůvodnit). Tabulka všech env proměnných.
+5. Účast/oprávnění: cílené testy (nadřízený jen své lidi, účastník, přímé volání API).
+6. Izolovaný test: skript ověřující stav přes Google Calendar API + měření latence; sepsat, co má vlastník dodat.
+7. Finální běh lint/typecheck/unit/e2e/vizuál, report do kategorií z bodu 11 zadání, PR popis.
+8. Na konci požádat vlastníka o oprávnění pro maximální automatizaci a testování (přístupy, účty, secrets).
 
 ## Technika
-- NEPOUŽÍVAT prettier. e2e: `E2E_WEBKIT=1 nohup node e2e/server.mjs &` (porty 3310/3311/3313), celá sada ~17 min.
+- NEPOUŽÍVAT prettier. `npm ci` (node_modules chybí v nové relaci), `npx next build`. Playwright si server
+  spouští sám (neběží-li jiný): `E2E_WEBKIT=1 npx playwright test <spec> --project=prihlaseni --project=…`.
 - Prohlížeče: `npx playwright install-deps webkit firefox`; `PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers npx playwright install webkit firefox`.
 - Vizuální sada: `PROHLIZEC=firefox node scripts/vizualni-sada.mjs $PWD <out>` (absolutní cesta repa).
 - Screenshoty číst jen jako výřezy/koláže (`montage` s `file[WxH+0+0]`), šetřit kontext.
