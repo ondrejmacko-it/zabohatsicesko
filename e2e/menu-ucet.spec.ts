@@ -40,4 +40,14 @@ test.describe("menu Účet: pozice, zavírání a fokus", () => {
     await expect(panel).toBeHidden();
     await expect(trigger).toBeFocused();
   });
+
+  // Ukázka nemá osobní kalendáře (CALENDAR_DELIVERY není personal): sekce se nezobrazí ani tlačítko synchronizace.
+  test("ukázka bez osobních kalendářů sekci Google Kalendář neukazuje", async ({ page }) => {
+    await page.goto("/");
+    const menu = page.locator(".account-menu");
+    await menu.getByRole("button", { name: "Účet", exact: true }).click();
+    await expect(menu.locator(".account-panel")).toBeVisible();
+    await expect(menu.getByTestId("ucet-kalendar")).toHaveCount(0);
+    await expect(menu.getByRole("button", { name: "Synchronizovat teď" })).toHaveCount(0);
+  });
 });
