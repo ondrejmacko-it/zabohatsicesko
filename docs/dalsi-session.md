@@ -1,4 +1,4 @@
-# Navazující relace (stav 28. 11. 2026, relace 96)
+# Navazující relace (stav 28. 11. 2026, relace 97)
 
 Cíl: připravit bezpečné, opakovatelné živé ověření PR #97 před mergem (testovací prostředí, živé scénáře
 proti skutečnému Google Kalendáři, vizuální ověření 320–3440 px v Chromiu, WebKitu a Firefoxu, report nálezů).
@@ -11,19 +11,22 @@ Vercel: tým `team_PtkXmFd9hI7UeUYovGkbwZQG`, projekt `prj_MYpwzB5KekzHAVwbiUDrZ
 Preview PR #97: `zbc-vzdelavani-demo-eedvobxq1-maci.vercel.app` (demo, simulace, účast vypnutá).
 
 ## Hotovo
-- Konfigurace Vercelu přečtená (jen názvy a cíle), nálezy K1–K7 a návrh izolovaného testu:
-  `docs/report-zive-overeni-pr97.md`. Hlavní nález: Production nemá `CRON_SECRET` ani
-  `CALENDAR_WORKER_TOKEN`, takže plánovač fronty Kalendáře v produkci nefunguje (401).
+- Report `docs/report-zive-overeni-pr97.md`: K1–K9 (K8 GitHub plánovač nenastavený a běží jen 2–4× denně,
+  K9 Neon `main` = produkční větev, test jen schema-only). Body 1 a 2 předchozí předávky hotové.
+- WebKit a Firefox: `PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers npx playwright install webkit firefox` (v novém
+  kontejneru zopakovat, ~1 min). Skript `scripts/vizualni-sada.mjs` (3 prohlížeče × 10 šířek × role, automatické
+  kontroly přetečení/uříznutí/konzole, JPEG; WebKit přes vlastní TLS proxy 3411/3413).
+- Zkušební běh Chromium 390: kandidáti „přetéká fieldset.filter-group“ (plán, moje cesta) a „uříznutý label
+  Přepnout ukázkovou roli“ – pravděpodobně skrytý panel / sr-only, OVĚŘIT na screenshotu, nezapisovat naslepo.
 
 ## Další krok
-1. Ověřit běhy workflow `kalendar-fronta.yml` (GitHub actions_list: „není nastavený“ / HTTP 401?) a doplnit K1.
-2. Neon: najít projekt Preview DB (Neon MCP, jen čtení) a ověřit, že jde vytvořit větev schema-only. Nic nezakládat.
-3. Vizuální sada lokálně nad buildem: `npx playwright install webkit firefox` (do /opt/pw-browsers), pak
-   skript screenshotů v scratchpadu pro šířky 320, 360, 390, 430, 768, 1024, 1280, 1440, 1920, 3440, všechny
-   stránky a role (vzor `scripts/audit-screenshoty.mjs`), skutečně prohlédnout, nálezy do reportu.
-   `E2E_WEBKIT=1` cíleně na webkit/firefox projekty.
-4. Návrh udržitelné vizuální regrese (`toHaveScreenshot`, pevný seed a DEMO_CLOCK, jen pár stránek).
-5. Doplnit report a poslat vlastníkovi návod k bodu „Navržený postup“ ke schválení.
+1. `npm ci`, instalace prohlížečů, `E2E_WEBKIT=1 node e2e/server.mjs` na pozadí, pak po prohlížečích
+   `PROHLIZEC=chromium node scripts/vizualni-sada.mjs . <scratchpad>/out` (potom firefox, webkit).
+2. Prohlížet koláže (`montage` je k dispozici: jedna stránka × 10 šířek na obrázek, malé rozlišení), ne stovky
+   souborů. Falešné kandidáty odfiltrovat úpravou kontroly ve skriptu, skutečné nálezy do reportu (reprodukce,
+   příčina, závažnost, minimální oprava).
+3. Návrh udržitelné vizuální regrese (`toHaveScreenshot`, pevný seed a DEMO_CLOCK, jen pár stránek) do reportu.
+4. Dokončit report (ověřeno/simulováno/předpoklad/neověřeno), pak poslat vlastníkovi souhrn a otázky.
 
 ## Technika
 - NEPOUŽÍVAT prettier. e2e server jede nad buildem (`npx next build`). Celá e2e ~17 min.

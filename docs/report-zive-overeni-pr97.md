@@ -13,6 +13,8 @@ se nečetly, u šifrovaných proměnných je známý jen název a cíl.
 | K4 | Preview sdílí jednu ukázkovou databázi (`DATABASE_URL` pro všechny větve). Živý test na ní by smíchal skutečné účty Google s fiktivním seedem. | blokuje živý test |
 | K5 | `APPROVED_MIGRATIONS` Production obsahuje 0015–0019, PR #97 je bez migrací. Preview má schválení jen pro jednu starou větev. Připravenost schématu testovací DB se ověří až po jejím založení. | info |
 | K6 | `FEEDBACK_WEBHOOK_URL` (Make) je nastavené i v Preview. Testovací větev ho musí přepsat prázdnou hodnotou, jinak by zpětná vazba z testu spustila Make. | střední (izolace) |
+| K8 | GitHub plánovač `kalendar-fronta.yml` (ověřeno v logu běhu 46148649291, 28. 11.): `WIKI_URL` i `CALENDAR_WORKER_TOKEN` jsou prázdné, krok skončí „Plánovač není nastavený“ se stavem success, takže výpadek v Actions není vidět. Cron `*/10` GitHub reálně spouští jen 2–4× denně (35 běhů celkem). Jako náhrada desetiminutového plánovače nestačí. | vysoká (provoz) |
+| K9 | Neon projekt `neon-zbz-vzdelavani-demo`: větev `main` je produkční větev Vercelu, dále `overeni-ucast-0016-0018` a `zaloha-pred-0015-2026-11-19`. Testovací větev pro bod 2 se proto musí zakládat jako *schema-only* (bez dat produkce), ne kopie `main`. Nic se nezakládalo. | info |
 | K7 | Vercel cron běží jen nad Production. Na preview je plánovač jen ruční volání endpointu s tokenem (a bypass ochrany nasazení). | info |
 
 ## Navržený postup izolovaného živého testu (čeká na schválení vlastníka)
@@ -45,5 +47,5 @@ v účtu Google; odebrání přístupu ve Správě (úklid jen událostí Wiki v
 
 ## Neověřeno
 
-Všechny živé scénáře, OAuth, plánovač, vizuální sada na šířkách 320–3440 px a WebKit/Firefox
-(v kontejneru je jen Chromium, `npx playwright install webkit firefox` zkusit v další relaci).
+Všechny živé scénáře, OAuth, plánovač. Vizuální sada: WebKit a Firefox nainstalované, skript
+`scripts/vizualni-sada.mjs` hotový, zatím jen zkušební běh Chromium 390 px (kandidáti nálezů čekají na prohlédnutí).
