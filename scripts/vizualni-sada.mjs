@@ -60,17 +60,20 @@ for (const [bn, bt] of browsers) {
           const scroll = document.documentElement.scrollWidth - vw;
           // Viditelné prvky, které přetékají viewport a nejsou uvnitř vodorovně posuvného kontejneru.
           const clipped = (el) => { for (let a = el.parentElement; a; a = a.parentElement) { const s = getComputedStyle(a); if (/(auto|scroll|hidden|clip)/.test(s.overflowX)) return true; } return false; };
+          // Skryté prvky (visually-hidden, obsah zavřeného <details>) nejsou vidět: nehlásit.
+          const hidden = (el) => !!el.closest('details:not([open]) > :not(summary), .visually-hidden');
           const over = [];
           for (const el of document.querySelectorAll('body *')) {
             const b = el.getBoundingClientRect();
-            if (!b.width || !b.height || getComputedStyle(el).visibility === 'hidden') continue;
+            if (!b.width || !b.height || getComputedStyle(el).visibility === 'hidden' || hidden(el)) continue;
             if ((b.right > vw + 1 || b.left < -1) && !clipped(el)) over.push(`${el.tagName.toLowerCase()}.${[...el.classList].join('.')}`);
           }
           // Text uříznutý v prvku bez vlastního posuvu (scrollWidth > clientWidth u inline textových prvků).
           const cut = [];
           for (const el of document.querySelectorAll('button, a, .badge, .chip, h1, h2, h3, label, th, td')) {
             const s = getComputedStyle(el);
-            if (el.scrollWidth > el.clientWidth + 2 && el.clientWidth > 0 && !/(auto|scroll)/.test(s.overflowX) && s.textOverflow !== 'ellipsis') cut.push(`${el.tagName.toLowerCase()}:${el.textContent.trim().slice(0, 30)}`);
+            if (hidden(el)) continue;
+            if (el.scrollWidth > el.clientWidth + 2 && el.clientWidth > 0 && !/(auto|scroll)/.test(s.overflowX) && s.textOverflow !== 'ellipsis') cut.push(`${el.tagName.toLowerCase()}:${(el.textContent.trim() || el.getAttribute('aria-label') || el.className).slice(0, 30)}`);
           }
           return { scroll, over: [...new Set(over)].slice(0, 5), cut: [...new Set(cut)].slice(0, 5), h: document.documentElement.scrollHeight };
         });
@@ -79,6 +82,7 @@ for (const [bn, bt] of browsers) {
         if (r.scroll > 1) issues.push(`${tag}: vodorovný posun ${r.scroll}px`);
         if (r.over.length) issues.push(`${tag}: přetéká ${r.over.join(', ')}`);
         if (r.cut.length) issues.push(`${tag}: uříznutý text ${r.cut.join(' | ')}`);
+        if (name === 'neexistuje') errs.splice(0, errs.length, ...errs.filter((e) => !e.includes('404')));
         if (errs.length) issues.push(`${tag}: konzole ${[...new Set(errs)].join(' | ')}`);
         await p.screenshot({ path: `${dir}/${String(w).padStart(4, '0')}-${name}.jpg`, fullPage: true, type: 'jpeg', quality: 55 });
       }

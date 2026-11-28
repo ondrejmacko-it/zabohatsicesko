@@ -1,42 +1,38 @@
-# Navazující relace (stav 28. 11. 2026, relace 98)
+# Navazující relace (stav 28. 11. 2026, relace 99)
 
-Cíl: připravit bezpečné, opakovatelné živé ověření PR #97 před mergem (testovací prostředí, živé scénáře
-proti skutečnému Google Kalendáři, vizuální ověření 320–3440 px v Chromiu, WebKitu a Firefoxu, report nálezů).
-Bez redesignu a velkých UI změn. Bez merge, deploye do produkce, produkční DB, Make a změn živé konfigurace
-bez výslovného souhlasu vlastníka. Tajemství nečíst ani nevypisovat.
+Cíl: bezpečné, opakovatelné živé ověření PR #97 před mergem (testovací prostředí, živé scénáře proti Google
+Kalendáři, vizuální ověření 320–3440 px v Chromiu, WebKitu a Firefoxu, report nálezů). Bez redesignu, merge,
+produkčního deploye, produkční DB, Make a změn živé konfigurace bez souhlasu vlastníka. Tajemství nevypisovat.
+Report vlastníkovi poslat až v poslední relaci.
 
-Větev `claude/gallant-knuth-ydgzxz` = HEAD PR #97 `e3c92b3` + report. PR #97 (větev
+Větev `claude/gallant-knuth-ydgzxz` (souběžné relace: před prací `git fetch` + ff/merge). PR #97 (větev
 `claude/oprava-kalendare-a-prehled-ucasti`) je draft, nic do něj nepushovat bez souhlasu.
 Vercel: tým `team_PtkXmFd9hI7UeUYovGkbwZQG`, projekt `prj_MYpwzB5KekzHAVwbiUDrZv6CG12i`.
-Preview PR #97: `zbc-vzdelavani-demo-eedvobxq1-maci.vercel.app` (demo, simulace, účast vypnutá).
 
 ## Hotovo
-- Report `docs/report-zive-overeni-pr97.md`: K1–K9 (K8 GitHub plánovač nenastavený a běží jen 2–4× denně,
-  K9 Neon `main` = produkční větev, test jen schema-only). Body 1 a 2 předchozí předávky hotové.
-- WebKit a Firefox: `PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers npx playwright install webkit firefox` (v novém
-  kontejneru zopakovat, ~1 min). Skript `scripts/vizualni-sada.mjs` (3 prohlížeče × 10 šířek × role, automatické
-  kontroly přetečení/uříznutí/konzole, JPEG; WebKit přes vlastní TLS proxy 3411/3413).
-- Zkušební běh Chromium 390: kandidáti „přetéká fieldset.filter-group“ (plán, moje cesta) a „uříznutý label
-  Přepnout ukázkovou roli“ – pravděpodobně skrytý panel / sr-only, OVĚŘIT na screenshotu, nezapisovat naslepo.
-
-- Relace 98: K8 doplněn o minimální opravu; ověřeno, že WebKit potřebuje `npx playwright install-deps webkit firefox`
-  (apt, ~2 min) před `install`. Server startuje ~2 min; čekat na `curl -s -o /dev/null -w '%{http_code}'`
-  (NIKDY nevypisovat tělo odpovědi – stojí desítky tisíc tokenů).
+- Report `docs/report-zive-overeni-pr97.md`: K1–K9 (konfigurace), návrh izolovaného testu, scénáře,
+  nově sekce „Vizuální ověření“ s V1 (tabulka Účasti přetéká na 768/1024 px, ověřeno na screenshotu).
+- Chromium celá sada proběhla (2,5 min). `scripts/vizualni-sada.mjs` už nehlásí visually-hidden, zavřené
+  `<details>` ani 404 na `/neexistuje`. Skript chce ABSOLUTNÍ cestu repa: `node scripts/vizualni-sada.mjs $PWD <out>`.
 
 ## Další krok
-1. `npm ci`, `npx playwright install-deps webkit firefox`, instalace prohlížečů, `E2E_WEBKIT=1 node e2e/server.mjs` na pozadí, pak po prohlížečích
-   `PROHLIZEC=chromium node scripts/vizualni-sada.mjs . <scratchpad>/out` (potom firefox, webkit).
-2. Prohlížet koláže (`montage` je k dispozici: jedna stránka × 10 šířek na obrázek, malé rozlišení), ne stovky
-   souborů. Falešné kandidáty odfiltrovat úpravou kontroly ve skriptu, skutečné nálezy do reportu (reprodukce,
-   příčina, závažnost, minimální oprava).
-3. Návrh udržitelné vizuální regrese (`toHaveScreenshot`, pevný seed a DEMO_CLOCK, jen pár stránek) do reportu.
-4. Dokončit report (ověřeno/simulováno/předpoklad/neověřeno), pak poslat vlastníkovi souhrn a otázky.
+1. Příprava (~5 min): `npm ci`; `npx playwright install-deps webkit firefox`;
+   `PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers npx playwright install webkit firefox`;
+   `E2E_WEBKIT=1 nohup node e2e/server.mjs >log &`; čekat na HTTP 200 portů 3310, 3311, 3313 (jen kód, ne tělo).
+2. Zbývající kandidát Chromia: „uříznutý text button:Možnosti akce …“ / „Možnosti účtu …“ (ikonová tlačítka
+   ⋯ v plánu a Správě, všechny šířky). Nejspíš falešný (scrollWidth ikony) – ověřit na výřezu screenshotu,
+   pak kontrolu ve skriptu zúžit (např. ignorovat tlačítka bez textového obsahu).
+3. `PROHLIZEC=firefox`, pak `webkit`: porovnat `nalezy.txt` s Chromiem, prohlížet jen odlišné kandidáty
+   a koláže (`montage`, malé rozlišení). Screenshoty jsou velké – číst jen výřezy/zmenšeniny (šetřit kontext).
+4. Do reportu: návrh udržitelné vizuální regrese (`toHaveScreenshot`, pevný seed a DEMO_CLOCK, 4–5 stránek ×
+   3 šířky, jen Chromium v CI, WebKit/Firefox ručně před releasem), shrnutí ověřeno/simulováno/předpoklad/neověřeno.
+5. Poslat vlastníkovi souhrn a otázky (níže).
 
 ## Technika
-- NEPOUŽÍVAT prettier. e2e server jede nad buildem (`npx next build`). Celá e2e ~17 min.
-- Výpis env proměnných z Vercelu je velký: zpracovat skriptem, vypsat jen klíč, cíl, větev, typ.
+- NEPOUŽÍVAT prettier. Celá e2e ~17 min. Výpis env z Vercelu zpracovat skriptem (jen klíč, cíl, větev, typ).
 
 ## Otevřené otázky pro vlastníka
-- Schválení izolovaného testu (testovací větev, branch-scoped proměnné, Neon větev, redirect URI).
+- Schválení izolovaného testu (testovací větev, branch-scoped proměnné, Neon větev schema-only, redirect URI).
 - Které testovací účty Google smím použít (správce, 2 členové)?
-- Nastavit `CRON_SECRET` v Production (K1)?
+- Nastavit `CRON_SECRET` v Production (K1) a secrets GitHub plánovače (K8)?
+- Opravit V1 v PR #97, nebo samostatně?

@@ -45,6 +45,17 @@ více rolí současně; změna času a zrušení akce; připomínky (7 d a 1 d e
 události v Googlu a další synchronizace; chyba a opakování (dočasně odvolaný token); odvolání oprávnění
 v účtu Google; odebrání přístupu ve Správě (úklid jen událostí Wiki v kalendáři „Vzdělávání ZBC“).
 
+## Vizuální ověření (lokální build, fiktivní seed)
+
+Chromium 155 (Playwright 1.63), 10 šířek × role správce, účastník, host, celé stránky. Screenshoty prohlédnuté
+po kandidátech nálezů. Firefox a WebKit zatím neběžely.
+
+| # | Nález | Stav | Závažnost |
+|---|---|---|---|
+| V1 | `/vzdelavani/ucast` (Podle akcí), správce, 768 a 1024 px: tabulka 8 sloupců je širší než karta, sloupec Kalendář („Problémy: N“) leží za okrajem karty a stránka se posouvá vodorovně o 18 / 26 px. Reprodukce: viewport 1024×768, přihlásit správce, otevřít Účast. Příčina: `.table-stack` se skládá pod sebe jen do 480 px (`globals.css` ~4250) a tabulka nemá vodorovně posuvný obal. Minimální oprava: obalit tabulky v `ucast/page.tsx` do `<div class="table-scroll">` s `overflow-x: auto` (nebo posunout hranici skládání na ~1100 px jen pro tuto tabulku). | ověřeno (Chromium) | střední |
+| – | Filtr harmonogramu na 320/390 px: otevřený panel se vejde (36–284 px při 320), přetečení hlášené skriptem bylo jen zavřené `<details>`. | ověřeno | – |
+| – | „Uříznutý“ label přepínače rolí je `visually-hidden`, 404 v konzoli na `/neexistuje` je očekávaná. Skript je teď nehlásí. | ověřeno | – |
+
 ## Neověřeno
 
 Všechny živé scénáře, OAuth, plánovač. Vizuální sada: WebKit a Firefox nainstalované, skript
