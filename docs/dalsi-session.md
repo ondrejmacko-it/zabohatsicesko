@@ -1,4 +1,4 @@
-# Navazující relace (stav 28. 11. 2026, relace 81)
+# Navazující relace (stav 28. 11. 2026, relace 83)
 
 Cíl: zadání vlastníka „Opravy po živém uživatelském testování, synchronizace Kalendáře a správa účasti“
 (body 0–12: osobní Kalendář podle účasti, stavy synchronizace, připomínky, záložka Účast, nadřízení,
@@ -22,20 +22,21 @@ Větev `claude/oprava-kalendare-a-prehled-ucasti` z main `fa5e67f`. PR zatím ne
 - Připomínky: `DEFAULT_REMINDERS` v `personal-api.ts` = e-mail 7 d a 1 d, popup 60/30/10 min (5 = max Googlu),
   platí pro akci i výchozí připomínky kalendáře; `EVENT_FORMAT` = 4 (přepíše akce); text v `PersonalCalendarStatus`.
 
+- Stav osobní události: `ownCalendarState` v personal volá `ownPersonalState` (`attendees.ts`): řádek
+  `personal_calendars` (neaktivní/žádný = `link: "none"`, errorCode = attention, syncRequestedAt > syncedAt =
+  pending) + záznam `personal_calendar_entries` = `inCalendar`; `OwnCalendar.personal = true`.
+  Věty `personalNote` v `src/lib/calendar-note.ts` (zapsaná / není / po přihlášení / nepropojený).
+
 ## Ověřeno
 - HEAD `4c7fbf6`: tsc + eslint OK; vitest `kalendar-osobni*`, `kalendar-organizator`, `users` OK (49+14).
 - HEAD `3664e50`: tsc + eslint OK; vitest `kalendar-osobni*`, `kalendar-uklid` 30/30.
+- HEAD `947da93`: tsc + eslint OK; vitest `kalendar*`, `ucast*`, `google-login`, `migrace-0016` 169/169.
 
 ## Další kroky (pořadí)
-1. Stav jednotlivých osobních událostí: `ownCalendarState` v `attendees.ts:101` vrací v personal `null`
-   (panel pak ukáže „stav nelze ověřit“). Návrh: v personal číst `personal_calendars` (status, errorCode,
-   syncRequestedAt vs syncedAt) + `personal_calendar_entries` (userId, eventId) → `OwnCalendar`
-   (`link` synced/pending/attention, `inCalendar` = záznam existuje); věty v `src/lib/calendar-note.ts`
-   upravit pro osobní kalendář (nejde o pozvánku). Bez propojeného kalendáře zvlášť (výzva k propojení).
-2. Záložka Účast, nadřízení (včetně sebe, ne na sebe), účet/oslovení, barvy, Témata, e2e, report, draft PR.
+1. Záložka Účast, nadřízení (včetně sebe, ne na sebe), účet/oslovení, barvy, Témata, e2e, report, draft PR.
 - Diagnostika nasazení (CALENDAR_DELIVERY, PARTICIPATION…): neověřeno, jen názvy proměnných, bez hodnot tajemství.
 
 ## Technika
 - NEPOUŽÍVAT prettier. e2e server jede nad buildem. Systémový prompt relace je velký: hook hlásí 140 tis.
   už po pár krocích, dělat malé jednotky a commitovat průběžně. Před prací `npm ci` (node_modules chybí).
-- Před začátkem `git fetch` a ověřit, že na větvi nepracuje jiná relace (relace 80 a 81 zdvojily krok).
+- Před začátkem `git fetch` a ověřit, že na větvi nepracuje jiná relace (relace 80/81 i 82 zdvojily krok; spouštět jen jednu navazující relaci).
