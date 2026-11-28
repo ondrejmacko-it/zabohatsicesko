@@ -4,7 +4,7 @@ import type { Persona } from "@/server/auth/personas";
 import type { CurrentUser } from "@/server/auth/session";
 import { ROLE_LABELS } from "@/lib/labels";
 import { isLiveWiki } from "@/server/config";
-import { Menu } from "./Menu";
+import { AccountMenu } from "./AccountMenu";
 import { PreviewSwitch } from "./PreviewSwitch";
 import { SalutationForm } from "./SalutationForm";
 
@@ -61,8 +61,8 @@ export function Topbar({ user, personas, preview, inPreview = false, salutation 
         <span className="account-name" title={user.signedInWith === "google" ? `Přihlášení účtem Google: ${user.email}` : undefined}>
           {user.signedInWith === "google" ? `${user.name} · ${ROLE_LABELS[user.role]}` : ROLE_LABELS[user.role]}
         </span>
-        {/* Menu Účet: jméno, role, oslovení a Odhlásit. Na telefonu je to jediný prvek účtu v liště. */}
-        <Menu small label="Účet" className="account-menu">
+        {/* Menu Účet: jméno, role, oslovení a Odhlásit. Na telefonu je to jediný prvek účtu v liště, otevře se jako okno. */}
+        <AccountMenu>
           <div className="account-menu-who">
             {inPreview && <span className="small muted">Skutečný účet</span>}
             <strong>{user.name}</strong>
@@ -76,7 +76,7 @@ export function Topbar({ user, personas, preview, inPreview = false, salutation 
               Odhlásit
             </button>
           </form>
-        </Menu>
+        </AccountMenu>
       </div>
     </header>
   );

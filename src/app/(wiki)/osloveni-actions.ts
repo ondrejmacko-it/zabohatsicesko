@@ -12,7 +12,8 @@ export async function saveSalutation(formData: FormData): Promise<void> {
   const user = await requireUser();
   // Náhled je jen ke čtení; bez této pojistky by si správce v náhledu kolegy přepsal vlastní oslovení.
   if (await currentPreview(user)) redirect("/");
-  const raw = formData.get("osloveni");
+  // „Vrátit podle jména“ smaže vlastní podobu bez ohledu na rozepsaný text v poli.
+  const raw = formData.get("vratit") ? "" : formData.get("osloveni");
   try {
     await setSalutation(user, typeof raw === "string" ? raw : "");
   } catch (error) {
