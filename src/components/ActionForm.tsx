@@ -12,7 +12,7 @@ type Props = {
   fields?: Record<string, string>;
   label: string;
   pendingLabel?: string;
-  variant?: "primary" | "default" | "danger";
+  variant?: "primary" | "default" | "danger" | "success" | "info";
   small?: boolean;
   /** Pokud je vyplněno, akce se provede až po potvrzení v dialogu. */
   confirm?: { title: string; text: string; confirmLabel: string };
@@ -44,7 +44,7 @@ export function ActionForm({ action, fields = {}, label, pendingLabel, variant =
     if (result.ok) setConfirming(false);
     return result;
   }, null);
-  const className = `btn${variant === "primary" ? " btn-primary" : variant === "danger" ? " btn-danger" : ""}${small ? " btn-small" : ""}${buttonClassName ? ` ${buttonClassName}` : ""}`;
+  const className = `btn${variant === "default" ? "" : ` btn-${variant}`}${small ? " btn-small" : ""}${buttonClassName ? ` ${buttonClassName}` : ""}`;
   const iconMark = icon ? <Icon name={icon} /> : null;
 
   const hidden = Object.entries(fields).map(([name, value]) => <input key={name} type="hidden" name={name} value={value} />);
@@ -75,7 +75,7 @@ export function ActionForm({ action, fields = {}, label, pendingLabel, variant =
             </button>
             <form action={formAction} className={variant === "danger" ? "confirm-destructive" : undefined}>
               {hidden}
-              <button type="submit" className={`btn ${variant === "danger" ? "btn-danger" : "btn-primary"}`} disabled={pending}>
+              <button type="submit" className={`btn ${variant === "default" ? "btn-primary" : `btn-${variant}`}`} disabled={pending}>
                 {pending ? (pendingLabel ?? "Probíhá…") : confirm.confirmLabel}
               </button>
             </form>

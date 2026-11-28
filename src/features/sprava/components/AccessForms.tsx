@@ -93,7 +93,7 @@ function AccessForm({ userId, roles, role, groups, mode, onDone }: AccessProps) 
       <AccessFields roles={roles} role={role} groups={mode === "approve" && groups.length === 0 ? ["vsichni"] : groups} />
       <ActionMessage state={state} />
       <div className="row">
-        <button type="submit" name="status" value="active" className="btn btn-primary" disabled={pending} {...lock}>
+        <button type="submit" name="status" value="active" className={`btn ${mode === "edit" ? "btn-primary" : "btn-success"}`} disabled={pending} {...lock}>
           {pending ? "Ukládám…" : mode === "approve" ? "Schválit přístup" : mode === "restore" ? "Vrátit přístup" : "Uložit změny"}
         </button>
         <button type="button" className="btn" onClick={onDone}>
@@ -123,7 +123,7 @@ export function InviteLink({ link }: { link: string }) {
       <div className="row">
         <button
           type="button"
-          className="btn btn-primary"
+          className="btn btn-info"
           onClick={() => navigator.clipboard.writeText(link).then(() => setCopied(true), () => setCopied(false))}
         >
           {copied ? "Zkopírováno" : "Kopírovat"}
@@ -155,7 +155,7 @@ function NewLink({ account: a, onClose }: { account: AccountActionsProps["accoun
           <p>Odkaz přidá jedno zařízení. Starší nepoužitý odkaz přestane platit.</p>
           <ActionMessage state={state} />
           <div className="dialog-actions">
-            <button type="submit" className="btn btn-primary" disabled={pending} {...lock}>
+            <button type="submit" className="btn btn-success" disabled={pending} {...lock}>
               {pending ? "Vytvářím…" : "Vytvořit odkaz"}
             </button>
             <button type="button" className="btn" data-modal-close>
@@ -230,7 +230,7 @@ export function AccountActions({ account: a, roles, live, editable = true, excus
   return (
     <div className="row account-actions">
       {a.status === "pending" && (
-        <button type="button" className="btn btn-primary btn-small" onClick={() => setMode("approve")}>
+        <button type="button" className="btn btn-success btn-small" onClick={() => setMode("approve")}>
           Nastavit a schválit
         </button>
       )}
@@ -264,11 +264,11 @@ export function AccountActions({ account: a, roles, live, editable = true, excus
             <p className="menu-heading" id={`prihlasovani-${a.id}`}>
               Přihlašování se zařízeními
             </p>
-            <button type="button" className="btn" onClick={() => setLinking(true)}>
+            <button type="button" className="btn btn-info" onClick={() => setLinking(true)}>
               Nový odkaz pro další zařízení…
             </button>
             {live.inviteWaiting && (
-              <ActionForm action={revokeLoginLinkAction} fields={{ userId: a.id }} label="Zneplatnit čekající odkaz" />
+              <ActionForm action={revokeLoginLinkAction} fields={{ userId: a.id }} label="Zneplatnit čekající odkaz" variant="danger" />
             )}
             {live.devices.map((d) => (
               <ActionForm
@@ -295,7 +295,7 @@ export function AccountActions({ account: a, roles, live, editable = true, excus
           </>
         )}
         {editable && a.status === "disabled" && (
-          <button type="button" className="btn" onClick={() => setMode("restore")}>
+          <button type="button" className="btn btn-success" onClick={() => setMode("restore")}>
             Vrátit přístup…
           </button>
         )}
@@ -360,7 +360,7 @@ export function InviteButton({ roles }: { roles: Role[] }) {
   };
   return (
     <>
-      <button type="button" className="btn btn-primary" onClick={() => setOpen(true)}>
+      <button type="button" className="btn btn-success" onClick={() => setOpen(true)}>
         Přidat přístup
       </button>
       {open && (
@@ -401,7 +401,7 @@ function InviteForm({ roles, onCreated }: { roles: Role[]; onCreated: () => void
       </div>
       <AccessFields roles={roles} role="member" groups={["vsichni"]} />
       <div>
-        <button type="submit" className="btn btn-primary" disabled={pending} {...lock}>
+        <button type="submit" className="btn btn-success" disabled={pending} {...lock}>
           {pending ? "Ukládám…" : "Vytvořit odkaz"}
         </button>
       </div>

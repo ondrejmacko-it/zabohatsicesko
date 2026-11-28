@@ -34,6 +34,10 @@
   --danger-soft: #f9e6e4;
   --ok: #2f6b48;
   --ok-soft: #e4f0e8;
+  --ok-dark: #24543a;
+  /* Informační akce (nový odkaz, kopírování): modrá se nesplete s okrovou výzvou ani se zelenou/červenou. */
+  --info: #1f5f8b;
+  --info-dark: #174a6d;
   /* Jediný focus ring (A-14): plná okrová má kontrast aspoň 3 : 1 vůči všem plochám včetně tmavého menu, dřívější
      průsvitný stín měl 1,6 : 1. Outline, ne stín: v režimu vynucených barev (Windows) stín zmizí. */
   --focus-ring: 2px solid var(--ochre);
@@ -573,6 +577,37 @@ a.item-card:hover {
   color: var(--danger);
 }
 
+/* Funkční barvy (Správa): zelená přidává nebo vrací přístup, modrá jen informuje (odkaz, kopírování), červená
+   odebírá. Barva nikdy nenese význam sama, popisek tlačítka ho říká vždy. */
+.btn-success {
+  border-color: var(--ok);
+  background: var(--ok);
+  color: #fff;
+  font-weight: 600;
+}
+
+.btn-success:hover {
+  border-color: var(--ok-dark);
+  background: var(--ok-dark);
+}
+
+.btn-info {
+  border-color: var(--info);
+  color: var(--info);
+}
+
+.btn-info:hover {
+  border-color: var(--info-dark);
+  color: var(--info-dark);
+}
+
+.btn-success:disabled {
+  border-color: var(--line-strong);
+  background: var(--beige);
+  color: var(--muted);
+  opacity: 1;
+}
+
 .btn-small {
   min-height: 30px;
   padding: 3px 10px;
@@ -1035,8 +1070,18 @@ fieldset.field > legend {
 }
 
 .menu-list .menu-danger,
-.menu-list .menu-danger > svg {
+.menu-list .menu-danger > svg,
+.menu-list .btn-danger {
   color: var(--danger);
+}
+
+/* V menu nese funkční barvu jen text, plocha zůstává jako u ostatních položek. */
+.menu-list .btn-success {
+  color: var(--ok);
+}
+
+.menu-list .btn-info {
+  color: var(--info);
 }
 
 /* ⋯ v rohu karty akce: malé, ale vždy viditelné tlačítko s jemným rámečkem. Karta mu vyhrazuje místo (odsazení
