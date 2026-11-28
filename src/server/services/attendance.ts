@@ -1,8 +1,8 @@
 import { and, desc, eq, gte, inArray, isNotNull, like, lt, or, sql } from "drizzle-orm";
 import { eventTitle } from "@/lib/labels";
-import type { OwnCalendar } from "@/lib/calendar-note";
+import { calendarStatus, type OwnCalendar } from "@/lib/calendar-note";
 import type { ExcuseReason, Group, ParticipationState } from "@/lib/types";
-import { ownCalendarState } from "@/server/calendar/attendees";
+import { calendarStates } from "@/server/calendar/attendees";
 import { config, participationEnabled } from "@/server/config";
 import { getDb } from "@/server/db/client";
 import { auditLog, eventParticipation, events, users } from "@/server/db/schema";
@@ -34,6 +34,8 @@ export type EventAttendance = {
   audience: Group;
   cancelled: boolean;
   counts: AttendanceCounts;
+  /** Kolika lidem v rozsahu akce v Kalendáři chybí, přebývá, zápis selhal nebo nemají propojený kalendář. */
+  calendarProblems: number;
 };
 
 type PeriodData = {
@@ -89,9 +91,15 @@ function addState(counts: AttendanceCounts, state: ParticipationState | null): b
 /** Přehled podle akcí v období [from, to): zveřejněné akce bez svátků, počty jen za lidi v rozsahu. */
 export async function attendanceByEvent(scope: AttendanceScope, from: Date, to: Date): Promise<EventAttendance[]> {
   const { rows, people, records } = await loadPeriod(scope, from, to);
+  const calendars = await calendarStates(await getDb(), rows.map((r) => r.id), people.map((p) => p.id));
   return rows.map(({ id, published: snapshot }) => {
     const counts = emptyCounts();
-    for (const person of people) addState(counts, participationState(person, snapshot, records.get(`${id}|${person.id}`) ?? null));
+    let calendarProblems = 0;
+    for (const person of people) {
+      const state = participationState(person, snapshot, records.get(`${id}|${person.id}`) ?? null);
+      if (!addState(counts, state) || state === null) continue;
+      if (snapshot.status !== "cancelled" && calendarStatus(state, calendars.get(`${id}|${person.id}`) ?? null)?.problem) calendarProblems++;
+    }
     return {
       id,
       title: eventTitle(snapshot.label, snapshot.topicTitle),
@@ -99,6 +107,7 @@ export async function attendanceByEvent(scope: AttendanceScope, from: Date, to: 
       audience: snapshot.audience,
       cancelled: snapshot.status === "cancelled",
       counts,
+      calendarProblems,
     };
   });
 }
@@ -168,7 +177,7 @@ export type AttendancePerson = {
   calendar: OwnCalendar | null;
 };
 
-export type EventAttendanceDetail = Omit<EventAttendance, "counts"> & { counts: AttendanceCounts; people: AttendancePerson[] };
+export type EventAttendanceDetail = Omit<EventAttendance, "counts" | "calendarProblems"> & { counts: AttendanceCounts; people: AttendancePerson[] };
 
 /** Detail jedné akce: lidé v rozsahu, kterých se akce týká, s jejich stavem. Null = akce neexistuje nebo nejde o zveřejněnou akci. */
 export async function attendanceDetail(viewer: Viewer, scope: AttendanceScope, eventId: string): Promise<EventAttendanceDetail | null> {
@@ -192,6 +201,7 @@ export async function attendanceDetail(viewer: Viewer, scope: AttendanceScope, e
   const records = new Map(recordRows.map((r) => [r.userId, r]));
   // Důvody omluv smí i správce číst jen u lidí, u kterých je výslovně určeným nadřízeným.
   const managed = scope.kind === "managed" ? scope.ids : await managedEmployeeIds(db, viewer.id);
+  const calendars = await calendarStates(db, [eventId], people.map((p) => p.id));
 
   const counts = emptyCounts();
   const result: AttendancePerson[] = [];
@@ -203,7 +213,7 @@ export async function attendanceDetail(viewer: Viewer, scope: AttendanceScope, e
       state === "excused" && record?.excuseReason && canReadExcuseDetails(viewer, person.id, managed)
         ? { reason: record.excuseReason, note: record.excuseNote }
         : null;
-    result.push({ id: person.id, name: person.name, state, excuse, calendar: await ownCalendarState(db, eventId, person.id) });
+    result.push({ id: person.id, name: person.name, state, excuse, calendar: calendars.get(`${eventId}|${person.id}`) ?? null });
   }
   return {
     id: eventId,

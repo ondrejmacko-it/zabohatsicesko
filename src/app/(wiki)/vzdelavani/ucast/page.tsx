@@ -225,8 +225,8 @@ export default async function AttendancePage({ searchParams }: { searchParams: S
           <Link className="btn" href={view === "lide" ? "/vzdelavani/ucast?pohled=lide" : "/vzdelavani/ucast"}>Zrušit filtr</Link>
         </div>
       </form>
-      {calendarOnly && <p className="small muted">Problémy Kalendáře se zobrazí v detailu akce u jednotlivých lidí.</p>}
-      {view === "akce" ? <EventsTable rows={(await attendanceByEvent(scope, ...range)).filter((e) => matches(e.title) && (!group || e.audience === group) && stateFilter(e.counts))} link={link} /> : <PeopleTable rows={(await attendanceByPerson(scope, ...range)).filter((p) => matches(p.name) && (!group || p.groups.includes(group)) && stateFilter(p.counts))} link={link} />}
+      {calendarOnly && view === "lide" && <p className="small muted">Filtr Kalendáře platí pro pohled podle akcí a pro detail akce.</p>}
+      {view === "akce" ? <EventsTable rows={(await attendanceByEvent(scope, ...range)).filter((e) => matches(e.title) && (!group || e.audience === group) && stateFilter(e.counts) && (!calendarOnly || e.calendarProblems > 0))} link={link} /> : <PeopleTable rows={(await attendanceByPerson(scope, ...range)).filter((p) => matches(p.name) && (!group || p.groups.includes(group)) && stateFilter(p.counts))} link={link} />}
     </section>
   );
 }
@@ -254,6 +254,7 @@ function EventsTable({ rows, link }: { rows: Awaited<ReturnType<typeof attendanc
           <th scope="col">Přihlášení</th>
           <th scope="col">Omluvení</th>
           <th scope="col">Odhlášení</th>
+          <th scope="col">Kalendář</th>
         </tr>
       </thead>
       <tbody>
@@ -269,6 +270,10 @@ function EventsTable({ rows, link }: { rows: Awaited<ReturnType<typeof attendanc
             <td><span className="visually-hidden">Přihlášení </span>{e.counts.enrolled}</td>
             <td><span className="visually-hidden">Omluvení </span>{e.counts.excused}</td>
             <td><span className="visually-hidden">Odhlášení </span>{e.counts.withdrawn}</td>
+            <td>
+              <span className="visually-hidden">Kalendář </span>
+              {e.calendarProblems > 0 ? <Link className="badge badge-danger" href={link({ akce: e.id, kalendar: "1" })}>Problémy: {e.calendarProblems}</Link> : "—"}
+            </td>
           </tr>
         ))}
       </tbody>

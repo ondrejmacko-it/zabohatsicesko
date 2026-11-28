@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { now } from "@/server/config";
+import { calendarStatus } from "@/lib/calendar-note";
+import { config, now } from "@/server/config";
+import { getDb } from "@/server/db/client";
+import { personalCalendarEntries, personalCalendars } from "@/server/db/schema";
 import { attendanceByEvent, attendanceByPerson, attendanceDetail, attendanceHistory, attendanceScope } from "@/server/services/attendance";
 import { setExcuseManagers } from "@/server/services/excuse-managers";
 import { changeOwnParticipation } from "@/server/services/participation";
@@ -101,5 +104,27 @@ describe("přehled účasti podle akcí", () => {
     expect((await attendanceByPerson(scope, ...window())).map((p) => p.id)).toEqual([participant.id]);
     expect(await attendanceHistory(scope, outsider.id)).toBeNull();
     expect(await attendanceHistory({ kind: "all" }, "neexistuje")).toBeNull();
+  });
+
+  test("problémy Kalendáře za akci odpovídají detailu, osobní režim počítá nepropojené i chybějící zápisy", async () => {
+    const problemsInDetail = async (eventId: string, cancelled: boolean, scope: Parameters<typeof attendanceDetail>[1] = { kind: "all" }) =>
+      (await attendanceDetail(admin, scope, eventId))!.people.filter((p) => calendarStatus(cancelled ? "cancelled" : p.state, p.calendar)?.problem).length;
+    for (const e of await attendanceByEvent({ kind: "all" }, ...window())) expect(e.calendarProblems).toBe(await problemsInDetail(e.id, e.cancelled));
+
+    vi.stubEnv("CALENDAR_MODE", "google-test");
+    vi.stubEnv("CALENDAR_DELIVERY", "personal");
+    const scope = { kind: "managed", ids: new Set([participant.id]) } as const;
+    const fp = (await attendanceByEvent(scope, ...window())).find((e) => e.audience === "fp" && !e.cancelled)!;
+    // Bez propojeného kalendáře je problémem každá akce, na kterou má člověk přijít.
+    expect(fp.counts.expected).toBe(1);
+    expect(fp.calendarProblems).toBe(1);
+
+    const db = await getDb();
+    await db.insert(personalCalendars).values({ userId: participant.id, orgId: config.orgId, accountEmail: "p@example.com", encryptedRefreshToken: "x", scopes: "s", status: "active", syncedAt: now() });
+    expect((await attendanceByEvent(scope, ...window())).find((e) => e.id === fp.id)!.calendarProblems).toBe(1);
+    await db.insert(personalCalendarEntries).values({ userId: participant.id, eventId: fp.id, externalEventId: "x", dataHash: "h" });
+    const synced = await attendanceByEvent(scope, ...window());
+    expect(synced.find((e) => e.id === fp.id)!.calendarProblems).toBe(0);
+    for (const e of synced) expect(e.calendarProblems).toBe(await problemsInDetail(e.id, e.cancelled, scope));
   });
 });

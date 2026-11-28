@@ -99,40 +99,70 @@ export async function participationInputs(db: Executor, eventId: string): Promis
  * spravovaných hostů nebo účet bez adresy. Do Googlu se kvůli tomu nic neposílá ani nečte.
  */
 export async function ownCalendarState(db: Executor, eventId: string, userId: string): Promise<OwnCalendar | null> {
+  return (await calendarStates(db, [eventId], [userId])).get(`${eventId}|${userId}`) ?? null;
+}
+
+/**
+ * Stav Kalendáře pro více akcí a lidí najednou (přehled účasti), klíč `eventId|userId`. Chybějící klíč = Wiki
+ * stav nezná (stejně jako null u `ownCalendarState`). Konstantní počet dotazů bez ohledu na počet akcí a lidí.
+ */
+export async function calendarStates(db: Executor, eventIds: string[], userIds: string[]): Promise<Map<string, OwnCalendar>> {
+  const result = new Map<string, OwnCalendar>();
+  if (eventIds.length === 0 || userIds.length === 0) return result;
+  if (personalDelivery()) return personalStates(db, eventIds, userIds);
   const cfg = googleCalendarConfig();
-  if (personalDelivery()) return ownPersonalState(db, eventId, userId);
-  if (cfg && attendeeSource() === "allowlist") return null;
-  const [link] = await db
-    .select({ syncStatus: calendarLinks.syncStatus, managed: calendarLinks.managedAttendees })
+  if (cfg && attendeeSource() === "allowlist") return result;
+  const links = await db
+    .select({ eventId: calendarLinks.eventId, syncStatus: calendarLinks.syncStatus, managed: calendarLinks.managedAttendees })
     .from(calendarLinks)
-    .where(eq(calendarLinks.eventId, eventId))
-    .limit(1);
-  if (!link) return { link: "none", inCalendar: false };
-  if (link.managed === null && link.syncStatus === "synced") return null;
-  const [me] = await listRecipients(db, cfg !== null, userId);
-  if (!me) return null;
-  return { link: link.syncStatus, inCalendar: (link.managed ?? []).includes(me.email) };
+    .where(inArray(calendarLinks.eventId, eventIds));
+  const byEvent = new Map(links.map((l) => [l.eventId, l]));
+  const wanted = new Set(userIds);
+  const emails = new Map((await listRecipients(db, cfg !== null)).filter((r) => wanted.has(r.id)).map((r) => [r.id, r.email]));
+  for (const eventId of eventIds) {
+    const link = byEvent.get(eventId);
+    if (link && link.managed === null && link.syncStatus === "synced") continue;
+    for (const userId of userIds) {
+      if (!link) {
+        result.set(`${eventId}|${userId}`, { link: "none", inCalendar: false });
+        continue;
+      }
+      const email = emails.get(userId);
+      if (email) result.set(`${eventId}|${userId}`, { link: link.syncStatus, inCalendar: (link.managed ?? []).includes(email) });
+    }
+  }
+  return result;
 }
 
 /**
  * Osobní režim: stav synchronizace kalendáře člověka a jestli v něm akce je, jen z databáze Wiki.
  * Kalendář bez platného přístupu (odvolaný, smazaný, odmítnutý) = nepropojený.
  */
-async function ownPersonalState(db: Executor, eventId: string, userId: string): Promise<OwnCalendar> {
-  const [row] = await db
-    .select({ status: personalCalendars.status, errorCode: personalCalendars.errorCode, requested: personalCalendars.syncRequestedAt, synced: personalCalendars.syncedAt })
+async function personalStates(db: Executor, eventIds: string[], userIds: string[]): Promise<Map<string, OwnCalendar>> {
+  const calendars = await db
+    .select({ userId: personalCalendars.userId, status: personalCalendars.status, errorCode: personalCalendars.errorCode, requested: personalCalendars.syncRequestedAt, synced: personalCalendars.syncedAt })
     .from(personalCalendars)
-    .where(and(eq(personalCalendars.orgId, config.orgId), eq(personalCalendars.userId, userId)))
-    .limit(1);
-  if (!row || row.status !== "active") return { link: "none", inCalendar: false, personal: true };
-  const [entry] = await db
-    .select({ eventId: personalCalendarEntries.eventId })
+    .where(and(eq(personalCalendars.orgId, config.orgId), inArray(personalCalendars.userId, userIds)));
+  const byUser = new Map(calendars.map((c) => [c.userId, c]));
+  const entries = await db
+    .select({ eventId: personalCalendarEntries.eventId, userId: personalCalendarEntries.userId })
     .from(personalCalendarEntries)
-    .where(and(eq(personalCalendarEntries.userId, userId), eq(personalCalendarEntries.eventId, eventId)))
-    .limit(1);
-  const stale = !row.synced || (row.requested !== null && row.requested > row.synced);
-  const link = row.errorCode ? "attention" : stale ? "pending" : "synced";
-  return { link, inCalendar: Boolean(entry), personal: true };
+    .where(and(inArray(personalCalendarEntries.userId, userIds), inArray(personalCalendarEntries.eventId, eventIds)));
+  const present = new Set(entries.map((e) => `${e.eventId}|${e.userId}`));
+  const result = new Map<string, OwnCalendar>();
+  for (const userId of userIds) {
+    const row = byUser.get(userId);
+    let link: OwnCalendar["link"] = "none";
+    if (row && row.status === "active") {
+      const stale = !row.synced || (row.requested !== null && row.requested > row.synced);
+      link = row.errorCode ? "attention" : stale ? "pending" : "synced";
+    }
+    for (const eventId of eventIds) {
+      const key = `${eventId}|${userId}`;
+      result.set(key, { link, inCalendar: link !== "none" && present.has(key), personal: true });
+    }
+  }
+  return result;
 }
 
 export type GuestPlan = {
