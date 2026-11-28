@@ -1,9 +1,9 @@
-# Navazující relace (stav 28. 11. 2026, relace 92)
+# Navazující relace (stav 28. 11. 2026, relace 93)
 
 Cíl: zadání vlastníka „Opravy po živém uživatelském testování, synchronizace Kalendáře a správa účasti“
 (body 0–12). Zadání do repa nedávat. Bez merge, deploye, produkční DB, živého Googlu a Make.
 
-Větev `claude/oprava-kalendare-a-prehled-ucasti` z main `fa5e67f`, HEAD `7f02d0e` (+ tato předávka).
+Větev `claude/oprava-kalendare-a-prehled-ucasti` z main `fa5e67f`, HEAD `851a593` (+ tato předávka).
 PR zatím není (draft až na konci, spolu se závěrečným reportem uživateli).
 
 ## Hotovo (shrnutí, detaily v `git log`)
@@ -17,10 +17,10 @@ PR zatím není (draft až na konci, spolu se závěrečným reportem uživateli
 - Bod 7: správce smí být nadřízeným jiných, sám sobě ne.
 
 ## Ověřeno
-- `7f02d0e`: tsc + eslint OK; vitest `kalendar-osobni-rucne` 3/3. Build a e2e po této změně NEspuštěny.
-- `fc05f98`: tsc + eslint OK, build OK; vitest `osloveni` 4/4; e2e `osloveni`, `zahlavi`, `nahled-role`
-  (windows-1280, telefon-390) 18/18, `menu-ucet` (+ telefon-360) 3/3. Fresh kontejner: e2e poprvé bez `--no-deps`.
-- `5bef7f7`: tsc + eslint OK, build OK; e2e `ucast-prehled` + `nahled` (windows-1280, telefon-390, telefon-360) prošly.
+- `851a593` (bod 8 hotový): build OK; vitest `ucet-kalendar` 3/3 (render `AccountCalendar`: active → „Synchronizovat teď“,
+  none/revoked → odkaz propojení); e2e `menu-ucet` windows-1280 + telefon-390 + telefon-360 15/15 (ukázka sekci nemá,
+  demo server nemá `CALENDAR_DELIVERY=personal`, ten má jen live server bez OAuth přihlášení v e2e).
+- `fc05f98`: vitest `osloveni` 4/4; e2e `osloveni`, `zahlavi`, `nahled-role` 18/18. `5bef7f7`: e2e `ucast-prehled` + `nahled` OK.
 - Dříve `891f3e3`: vitest `kalendar*`, `ucast*` 152/152.
 
 ## Zadání
@@ -33,17 +33,19 @@ Oslovení: 5. pád, vlastní hodnota, neutrální náhrada, žádné oslovení z
 dlouhá/neobvyklá jména a náhled za kolegu.
 
 ## Další kroky (pořadí)
-1. Bod 8 – dokončit sekci Google Kalendář v menu Účet (`7f02d0e`): `AccountCalendar` v
-   `src/features/vzdelavani/components/PersonalCalendarStatus.tsx` (stav vždy, „Synchronizovat teď“ přes
-   `ActionForm` jen ve stavu active, jinak odkaz `PERSONAL_CONNECT_HREF`), `syncOwnCalendarAction` (konec
-   `src/features/vzdelavani/actions.ts`, náhled odmítne `runAction`), služba `syncOwnCalendarNow` v
-   `src/server/services/calendar-status.ts`, layout předává `calendar` jen mimo náhled, CSS `.account-calendar`.
-   Zbývá: `npx next build`, rozšířit `e2e/menu-ucet.spec.ts` o sekci (zjistit, zda e2e server běží v režimu
-   personal – grep `CALENDAR_DELIVERY` v `playwright.config.ts`; pokud ne, e2e jen ověří, že sekce chybí),
-   spustit e2e `menu-ucet` (windows-1280, telefon-360/390).
-2. Bod 9 barvy Správy (zelená/červená/modrá/neutrální/varovná, i v dialozích a zprávách), bod 10 filtry Témat.
-3. Zkontrolovat zbytky bodu 4 (ruční synchronizace vlastního kalendáře, přehled problémů pro správce) a bodu 3
-   (první synchronizace po propojení, dry-run inventura) – ověřit grepem, co už existuje, nedomýšlet.
+1. Bod 9 barvy Správy (zjištěno, neimplementováno). Soubor `src/features/sprava/components/AccessForms.tsx`,
+   CSS `src/app/globals.css` (`.btn` ř. ~526, `.btn-primary` = okrová, `.btn-danger` = obrys `--danger`,
+   tokeny `--ok`/`--ok-soft`, `--danger`; modrý token chybí, `.menu-list .btn` ř. ~963 přebíjí vzhled v menu).
+   `ActionForm` (`src/components/ActionForm.tsx`) má `variant` primary/default/danger, potvrzovací tlačítko
+   danger/primary → přidat `success`/`info` a propsat do confirm tlačítka. Návrh mapování: zelená = Přidat přístup,
+   Nastavit a schválit, Vytvořit odkaz, Vrátit přístup (+ submit v AccessForm approve/restore); červená = Odebrat
+   přístup, Odhlásit zařízení, Zamítnout, Zneplatnit čekající odkaz; modrá = Nový odkaz pro zařízení (+ potvrzení),
+   Kopírovat; okrová/neutrální = Upravit přístup, Nadřízený, Uložit; varovná = čekající žádosti (badge-ochre/notice).
+   V menu (`.menu-list .btn`) barvit text/ikonu, ne plochu. Barva nesmí být jediným nositelem (text zůstává).
+   Ověřit i `ActionMessage` (úspěch zeleně, chyba červeně) a dark mode tokeny, pokud existují. Test: vitest render +
+   e2e správy (grep `e2e/sprava*`), build.
+2. Bod 10 filtry Témat (Pro mou roli / Všechna + vyhledávání v jednom řádku na PC, telefon plná šířka).
+3. Zbytky bodu 4 (přehled problémů pro správce) a bodu 3 (první synchronizace po propojení, dry-run inventura) – grepem.
 4. Celé lint/tsc/vitest/build/e2e, report `docs/report-oprava-kalendare-ucasti.md`, draft PR, závěrečný report uživateli.
 - Diagnostika nasazení (CALENDAR_DELIVERY, PARTICIPATION…): neověřeno, jen názvy proměnných, bez hodnot tajemství.
 
