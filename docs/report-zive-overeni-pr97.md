@@ -1,4 +1,4 @@
-# Živé ověření PR #97 před mergem (rozpracováno)
+# Živé ověření PR #97 před mergem
 
 Stav 28. 11. 2026. Nad HEAD PR #97 `e3c92b3`. Jen čtení konfigurace, nic se neměnilo. Hodnoty tajemství
 se nečetly, u šifrovaných proměnných je známý jen název a cíl.
@@ -47,16 +47,39 @@ v účtu Google; odebrání přístupu ve Správě (úklid jen událostí Wiki v
 
 ## Vizuální ověření (lokální build, fiktivní seed)
 
-Chromium 155 (Playwright 1.63), 10 šířek × role správce, účastník, host, celé stránky. Screenshoty prohlédnuté
-po kandidátech nálezů. Firefox a WebKit zatím neběžely.
+Playwright 1.63: Chromium, Firefox 155, WebKit. Každý prohlížeč 10 šířek (320, 360, 390, 430, 768, 1024, 1280,
+1440, 1920, 3440) × role správce, účastník, host, celé stránky (110 snímků na roli a prohlížeč). Automatické
+kontroly `scripts/vizualni-sada.mjs` (vodorovný posun, přetékající prvky, uříznutý text, chyby konzole) a ruční
+prohlídka koláží 320, 768/1024 a 3440 px. WebKit jede přes TLS proxy (Secure cookie).
 
 | # | Nález | Stav | Závažnost |
 |---|---|---|---|
-| V1 | `/vzdelavani/ucast` (Podle akcí), správce, 768 a 1024 px: tabulka 8 sloupců je širší než karta, sloupec Kalendář („Problémy: N“) leží za okrajem karty a stránka se posouvá vodorovně o 18 / 26 px. Reprodukce: viewport 1024×768, přihlásit správce, otevřít Účast. Příčina: `.table-stack` se skládá pod sebe jen do 480 px (`globals.css` ~4250) a tabulka nemá vodorovně posuvný obal. Minimální oprava: obalit tabulky v `ucast/page.tsx` do `<div class="table-scroll">` s `overflow-x: auto` (nebo posunout hranici skládání na ~1100 px jen pro tuto tabulku). | ověřeno (Chromium) | střední |
-| – | Filtr harmonogramu na 320/390 px: otevřený panel se vejde (36–284 px při 320), přetečení hlášené skriptem bylo jen zavřené `<details>`. | ověřeno | – |
-| – | „Uříznutý“ label přepínače rolí je `visually-hidden`, 404 v konzoli na `/neexistuje` je očekávaná. Skript je teď nehlásí. | ověřeno | – |
+| V1 | `/vzdelavani/ucast` (Podle akcí), správce, 768 a 1024 px: tabulka 8 sloupců je širší než karta, sloupec Kalendář („Problémy: N“) leží za okrajem karty a stránka se posouvá vodorovně o 18 / 26 px. Reprodukce: viewport 1024×768, přihlásit správce, otevřít Účast. Příčina: `.table-stack` se skládá pod sebe jen do 480 px (`globals.css` ~4250) a tabulka nemá vodorovně posuvný obal. Minimální oprava: obalit tabulky v `ucast/page.tsx` do `<div class="table-scroll">` s `overflow-x: auto` (nebo posunout hranici skládání na ~1100 px jen pro tuto tabulku). | ověřeno ve všech 3 prohlížečích, stejné hodnoty | střední |
+| – | Jiné nálezy: žádné. Všechny tři prohlížeče hlásí shodně jen V1 (4 řádky `nalezy.txt`). | ověřeno | – |
+| – | Falešné kandidáty vyřazené ze skriptu: ikonová tlačítka ⋯ „Možnosti akce/účtu“ (ikona 16 px leží celá uvnitř 36px tlačítka, `scrollWidth` navyšuje jen rámeček, ověřeno na výřezu), `visually-hidden` label přepínače rolí, zavřené `<details>` filtru, očekávaná 404 na `/neexistuje`. | ověřeno | – |
+| – | Na 3440 px má obsah na všech stránkách stejnou šířku (`main` 1236 px, změřeno), rozdíl v koláži byl jen měřítkem. | ověřeno | – |
 
-## Neověřeno
+## Návrh udržitelné vizuální regrese (k odsouhlasení, nic nezavedeno)
 
-Všechny živé scénáře, OAuth, plánovač. Vizuální sada: WebKit a Firefox nainstalované, skript
-`scripts/vizualni-sada.mjs` hotový, zatím jen zkušební běh Chromium 390 px (kandidáti nálezů čekají na prohlédnutí).
+1. **Geometrické testy místo pixelů tam, kde jde o rozložení.** Repo už má `expectNoHorizontalScroll`
+   a `lineCount` (`e2e/support`, `geometrie.spec.ts`). Pro V1 stačí test „Účast na 768 a 1024 px bez
+   vodorovného posunu“; je stabilní napříč prohlížeči a fonty a nepotřebuje referenční obrázky.
+2. **Malá sada `toHaveScreenshot`** jen pro 4–5 stránek s nejvyšším rizikem (Plán mřížka, Plán seznam, okno
+   akce, Účast, Úvod) × 3 šířky (390, 1024, 1440), role správce. Pevný seed a výchozí demo hodiny (bez
+   `DEMO_CLOCK=real`), `animations: 'disabled'`, `maskColor` na relativní časy, `maxDiffPixelRatio` ~0,01.
+   Referenční snímky generovat a porovnávat jen v CI kontejneru (Linux Chromium), jinak se liší fonty.
+3. **CI:** jen Chromium, samostatný projekt `vizualni` mimo `@smoke`, spouštět u PR měnících `src/**/*.css`
+   nebo komponenty. Aktualizace referencí jen vědomě (`--update-snapshots`) v samostatném commitu s náhledy.
+4. **WebKit a Firefox ručně před releasem:** `scripts/vizualni-sada.mjs` (několik minut na prohlížeč) a porovnat
+   `nalezy.txt` s posledním během; prohlížet jen nové kandidáty a koláže.
+
+## Souhrn stavu
+
+- **Ověřeno:** konfigurace Vercelu a Neonu (K1–K9, jen názvy a cíle), běh GitHub plánovače (K8), vizuální sada
+  ve 3 prohlížečích (V1), existující e2e sada nad buildem (předchozí relace, HEAD PR #97 `e3c92b3`).
+- **Simulováno:** Kalendář a přihlášení v e2e a v preview běží v `CALENDAR_MODE=simulation` / demo režimu
+  s fiktivními účty; chování proti skutečnému Google API tím ověřené není.
+- **Předpoklad:** postup izolovaného testu (alias testovací větve, schema-only větev Neon, redirect URI) vychází
+  z dokumentace a konfigurace, prakticky nevyzkoušený. Oprava V1 je navržená, ne napsaná.
+- **Neověřeno:** všechny živé scénáře proti Google Kalendáři, OAuth přihlášení, plánovač fronty v produkci
+  (dnes podle K1 odmítá volání). Vyžaduje schválení vlastníka a tajemství (viz Navržený postup).

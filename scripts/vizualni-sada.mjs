@@ -72,8 +72,9 @@ for (const [bn, bt] of browsers) {
           const cut = [];
           for (const el of document.querySelectorAll('button, a, .badge, .chip, h1, h2, h3, label, th, td')) {
             const s = getComputedStyle(el);
-            if (hidden(el)) continue;
-            if (el.scrollWidth > el.clientWidth + 2 && el.clientWidth > 0 && !/(auto|scroll)/.test(s.overflowX) && s.textOverflow !== 'ellipsis') cut.push(`${el.tagName.toLowerCase()}:${(el.textContent.trim() || el.getAttribute('aria-label') || el.className).slice(0, 30)}`);
+            // Ikonová tlačítka bez textu přesahují jen rámečkem (ověřeno na výřezu), text uříznout nemohou.
+            if (hidden(el) || !el.textContent.trim()) continue;
+            if (el.scrollWidth > el.clientWidth + 2 && el.clientWidth > 0 && !/(auto|scroll)/.test(s.overflowX) && s.textOverflow !== 'ellipsis') cut.push(`${el.tagName.toLowerCase()}:${el.textContent.trim().slice(0, 30)}`);
           }
           return { scroll, over: [...new Set(over)].slice(0, 5), cut: [...new Set(cut)].slice(0, 5), h: document.documentElement.scrollHeight };
         });
