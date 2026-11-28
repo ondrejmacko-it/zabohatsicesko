@@ -241,6 +241,22 @@ export class PersonalCalendarApi {
     throw new CalendarError("calendar_unavailable", true);
   }
 
+  /** Jen čtení: nezrušené události kalendáře. Používá skript živého ověření, ne synchronizace. */
+  async listEvents(calendarId: string): Promise<Array<{ id: string; status?: string; summary?: string; start?: { dateTime?: string }; end?: { dateTime?: string } }>> {
+    type Page = { items?: Array<{ id: string }>; nextPageToken?: string };
+    const items: Array<{ id: string }> = [];
+    let pageToken: string | undefined;
+    do {
+      const { status, body } = await this.request("GET", `/calendars/${encodeURIComponent(calendarId)}/events`, {
+        query: { maxResults: "250", showDeleted: "false", ...(pageToken ? { pageToken } : {}) },
+      });
+      if (status !== 200) throw new CalendarError("calendar_unavailable", true);
+      items.push(...((body as Page).items ?? []));
+      pageToken = (body as Page).nextPageToken;
+    } while (pageToken);
+    return items;
+  }
+
   /** Smaže událost. Už smazaná (404, 410) je v pořádku. */
   async deleteEvent(calendarId: string, eventId: string, notify = false): Promise<void> {
     await this.request("DELETE", `/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`, { query: { sendUpdates: notify ? "all" : "none" } });

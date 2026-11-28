@@ -394,6 +394,22 @@ export async function syncPersonalCalendar(db: Db, userId: string, deps: Persona
   }
 }
 
+/**
+ * Jen čtení pro skript živého ověření (`scripts/overeni-kalendare-google.ts`): přístup ke kalendáři uživatele
+ * a akce, které v něm podle Wiki mají být (klíč = ID události u Googlu). Nic nezapisuje.
+ */
+export async function personalCalendarExpectation(db: Db, userId: string) {
+  const [row] = await db.select().from(personalCalendars).where(whereUser(userId)).limit(1);
+  const [account] = await db.select({ status: users.status, groups: users.groups }).from(users).where(and(eq(users.orgId, config.orgId), eq(users.id, userId))).limit(1);
+  if (!row || row.status !== "active" || !row.calendarId || !account) return null;
+  const refreshToken = openSecret(row.encryptedRefreshToken, tokenEncryptionKey(), secretContext(userId));
+  const api = refreshToken ? apiFor(refreshToken, {}) : null;
+  if (!api) return null;
+  const since = new Date(Date.now() - HISTORY_DAYS * 24 * 3600 * 1000);
+  const wanted = await desiredEvents(db, userId, account, since, personalSelfInvite() ? row.accountEmail : undefined);
+  return { api, calendarId: row.calendarId, since, wanted: new Map([...wanted].map(([id, w]) => [personalEventId(id), w.data])) };
+}
+
 /** Synchronizuje všechny, kdo to potřebují, a uklidí kalendáře odebraných účtů. Opakované volání je bezpečné. */
 export async function syncPersonalCalendars(db: Db, deps: PersonalDeps = {}): Promise<void> {
   if (!personalDelivery()) return;
