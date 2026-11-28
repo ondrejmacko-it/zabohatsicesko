@@ -1,4 +1,4 @@
-# Navazující relace (stav 28. 11. 2026, relace 102)
+# Navazující relace (stav 28. 11. 2026, relace 103)
 
 Cíl: dokončit opravy PR #97, ověřit skutečnou funkčnost (živý Google Kalendář), připravit bezpečné ostré nasazení.
 Plné zadání vlastníka (body 1–11) je v promptu navazující relace; drž se ho. Bez merge do main, bez produkčního
@@ -21,18 +21,26 @@ Neon projekt `neon-zbz-vzdelavani-demo` (main = produkce, NEDOTÝKAT SE).
   globals.css, `e2e/ucast-sirka.spec.ts` (768/1024/1280, akce/lidé/detail, klávesnice) prošel v
   windows-1280, firefox-1280, webkit-1440 (E2E_WEBKIT=1); TLS proxy i pro UCAST (3413). ucast*.spec prošly.
 
+## Relace 103 (krátká, kontext vyčerpán schématy nástrojů)
+- CI PR #97 na ec1a241 ZELENÉ (lint/typy/testy/build, E2E smoke, citlivé cesty, Vercel).
+- `temata-filtr` + `menu-telefon` (windows-1280, telefon-390, telefon-320): 36 passed, 48 skipped (gating projektů).
+- NÁLEZ: `src/server/domain/topics.ts:122` `defaultTopicFilter` = „all“ jen pro organizátora, člen má „role“.
+  Zadání říká výchozí „Všechna“; e2e testuje jen `?filtr=vse`, ne výchozí stav. Přečíst komentář nad funkcí
+  (ř. ~112–121); pokud není výslovně dohodnuto jinak, změnit na „all“ pro všechny + e2e bez parametru.
+- Plánovač: běhy `kalendar-fronta.yml` jen ~každé 4–9 h místo */10 (35 běhů celkem), všechny „success“ –
+  důkaz pro K1/K8 (GitHub schedule nespolehlivý + exit 0 při chybějící konfiguraci).
+
 ## Další kroky (po malých jednotkách, commit + push po každé)
-1. Zkontrolovat CI PR #97 na c5db69d. Do reportu (V1) doplnit opravu a výsledky.
-2. Ověřit: výchozí filtr témat „Všechna“ (commit b1082c8, `e2e/temata-filtr.spec.ts`), mobilní hamburger menu
-   (`e2e/menu-telefon.spec.ts`). Dokončit jen chybějící.
-3. Vizuální regrese: malý projekt `toHaveScreenshot` (4–5 stránek × 390/1024/1440, Chromium, CI Linux),
+1. Výchozí filtr témat (viz nález), report V1 doplnit (c5db69d, CI zelené).
+2. Vizuální regrese: malý projekt `toHaveScreenshot` (4–5 stránek × 390/1024/1440, Chromium, CI Linux),
    reference generovat v CI, postup Firefox/WebKit do README/reportu.
-4. Plánovač K1/K8: proč `kalendar-fronta.yml` končí success bez konfigurace → rozlišit vypnuto vs. chyba
-   (chyba = fail). Posoudit jeden vs. dva plánovače (návrh nejdřív zdůvodnit). Tabulka všech env proměnných.
-5. Účast/oprávnění: cílené testy (nadřízený jen své lidi, účastník, přímé volání API).
-6. Izolovaný test: skript ověřující stav přes Google Calendar API + měření latence; sepsat, co má vlastník dodat.
-7. Finální běh lint/typecheck/unit/e2e/vizuál, report do kategorií z bodu 11 zadání, PR popis.
-8. Na konci požádat vlastníka o oprávnění pro maximální automatizaci a testování (přístupy, účty, secrets).
+3. Plánovač K1/K8: `kalendar-fronta.yml` exit 0 bez konfigurace → rozlišit vypnuto (proměnná např.
+   `vars.CALENDAR_QUEUE_DISABLED`) vs. chyba (fail). Posoudit jeden vs. dva plánovače. Tabulka env proměnných.
+4. Účast/oprávnění: cílené testy (nadřízený jen své lidi, účastník, přímé volání API).
+5. Izolovaný test: skript ověřující stav přes Google Calendar API + měření latence; co má vlastník dodat.
+6. Finální běh lint/typecheck/unit/e2e/vizuál, report do kategorií z bodu 11 zadání, PR popis.
+7. Na konci požádat vlastníka o oprávnění pro maximální automatizaci a testování (přístupy, účty, secrets).
+- Pozn.: nová relace má hned ~100k+ kontextu ze schémat MCP nástrojů → kroky dělat malé, předávat brzy.
 
 ## Technika
 - NEPOUŽÍVAT prettier. `npm ci` (node_modules chybí v nové relaci), `npx next build`. Playwright si server
