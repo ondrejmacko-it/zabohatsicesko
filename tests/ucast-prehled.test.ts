@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { now } from "@/server/config";
-import { attendanceByEvent, attendanceDetail, attendanceScope } from "@/server/services/attendance";
+import { attendanceByEvent, attendanceByPerson, attendanceDetail, attendanceHistory, attendanceScope } from "@/server/services/attendance";
 import { setExcuseManagers } from "@/server/services/excuse-managers";
 import { changeOwnParticipation } from "@/server/services/participation";
 import { admin, lead, outsider, participant, resetDemo } from "./helpers";
@@ -81,5 +81,25 @@ describe("přehled účasti podle akcí", () => {
     expect(managed.people[0]?.excuse).toEqual({ reason: "illness", note: "chřipka" });
 
     expect(await attendanceDetail(admin, { kind: "all" }, "neexistuje")).toBeNull();
+  });
+
+  test("přehled podle lidí a historie z auditu, nadřízený jen svého člověka", async () => {
+    const list = await attendanceByEvent({ kind: "all" }, ...window());
+    const fp = list.find((e) => e.audience === "fp" && !e.cancelled)!;
+    const before = (await attendanceByPerson({ kind: "all" }, ...window())).find((p) => p.id === participant.id)!;
+    await changeOwnParticipation(participant, fp.id, { kind: "excuse", excuse: { reason: "illness", note: null } });
+    const after = (await attendanceByPerson({ kind: "all" }, ...window())).find((p) => p.id === participant.id)!;
+    expect(after.counts.excused).toBe(before.counts.excused + 1);
+    expect(after.counts.required).toBe(before.counts.required - 1);
+
+    await setExcuseManagers(admin, participant.id, [lead.id]);
+    const history = (await attendanceHistory({ kind: "all" }, participant.id))!;
+    expect(history.map((h) => h.action)).toEqual(["excuse_managers.changed", "participation.excuse"]);
+    expect(history[1]).toMatchObject({ eventId: fp.id, eventTitle: fp.title });
+
+    const scope = (await attendanceScope(lead, false))!;
+    expect((await attendanceByPerson(scope, ...window())).map((p) => p.id)).toEqual([participant.id]);
+    expect(await attendanceHistory(scope, outsider.id)).toBeNull();
+    expect(await attendanceHistory({ kind: "all" }, "neexistuje")).toBeNull();
   });
 });

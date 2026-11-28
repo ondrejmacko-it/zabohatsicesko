@@ -1,11 +1,11 @@
-import { and, eq, gte, inArray, isNotNull, lt, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNotNull, like, lt, or, sql } from "drizzle-orm";
 import { eventTitle } from "@/lib/labels";
 import type { OwnCalendar } from "@/lib/calendar-note";
 import type { ExcuseReason, Group, ParticipationState } from "@/lib/types";
 import { ownCalendarState } from "@/server/calendar/attendees";
 import { config, participationEnabled } from "@/server/config";
 import { getDb } from "@/server/db/client";
-import { eventParticipation, events, users } from "@/server/db/schema";
+import { auditLog, eventParticipation, events, users } from "@/server/db/schema";
 import { participationState, type ParticipationRecord } from "@/server/domain/participation";
 import { canManageUsers, canReadExcuseDetails, type Viewer } from "@/server/policy";
 import { managedEmployeeIds } from "@/server/services/excuse-managers";
@@ -36,10 +36,16 @@ export type EventAttendance = {
   counts: AttendanceCounts;
 };
 
-/** Přehled podle akcí v období [from, to): zveřejněné akce bez svátků, počty jen za lidi v rozsahu. */
-export async function attendanceByEvent(scope: AttendanceScope, from: Date, to: Date): Promise<EventAttendance[]> {
+type PeriodData = {
+  rows: { id: string; published: NonNullable<(typeof events.$inferSelect)["published"]> }[];
+  people: { id: string; name: string; status: (typeof users.$inferSelect)["status"]; groups: string[] }[];
+  records: Map<string, ParticipationRecord>;
+};
+
+/** Zveřejněné akce bez svátků v období [from, to), lidé v rozsahu a jejich záznamy účasti. */
+async function loadPeriod(scope: AttendanceScope, from: Date, to: Date): Promise<PeriodData> {
   const db = await getDb();
-  const rows = await db
+  const rows = (await db
     .select({ id: events.id, published: events.published })
     .from(events)
     .where(
@@ -51,30 +57,41 @@ export async function attendanceByEvent(scope: AttendanceScope, from: Date, to: 
         lt(events.startsAt, to),
       ),
     )
-    .orderBy(events.startsAt, events.id);
-  if (rows.length === 0) return [];
+    .orderBy(events.startsAt, events.id)) as PeriodData["rows"];
   const people = (await db
-    .select({ id: users.id, status: users.status, groups: users.groups })
+    .select({ id: users.id, name: users.name, status: users.status, groups: users.groups })
     .from(users)
-    .where(eq(users.orgId, config.orgId))).filter((p) => scope.kind === "all" || scope.ids.has(p.id));
+    .where(eq(users.orgId, config.orgId))
+    .orderBy(users.name, users.id)).filter((p) => scope.kind === "all" || scope.ids.has(p.id));
   const records = new Map<string, ParticipationRecord>();
+  if (rows.length === 0) return { rows, people, records };
   const recordRows = await db
     .select({ eventId: eventParticipation.eventId, userId: eventParticipation.userId, kind: eventParticipation.kind, excuseReason: eventParticipation.excuseReason })
     .from(eventParticipation)
     .where(and(eq(eventParticipation.orgId, config.orgId), inArray(eventParticipation.eventId, rows.map((r) => r.id))));
   for (const r of recordRows) records.set(`${r.eventId}|${r.userId}`, { kind: r.kind, excuseReason: r.excuseReason });
+  return { rows, people, records };
+}
 
-  return rows.map(({ id, published }) => {
-    const snapshot = published!;
-    const counts: AttendanceCounts = { required: 0, excused: 0, enrolled: 0, withdrawn: 0, expected: 0 };
-    for (const person of people) {
-      const state = participationState(person, snapshot, records.get(`${id}|${person.id}`) ?? null);
-      if (state === "required") counts.required++;
-      else if (state === "excused") counts.excused++;
-      else if (state === "voluntary_enrolled") counts.enrolled++;
-      else if (state === "withdrawn") counts.withdrawn++;
-    }
-    counts.expected = counts.required + counts.enrolled;
+const emptyCounts = (): AttendanceCounts => ({ required: 0, excused: 0, enrolled: 0, withdrawn: 0, expected: 0 });
+
+/** Přičte stav do počtů. Vrací false, když se akce člověka netýká (dobrovolná bez přihlášky, bez účasti). */
+function addState(counts: AttendanceCounts, state: ParticipationState | null): boolean {
+  if (state === null || state === "optional") return false;
+  if (state === "required") counts.required++;
+  else if (state === "excused") counts.excused++;
+  else if (state === "voluntary_enrolled") counts.enrolled++;
+  else if (state === "withdrawn") counts.withdrawn++;
+  counts.expected = counts.required + counts.enrolled;
+  return true;
+}
+
+/** Přehled podle akcí v období [from, to): zveřejněné akce bez svátků, počty jen za lidi v rozsahu. */
+export async function attendanceByEvent(scope: AttendanceScope, from: Date, to: Date): Promise<EventAttendance[]> {
+  const { rows, people, records } = await loadPeriod(scope, from, to);
+  return rows.map(({ id, published: snapshot }) => {
+    const counts = emptyCounts();
+    for (const person of people) addState(counts, participationState(person, snapshot, records.get(`${id}|${person.id}`) ?? null));
     return {
       id,
       title: eventTitle(snapshot.label, snapshot.topicTitle),
@@ -83,6 +100,61 @@ export async function attendanceByEvent(scope: AttendanceScope, from: Date, to: 
       cancelled: snapshot.status === "cancelled",
       counts,
     };
+  });
+}
+
+export type PersonAttendance = { id: string; name: string; active: boolean; counts: AttendanceCounts };
+
+/** Přehled podle lidí v období [from, to): u každého člověka v rozsahu počty akcí podle stavu. Zrušené akce se nepočítají. */
+export async function attendanceByPerson(scope: AttendanceScope, from: Date, to: Date): Promise<PersonAttendance[]> {
+  const { rows, people, records } = await loadPeriod(scope, from, to);
+  return people.map((person) => {
+    const counts = emptyCounts();
+    for (const { id, published } of rows) addState(counts, participationState(person, published, records.get(`${id}|${person.id}`) ?? null));
+    return { id: person.id, name: person.name, active: person.status === "active", counts };
+  });
+}
+
+export type AttendanceHistoryItem = { at: string; action: string; eventId: string | null; eventTitle: string | null };
+
+/**
+ * Historie člověka jen z auditu (nic se nedomýšlí): vlastní změny účasti (`participation.*`, aktér = člověk)
+ * a změny jeho přístupu a nadřízených (`user.*`, `excuse_managers.*`). Null = člověk není v rozsahu.
+ */
+export async function attendanceHistory(scope: AttendanceScope, userId: string, limit = 100): Promise<AttendanceHistoryItem[] | null> {
+  if (scope.kind === "managed" && !scope.ids.has(userId)) return null;
+  const db = await getDb();
+  const [person] = await db.select({ id: users.id }).from(users).where(and(eq(users.orgId, config.orgId), eq(users.id, userId))).limit(1);
+  if (!person) return null;
+  const rows = await db
+    .select({ at: auditLog.createdAt, action: auditLog.action, entityType: auditLog.entityType, entityId: auditLog.entityId })
+    .from(auditLog)
+    .where(
+      and(
+        eq(auditLog.orgId, config.orgId),
+        or(
+          and(eq(auditLog.actorId, userId), eq(auditLog.entityType, "event"), like(auditLog.action, "participation.%")),
+          and(eq(auditLog.entityType, "user"), eq(auditLog.entityId, userId), or(like(auditLog.action, "user.%"), eq(auditLog.action, "excuse_managers.changed"))),
+        ),
+      ),
+    )
+    .orderBy(desc(auditLog.createdAt), desc(auditLog.id))
+    .limit(limit);
+  const eventIds = [...new Set(rows.filter((r) => r.entityType === "event").map((r) => r.entityId))];
+  const titles = new Map<string, string>();
+  if (eventIds.length) {
+    const found = await db
+      .select({ id: events.id, published: events.published })
+      .from(events)
+      .where(and(eq(events.orgId, config.orgId), inArray(events.id, eventIds)));
+    for (const e of found) {
+      const snap = e.published;
+      if (snap) titles.set(e.id, eventTitle(snap.label, snap.topicTitle));
+    }
+  }
+  return rows.map((r) => {
+    const eventId = r.entityType === "event" ? r.entityId : null;
+    return { at: r.at.toISOString(), action: r.action, eventId, eventTitle: eventId ? (titles.get(eventId) ?? null) : null };
   });
 }
 
@@ -121,23 +193,18 @@ export async function attendanceDetail(viewer: Viewer, scope: AttendanceScope, e
   // Důvody omluv smí i správce číst jen u lidí, u kterých je výslovně určeným nadřízeným.
   const managed = scope.kind === "managed" ? scope.ids : await managedEmployeeIds(db, viewer.id);
 
-  const counts: AttendanceCounts = { required: 0, excused: 0, enrolled: 0, withdrawn: 0, expected: 0 };
+  const counts = emptyCounts();
   const result: AttendancePerson[] = [];
   for (const person of people) {
     const record = records.get(person.id) ?? null;
     const state = participationState(person, snapshot, record);
-    if (state === null || state === "optional") continue;
-    if (state === "required") counts.required++;
-    else if (state === "excused") counts.excused++;
-    else if (state === "voluntary_enrolled") counts.enrolled++;
-    else if (state === "withdrawn") counts.withdrawn++;
+    if (!addState(counts, state) || state === null) continue;
     const excuse =
       state === "excused" && record?.excuseReason && canReadExcuseDetails(viewer, person.id, managed)
         ? { reason: record.excuseReason, note: record.excuseNote }
         : null;
     result.push({ id: person.id, name: person.name, state, excuse, calendar: await ownCalendarState(db, eventId, person.id) });
   }
-  counts.expected = counts.required + counts.enrolled;
   return {
     id: eventId,
     title: eventTitle(snapshot.label, snapshot.topicTitle),
