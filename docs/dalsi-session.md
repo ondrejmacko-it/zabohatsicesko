@@ -22,10 +22,9 @@ Neon projekt `neon-zbz-vzdelavani-demo` (main = produkce, NEDOTÝKAT SE).
   plné e2e 1660 passed / 0 failed. CI 46163734788 zelené kromě vizuální regrese 15/15 (fonty runneru).
 
 ## Další kroky
-1. `git fetch origin reference-vizual/pr97`; pokud má commit „Reference vizuální regrese z CI runneru“:
-   `git checkout FETCH_HEAD -- e2e/vizualni.spec.ts-snapshots/`, 2 PNG zkontrolovat (Read), commit
-   „Vizuální regrese: reference z CI runneru“, push na obě větve, ověřit, že CI PR #97 má vizuální krok zelený.
-   Když běh selhal: `get_job_logs` job běhu 46165244474 (tail 60).
+1. HOTOVO: reference z běhu 46165244474 (commit aebd393) převzaty do pracovní větve. Ověř běh CI PR #97 na
+   HEAD (`actions_list` list_workflow_runs, branch claude/oprava-kalendare-a-prehled-ucasti): vizuální krok zelený?
+   Když ne: `get_job_logs` (tail 60) a opravit.
 2. Do reportu kap. 5 R1 doplnit výsledek (zelené/červené, číslo běhu). Aktualizovat popis PR #97 (shrnutí
    kategorií reportu + odkaz na report; bez merge, draft ponechat).
 3. Pomocnou větev `reference-vizual/pr97` nechat (smazání je nevratné – uvést vlastníkovi).
