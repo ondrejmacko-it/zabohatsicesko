@@ -137,7 +137,7 @@ export async function TopicsSection({ user, readOnly = false, filter: requested 
   const organizer = isOrganizer(user);
   // Filtr má smysl, jen když člověk vidí i témata mimo své role: správce vždy, kolega v režimu všech zveřejněných akcí.
   const filterable = organizer || eventVisibility() === "all-published";
-  const filter = filterable ? parseTopicFilter(requested, organizer) : "all";
+  const filter = filterable ? parseTopicFilter(requested) : "all";
   const [ranked, archived, interested] = await Promise.all([
     listTopics(user),
     listArchivedTopics(user),

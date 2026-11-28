@@ -34,3 +34,17 @@ test.describe("Témata: lišta filtru a hledání", () => {
     await expect(page.getByRole("link", { name: "Pro mou roli", exact: true })).toHaveAttribute("aria-current", "page");
   });
 });
+
+// Zadání: výchozí filtr témat je „Všechna“ pro všechny role, „Pro mou roli“ je volba.
+for (const role of ["spravce", "ucastnikFp"] as const) {
+  test.describe(`Témata: výchozí filtr (${role})`, () => {
+    test.use({ storageState: authFile(role) });
+
+    test("bez parametru je vybráno Všechna", async ({ page }) => {
+      await page.goto("/vzdelavani/temata");
+      const all = page.getByRole("link", { name: "Všechna", exact: true });
+      await expect(all).toHaveAttribute("aria-current", "page");
+      await expect(page.getByRole("link", { name: "Pro mou roli", exact: true })).not.toHaveAttribute("aria-current", "page");
+    });
+  });
+}

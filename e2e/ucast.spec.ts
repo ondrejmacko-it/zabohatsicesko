@@ -233,20 +233,20 @@ test.describe("témata v režimu všech zveřejněných (F10, F11)", () => {
   // eslint-disable-next-line react-hooks/rules-of-hooks -- `use` je fixture Playwrightu, ne hook Reactu.
   test.use({ storageState: ({}, use, info) => use(authFile(info.project.name === "windows-1280" ? "ucastnikFp" : "ucastnikRm")) });
 
-  test("Pro mou roli je výchozí, Všechna ukáže i cizí témata, pořadí kolega měnit nemůže", async ({ page }, info) => {
+  test("Všechna je výchozí, Pro mou roli skryje cizí témata, pořadí kolega měnit nemůže", async ({ page }, info) => {
     const fp = info.project.name === "windows-1280";
     const own = fp ? "Otevřené otázky na schůzce" : "Návaznost po konzultaci";
     const foreign = fp ? "Návaznost po konzultaci" : "Otevřené otázky na schůzce";
     await page.goto(`${BASE}/vzdelavani/temata`);
     await settle(page);
-    await expect(page.getByRole("link", { name: "Pro mou roli", exact: true })).toHaveAttribute("aria-current", "page");
+    await expect(page.getByRole("link", { name: "Všechna", exact: true })).toHaveAttribute("aria-current", "page");
+    await expect(page.locator("main").getByText(foreign, { exact: true })).toBeVisible();
+
+    await page.getByRole("link", { name: "Pro mou roli", exact: true }).click();
+    await expect(page).toHaveURL(/filtr=role/);
     await expect(page.locator("main").getByText(own, { exact: true })).toBeVisible();
     await expect(page.locator("main").getByText("Týmové priority", { exact: true })).toBeVisible();
     await expect(page.locator("main").getByText(foreign, { exact: true })).toHaveCount(0);
-
-    await page.getByRole("link", { name: "Všechna", exact: true }).click();
-    await expect(page).toHaveURL(/filtr=vse/);
-    await expect(page.locator("main").getByText(foreign, { exact: true })).toBeVisible();
     await expect(page.locator(".topic-handle, .topic-rank")).toHaveCount(0);
     await expect(page.getByRole("button", { name: /^Možnosti tématu/ })).toHaveCount(0);
     await expectNoHorizontalScroll(page);

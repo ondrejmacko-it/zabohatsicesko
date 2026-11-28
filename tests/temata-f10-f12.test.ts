@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { defaultTopicFilter, filterTopics, isTopicForRoles, parseTopicFilter, rankTopics } from "@/server/domain/topics";
+import { DEFAULT_TOPIC_FILTER, filterTopics, isTopicForRoles, parseTopicFilter, rankTopics } from "@/server/domain/topics";
 import { canSeeTopic } from "@/server/policy";
 import { listTopicInterested, listTopics, moveTopic, placeTopic, proposeTopic, resetTopicOrder, setInterest, setTopicPriority } from "@/server/services/topics";
 import { DomainError } from "@/server/services/errors";
@@ -32,14 +32,13 @@ describe("F10 filtr Pro mou roli / Všechna: pravidla", () => {
     expect(filterTopics(topics, [], "role").map((t) => t.id)).toEqual(["a"]);
   });
 
-  test("výchozí filtr: kolega Pro mou roli, správce Všechna; neznámá hodnota = výchozí", () => {
-    expect(defaultTopicFilter(false)).toBe("role");
-    expect(defaultTopicFilter(true)).toBe("all");
-    expect(parseTopicFilter(undefined, false)).toBe("role");
-    expect(parseTopicFilter("vse", false)).toBe("all");
-    expect(parseTopicFilter("role", true)).toBe("role");
-    expect(parseTopicFilter(["vse", "role"], false)).toBe("all");
-    expect(parseTopicFilter("cokoli", true)).toBe("all");
+  test("výchozí filtr je pro všechny Všechna; neznámá hodnota = výchozí", () => {
+    expect(DEFAULT_TOPIC_FILTER).toBe("all");
+    expect(parseTopicFilter(undefined)).toBe("all");
+    expect(parseTopicFilter("vse")).toBe("all");
+    expect(parseTopicFilter("role")).toBe("role");
+    expect(parseTopicFilter(["vse", "role"])).toBe("all");
+    expect(parseTopicFilter("cokoli")).toBe("all");
   });
 
   test("viditelnost tématu: v režimu všech zveřejněných každý, jinak jen vlastní skupiny", () => {
