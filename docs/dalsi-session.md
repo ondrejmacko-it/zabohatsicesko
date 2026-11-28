@@ -1,9 +1,9 @@
-# Navazující relace (stav 28. 11. 2026, relace 91)
+# Navazující relace (stav 28. 11. 2026, relace 92)
 
 Cíl: zadání vlastníka „Opravy po živém uživatelském testování, synchronizace Kalendáře a správa účasti“
 (body 0–12). Zadání do repa nedávat. Bez merge, deploye, produkční DB, živého Googlu a Make.
 
-Větev `claude/oprava-kalendare-a-prehled-ucasti` z main `fa5e67f`, HEAD `fc05f98` (+ tato předávka).
+Větev `claude/oprava-kalendare-a-prehled-ucasti` z main `fa5e67f`, HEAD `7f02d0e` (+ tato předávka).
 PR zatím není (draft až na konci, spolu se závěrečným reportem uživateli).
 
 ## Hotovo (shrnutí, detaily v `git log`)
@@ -17,6 +17,7 @@ PR zatím není (draft až na konci, spolu se závěrečným reportem uživateli
 - Bod 7: správce smí být nadřízeným jiných, sám sobě ne.
 
 ## Ověřeno
+- `7f02d0e`: tsc + eslint OK; vitest `kalendar-osobni-rucne` 3/3. Build a e2e po této změně NEspuštěny.
 - `fc05f98`: tsc + eslint OK, build OK; vitest `osloveni` 4/4; e2e `osloveni`, `zahlavi`, `nahled-role`
   (windows-1280, telefon-390) 18/18, `menu-ucet` (+ telefon-360) 3/3. Fresh kontejner: e2e poprvé bez `--no-deps`.
 - `5bef7f7`: tsc + eslint OK, build OK; e2e `ucast-prehled` + `nahled` (windows-1280, telefon-390, telefon-360) prošly.
@@ -32,17 +33,14 @@ Oslovení: 5. pád, vlastní hodnota, neutrální náhrada, žádné oslovení z
 dlouhá/neobvyklá jména a náhled za kolegu.
 
 ## Další kroky (pořadí)
-1. Bod 8 – zbývá sekce Google Kalendář v menu Účet. Hotovo v relaci 91 (`5905210`, `10195c2`, `fc05f98`):
-   `src/components/AccountMenu.tsx` (panel CSS `.account-panel`: PC absolutně pod tlačítkem 340 px, telefon
-   ≤640 px fixní okno, zámek scrollu `:root.account-panel-open`, past fokusu jen na telefonu, Esc/křížek vrátí
-   fokus, resize nezavírá, obsah zůstává v DOM), `Topbar.tsx` ho používá místo `Menu`; „Vrátit podle jména“
-   (`name="vratit"` v `SalutationForm`, `osloveni-actions.ts`); `greeting.ts` NFC + bez ohledu na velikost
-   písmen; náhled za kolegu bere `getSalutation(preview.viewer.id)` (`page.tsx`). e2e `e2e/menu-ucet.spec.ts`.
-   Zbývá: v `src/app/(wiki)/layout.tsx` načíst `loadPersonalCalendar(user)` (jen mimo náhled; mimo režim
-   personal null) a předat do `Topbar` → sekce „Google Kalendář“ v panelu (stav z `personalCalendarView()`
-   v `PersonalCalendarStatus.tsx`, odkaz `PERSONAL_CONNECT_HREF`, tlačítko „Synchronizovat teď“ = server akce
-   s `requestPersonalSync(db,[user.id])` + cílená synchronizace, jen ve stavu active, ne v náhledu). Test akce
-   (oprávnění, náhled odmítne) + rozšířit `e2e/menu-ucet.spec.ts`.
+1. Bod 8 – dokončit sekci Google Kalendář v menu Účet (`7f02d0e`): `AccountCalendar` v
+   `src/features/vzdelavani/components/PersonalCalendarStatus.tsx` (stav vždy, „Synchronizovat teď“ přes
+   `ActionForm` jen ve stavu active, jinak odkaz `PERSONAL_CONNECT_HREF`), `syncOwnCalendarAction` (konec
+   `src/features/vzdelavani/actions.ts`, náhled odmítne `runAction`), služba `syncOwnCalendarNow` v
+   `src/server/services/calendar-status.ts`, layout předává `calendar` jen mimo náhled, CSS `.account-calendar`.
+   Zbývá: `npx next build`, rozšířit `e2e/menu-ucet.spec.ts` o sekci (zjistit, zda e2e server běží v režimu
+   personal – grep `CALENDAR_DELIVERY` v `playwright.config.ts`; pokud ne, e2e jen ověří, že sekce chybí),
+   spustit e2e `menu-ucet` (windows-1280, telefon-360/390).
 2. Bod 9 barvy Správy (zelená/červená/modrá/neutrální/varovná, i v dialozích a zprávách), bod 10 filtry Témat.
 3. Zkontrolovat zbytky bodu 4 (ruční synchronizace vlastního kalendáře, přehled problémů pro správce) a bodu 3
    (první synchronizace po propojení, dry-run inventura) – ověřit grepem, co už existuje, nedomýšlet.
