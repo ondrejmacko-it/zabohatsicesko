@@ -2854,6 +2854,15 @@ a.brief-link:hover {
 }
 
 @media (max-width: 560px) {
+  .topic-filter {
+    flex-basis: 100%;
+  }
+
+  .topic-filter .pill {
+    flex: 1 1 0;
+    text-align: center;
+  }
+
   .topic-search {
     flex-basis: 100%;
     max-width: none;
@@ -3404,9 +3413,10 @@ p.cal-status {
   }
 }
 
-/* Telefon: Plán je vždy seznam, přepínač zobrazení není potřeba. Akce správce se zarovnají vlevo. */
+/* Telefon: Plán je vždy seznam, přepínač zobrazení není potřeba. Akce správce se zarovnají vlevo.
+   Filtr Témat (.topic-filter) sdílí jen vzhled pilulek, na telefonu zůstává. */
 @container (max-width: 560px) {
-  .view-toggle {
+  .view-toggle:not(.topic-filter) {
     display: none;
   }
 
