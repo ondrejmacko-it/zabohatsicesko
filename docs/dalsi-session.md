@@ -1,4 +1,4 @@
-# Navazující relace (stav 28. 11. 2026, relace 110)
+# Navazující relace (stav 28. 11. 2026, relace 111)
 
 Cíl: dokončit PR #97, ověřit skutečnou funkčnost (živý Google Kalendář), připravit bezpečné ostré nasazení.
 Plné zadání vlastníka (body 1–11) je v promptu navazující relace; drž se ho. Bez merge do main, bez produkčního
@@ -22,9 +22,12 @@ Vlastník nechce návody ani checklisty. Jen při nepřekonatelné překážce: 
 nezastavuje ostatní.
 
 ## Úkoly (pořadí)
-1. HAMBURGER MENU na telefonu (vlastník výslovně chce). Nahradit mřížku `e2e/menu-telefon.spec.ts` za
-   přehledné hamburger menu ve stylu Wiki (přístupnost: aria-expanded, Esc, fokus, zavření po kliknutí).
-   Upravit testy a vizuální reference (push na `reference-vizual/**` → workflow vygeneruje snímky).
+1. HOTOVO (ee6f6ce): hamburger menu ≤640 px v `src/components/Sidebar.tsx` (+CSS `.nav-toggle` v globals.css,
+   helper `openMainMenu` v `e2e/support.ts`, nový `e2e/menu-telefon.spec.ts`). Tablet 641–900 mřížka beze změny.
+   ZBÝVÁ: vizuální reference. Pushnuto na NOVOU větev `reference-vizual/pr97-menu` (stará pr97 nebyla FF, force
+   zakázán) → workflow `vizualni-reference.yml` commitne snímky zpět na ni. Zkontroluj běh (actions_list),
+   převezmi `e2e/vizualni.spec.ts-snapshots/*` do pracovní větve (git checkout origin/reference-vizual/pr97-menu --
+   e2e/vizualni.spec.ts-snapshots), commit, push na obě větve, ověř CI PR #97.
 2. Nastavit demo pro živý test: CALENDAR_DELIVERY=personal, PARTICIPATION=on, CRON_SECRET a
    CALENDAR_WORKER_TOKEN (vygenerovat), GitHub secret/var WIKI_URL + CALENDAR_WORKER_TOKEN (K1/K8, K2, K6).
 3. Živé E2E Google Kalendáře se stávajícími účty: všechny scénáře kap. 6 `docs/report-zive-overeni-pr97.md`,
@@ -33,9 +36,11 @@ nezastavuje ostatní.
 4. Aktualizovat report (8 kategorií) + popis PR #97 (draft), finální testy, report vlastníkovi až na konci.
 
 ## Stav
-HEAD 7b4d7c1; CI na 783c592 zelené vč. vizuální regrese. eslint/tsc 0, vitest 668/668, e2e 1660/0.
-PR body: oprav odkaz session v patičce (překlep). Pomocná větev `reference-vizual/pr97` existuje.
+HEAD ee6f6ce. Ověřeno na ee6f6ce: tsc 0, eslint změněných souborů 0, next build OK, e2e menu-telefon 28/28
+(telefon-390), nahled+zpetna-vazba na telefon-390/320/windows-1280 prošly. Celá sada e2e/vitest po změně menu
+ještě NEběžela (spustit před předáním). PR body: oprav odkaz session v patičce (překlep).
 
 ## Technika
 - NEPOUŽÍVAT prettier. `npm ci`, `npx next build`. Playwright si server spouští sám.
+- Force push (i --force-with-lease) klasifikátor zakazuje → nové větve místo přepisu.
 - Nová relace má hned ~100k+ kontextu ze schémat MCP → kroky malé, předávat brzy.
