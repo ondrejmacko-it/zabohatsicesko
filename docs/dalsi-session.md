@@ -1,4 +1,4 @@
-# Navazující relace (stav 28. 11. 2026, relace 109)
+# Navazující relace (stav 28. 11. 2026, relace 110)
 
 Cíl: dokončit PR #97, ověřit skutečnou funkčnost (živý Google Kalendář), připravit bezpečné ostré nasazení.
 Plné zadání vlastníka (body 1–11) je v promptu navazující relace; drž se ho. Bez merge do main, bez produkčního
@@ -10,22 +10,31 @@ Větve: `claude/gallant-knuth-ydgzxz` = `claude/oprava-kalendare-a-prehled-ucast
 vždy `git fetch` + merge. Vercel tým `team_PtkXmFd9hI7UeUYovGkbwZQG`, projekt `prj_MYpwzB5KekzHAVwbiUDrZv6CG12i`.
 Neon projekt `neon-zbz-vzdelavani-demo` (main = produkce, NEDOTÝKAT SE).
 
-## Hotovo (relace 109)
-- CI PR #97 na 783c592 zelené včetně vizuální regrese 15/15 (46165521065, 46165521067).
-- Report kap. 2 a 5/R1 doplněn (0d7cfcd), popis PR #97 aktualizován (draft ponechán).
-- Report vlastníkovi a žádost o přístupy (kap. 7 reportu) odeslány v relaci 109.
-- Dříve: V1 c5db69d, filtr témat ffcca12, plánovač 739187b, vizuální regrese aa63cb7/783c592, proměnné 430e814.
-- Testy: eslint 0, tsc 0, vitest 668/668, build OK, plné e2e 1660/0 failed (kód aplikace od a53c972 beze změny).
+## NOVÉ ZADÁNÍ VLASTNÍKA (28. 11. 2026, závazné, nahrazuje omezení výše)
+Demo, DB i nasazení jsou vývojové a data postradatelná. Vlastník dal plnou autonomii nad VÝVOJOVOU
+infrastrukturou projektu: GitHub, Vercel (vč. Production demo projektu), Neon (vč. main demo projektu), Google
+Cloud, Google Kalendář, Make, proměnné, plánovače, testovací data. Klíče/secrets generuj a ukládej sám (nikdy
+nevypisuj). Použij současné demo pro živé testy, další infrastrukturu jen když nutné. Testovací Google účty
+existují (ty, co vlastník dosud používal – zjisti z DB/env, např. BOOTSTRAP_ADMIN_EMAILS, uživatelé v DB).
+Zakázáno bez souhlasu: zvyšovat náklady, merge do main, ostré FIREMNÍ nasazení, cizí projekty/osobní data.
+Vlastník nechce návody ani checklisty. Jen při nepřekonatelné překážce: 1) přímý odkaz, 2) co přesně udělat,
+3) proč to nejde samo – ideálně jednorázová autorizace. Hesla/klíče se neposílají chatem. Blokovaný úkol
+nezastavuje ostatní.
 
-## Další kroky
-Vše neblokované je hotové. Čeká se na vlastníka (kap. 7 reportu). Po dodání přístupů:
-1. Neon schema-only větev, Vercel Preview pro `test/zive-overeni-kalendare` (nesecretní proměnné dle kap. 7).
-2. Scénáře kap. 6 přes `scripts/overeni-kalendare-google.ts` (`--sledovat=N` pro latenci), výsledky do reportu.
-3. Po testu úklid (proměnné, Neon větev, Git větev, testovací události). Pomocná větev `reference-vizual/pr97`
-   ponechána, smazání na vlastníkovi.
+## Úkoly (pořadí)
+1. HAMBURGER MENU na telefonu (vlastník výslovně chce). Nahradit mřížku `e2e/menu-telefon.spec.ts` za
+   přehledné hamburger menu ve stylu Wiki (přístupnost: aria-expanded, Esc, fokus, zavření po kliknutí).
+   Upravit testy a vizuální reference (push na `reference-vizual/**` → workflow vygeneruje snímky).
+2. Nastavit demo pro živý test: CALENDAR_DELIVERY=personal, PARTICIPATION=on, CRON_SECRET a
+   CALENDAR_WORKER_TOKEN (vygenerovat), GitHub secret/var WIKI_URL + CALENDAR_WORKER_TOKEN (K1/K8, K2, K6).
+3. Živé E2E Google Kalendáře se stávajícími účty: všechny scénáře kap. 6 `docs/report-zive-overeni-pr97.md`,
+   skript `scripts/overeni-kalendare-google.ts` (`--sledovat=N` latence), duplicity, pravdivé stavy fronty.
+   Chyby opravit, opakovat do funkčnosti. Make živě (zpětná vazba) pokud je scénář/webhook.
+4. Aktualizovat report (8 kategorií) + popis PR #97 (draft), finální testy, report vlastníkovi až na konci.
 
-## Otevřené otázky
-- Hamburger menu na telefonu: ponechána mřížka (původní zadání); potvrdit vlastníkem.
+## Stav
+HEAD 7b4d7c1; CI na 783c592 zelené vč. vizuální regrese. eslint/tsc 0, vitest 668/668, e2e 1660/0.
+PR body: oprav odkaz session v patičce (překlep). Pomocná větev `reference-vizual/pr97` existuje.
 
 ## Technika
 - NEPOUŽÍVAT prettier. `npm ci`, `npx next build`. Playwright si server spouští sám.
