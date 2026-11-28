@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { TableScroll } from "@/components/TableScroll";
 import { calendarStatus } from "@/lib/calendar-note";
 import { EXCUSE_REASON_LABELS, GROUP_LABELS } from "@/lib/labels";
 import { addDays, formatDate, fromPragueLocal, isValidDateKey, toDateKey, toTimeKey } from "@/lib/time";
@@ -104,7 +105,8 @@ export default async function AttendancePage({ searchParams }: { searchParams: S
             <p className="item-title">Filtru neodpovídá nikdo.</p>
           </div>
         ) : (
-          <table className="table table-stack">
+          <TableScroll label="Účast lidí na akci">
+<table className="table table-stack">
             <thead>
               <tr>
                 <th scope="col">Člověk</th>
@@ -133,6 +135,7 @@ export default async function AttendancePage({ searchParams }: { searchParams: S
               ))}
             </tbody>
           </table>
+</TableScroll>
         )}
       </section>
     );
@@ -251,7 +254,8 @@ type LinkFor = (change?: Record<string, string | undefined>) => string;
 function EventsTable({ rows, link }: { rows: Awaited<ReturnType<typeof attendanceByEvent>>; link: LinkFor }) {
   if (rows.length === 0) return <div className="empty-state"><p className="item-title">V tomto období a filtru není žádná akce.</p></div>;
   return (
-    <table className="table table-stack">
+    <TableScroll label="Přehled účasti podle akcí">
+<table className="table table-stack">
       <thead>
         <tr>
           <th scope="col">Akce</th>
@@ -285,13 +289,15 @@ function EventsTable({ rows, link }: { rows: Awaited<ReturnType<typeof attendanc
         ))}
       </tbody>
     </table>
+</TableScroll>
   );
 }
 
 function PeopleTable({ rows, link }: { rows: Awaited<ReturnType<typeof attendanceByPerson>>; link: LinkFor }) {
   if (rows.length === 0) return <div className="empty-state"><p className="item-title">Filtru neodpovídá nikdo.</p></div>;
   return (
-    <table className="table table-stack">
+    <TableScroll label="Přehled účasti podle lidí">
+<table className="table table-stack">
       <thead>
         <tr>
           <th scope="col">Člověk</th>
@@ -320,5 +326,6 @@ function PeopleTable({ rows, link }: { rows: Awaited<ReturnType<typeof attendanc
         ))}
       </tbody>
     </table>
+</TableScroll>
   );
 }

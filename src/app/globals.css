@@ -5840,3 +5840,45 @@ body[data-moving] .quick-actions,
   margin: 0;
   padding: 0;
 }
+
+/*
+ * Posuvný obal široké tabulky (Účast). Na středních šířkách se posouvá jen tabulka, stránka zůstává.
+ * Stíny na okrajích (background-attachment: local) naznačují, že vedle jsou další sloupce.
+ */
+.table-scroll {
+  /* Skryté popisky buněk (.visually-hidden, absolutní) musí mít obal jako blok, jinak posouvají stránku. */
+  position: relative;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  background:
+    linear-gradient(to right, var(--surface) 30%, transparent) left center / 40px 100% no-repeat local,
+    linear-gradient(to left, var(--surface) 30%, transparent) right center / 40px 100% no-repeat local,
+    radial-gradient(farthest-side at 0 50%, rgba(0, 0, 0, 0.14), transparent) left center / 14px 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%, rgba(0, 0, 0, 0.14), transparent) right center / 14px 100% no-repeat scroll;
+}
+
+.table-scroll > .table th,
+.table-scroll > .table td {
+  white-space: nowrap;
+}
+
+.table-scroll > .table td:first-child {
+  white-space: normal;
+  min-width: 12em;
+}
+
+@media (max-width: 480px) {
+  .table-scroll {
+    background: none;
+  }
+
+  .table-scroll > .table th,
+  .table-scroll > .table td {
+    white-space: normal;
+  }
+
+  .table-scroll > .table td:first-child {
+    min-width: 0;
+  }
+}
