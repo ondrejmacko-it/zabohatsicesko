@@ -1,4 +1,4 @@
-# Navazující relace (stav 28. 11. 2026, relace 83)
+# Navazující relace (stav 28. 11. 2026, relace 84)
 
 Cíl: zadání vlastníka „Opravy po živém uživatelském testování, synchronizace Kalendáře a správa účasti“
 (body 0–12: osobní Kalendář podle účasti, stavy synchronizace, připomínky, záložka Účast, nadřízení,
@@ -27,13 +27,28 @@ Větev `claude/oprava-kalendare-a-prehled-ucasti` z main `fa5e67f`. PR zatím ne
   pending) + záznam `personal_calendar_entries` = `inCalendar`; `OwnCalendar.personal = true`.
   Věty `personalNote` v `src/lib/calendar-note.ts` (zapsaná / není / po přihlášení / nepropojený).
 
+- Nadřízení (bod 7): `setExcuseManagers` už nezakazuje správci určit nadřízeným sebe; člověk sám sobě dál
+  `invalid_input`. UI Správy (`sprava/page.tsx` candidates) správce v seznamu už mělo. Test v `omluvy-nadrizeny`.
+
 ## Ověřeno
 - HEAD `4c7fbf6`: tsc + eslint OK; vitest `kalendar-osobni*`, `kalendar-organizator`, `users` OK (49+14).
 - HEAD `3664e50`: tsc + eslint OK; vitest `kalendar-osobni*`, `kalendar-uklid` 30/30.
 - HEAD `947da93`: tsc + eslint OK; vitest `kalendar*`, `ucast*`, `google-login`, `migrace-0016` 169/169.
 
+- HEAD po bodu 7: tsc + eslint OK; vitest `omluvy-nadrizeny` 9/9.
+
+## Zadání
+Plné znění = první zpráva uživatele v relaci `session_01HpUirxBfw13jo5FXzPsfP2` (list_events, kinds `user`,
+before_id `1c2d91e3-70a5-48e2-aad8-bf9e5819fbb2`; výstup je velký, číst jen bod, na kterém se pracuje).
+
 ## Další kroky (pořadí)
-1. Záložka Účast, nadřízení (včetně sebe, ne na sebe), účet/oslovení, barvy, Témata, e2e, report, draft PR.
+1. Bod 6 záložka Účast (4. pill v `SubNav.tsx`, nová stránka `vzdelavani/ucast`): správce celá firma, nadřízený
+   jen přidělení (`managedEmployeeIds`), účastník bez záložky, náhled bez citlivých údajů a mutací. Přehled
+   podle akcí (počty povinní bez omluvy / omluvení / přihlášení / odhlášení / očekávaní; ne „docházka“),
+   detail akce = lidé podle stavu + stav synchronizace; přehled podle lidí (historie z `audit_log`, nic
+   nedomýšlet); filtry hledání, období, skupina, stav, problémy Kalendáře. PC šířka, mobil karty.
+   Začít malou jednotkou: služba počtů podle akcí + test oprávnění, pak stránka.
+2. Účet/oslovení (bod 8), barvy Správy (bod 9), Témata filtry (bod 10), e2e, report, draft PR.
 - Diagnostika nasazení (CALENDAR_DELIVERY, PARTICIPATION…): neověřeno, jen názvy proměnných, bez hodnot tajemství.
 
 ## Technika
