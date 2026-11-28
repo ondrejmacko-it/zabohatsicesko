@@ -1,4 +1,4 @@
-# Navazující relace (stav 28. 11. 2026, relace 112)
+# Navazující relace (stav 28. 11. 2026, relace 113)
 
 Cíl: dokončit PR #97, ověřit skutečnou funkčnost (živý Google Kalendář), připravit bezpečné ostré nasazení.
 Plné zadání vlastníka (body 1–11) je v promptu navazující relace; drž se ho. Bez merge do main, bez produkčního
@@ -22,39 +22,33 @@ Vlastník nechce návody ani checklisty. Jen při nepřekonatelné překážce: 
 nezastavuje ostatní.
 
 ## Úkoly (pořadí)
-1. HOTOVO (ee6f6ce): hamburger menu ≤640 px v `src/components/Sidebar.tsx` (+CSS `.nav-toggle` v globals.css,
-   helper `openMainMenu` v `e2e/support.ts`, nový `e2e/menu-telefon.spec.ts`). Tablet 641–900 mřížka beze změny.
-   ZBÝVÁ: vizuální reference. Pushnuto na NOVOU větev `reference-vizual/pr97-menu` (stará pr97 nebyla FF, force
-   zakázán) → workflow `vizualni-reference.yml` commitne snímky zpět na ni. Zkontroluj běh (actions_list),
-   převezmi `e2e/vizualni.spec.ts-snapshots/*` do pracovní větve (git checkout origin/reference-vizual/pr97-menu --
-   e2e/vizualni.spec.ts-snapshots), commit, push na obě větve, ověř CI PR #97.
-2. Nastavit demo pro živý test: CALENDAR_DELIVERY=personal, PARTICIPATION=on, CRON_SECRET a
-   CALENDAR_WORKER_TOKEN (vygenerovat), GitHub secret/var WIKI_URL + CALENDAR_WORKER_TOKEN (K1/K8, K2, K6).
-3. Živé E2E Google Kalendáře se stávajícími účty: všechny scénáře kap. 6 `docs/report-zive-overeni-pr97.md`,
-   skript `scripts/overeni-kalendare-google.ts` (`--sledovat=N` latence), duplicity, pravdivé stavy fronty.
-   Chyby opravit, opakovat do funkčnosti. Make živě (zpětná vazba) pokud je scénář/webhook.
-4. Aktualizovat report (8 kategorií) + popis PR #97 (draft), finální testy, report vlastníkovi až na konci.
+1. HOTOVO: hamburger menu (ee6f6ce) + vizuální reference převzaté z CI (ff5b12f). ZBÝVÁ jen ověřit CI PR #97
+   (actions_list na větvi claude/oprava-kalendare-a-prehled-ucasti, commit ff5b12f).
+2. Nastavit demo (Vercel prj_MYpwzB5KekzHAVwbiUDrZv6CG12i, Production): vygenerovat `openssl rand -hex 32` do
+   scratchpadu (umask 077, nevypisovat), create_project_env upsert type=sensitive target=production:
+   CRON_SECRET, CALENDAR_WORKER_TOKEN; CALENDAR_DELIVERY (id L0RzHDHLkWWXwCd4) edit → personal. GitHub:
+   var WIKI_URL (=APP_URL demo) + secret CALENDAR_WORKER_TOKEN (pokud MCP neumí secrets → workflow_dispatch/ruční
+   volání /api/kalendar/fronta s Bearer). Pak create_deployment gitSource github ref=claude/oprava-kalendare-a-
+   prehled-ucasti target=production (projekt zbc-vzdelavani-demo). Rollback: promote dpl_DVApGnJwmapSmAnP44rLysRnd6zH.
+3. Živé E2E (kap. 6 docs/report-zive-overeni-pr97.md, scripts/overeni-kalendare-google.ts --sledovat=N).
+4. Report (8 kategorií) + popis PR #97 (oprav odkaz session v patičce), finální testy, report vlastníkovi na konci.
 
-## Stav
-HEAD f1c1cb3 (beze změn kódu v relaci 112). Workflow referencí run 46172197766 (větev reference-vizual/pr97-menu)
-běžel od 17:45 UTC; po doběhnutí převzít snímky dle úkolu 1. Celá sada e2e/vitest po změně menu ještě NEběžela.
-PR body: oprav odkaz session v patičce (překlep).
-
-## Zjištění relace 112 (pro úkol 2–3, neověřovat znovu)
-- Vercel Production demo (zbc-vzdelavani-demo.vercel.app) běží z `main` (fa5e67f, PR #96), NE z PR #97. Production
-  env: CALENDAR_MODE/LOGIN_MODE=google-test, CALENDAR_ATTENDEES=audience, PARTICIPATION=on, CALENDAR_DELIVERY
-  (encrypted, hodnota neznámá), APPROVED_MIGRATIONS do 0019, FEEDBACK_WEBHOOK_URL (Make hook eu1) + SECRET.
-  CHYBÍ CRON_SECRET a CALENDAR_WORKER_TOKEN (čte `src/server/config.ts:195`).
-- Preview env: CALENDAR_MODE=simulation, WIKI_MODE=demo, vlastní DB proměnné, GOOGLE_* existují (OAuth redirect na
-  preview URL neověřen). Nejčistší živý test PR #97 = nasadit větev na Production demo (create_deployment
-  gitSource ref=claude/oprava-kalendare-a-prehled-ucasti, target production), doplnit APPROVED_MIGRATIONS o
-  migrace PR #97 (zjistit v `src/server/db/migrations.ts`), CRON_SECRET+CALENDAR_WORKER_TOKEN (sensitive,
-  vygenerovat `openssl rand -hex 32`, nevypisovat), CALENDAR_DELIVERY=personal. Rollback = promote dpl_DVApGnJwmapSmAnP44rLysRnd6zH.
-  Před tím přes Neon run_sql ověřit uživatele (jen testovací účty → audience bezpečné).
-- Neon projekt id `still-shadow-86247101` (výchozí větev = demo produkce).
-- Plánovač `kalendar-fronta.yml` čte vars.WIKI_URL, secrets.CALENDAR_WORKER_TOKEN, vars.CALENDAR_QUEUE_SCHEDULER;
-  schedule běží jen z default větve (ověřit, zda soubor je na main; jinak workflow_dispatch / ruční volání).
-- Výpis env Vercelu je obří: filtrovat v pythonu, nevypisovat celý.
+## Zjištění relace 113 (neověřovat znovu)
+- PR #97 nepřidává migrace (poslední 0019). Demo DB (Neon still-shadow-86247101, neondb) má v schema_migrations
+  jen do 0015 (17 řádků) → 0016–0019 se aplikují až při nasazení (APPROVED_MIGRATIONS je obsahuje).
+- DB: 5 users @example.invalid (fiktivní seed) + 2 Google identity (gmail.com; role organizer a member),
+  integration_credentials google-calendar = 1 (sdílený kalendář organizátora), personal_calendars = 0.
+- Osobní doručení potřebuje grant scope calendar.app.created, který vzniká JEN při přihlášení Googlem v aplikaci
+  (savePersonalGrant). Přihlášení = pozvánka + Google OAuth; bez hesel test. účtů to sám neuděláš →
+  NEPŘEKONATELNÉ: po nasazení požádat vlastníka (odkaz na demo URL, přihlásit se oběma test. účty a povolit
+  Kalendář; proč: vyžaduje interaktivní souhlas Google účtu). Mezitím testovat co jde bez nich (fronta/worker,
+  sdílený kalendář přes uloženou credential, duplicity, stavy fronty).
+- Production env: LOGIN/CALENDAR_MODE=google-test, WIKI_MODE=production, CALENDAR_ATTENDEES=audience,
+  PARTICIPATION=on, CALENDAR_PERSONAL_NOTIFY (encrypted), BOOTSTRAP_ADMIN_EMAILS (encrypted). CRON_SECRET a
+  CALENDAR_WORKER_TOKEN stále CHYBÍ (relace 113 je nevytvořila).
+- Výpis env přes filter_project_envs uložit do souboru a filtrovat pythonem (json['result']['envs']).
+- `kalendar-fronta.yml` čte vars.WIKI_URL, secrets.CALENDAR_WORKER_TOKEN, vars.CALENDAR_QUEUE_SCHEDULER; schedule
+  běží jen z default větve (main) → pro PR #97 workflow_dispatch nebo ruční volání endpointu.
 
 ## Technika
 - NEPOUŽÍVAT prettier. `npm ci`, `npx next build`. Playwright si server spouští sám.
