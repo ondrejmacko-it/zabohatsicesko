@@ -1,4 +1,4 @@
-# Navazující relace (stav 28. 11. 2026, relace 115)
+# Navazující relace (stav 28. 11. 2026, relace 116)
 
 Cíl: dokončit PR #97, ověřit skutečnou funkčnost (živý Google Kalendář), připravit bezpečné ostré nasazení.
 Plné zadání vlastníka (body 1–11) je v promptu navazující relace; drž se ho. Bez merge do main, bez produkčního
@@ -39,22 +39,29 @@ E. Ruční volání /api/kalendar/fronta ≠ důkaz plánovače. Ověř obě vě
 F. Po uvolnění limitu: jedno ucelené ověřené nasazení (nejdřív lokální testy, nepushovat drobnosti zbytečně),
    pak všechny živé testy, opravy, dokumentace, finální kontrola.
 
-## Stav bodů A–F (relace 115, HEAD 2c965ac + předávka)
-- A HOTOVO v kódu: vercel.json `git.deploymentEnabled {"claude/gallant-knuth-ydgzxz": false}` (docs: při více
-  shodách stačí jedno true → nasadí se; nepasující větve se nasazují). PR větev nechána zapnutá (1 preview/push).
-  commandForIgnoringBuildStep NEpoužit (ignorovaný build stále vytváří nasazení a platil by i pro ruční deploy).
-  Neověřeno: že create_deployment API vypnutí neovlivní (podle docs se týká jen Git pushů) → ověř v F.
-  Pushnuto JEN na gallant (vypnutá) – na PR větev pushni až s F (vytvoří 1 preview).
-- B HOTOVO v kódu: endpoint přijímá GitHub OIDC (src/server/calendar/worker-auth.ts, tests/kalendar-oidc.test.ts
-  10/10 zelených, tsc+eslint OK); workflow má id-token: write, audience zbc-kalendar-fronta. ZBÝVÁ: nastavit
-  Vercel Production env CALENDAR_WORKER_OIDC_REPOSITORY=ondrejmacko-it/zabohatsicesko (nesecretní, plain)
-  a GitHub var WIKI_URL (zjisti, jestli existuje). GitHub secret už není nutný. Schedule běží jen z main →
-  do nasazení/merge ověřit jen ručním workflow_dispatch na PR větvi (actions_run_trigger).
-- C, D, E: NEZAČATO. Pak F (limit Vercelu do ~29. 11. 18:20 UTC) a úkoly 3–4 níže.
-- Celou sadu testů (vitest s DB, e2e) před F spustit jednou.
+## Stav bodů A–F (relace 116, HEAD viz git log)
+- A HOTOVO v kódu (vercel.json deploymentEnabled gallant=false). Neověřeno: create_deployment API tím
+  neovlivněno → ověř v F. Na gallant pushováno, na PR větev NE (push tam = 1 preview).
+- B HOTOVO: OIDC v endpointu (worker-auth.ts, workflow id-token: write). Vercel Production env
+  CALENDAR_WORKER_OIDC_REPOSITORY=ondrejmacko-it/zabohatsicesko NASTAVENO (plain). GitHub var WIKI_URL přes MCP
+  nejde → workflow má výchozí `vars.WIKI_URL || 'https://zbc-vzdelavani-demo.vercel.app'` (344f876).
+  OIDC přijímá workflow z jakékoli větve (kontrola repository + workflow_ref) → GitHub plánovač ověřit
+  `actions_run_trigger` workflow_dispatch kalendar-fronta.yml ref=claude/oprava-kalendare-a-prehled-ucasti.
+- C NEPROVEDITELNÉ lokálně: TOKEN_ENCRYPTION_KEY a GOOGLE_OAUTH_CLIENT_SECRET jsou ve Vercelu `sensitive`
+  (API je nevrátí), bez nich nejde dešifrovat refresh token z demo DB ani obnovit access token. Google API
+  z kontejneru dosažitelné, *.vercel.app proxy blokuje (403) → nasazenou app volat přes Vercel MCP
+  (web_fetch_vercel_url / get_runtime_logs). Živý test Google jen na nasazení (F). Do reportu uvést.
+- D OVĚŘENO v kódu: každá akce měnící kalendář volá `after(() => syncEvent/syncPublished/syncParticipation/
+  syncPending)` (features/vzdelavani/actions.ts, sprava/actions.ts, oba OAuth callbacky); personal režim
+  synchronizuje hned. Worker (visit/cron/GitHub) jen dohání neúspěchy. Žádná oprava nebyla nutná.
+- E ZJIŠTĚNO: schedule na main běží reálně po 5–9 h (GitHub throttling, běhy 22:48, 04:19, 13:14 UTC) a
+  dosud nic nevolá (log 46148649291: WIKI_URL i TOKEN prázdné; main nemá OIDC) → začne fungovat až po merge.
+  Vercel cron 17 5 * * * (Hobby = 1×/den) ověřit v F přes calendar_worker_runs (source cron) / runtime logs.
+- Kontroly na 344f876: eslint 0, tsc 0, vitest 678/678; build + e2e: VYSLEDEK_E2E.
+- F: limit Vercelu podle relace 114 do ~29. 11. 18:20 UTC (nezkoušeno). Po něm create_deployment (viz úkol 2),
+  pak push gallant→PR větev, živé testy, report.
 
 ## Úkoly (pořadí)
-1. HOTOVO: CI PR #97 zelené na ff5b12f (Kontrola kódu + bezpečnosti).
 2. ČÁSTEČNĚ (relace 114): Vercel Production env nastaveno – CRON_SECRET a CALENDAR_WORKER_TOKEN (sensitive,
    hodnoty nikde neuložené mimo Vercel; pro ruční volání /api/kalendar/fronta je potřeba nový token → vygeneruj
    nový a upsertni ho, starý se tím nahradí), CALENDAR_DELIVERY=personal. BLOKUJE: create_deployment vrací 402
@@ -69,8 +76,7 @@ F. Po uvolnění limitu: jedno ucelené ověřené nasazení (nejdřív lokáln�
 4. Report (8 kategorií) + popis PR #97 (oprav odkaz session v patičce), finální testy, report vlastníkovi na konci.
 
 ## Zjištění relace 113 (neověřovat znovu)
-- PR #97 nepřidává migrace (poslední 0019). Demo DB (Neon still-shadow-86247101, neondb) má v schema_migrations
-  jen do 0015 (17 řádků) → 0016–0019 se aplikují až při nasazení (APPROVED_MIGRATIONS je obsahuje).
+- Demo DB má migrace jen do 0015, 0016–0019 se aplikují při nasazení (APPROVED_MIGRATIONS).
 - DB: 5 users @example.invalid (fiktivní seed) + 2 Google identity (gmail.com; role organizer a member),
   integration_credentials google-calendar = 1 (sdílený kalendář organizátora), personal_calendars = 0.
 - Osobní doručení potřebuje grant scope calendar.app.created, který vzniká JEN při přihlášení Googlem v aplikaci
@@ -78,12 +84,7 @@ F. Po uvolnění limitu: jedno ucelené ověřené nasazení (nejdřív lokáln�
   NEPŘEKONATELNÉ: po nasazení požádat vlastníka (odkaz na demo URL, přihlásit se oběma test. účty a povolit
   Kalendář; proč: vyžaduje interaktivní souhlas Google účtu). Mezitím testovat co jde bez nich (fronta/worker,
   sdílený kalendář přes uloženou credential, duplicity, stavy fronty).
-- Production env: LOGIN/CALENDAR_MODE=google-test, WIKI_MODE=production, CALENDAR_ATTENDEES=audience,
-  PARTICIPATION=on, CALENDAR_PERSONAL_NOTIFY (encrypted), BOOTSTRAP_ADMIN_EMAILS (encrypted). CRON_SECRET a
-  CALENDAR_WORKER_TOKEN stále CHYBÍ (relace 113 je nevytvořila).
 - Výpis env přes filter_project_envs uložit do souboru a filtrovat pythonem (json['result']['envs']).
-- `kalendar-fronta.yml` čte vars.WIKI_URL, secrets.CALENDAR_WORKER_TOKEN, vars.CALENDAR_QUEUE_SCHEDULER; schedule
-  běží jen z default větve (main) → pro PR #97 workflow_dispatch nebo ruční volání endpointu.
 
 ## Technika
 - NEPOUŽÍVAT prettier. `npm ci`, `npx next build`. Playwright si server spouští sám.
