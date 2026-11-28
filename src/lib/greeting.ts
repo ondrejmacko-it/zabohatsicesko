@@ -32,10 +32,12 @@ const VOCATIVE: Record<string, string> = {
  * (zatím se nikde neukládá, viz docs/dalsi-session.md); má přednost před slovníkem.
  */
 export function vocativeName(fullName: string | null | undefined, preferred?: string | null): string | null {
-  const own = preferred?.trim();
+  const own = preferred?.normalize("NFC").trim();
   if (own) return own.slice(0, 40);
-  const first = (fullName ?? "").trim().split(/\s+/)[0] ?? "";
-  return VOCATIVE[first] ?? null;
+  const first = (fullName ?? "").normalize("NFC").trim().split(/\s+/)[0] ?? "";
+  // „ANNA“ i „anna“ z importu účtů patří ke stejnému jménu; klíč slovníku je s velkým počátečním písmenem.
+  const key = first.charAt(0).toLocaleUpperCase("cs") + first.slice(1).toLocaleLowerCase("cs");
+  return VOCATIVE[key] ?? null;
 }
 
 /** Pozdrav na Úvodu: „Ahoj, Anno“, u neznámého tvaru jen „Ahoj“. */

@@ -8,13 +8,15 @@ const ITEMS = [
   { href: "/vzdelavani/zapisy", label: "Zápisy", also: [] },
   { href: "/vzdelavani/temata", label: "Témata", also: [] },
 ];
+const ATTENDANCE = { href: "/vzdelavani/ucast", label: "Účast", also: [] };
 
-export function SubNav() {
+export function SubNav({ showAttendance = false }: { showAttendance?: boolean }) {
   const pathname = usePathname();
+  const items = showAttendance ? [...ITEMS, ATTENDANCE] : ITEMS;
   return (
     <nav aria-label="Vzdělávání">
       <ul className="pill-nav">
-        {ITEMS.map((item) => {
+        {items.map((item) => {
           const active = [item.href, ...item.also].some((prefix) => pathname.startsWith(prefix));
           return (
             <li key={item.href}>

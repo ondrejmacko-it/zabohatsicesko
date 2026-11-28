@@ -23,22 +23,36 @@ jobs:
     steps:
       - name: Zavolat Wiki
         env:
+          SCHEDULER: ${{ vars.CALENDAR_QUEUE_SCHEDULER }}
           WIKI_URL: ${{ vars.WIKI_URL }}
           TOKEN: ${{ secrets.CALENDAR_WORKER_TOKEN }}
           # Jen pro preview za ochranou Vercel Authentication (Protection Bypass for Automation), jinak prázdné.
           BYPASS: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
         run: |
-          if [ -z "$WIKI_URL" ] || [ -z "$TOKEN" ]; then
-            echo "Plánovač není nastavený (WIKI_URL nebo CALENDAR_WORKER_TOKEN chybí), nic se nevolá."
+          # Záměrné vypnutí je proměnná repa CALENDAR_QUEUE_SCHEDULER=off: běh skončí úspěchem s poznámkou.
+          # Bez ní chybějící WIKI_URL nebo CALENDAR_WORKER_TOKEN je chyba konfigurace a běh selže (K1/K8),
+          # aby výpadek plánovače nezůstal schovaný za zelenými běhy.
+          if [ "$SCHEDULER" = "off" ]; then
+            echo "::notice::Plánovač je záměrně vypnutý (CALENDAR_QUEUE_SCHEDULER=off), nic se nevolá."
             exit 0
+          fi
+          missing=()
+          [ -n "$WIKI_URL" ] || missing+=("proměnná WIKI_URL")
+          [ -n "$TOKEN" ] || missing+=("secret CALENDAR_WORKER_TOKEN")
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Plánovač není nastavený, chybí: ${missing[*]}. Doplň je v Settings → Secrets and variables → Actions, nebo plánovač záměrně vypni proměnnou CALENDAR_QUEUE_SCHEDULER=off."
+            exit 1
           fi
           # Tělo odpovědi se nevypisuje, log nese jen stavový kód.
           bypass=()
           [ -z "$BYPASS" ] || bypass=(-H "x-vercel-protection-bypass: $BYPASS")
           code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 90 --retry 2 --retry-delay 20 \
-            -X POST -H "Authorization: Bearer $TOKEN" "${bypass[@]}" "${WIKI_URL%/}/api/kalendar/fronta")
+            -X POST -H "Authorization: Bearer $TOKEN" "${bypass[@]}" "${WIKI_URL%/}/api/kalendar/fronta") || true
           echo "HTTP $code"
-          [ "$code" = "200" ]
+          if [ "$code" != "200" ]; then
+            echo "::error::Endpoint fronty vrátil HTTP $code (401 = neplatný token, 404/000 = špatná WIKI_URL nebo nedostupná Wiki, 5xx = chyba zpracování)."
+            exit 1
+          fi
 
   udrzet-zapnuty:
     # GitHub vypne plánované workflow veřejného repa po 60 dnech bez aktivity. Jednou denně ho

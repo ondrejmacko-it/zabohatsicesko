@@ -45,6 +45,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   // pozvánky patří přihlášenému, v náhledu se nenačítají.
   const preview = await currentPreview(user);
   const salutation = preview ? null : await getSalutation(user.id);
+  // V náhledu za kolegu pozdrav použije jeho vlastní uloženou podobu oslovení, u skupiny žádnou.
+  const previewSalutation = preview?.personName ? await getSalutation(preview.viewer.id) : null;
   const viewer = preview?.viewer ?? user;
   const planner = canPlan(viewer);
   const [upcomingCandidates, initial, own, monthCards, invitations] = await Promise.all([
@@ -85,7 +87,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       {/* Pozdrav patří tomu, čí pohled stránka ukazuje: v náhledu kolegovi, v náhledu skupiny bez jména (F16).
           Jméno se do snímku zpětné vazby nedostane, hlášení jméno záměrně neposílá. */}
       <h1>
-        <span data-feedback-redact="">{greeting(preview ? preview.personName : user.name, preview ? null : salutation)}</span>.
+        <span data-feedback-redact="">{greeting(preview ? preview.personName : user.name, preview ? previewSalutation : salutation)}</span>.
       </h1>
       {/* Oslovení se mění v menu Účet; sem se vrátí jen chybné uložení, aby bylo vidět, co opravit. */}
       {salutationsEnabled() && !preview && salutationError && <SalutationForm current={salutation} error inputId="osloveni-oprava" />}

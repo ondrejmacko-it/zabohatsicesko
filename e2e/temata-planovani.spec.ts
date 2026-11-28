@@ -514,11 +514,12 @@ test.describe("Témata očima účastníka", () => {
     await expect(page.getByRole("button", { name: "Seřadit podle zájmu" })).toHaveCount(0);
     await expect(page.getByText("zatím neproběhlo")).toHaveCount(0);
     await expect(page.getByText(/termín se potvrzuje/i)).toHaveCount(0);
-    // Všechna nearchivovaná témata jsou dostupná všem; „Pro mou roli“ (výchozí) ukáže jen témata FP.
-    await expect(page.getByRole("link", { name: "Pro mou roli", exact: true })).toHaveAttribute("aria-current", "page");
+    // Všechna nearchivovaná témata jsou dostupná všem; „Všechna“ je výchozí, „Pro mou roli“ ukáže jen témata FP.
+    await expect(page.getByRole("link", { name: "Všechna", exact: true })).toHaveAttribute("aria-current", "page");
+    await expect(page.getByText("Návaznost po konzultaci").first()).toBeVisible();
+    await page.getByRole("link", { name: "Pro mou roli", exact: true }).click();
     await expect(page.getByText("Návaznost po konzultaci")).toHaveCount(0);
     await page.getByRole("link", { name: "Všechna", exact: true }).click();
-    await expect(page.getByText("Návaznost po konzultaci").first()).toBeVisible();
     // Jména zájemců ani správu kolega nevidí ani ve „Všechna“.
     await expect(page.getByRole("button", { name: /^Možnosti tématu/ })).toHaveCount(0);
   });

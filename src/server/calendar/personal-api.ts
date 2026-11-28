@@ -15,13 +15,17 @@ export const PERSONAL_CALENDAR_NAME = "Vzdělávání ZBC";
 /** Barva kalendáře v Google Kalendáři: tmavě zelená Wiki, bílý text. */
 const CALENDAR_COLORS = { backgroundColor: "#1f6f5c", foregroundColor: "#ffffff" } as const;
 /**
- * Výchozí připomínky kalendáře: e-mail den předem a oznámení 30 minut předem. E-mail o změně, kterou
+ * Připomínky každé akce i výchozí připomínky kalendáře: e-mail 7 dní a 1 den předem, oznámení 60, 30
+ * a 10 minut předem. Google dovolí nejvýš 5 připomínek, víc jich tu proto být nesmí. E-mail o změně, kterou
  * zapíše aplikace tokenem samotného uživatele, Google neposílá (změnu „udělal“ on sám). Připomínky
  * a ranní přehled („agenda“) Google posílá vždy, proto jsou hlavní cestou, jak se o akci dozvědět.
  */
 export const DEFAULT_REMINDERS = [
+  { method: "email", minutes: 7 * 24 * 60 },
   { method: "email", minutes: 24 * 60 },
+  { method: "popup", minutes: 60 },
   { method: "popup", minutes: 30 },
+  { method: "popup", minutes: 10 },
 ] as const;
 export const NOTIFICATIONS = ["eventCreation", "eventChange", "eventCancellation", "agenda"].map((type) => ({ type, method: "email" }));
 
@@ -235,6 +239,22 @@ export class PersonalCalendarApi {
     if (result.status === 200) return "ok";
     if (result.status === 404) return "calendar_missing";
     throw new CalendarError("calendar_unavailable", true);
+  }
+
+  /** Jen čtení: nezrušené události kalendáře. Používá skript živého ověření, ne synchronizace. */
+  async listEvents(calendarId: string): Promise<Array<{ id: string; status?: string; summary?: string; start?: { dateTime?: string }; end?: { dateTime?: string } }>> {
+    type Page = { items?: Array<{ id: string }>; nextPageToken?: string };
+    const items: Array<{ id: string }> = [];
+    let pageToken: string | undefined;
+    do {
+      const { status, body } = await this.request("GET", `/calendars/${encodeURIComponent(calendarId)}/events`, {
+        query: { maxResults: "250", showDeleted: "false", ...(pageToken ? { pageToken } : {}) },
+      });
+      if (status !== 200) throw new CalendarError("calendar_unavailable", true);
+      items.push(...((body as Page).items ?? []));
+      pageToken = (body as Page).nextPageToken;
+    } while (pageToken);
+    return items;
   }
 
   /** Smaže událost. Už smazaná (404, 410) je v pořádku. */

@@ -1,6 +1,6 @@
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { audit } from "@/server/audit";
-import { config, now, participationEnabled } from "@/server/config";
+import { config, now, participationEnabled, personalDelivery } from "@/server/config";
 import { getDb, type Executor } from "@/server/db/client";
 import { calendarLinks, eventParticipation, events, users } from "@/server/db/schema";
 import {
@@ -18,6 +18,7 @@ import type { PlanPreview } from "@/server/services/preview";
 import type { ExcuseReason } from "@/lib/types";
 import type { OwnCalendar } from "@/lib/calendar-note";
 import { ownCalendarState } from "@/server/calendar/attendees";
+import { requestPersonalSync } from "@/server/calendar/personal";
 import { DomainError } from "@/server/services/errors";
 
 // Serverová vrstva individuální účasti. Stránky a akce formuláře ji volají jen se zapnutým přepínačem
@@ -90,6 +91,9 @@ export async function changeOwnParticipation(viewer: Viewer, eventId: string, ch
           .update(calendarLinks)
           .set({ syncStatus: "pending", attempts: 0, errorCode: null, updatedAt: new Date() })
           .where(and(eq(calendarLinks.eventId, eventId), eq(calendarLinks.syncStatus, "synced")));
+        // Trvalý požadavek na srovnání osobního kalendáře ve stejné transakci jako změna účasti: okamžitý
+        // běh po odpovědi (`after`) není jediný mechanismus, frontu dožene i worker a další spouštěče.
+        if (personalDelivery()) await requestPersonalSync(tx, [viewer.id]);
       }
     }
 

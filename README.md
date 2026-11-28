@@ -42,6 +42,7 @@ serveru) nebo tlačítkem *Vzdělávání → Integrace → Obnovit ukázková d
 | `npm run lint` · `npm run typecheck` | ESLint a TypeScript |
 | `npm test` | Testy (vitest): správa uživatelů, přístupy, plán a revize, Kalendář, přihlášení Google, témata, nahrávky, čas a session |
 | `npm run e2e` | Playwright nad produkčním buildem: 4 role, všechny stránky a okna, klávesnice, axe, ostrá Wiki s falešnými hodnotami Google. Desktop Windows (1280, 1920), macOS (1440×900, 1512×982, Retina, user agent Safari a Chrome) a telefony (390, 360, 320). Vykresluje Chromium, skutečné Safari viz [docs/overeni-mac.md](docs/overeni-mac.md). `E2E_SKIP_BUILD=1` přeskočí build. |
+| `npm run e2e:vizual` | Vizuální regrese (CI): Úvod, Plán, Témata, detail akce a Účast ve 390, 1024 a 1440 px proti referencím v `e2e/vizualni.spec.ts-snapshots` (Linux, Chromium, čistý seed, pevný čas ze seedu). Po záměrné změně vzhledu `npm run e2e:vizual -- --update-snapshots` na Linuxu a snímky commitnout. Firefox a WebKit: geometrie a přetékání `E2E_WEBKIT=1 npm run e2e -- --project=firefox-1280 --project=webkit-1440 …`, snímky ke kontrole okem `PROHLIZEC=firefox node scripts/vizualni-sada.mjs <repo> <výstup>`. |
 | `npm run build` | Produkční build (vyžaduje `SESSION_SECRET` a `DEMO_ACCESS_CODE`) |
 | `npm run db:migrate` · `npm run db:reset` | Migrace a seed, nebo obnova ukázkových dat |
 

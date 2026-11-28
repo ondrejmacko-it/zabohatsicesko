@@ -15,6 +15,11 @@ export function SalutationForm({ current, error, inputId = "osloveni" }: { curre
             aria-invalid={error || undefined} aria-describedby={`${inputId}-napoveda`} />
           <button className="btn btn-small btn-primary" type="submit">Uložit</button>
         </div>
+        {current && (
+          <button className="btn btn-small" type="submit" name="vratit" value="1" formNoValidate>
+            Vrátit podle jména
+          </button>
+        )}
         <p id={`${inputId}-napoveda`} className={error ? "form-error" : "small muted"}>
           {error ? "Použij jen písmena, mezeru nebo spojovník, nejvýš 40 znaků." : "Prázdné pole vrátí oslovení podle jména."}
         </p>

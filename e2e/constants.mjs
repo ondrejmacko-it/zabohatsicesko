@@ -5,6 +5,7 @@ export const LIVE_PORT = 3311;
 export const UCAST_PORT = 3313;
 // HTTPS před ukázkou jen pro WebKit (E2E_WEBKIT=1), viz e2e/server.mjs.
 export const DEMO_TLS_PORT = 3410;
+export const UCAST_TLS_PORT = 3413;
 // Falešný webhook Make.com pro zpětnou vazbu (e2e/server.mjs). Přijímá jen na 127.0.0.1.
 export const FEEDBACK_HOOK_PORT = 3312;
 export const FEEDBACK_HOOK_SECRET = "e2e-jen-test-feedback-secret-00000000";

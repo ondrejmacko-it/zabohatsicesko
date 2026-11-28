@@ -87,6 +87,14 @@ export async function settle(page: Page) {
   await page.waitForLoadState("networkidle");
 }
 
+/** Hlavní navigace. Na telefonu je sbalená pod tlačítkem Menu, helper ji rozbalí (na širším okně nic nedělá). */
+export async function openMainMenu(page: Page) {
+  const nav = page.getByRole("complementary", { name: "Hlavní navigace" });
+  const toggle = nav.getByRole("button", { name: /^Menu/ });
+  if ((await toggle.isVisible()) && (await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
+  return nav;
+}
+
 /** Vybere možnost v Comboboxu `selectOnly` (náhrada <select>) podle hodnoty nebo zobrazeného názvu. */
 export async function chooseOption(scope: Locator, field: string | RegExp, option: { value: string } | { label: string }) {
   const input = scope.getByRole("combobox", { name: field });

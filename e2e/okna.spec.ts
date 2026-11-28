@@ -267,6 +267,8 @@ test.describe("okna správce", () => {
   test("Správa: Přidat přístup a menu účtu", async ({ page }) => {
     await page.goto("/sprava");
     await settle(page);
+    // Funkční barvy: přidání přístupu zelená plocha (--ok), odebrání červený text v menu (--danger).
+    await expect(page.getByRole("button", { name: "Přidat přístup" })).toHaveCSS("background-color", "rgb(47, 107, 72)");
     await page.getByRole("button", { name: "Přidat přístup" }).click();
     await checkDialog(page, /./);
     await page.getByRole("button", { name: /Možnosti účtu Vedoucí akce/ }).click();
@@ -274,6 +276,9 @@ test.describe("okna správce", () => {
     const items = page.locator(".menu-list:not([hidden]) .btn");
     await expect(items.first()).toHaveText("Upravit přístup…");
     await expect(items.last()).toHaveText("Odebrat přístup…");
+    await expect(items.last()).toHaveCSS("color", "rgb(179, 38, 30)");
+    await expect(items.last()).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+    await expect(items.first()).not.toHaveCSS("color", "rgb(179, 38, 30)");
     await expectNoHorizontalScroll(page);
     await page.keyboard.press("Escape");
   });

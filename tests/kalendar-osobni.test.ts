@@ -123,7 +123,7 @@ describe("osobní kalendář", () => {
     for (const w of writes) {
       expect(w.url.searchParams.get("sendUpdates")).toBe("none");
       expect((w.body as { attendees?: unknown }).attendees).toBeUndefined();
-      if (w.method !== "DELETE") expect((w.body as { reminders: unknown }).reminders).toEqual({ useDefault: false, overrides: [{ method: "email", minutes: 1440 }, { method: "popup", minutes: 30 }] });
+      if (w.method !== "DELETE") expect((w.body as { reminders: unknown }).reminders).toEqual({ useDefault: false, overrides: [{ method: "email", minutes: 10080 }, { method: "email", minutes: 1440 }, { method: "popup", minutes: 60 }, { method: "popup", minutes: 30 }, { method: "popup", minutes: 10 }] });
     }
     expect(await needsPersonalCalendar(db, participant.id)).toBe(false);
     // Druhý běh bez změn nic nezapisuje, jen obnoví token (pozná tak odvolání přístupu).

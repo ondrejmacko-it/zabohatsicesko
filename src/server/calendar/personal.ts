@@ -2,10 +2,11 @@ import { createHash } from "node:crypto";
 import { and, eq, gt, inArray, isNotNull, isNull, lt, ne, or, sql } from "drizzle-orm";
 import type { EventSnapshot } from "@/lib/types";
 import { audit, logError } from "@/server/audit";
-import { config, googleCalendarConfig, personalDelivery, personalSelfInvite, tokenEncryptionKey } from "@/server/config";
+import { config, googleCalendarConfig, participationEnabled, personalDelivery, personalSelfInvite, tokenEncryptionKey } from "@/server/config";
 import type { Db, Executor } from "@/server/db/client";
-import { calendarLinks, events, minutes, personalCalendarEntries, personalCalendars, recordings, users, type PersonalCalendarStatus } from "@/server/db/schema";
+import { calendarLinks, eventParticipation, events, minutes, personalCalendarEntries, personalCalendars, recordings, users, type PersonalCalendarStatus } from "@/server/db/schema";
 import { openSecret, sealSecret } from "@/server/integrations/secret-box";
+import { participationState, type Participant, type ParticipationRecord } from "@/server/domain/participation";
 import { eventIdForKey } from "./google";
 import { revokeToken, type FetchLike } from "./google-auth";
 import { PersonalCalendarApi } from "./personal-api";
@@ -143,14 +144,9 @@ export async function requestPersonalSync(db: Executor, userIds?: readonly strin
     .where(userIds ? and(where, inArray(personalCalendars.userId, [...userIds])) : where);
 }
 
-/**
- * Je co dohánět? Aktivní kalendář po přechodné chybě, se změnou novější než poslední zápis, ještě nikdy
- * nezapsaný, nebo kalendář účtu, který už není aktivní (úklid). Jeden levný dotaz bez volání Googlu,
- * proto ho smí položit každé otevření Úvodu.
- */
-export async function personalSyncNeeded(db: Executor): Promise<boolean> {
-  if (!personalDelivery()) return false;
-  const [row] = await db
+/** Kalendáře, které je potřeba srovnat (výběr pro `personalSyncNeeded` i plánovač). */
+const dueQuery = (db: Executor) =>
+  db
     .select({ userId: personalCalendars.userId })
     .from(personalCalendars)
     .leftJoin(users, eq(users.id, personalCalendars.userId))
@@ -174,17 +170,36 @@ export async function personalSyncNeeded(db: Executor): Promise<boolean> {
           ne(users.status, "active"),
         ),
       ),
-    )
-    .limit(1);
+    );
+
+/**
+ * Je co dohánět? Aktivní kalendář po přechodné chybě, se změnou novější než poslední zápis, ještě nikdy
+ * nezapsaný, nebo kalendář účtu, který už není aktivní (úklid). Jeden levný dotaz bez volání Googlu,
+ * proto ho smí položit každé otevření Úvodu.
+ */
+export async function personalSyncNeeded(db: Executor): Promise<boolean> {
+  if (!personalDelivery()) return false;
+  const [row] = await dueQuery(db).limit(1);
   return Boolean(row);
 }
 
 /**
+ * Srovná jen kalendáře, které to potřebují (stejný výběr jako `personalSyncNeeded`). Pro plánovač:
+ * opakování po chybě a změny čekající ve frontě se doženou i bez návštěvy Wiki. Vrací, kolik jich zbývá.
+ */
+export async function syncDuePersonalCalendars(db: Db, deps: PersonalDeps = {}): Promise<number> {
+  if (!personalDelivery()) return 0;
+  const rows = await dueQuery(db);
+  for (const row of rows) await syncPersonalCalendar(db, row.userId, deps);
+  return (await dueQuery(db)).length;
+}
+
+/**
  * Verze podoby zapsané akce. Zvýšení přepíše všechny akce v kalendářích a znovu zkusí nastavení kalendáře
- * (2 = připomínky přímo v akci, 3 = oprava nastavení kalendáře po 401 na `calendarList.patch`). Kalendář si pamatuje verzi v `event_format`, `personalSyncNeeded` podle ní
+ * (2 = připomínky přímo v akci, 3 = oprava nastavení kalendáře po 401 na `calendarList.patch`, 4 = pět připomínek 7 d / 1 d / 60 / 30 / 10 min). Kalendář si pamatuje verzi v `event_format`, `personalSyncNeeded` podle ní
  * pozná, že po nasazení je co přepisovat.
  */
-export const EVENT_FORMAT = 3;
+export const EVENT_FORMAT = 4;
 const hashOf = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex").slice(0, 32);
 export const personalEventId = (eventId: string) => eventIdForKey(`personal:${config.orgId}:${eventId}`);
 
@@ -209,8 +224,12 @@ function desiredEntry(eventId: string, snapshot: EventSnapshot, withMinutes: boo
   return { data, hash: hashOf({ v: EVENT_FORMAT, g: guest ?? null, s: data.summary, d: data.description, a: data.startsAt, b: data.endsAt }) };
 }
 
-/** Akce, které mají být v kalendáři uživatele: zveřejněné, nezrušené, ne svátky, z jeho skupin, nedávné a budoucí. */
-async function desiredEvents(db: Executor, groups: readonly string[], since: Date, guest: string | undefined) {
+/**
+ * Akce, které mají být v kalendáři uživatele: zveřejněné, nezrušené, ne svátky, nedávné a budoucí, a podle
+ * pravidel účasti (`participationState`) povinné bez omluvy nebo dobrovolně přihlášené. Bez zapnuté účasti
+ * (a tedy bez čtení `event_participation`) rozhoduje jen povinnost podle rolí a publika.
+ */
+async function desiredEvents(db: Executor, userId: string, person: Participant, since: Date, guest: string | undefined) {
   const rows = await db
     .select({ id: events.id, published: events.published })
     .from(events)
@@ -222,11 +241,22 @@ async function desiredEvents(db: Executor, groups: readonly string[], since: Dat
         gt(sql`(${events.published}->>'endsAt')::timestamptz`, sql`${since.toISOString()}::timestamptz`),
       ),
     );
+  const records = participationEnabled()
+    ? new Map<string, ParticipationRecord>(
+        (
+          await db
+            .select({ eventId: eventParticipation.eventId, kind: eventParticipation.kind, excuseReason: eventParticipation.excuseReason })
+            .from(eventParticipation)
+            .where(and(eq(eventParticipation.orgId, config.orgId), eq(eventParticipation.userId, userId)))
+        ).map((r) => [r.eventId, { kind: r.kind, excuseReason: r.excuseReason }]),
+      )
+    : new Map<string, ParticipationRecord>();
   const withMinutes = await eventsWithMinutes(db);
   const wanted = new Map<string, ReturnType<typeof desiredEntry>>();
   for (const row of rows) {
     const snapshot = row.published as EventSnapshot;
-    if (snapshot.status === "cancelled" || snapshot.type === "holiday" || !groups.includes(snapshot.audience)) continue;
+    const state = participationState(person, snapshot, records.get(row.id) ?? null);
+    if (state !== "required" && state !== "voluntary_enrolled") continue;
     wanted.set(row.id, desiredEntry(row.id, snapshot, withMinutes.has(row.id), guest));
   }
   return wanted;
@@ -302,7 +332,7 @@ export async function syncPersonalCalendar(db: Db, userId: string, deps: Persona
     for (let round = 0; round < MAX_ROUNDS; round += 1) {
       const started = clock();
       const since = new Date(started.getTime() - HISTORY_DAYS * 24 * 3600 * 1000);
-      const wanted = await desiredEvents(db, account.groups, since, guest);
+      const wanted = await desiredEvents(db, userId, account, since, guest);
       const written = new Map(
         (await db.select().from(personalCalendarEntries).where(eq(personalCalendarEntries.userId, userId))).map((e) => [e.eventId, e]),
       );
@@ -362,6 +392,22 @@ export async function syncPersonalCalendar(db: Db, userId: string, deps: Persona
   } finally {
     await db.update(personalCalendars).set({ leaseUntil: null }).where(whereUser(userId));
   }
+}
+
+/**
+ * Jen čtení pro skript živého ověření (`scripts/overeni-kalendare-google.ts`): přístup ke kalendáři uživatele
+ * a akce, které v něm podle Wiki mají být (klíč = ID události u Googlu). Nic nezapisuje.
+ */
+export async function personalCalendarExpectation(db: Db, userId: string) {
+  const [row] = await db.select().from(personalCalendars).where(whereUser(userId)).limit(1);
+  const [account] = await db.select({ status: users.status, groups: users.groups }).from(users).where(and(eq(users.orgId, config.orgId), eq(users.id, userId))).limit(1);
+  if (!row || row.status !== "active" || !row.calendarId || !account) return null;
+  const refreshToken = openSecret(row.encryptedRefreshToken, tokenEncryptionKey(), secretContext(userId));
+  const api = refreshToken ? apiFor(refreshToken, {}) : null;
+  if (!api) return null;
+  const since = new Date(Date.now() - HISTORY_DAYS * 24 * 3600 * 1000);
+  const wanted = await desiredEvents(db, userId, account, since, personalSelfInvite() ? row.accountEmail : undefined);
+  return { api, calendarId: row.calendarId, since, wanted: new Map([...wanted].map(([id, w]) => [personalEventId(id), w.data])) };
 }
 
 /** Synchronizuje všechny, kdo to potřebují, a uklidí kalendáře odebraných účtů. Opakované volání je bezpečné. */

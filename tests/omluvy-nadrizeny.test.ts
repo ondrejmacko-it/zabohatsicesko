@@ -126,9 +126,12 @@ describe("nadřízený pro omluvy (0018)", () => {
     expect(await code(setExcuseManagers(admin, participant.id, [lead.id]))).toBe("invalid_input");
   });
 
-  test("C04: správce nesmí nastavit sám sebe nadřízeným", async () => {
-    expect(await code(setExcuseManagers(admin, participant.id, [admin.id]))).toBe("forbidden");
-    expect(await code(setExcuseManagers(admin, participant.id, [lead.id, admin.id]))).toBe("forbidden");
+  test("správce smí určit nadřízeným sebe, nikdo nesmí být nadřízeným sám sobě", async () => {
+    await setExcuseManagers(admin, participant.id, [lead.id, admin.id]);
+    expect((await listExcuseManagers(admin))?.get(participant.id)?.sort()).toEqual([lead.id, admin.id].sort());
+    expect(await code(setExcuseManagers(admin, admin.id, [admin.id]))).toBe("invalid_input");
+    expect(await code(setExcuseManagers(admin, participant.id, [participant.id]))).toBe("invalid_input");
+    await setExcuseManagers(admin, participant.id, []);
   });
 
   test("C04: deaktivace nadřízeného odebere jeho vazby, C05: vedouci-tymu zůstane", async () => {

@@ -11,11 +11,13 @@ const MAC_SAFARI_UA =
 // ostatních (teardown přihlášení), takže čtecí testy vidí vždy seed a nemusí přijímat víc stavů. Závislost na všech
 // projektech by nešla: Playwright na závislé projekty nepoužije filtr souboru a spustil by celou sadu.
 const TOPIC_WRITES = /@zapis-temat/;
+// Vizuální regrese běží jen ve vlastním projektu „vizual“ (e2e/vizualni.spec.ts).
+const OWN_PROJECT_FILES = /(prihlaseni\.setup|vizualni\.spec)\.ts/;
 
 const desktop = (name: string, width: number, height: number, extra: Project["use"] = {}): Project => ({
   name,
   dependencies: ["prihlaseni"],
-  testIgnore: /prihlaseni\.setup\.ts/,
+  testIgnore: OWN_PROJECT_FILES,
   grepInvert: TOPIC_WRITES,
   use: { ...devices["Desktop Chrome"], viewport: { width, height }, ...extra },
 });
@@ -23,7 +25,7 @@ const desktop = (name: string, width: number, height: number, extra: Project["us
 const phone = (name: string, width: number): Project => ({
   name,
   dependencies: ["prihlaseni"],
-  testIgnore: /prihlaseni\.setup\.ts/,
+  testIgnore: OWN_PROJECT_FILES,
   // Klávesnice a axe jen na počítači, telefon hlídá rozložení a okna.
   grepInvert: [/@desktop/, TOPIC_WRITES],
   use: { ...devices["Desktop Chrome"], viewport: { width, height: 760 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true },
@@ -46,6 +48,13 @@ projects.push({
   testMatch: /(temata-planovani|vyber-navrhu|vyber-kontext)\.spec\.ts/,
   grep: TOPIC_WRITES,
   grepInvert: undefined,
+});
+// Jen na vyžádání (`npm run e2e:vizual`): v plném běhu by ostatní testy souběžně měnily data na snímcích.
+if (process.env.E2E_VIZUAL === "1") projects.push({
+  name: "vizual",
+  dependencies: ["prihlaseni"],
+  testMatch: /vizualni\.spec\.ts/,
+  use: { ...devices["Desktop Chrome"], deviceScaleFactor: 1 },
 });
 
 // Skutečný WebKit (jádro Safari) a Firefox jen na vyžádání: v cloudovém prostředí nemusí být nainstalované.
@@ -77,7 +86,11 @@ export default defineConfig({
   workers: process.env.E2E_WORKERS ? Number(process.env.E2E_WORKERS) : 3,
   reporter: [["list"]],
   timeout: 30_000,
-  expect: { timeout: 7_000 },
+  expect: {
+    timeout: 7_000,
+    // Vizuální regrese: malá tolerance na vyhlazování písma, animace a kurzor vypnuté.
+    toHaveScreenshot: { maxDiffPixelRatio: 0.002, animations: "disabled", caret: "hide" },
+  },
   use: {
     baseURL: `http://localhost:${DEMO_PORT}`,
     locale: "cs-CZ",

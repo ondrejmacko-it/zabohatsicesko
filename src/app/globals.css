@@ -34,6 +34,10 @@
   --danger-soft: #f9e6e4;
   --ok: #2f6b48;
   --ok-soft: #e4f0e8;
+  --ok-dark: #24543a;
+  /* Informační akce (nový odkaz, kopírování): modrá se nesplete s okrovou výzvou ani se zelenou/červenou. */
+  --info: #1f5f8b;
+  --info-dark: #174a6d;
   /* Jediný focus ring (A-14): plná okrová má kontrast aspoň 3 : 1 vůči všem plochám včetně tmavého menu, dřívější
      průsvitný stín měl 1,6 : 1. Outline, ne stín: v režimu vynucených barev (Windows) stín zmizí. */
   --focus-ring: 2px solid var(--ochre);
@@ -127,17 +131,6 @@ textarea {
 
 /* ——— Shell ——— */
 
-/* Na nejužších telefonech se „Správa systému“ zkrátí na „Správa“, ať se vejde vedle ostatních položek. */
-@media (max-width: 380px) {
-  .nav-label-tail {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    white-space: nowrap;
-  }
-}
 
 /* Lišta se na užším okně zalomí po celcích (značka, Pohled, účet), nikdy uvnitř účtu: jméno a Odhlásit zůstanou
    vedle sebe (F18). */
@@ -223,6 +216,11 @@ textarea {
   background: var(--sidebar);
   border-radius: var(--radius);
   color: var(--sidebar-text);
+}
+
+/* Tlačítko menu je jen na telefonu (blok max-width: 640px). */
+.nav-toggle {
+  display: none;
 }
 
 .nav {
@@ -466,6 +464,11 @@ a.item-card:hover {
   border-color: var(--line-strong);
 }
 
+/* Odkaz zpět nad nadpisem detailu (Účast): odstup od řádku nad nadpisem. */
+.back-row {
+  margin-bottom: 12px;
+}
+
 .eyebrow {
   margin-bottom: 2px;
   color: var(--ochre-dark);
@@ -566,6 +569,37 @@ a.item-card:hover {
 .btn-danger {
   border-color: var(--danger);
   color: var(--danger);
+}
+
+/* Funkční barvy (Správa): zelená přidává nebo vrací přístup, modrá jen informuje (odkaz, kopírování), červená
+   odebírá. Barva nikdy nenese význam sama, popisek tlačítka ho říká vždy. */
+.btn-success {
+  border-color: var(--ok);
+  background: var(--ok);
+  color: #fff;
+  font-weight: 600;
+}
+
+.btn-success:hover {
+  border-color: var(--ok-dark);
+  background: var(--ok-dark);
+}
+
+.btn-info {
+  border-color: var(--info);
+  color: var(--info);
+}
+
+.btn-info:hover {
+  border-color: var(--info-dark);
+  color: var(--info-dark);
+}
+
+.btn-success:disabled {
+  border-color: var(--line-strong);
+  background: var(--beige);
+  color: var(--muted);
+  opacity: 1;
 }
 
 .btn-small {
@@ -1030,8 +1064,18 @@ fieldset.field > legend {
 }
 
 .menu-list .menu-danger,
-.menu-list .menu-danger > svg {
+.menu-list .menu-danger > svg,
+.menu-list .btn-danger {
   color: var(--danger);
+}
+
+/* V menu nese funkční barvu jen text, plocha zůstává jako u ostatních položek. */
+.menu-list .btn-success {
+  color: var(--ok);
+}
+
+.menu-list .btn-info {
+  color: var(--info);
 }
 
 /* ⋯ v rohu karty akce: malé, ale vždy viditelné tlačítko s jemným rámečkem. Karta mu vyhrazuje místo (odsazení
@@ -2193,26 +2237,73 @@ details > summary {
     display: none;
   }
 
-  /* Telefon: ikona nad popiskem, všechny položky v jedné řadě stejně široké. */
+  /* Telefon: hamburger menu. Tlačítko ukazuje aktuální sekci, rozbalený seznam je svislý jako na počítači. */
+  .nav-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 44px;
+    padding: 8px 10px;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: none;
+    color: var(--sidebar-text);
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .nav-toggle svg {
+    flex: none;
+    width: 20px;
+    height: 20px;
+  }
+
+  .nav-toggle:hover {
+    background: #262626;
+  }
+
+  .nav-toggle-current {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--sidebar-muted);
+    font-weight: 400;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .nav-toggle-current::before {
+    content: "· ";
+  }
+
+  .nav-toggle .nav-badge {
+    margin-left: auto;
+  }
+
   .nav {
-    grid-template-columns: repeat(var(--nav-cols-phone, 4), minmax(0, 1fr));
+    display: flex;
+    flex-direction: column;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid var(--sidebar-line);
+  }
+
+  .nav:not([data-open="true"]) {
+    display: none;
   }
 
   .nav-item {
-    position: relative;
-    flex-direction: column;
-    gap: 4px;
-    min-height: 52px;
-    padding: 8px 4px;
-    font-size: 13px;
-    line-height: 1.2;
-    text-align: center;
+    justify-content: flex-start;
+    min-height: 44px;
+    padding: 10px 12px;
+    font-size: 15px;
   }
 
   .nav-badge {
-    position: absolute;
-    top: 4px;
-    right: 6px;
+    margin-left: auto;
   }
 
   h1 {
@@ -2804,6 +2895,15 @@ a.brief-link:hover {
 }
 
 @media (max-width: 560px) {
+  .topic-filter {
+    flex-basis: 100%;
+  }
+
+  .topic-filter .pill {
+    flex: 1 1 0;
+    text-align: center;
+  }
+
   .topic-search {
     flex-basis: 100%;
     max-width: none;
@@ -3354,9 +3454,10 @@ p.cal-status {
   }
 }
 
-/* Telefon: Plán je vždy seznam, přepínač zobrazení není potřeba. Akce správce se zarovnají vlevo. */
+/* Telefon: Plán je vždy seznam, přepínač zobrazení není potřeba. Akce správce se zarovnají vlevo.
+   Filtr Témat (.topic-filter) sdílí jen vzhled pilulek, na telefonu zůstává. */
 @container (max-width: 560px) {
-  .view-toggle {
+  .view-toggle:not(.topic-filter) {
     display: none;
   }
 
@@ -4217,6 +4318,27 @@ p.cal-status {
     margin-bottom: 4px;
     color: var(--muted);
     font-size: 13px;
+  }
+
+  /* Počty v řádku vedle sebe, s viditelným popiskem místo skrytého záhlaví sloupce. */
+  .table-stack td.stack-count {
+    display: inline-block;
+    margin-right: 12px;
+    font-size: 13px;
+  }
+
+  /* Prázdná buňka (pomlčka) by ve skládaném řádku visela bez popisku. */
+  .table-stack td.stack-empty {
+    display: none;
+  }
+
+  .table-stack .stack-label {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip: auto;
+    color: var(--muted);
   }
 }
 
@@ -5105,6 +5227,12 @@ body[data-moving] .quick-actions,
   background: #262626;
 }
 
+@media (max-width: 640px) {
+  .sidebar-feedback .nav-item {
+    font-size: 15px;
+  }
+}
+
 .bug-dock {
   position: fixed;
   z-index: 40;
@@ -5507,6 +5635,74 @@ body[data-moving] .quick-actions,
   flex: none;
 }
 
+/* Panel Účet: na počítači pod tlačítkem u pravé hrany, šířku drží CSS, takže rozbalené oslovení ho nevytlačí
+   z okna. Dlouhý obsah se posouvá uvnitř panelu. */
+.account-menu {
+  position: relative;
+}
+
+.menu-list.account-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  left: auto;
+  width: min(340px, calc(100vw - 16px));
+  min-width: 0;
+  max-height: calc(100dvh - 80px);
+  overscroll-behavior: contain;
+}
+
+.account-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 4px 2px 10px;
+}
+
+.account-panel-head h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+
+.account-panel-head .btn {
+  width: auto;
+}
+
+.account-panel .salutation {
+  margin: 0;
+  padding: 4px 10px;
+}
+
+.account-panel .salutation-form .row {
+  flex-wrap: wrap;
+}
+
+.account-panel .salutation-form .input {
+  flex: 1 1 140px;
+  min-width: 0;
+}
+
+/* Telefon: samostatné okno přes celou obrazovku, stránka pod ním se neposouvá. */
+@media (max-width: 640px) {
+  .menu-list.account-panel {
+    position: fixed;
+    inset: 0;
+    width: auto;
+    max-width: none;
+    max-height: none;
+    border-radius: 0;
+    padding: 8px 12px calc(16px + env(safe-area-inset-bottom));
+    z-index: 100;
+  }
+
+  :root.account-panel-open,
+  :root.account-panel-open body {
+    overflow: hidden;
+  }
+}
+
 .account-menu-who {
   display: flex;
   flex-direction: column;
@@ -5643,27 +5839,68 @@ body[data-moving] .quick-actions,
   }
 }
 
-/* Telefon: Zpětná vazba má stejné písmo a zarovnání jako ostatní položky menu. */
-@media (max-width: 640px) {
-  .sidebar-feedback .nav-item {
-    font-size: 13px;
-    text-align: center;
-  }
+/* Sekce Google Kalendář v menu Účet. */
+.account-calendar {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 4px 10px 6px;
+  overflow-wrap: anywhere;
 }
 
-/* Úzký telefon se čtyřmi položkami: 2×2 s ikonou vedle popisku místo čtyř stísněných sloupců. */
+.account-calendar-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.account-calendar .small {
+  margin: 0;
+  padding: 0;
+}
+
+/*
+ * Posuvný obal široké tabulky (Účast). Na středních šířkách se posouvá jen tabulka, stránka zůstává.
+ * Stíny na okrajích (background-attachment: local) naznačují, že vedle jsou další sloupce.
+ */
+.table-scroll {
+  /* Skryté popisky buněk (.visually-hidden, absolutní) musí mít obal jako blok, jinak posouvají stránku. */
+  position: relative;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  background:
+    linear-gradient(to right, var(--surface) 30%, transparent) left center / 40px 100% no-repeat local,
+    linear-gradient(to left, var(--surface) 30%, transparent) right center / 40px 100% no-repeat local,
+    radial-gradient(farthest-side at 0 50%, rgba(0, 0, 0, 0.14), transparent) left center / 14px 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%, rgba(0, 0, 0, 0.14), transparent) right center / 14px 100% no-repeat scroll;
+}
+
+.table-scroll > .table th,
+.table-scroll > .table td {
+  white-space: nowrap;
+}
+
+.table-scroll > .table td:first-child {
+  white-space: normal;
+  min-width: 12em;
+}
+
 @media (max-width: 480px) {
-  .nav[data-phone-count="4"] {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .table-scroll {
+    background: none;
   }
 
-  .nav[data-phone-count="4"] .nav-item {
-    flex-direction: row;
-    gap: 8px;
-    min-height: 44px;
+  .table-scroll > .table th,
+  .table-scroll > .table td {
+    white-space: normal;
   }
 
-  .nav[data-phone-count="4"] .nav-badge {
-    position: static;
+  .table-scroll > .table td:first-child {
+    min-width: 0;
   }
 }

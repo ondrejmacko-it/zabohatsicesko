@@ -1,4 +1,4 @@
-import { authFile, choosePreview, expect, expectNoHorizontalScroll, settle, test } from "./support";
+import { authFile, choosePreview, expect, expectNoHorizontalScroll, openMainMenu, settle, test } from "./support";
 
 // Globální „Zobrazit jako“ v horní liště: správce vidí Domů, Plán, Témata a Zápisy očima skupiny, jen ke čtení.
 // Náhled drží HttpOnly cookie `zbc_nahled` (`id účtu|klíč`), server ji při každém požadavku znovu ověří.
@@ -26,7 +26,7 @@ test.describe("správce: pohled skupiny", () => {
     await expect(page.getByRole("heading", { name: "Co tě čeká" })).toBeVisible();
     // F16: pozdrav nepatří správci a navigace odpovídá pohledu poradce (bez Správy systému).
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Ahoj.");
-    const nav = page.getByRole("complementary", { name: "Hlavní navigace" });
+    const nav = await openMainMenu(page);
     await expect(nav.getByRole("link", { name: "Domů" })).toBeVisible();
     await expect(nav.getByRole("link", { name: /Správa/ })).toHaveCount(0);
 
@@ -60,7 +60,7 @@ test.describe("správce: pohled skupiny", () => {
     await expect(bar(page)).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Přidat akci" }).first()).toBeVisible();
     await expect(page.getByLabel("Pohled", { exact: true })).toHaveValue("Můj pohled");
-    await expect(page.getByRole("complementary", { name: "Hlavní navigace" }).getByRole("link", { name: /Správa/ })).toBeVisible();
+    await expect((await openMainMenu(page)).getByRole("link", { name: /Správa/ })).toBeVisible();
   });
 
   test("pohled kolegy 1:1: Témata, Zápisy a Domů mají stejné ovládání jako skutečný vedoucí, jen zamčené", async ({ browser, page, context }, info) => {
@@ -108,7 +108,7 @@ test.describe("správce: pohled skupiny", () => {
     await expect(page.getByRole("heading", { level: 1 })).not.toContainText("Správce");
     await expect(page.getByRole("complementary", { name: "Hlavní navigace" }).getByRole("link", { name: /Správa/ })).toHaveCount(0);
     await bar(page).getByRole("button", { name: "Ukončit náhled" }).click();
-    await expect(page.getByRole("complementary", { name: "Hlavní navigace" }).getByRole("link", { name: /Správa/ })).toBeVisible();
+    await expect((await openMainMenu(page)).getByRole("link", { name: /Správa/ })).toBeVisible();
   });
 
   test("cookie jiného účtu nebo neplatný klíč náhled nezapne", async ({ page, context }) => {

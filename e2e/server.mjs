@@ -5,7 +5,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync, rmSync } from "node:fs";
 import { createServer as createHttpServer, request as httpRequest } from "node:http";
 import { createServer as createHttpsServer } from "node:https";
-import { DEMO_CODE, DEMO_PORT, DEMO_TLS_PORT, FEEDBACK_HOOK_PORT, FEEDBACK_HOOK_SECRET, LIVE_PORT, UCAST_PORT } from "./constants.mjs";
+import { DEMO_CODE, DEMO_PORT, DEMO_TLS_PORT, UCAST_TLS_PORT, FEEDBACK_HOOK_PORT, FEEDBACK_HOOK_SECRET, LIVE_PORT, UCAST_PORT } from "./constants.mjs";
 
 
 const shared = {
@@ -121,9 +121,11 @@ if (process.env.E2E_WEBKIT === "1") {
   const cert = spawnSync("openssl", ["req", "-x509", "-newkey", "rsa:2048", "-nodes", "-days", "1", "-subj", "/CN=localhost",
     "-keyout", `${dir}/key.pem`, "-out", `${dir}/cert.pem`], { stdio: "ignore" });
   if (cert.status !== 0) process.exit(cert.status ?? 1);
-  createHttpsServer({ key: readFileSync(`${dir}/key.pem`), cert: readFileSync(`${dir}/cert.pem`) }, (req, res) => {
+  const tls = { key: readFileSync(`${dir}/key.pem`), cert: readFileSync(`${dir}/cert.pem`) };
+  // Ukázka (DEMO_PORT) i ukázka se zapnutou účastí (UCAST_PORT) mají každá svou TLS proxy.
+  const proxyTo = (port) => createHttpsServer(tls, (req, res) => {
     const upstream = httpRequest(
-      { host: "127.0.0.1", port: DEMO_PORT, method: req.method, path: req.url, headers: { ...req.headers, "x-forwarded-proto": "https" } },
+      { host: "127.0.0.1", port, method: req.method, path: req.url, headers: { ...req.headers, "x-forwarded-proto": "https" } },
       (reply) => {
         res.writeHead(reply.statusCode ?? 502, reply.headers);
         reply.pipe(res);
@@ -131,7 +133,9 @@ if (process.env.E2E_WEBKIT === "1") {
     );
     upstream.on("error", () => res.writeHead(502).end());
     req.pipe(upstream);
-  }).listen(DEMO_TLS_PORT);
+  });
+  proxyTo(DEMO_PORT).listen(DEMO_TLS_PORT);
+  proxyTo(UCAST_PORT).listen(UCAST_TLS_PORT);
 }
 
 const stop = () => {

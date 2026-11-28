@@ -116,19 +116,17 @@ export function filterTopics<T extends { audience: string }>(topics: readonly T[
 }
 
 /**
- * Výchozí filtr: běžný kolega dřív viděl jen témata svých skupin, proto „Pro mou roli“. Správce plánuje pro
- * všechny a pořadí mění jen nad celým seznamem, proto „Všechna“.
+ * Výchozí filtr je pro všechny „Všechna“ (zadání: kolega i správce napřed vidí celý seznam). „Pro mou roli“ je
+ * volba, kterou si člověk zapne odkazem `?filtr=role`.
  */
-export function defaultTopicFilter(organizer: boolean): TopicFilter {
-  return organizer ? "all" : "role";
-}
+export const DEFAULT_TOPIC_FILTER: TopicFilter = "all";
 
 /** Hodnota z adresy (`?filtr=role|vse`). Neznámá nebo chybějící = výchozí filtr. */
-export function parseTopicFilter(value: string | string[] | undefined, organizer: boolean): TopicFilter {
+export function parseTopicFilter(value: string | string[] | undefined): TopicFilter {
   const raw = Array.isArray(value) ? value[0] : value;
   if (raw === "role") return "role";
   if (raw === "vse") return "all";
-  return defaultTopicFilter(organizer);
+  return DEFAULT_TOPIC_FILTER;
 }
 
 // ——— Garantovaná témata a ruční pořadí ———

@@ -1,7 +1,15 @@
 import { GROUPS, type Group } from "@/lib/types";
 import { audienceAttendees, listRecipients } from "@/server/calendar/attendees";
 import { connectionStatus, storedAccessToken } from "@/server/calendar/google-auth";
-import { personalCalendarState, personalCalendarStates, type PersonalCalendarState } from "@/server/calendar/personal";
+import {
+  personalCalendarState,
+  personalCalendarStates,
+  requestPersonalSync,
+  syncPersonalCalendar,
+  type PersonalCalendarState,
+  type PersonalDeps,
+  type PersonalSyncResult,
+} from "@/server/calendar/personal";
 import { CalendarError } from "@/server/calendar/provider";
 import { attendeeSource, calendarMode, googleCalendarConfig, googleCalendarConfigProblems, oauthConsentExpiryDays, personalDelivery, type AttendeeSource } from "@/server/config";
 import { getDb } from "@/server/db/client";
@@ -102,6 +110,19 @@ export async function loadCalendarStatus(viewer: Viewer): Promise<CalendarStatus
 export async function loadPersonalCalendar(viewer: Viewer): Promise<PersonalCalendarState | null> {
   if (!personalDelivery()) return null;
   return personalCalendarState(await getDb(), viewer.id);
+}
+
+/**
+ * „Synchronizovat teď“ z menu Účet: srovná jen vlastní osobní kalendář přihlášeného. Jen v režimu `personal`
+ * a s funkčním propojením; jinak není co synchronizovat a náprava vede přes propojení Kalendáře.
+ * Požadavek se zapíše před během, takže při chybě ho dožene plánovač.
+ */
+export async function syncOwnCalendarNow(viewer: Viewer, deps: PersonalDeps = {}): Promise<PersonalSyncResult> {
+  if (!personalDelivery()) throw new DomainError("forbidden");
+  const db = await getDb();
+  if ((await personalCalendarState(db, viewer.id)).status !== "active") throw new DomainError("forbidden");
+  await requestPersonalSync(db, [viewer.id]);
+  return syncPersonalCalendar(db, viewer.id, deps);
 }
 
 /** Stav osobních kalendářů všech účtů pro Správu. Jen správce, mimo režim `personal` null. */

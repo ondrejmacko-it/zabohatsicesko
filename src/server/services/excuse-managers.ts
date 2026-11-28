@@ -49,15 +49,15 @@ export async function listExcuseManagers(viewer: Viewer): Promise<Map<string, st
 
 /**
  * Nastaví nadřízené pro omluvy jednoho člověka (nahradí dosavadní). Jen správce. Nadřízený musí být aktivní
- * účet v organizaci a nesmí to být člověk sám. Do auditu jde jen kdo změnil koho, nic o omluvách.
+ * účet v organizaci (může to být i správce sám) a nesmí to být člověk sám sobě. Do auditu jde jen kdo změnil koho, nic o omluvách.
  */
 export async function setExcuseManagers(viewer: Viewer, employeeId: string, managerIds: string[]): Promise<void> {
   if (!canManageUsers(viewer)) throw new DomainError("forbidden");
   if (!excuseManagersEnabled()) throw new DomainError("forbidden");
   const ids = [...new Set(managerIds)];
+  // Člověk nesmí být nadřízeným sám sobě. Správce se nadřízeným jiného člověka určit smí (zadání vlastníka):
+  // vazba je výslovná, po jednotlivých lidech a auditovaná, plošný přístup k důvodům role správce nedává.
   if (ids.length > MAX_EXCUSE_MANAGERS || ids.includes(employeeId)) throw new DomainError("invalid_input");
-  // Správce si sám sebe nadřízeným nastavit nesmí, jinak by si mohl otevřít důvody omluv kohokoli (C04).
-  if (ids.includes(viewer.id)) throw new DomainError("forbidden");
   const db = await getDb();
   await db.transaction(async (tx) => {
     const people = await tx

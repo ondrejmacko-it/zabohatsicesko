@@ -12,7 +12,7 @@ import { isOrganizer, type Viewer } from "@/server/policy";
 import { eventAttendees, planGuests, samePlan } from "./attendees";
 import { GoogleCalendar } from "./google";
 import { connectionStatus, storedAccessToken } from "./google-auth";
-import { markLinksDelivered, syncPersonalCalendars } from "./personal";
+import { markLinksDelivered, syncPersonalCalendar, syncPersonalCalendars } from "./personal";
 import { CalendarError, type CalendarProvider, type ExternalEvent, type ManagedEventData } from "./provider";
 import { SimulatedCalendar } from "./simulated";
 import { targetCalendarId } from "./target";
@@ -313,6 +313,17 @@ async function pushToCalendar(
     throw new ConflictDetected(managed(external));
   }
   return reconcile(external);
+}
+
+/**
+ * Propíše změnu vlastní účasti. V osobním režimu se srovná jen kalendář toho, kdo účast změnil:
+ * ostatním se nic nemění a jejich kalendáře by se zbytečně procházely. Jinak se aktualizuje pozvánka akce.
+ */
+export async function syncParticipation(eventId: string, userId: string): Promise<void> {
+  if (!personalDelivery()) return syncEvent(eventId);
+  const db = await getDb();
+  await markLinksDelivered(db, eventId);
+  await syncPersonalCalendar(db, userId);
 }
 
 /** Dožene akce čekající ve frontě, například po změně skupin uživatele. Opakované volání je bezpečné. */

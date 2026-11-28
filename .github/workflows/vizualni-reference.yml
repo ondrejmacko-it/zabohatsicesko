@@ -1,0 +1,46 @@
+name: Reference vizuální regrese
+
+# Přegeneruje referenční snímky e2e/vizualni.spec.ts-snapshots na stejném runneru (ubuntu-latest), na kterém
+# je porovnává CI. Spouští se jen pushem na pomocnou větev reference-vizual/** a výsledek commitne zpět na
+# tu samou větev. Odtud se snímky po kontrole převezmou do pracovní větve. Na main ani PR větve nezapisuje.
+on:
+  push:
+    branches:
+      - "reference-vizual/**"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: vizualni-reference-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  reference:
+    name: Přegenerování referenčních snímků
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Chromium pro Playwright
+        run: npx playwright install --with-deps chromium
+      - name: Nové reference
+        run: npm run e2e:vizual -- --update-snapshots
+      # Commit pomocí GITHUB_TOKEN nespouští další workflow, takže nevznikne smyčka.
+      - name: Commit snímků zpět na pomocnou větev
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git add e2e/vizualni.spec.ts-snapshots/
+          if git diff --cached --quiet; then
+            echo "Reference se nezměnily."
+          else
+            git commit -m "Reference vizuální regrese z CI runneru"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
