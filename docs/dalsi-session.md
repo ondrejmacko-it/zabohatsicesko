@@ -1,4 +1,4 @@
-# Navazující relace (stav 28. 11. 2026, relace 86)
+# Navazující relace (stav 28. 11. 2026, relace 87)
 
 Cíl: zadání vlastníka „Opravy po živém uživatelském testování, synchronizace Kalendáře a správa účasti“
 (body 0–12: osobní Kalendář podle účasti, stavy synchronizace, připomínky, záložka Účast, nadřízení,
@@ -42,6 +42,12 @@ Větev `claude/oprava-kalendare-a-prehled-ucasti` z main `fa5e67f`. PR zatím ne
   = počty za člověka; `attendanceHistory(scope, userId)` = audit `participation.*` (aktér) + `user.*`,
   `excuse_managers.changed` (entity user), null mimo rozsah. Společné `loadPeriod`, `addState`.
 
+- Bod 6, jednotka (c) část 1 (`d5f66ff`): stránka `src/app/(wiki)/vzdelavani/ucast/page.tsx` (scope null → notFound,
+  i v náhledu). `?pohled=akce|lide`, detail `?akce=id` (lidé, stav, omluva, badge Kalendáře), historie `?clovek=id`;
+  filtry q, od/do (výchozí −30/+60 dní, max 366), skupina, stav, `kalendar=1`. Mobil = `.table table-stack`.
+  `calendarStatus(state, calendar)` v `src/lib/calendar-note.ts` (label + problem), test `ucast-stav-kalendare`.
+  `PersonAttendance.groups` přidáno.
+
 ## Ověřeno
 - HEAD `4c7fbf6`: tsc + eslint OK; vitest `kalendar-osobni*`, `kalendar-organizator`, `users` OK (49+14).
 - HEAD `3664e50`: tsc + eslint OK; vitest `kalendar-osobni*`, `kalendar-uklid` 30/30.
@@ -50,19 +56,20 @@ Větev `claude/oprava-kalendare-a-prehled-ucasti` z main `fa5e67f`. PR zatím ne
 - HEAD po bodu 7: tsc + eslint OK; vitest `omluvy-nadrizeny` 9/9.
 - Jednotka 1 bodu 6: tsc + eslint OK; vitest `ucast-prehled` 3/3.
 - HEAD `e7a38c6`: tsc + eslint OK; vitest `ucast-prehled` 5/5.
+- HEAD `d5f66ff`: tsc + eslint OK; vitest `ucast-stav-kalendare`, `ucast-prehled` 9/9. Stránka zatím neotevřená v prohlížeči.
 
 ## Zadání
 Plné znění = první zpráva uživatele v relaci `session_01HpUirxBfw13jo5FXzPsfP2` (list_events, kinds `user`,
 before_id `1c2d91e3-70a5-48e2-aad8-bf9e5819fbb2`; výstup je velký, číst jen bod, na kterém se pracuje).
 
 ## Další kroky (pořadí)
-1. Bod 6, jednotka (c): stránka `src/app/(wiki)/vzdelavani/ucast/page.tsx` (vzor filtrů `zapisy/page.tsx`:
-   `requireUser`, `currentPreview`, `<form className="filter-bar" method="get">`; třídy `.table`, `.card-list`,
-   `.badge-*`, `.empty-state`). Scope null → `notFound()`. Pohledy přes `?pohled=akce|lide`, detail `?akce=id`,
-   historie `?clovek=id`; filtry hledání, období (od–do), skupina, stav, „jen problémy Kalendáře“. PC tabulka,
-   mobil karty. Texty: očekávaná účast, ne docházka. Pill „Účast“ v `SubNav.tsx` jen s propem `showAttendance`
-   z `layout.tsx` (server: `requireUser` + `currentPreview` + `attendanceScope` ≠ null). Pak e2e/test stránky.
-2. Účet/oslovení (bod 8), barvy Správy (bod 9), Témata filtry (bod 10), e2e, report, draft PR.
+1. Bod 6 (c) dokončit: filtr `kalendar=1` v pohledu akcí zatím jen hláška (problémy se filtrují v detailu).
+   Přidat hromadný počet problémů za akci do `attendanceByEvent` (osobní režim: jeden dotaz na
+   `personal_calendars` + `personal_calendar_entries` pro akce období; jinak `calendar_links`) a sloupec/filtr.
+2. Pill „Účast“ v `SubNav.tsx` jen s propem `showAttendance` z `layout.tsx` (server: `requireUser` +
+   `currentPreview` + `attendanceScope(user, Boolean(preview))` ≠ null). Pak e2e scénář stránky (správce vidí,
+   zaměstnanec 404, nadřízený jen své lidi) a kontrola v prohlížeči PC + mobil.
+3. Účet/oslovení (bod 8), barvy Správy (bod 9), Témata filtry (bod 10), e2e, report, draft PR.
 - Diagnostika nasazení (CALENDAR_DELIVERY, PARTICIPATION…): neověřeno, jen názvy proměnných, bez hodnot tajemství.
 
 ## Technika
