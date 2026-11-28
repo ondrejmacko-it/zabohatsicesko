@@ -2,10 +2,11 @@ import { createHash } from "node:crypto";
 import { and, eq, gt, inArray, isNotNull, isNull, lt, ne, or, sql } from "drizzle-orm";
 import type { EventSnapshot } from "@/lib/types";
 import { audit, logError } from "@/server/audit";
-import { config, googleCalendarConfig, personalDelivery, personalSelfInvite, tokenEncryptionKey } from "@/server/config";
+import { config, googleCalendarConfig, participationEnabled, personalDelivery, personalSelfInvite, tokenEncryptionKey } from "@/server/config";
 import type { Db, Executor } from "@/server/db/client";
-import { calendarLinks, events, minutes, personalCalendarEntries, personalCalendars, recordings, users, type PersonalCalendarStatus } from "@/server/db/schema";
+import { calendarLinks, eventParticipation, events, minutes, personalCalendarEntries, personalCalendars, recordings, users, type PersonalCalendarStatus } from "@/server/db/schema";
 import { openSecret, sealSecret } from "@/server/integrations/secret-box";
+import { participationState, type Participant, type ParticipationRecord } from "@/server/domain/participation";
 import { eventIdForKey } from "./google";
 import { revokeToken, type FetchLike } from "./google-auth";
 import { PersonalCalendarApi } from "./personal-api";
@@ -209,8 +210,12 @@ function desiredEntry(eventId: string, snapshot: EventSnapshot, withMinutes: boo
   return { data, hash: hashOf({ v: EVENT_FORMAT, g: guest ?? null, s: data.summary, d: data.description, a: data.startsAt, b: data.endsAt }) };
 }
 
-/** Akce, které mají být v kalendáři uživatele: zveřejněné, nezrušené, ne svátky, z jeho skupin, nedávné a budoucí. */
-async function desiredEvents(db: Executor, groups: readonly string[], since: Date, guest: string | undefined) {
+/**
+ * Akce, které mají být v kalendáři uživatele: zveřejněné, nezrušené, ne svátky, nedávné a budoucí, a podle
+ * pravidel účasti (`participationState`) povinné bez omluvy nebo dobrovolně přihlášené. Bez zapnuté účasti
+ * (a tedy bez čtení `event_participation`) rozhoduje jen povinnost podle rolí a publika.
+ */
+async function desiredEvents(db: Executor, userId: string, person: Participant, since: Date, guest: string | undefined) {
   const rows = await db
     .select({ id: events.id, published: events.published })
     .from(events)
@@ -222,11 +227,22 @@ async function desiredEvents(db: Executor, groups: readonly string[], since: Dat
         gt(sql`(${events.published}->>'endsAt')::timestamptz`, sql`${since.toISOString()}::timestamptz`),
       ),
     );
+  const records = participationEnabled()
+    ? new Map<string, ParticipationRecord>(
+        (
+          await db
+            .select({ eventId: eventParticipation.eventId, kind: eventParticipation.kind, excuseReason: eventParticipation.excuseReason })
+            .from(eventParticipation)
+            .where(and(eq(eventParticipation.orgId, config.orgId), eq(eventParticipation.userId, userId)))
+        ).map((r) => [r.eventId, { kind: r.kind, excuseReason: r.excuseReason }]),
+      )
+    : new Map<string, ParticipationRecord>();
   const withMinutes = await eventsWithMinutes(db);
   const wanted = new Map<string, ReturnType<typeof desiredEntry>>();
   for (const row of rows) {
     const snapshot = row.published as EventSnapshot;
-    if (snapshot.status === "cancelled" || snapshot.type === "holiday" || !groups.includes(snapshot.audience)) continue;
+    const state = participationState(person, snapshot, records.get(row.id) ?? null);
+    if (state !== "required" && state !== "voluntary_enrolled") continue;
     wanted.set(row.id, desiredEntry(row.id, snapshot, withMinutes.has(row.id), guest));
   }
   return wanted;
@@ -302,7 +318,7 @@ export async function syncPersonalCalendar(db: Db, userId: string, deps: Persona
     for (let round = 0; round < MAX_ROUNDS; round += 1) {
       const started = clock();
       const since = new Date(started.getTime() - HISTORY_DAYS * 24 * 3600 * 1000);
-      const wanted = await desiredEvents(db, account.groups, since, guest);
+      const wanted = await desiredEvents(db, userId, account, since, guest);
       const written = new Map(
         (await db.select().from(personalCalendarEntries).where(eq(personalCalendarEntries.userId, userId))).map((e) => [e.eventId, e]),
       );
