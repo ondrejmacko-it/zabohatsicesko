@@ -21,6 +21,24 @@ Vlastník nechce návody ani checklisty. Jen při nepřekonatelné překážce: 
 3) proč to nejde samo – ideálně jednorázová autorizace. Hesla/klíče se neposílají chatem. Blokovaný úkol
 nezastavuje ostatní.
 
+## DOPLNĚNÉ ZADÁNÍ VLASTNÍKA (28. 11. 2026, po relaci 114, závazné)
+Placený Vercel NE – čekat na limit, pokud není jiná bezpečná cesta. Dále:
+A. Deployment kvóta: prověř `git.deploymentEnabled` (vercel.json, ověř sémantiku překrývajících se globů přes
+   Vercel docs) a vypni automatická nasazení pomocných větví (min. claude/gallant-knuth-ydgzxz). CI a ruční
+   nasazení (create_deployment) zachovat. Zvaž i commandForIgnoringBuildStep v nastavení projektu.
+B. GitHub secret CALENDAR_WORKER_TOKEN: když MCP neumí, prověř REST API / gh CLI / jiné autorizované cesty
+   (pozor: prostředí povoluje `gh` jen pro search; zvaž alternativu bez secretu, např. ověření GitHub OIDC
+   tokenu v endpointu). Token NErotovat před každým testem; nutnou rotaci udělat koordinovaně všude
+   (Vercel + GitHub) jednou, před finálním nasazením. Současná hodnota existuje jen ve Vercelu (sensitive).
+C. Živý test Google Calendar API mimo Vercel (lokální server v kontejneru s existujícími test. přístupy, např.
+   credential v demo DB + TOKEN_ENCRYPTION_KEY). Lokální ověření v reportu oddělit od ověření nasazené aplikace.
+D. Ověř, že běžná synchronizace kalendářů běží automaticky (hned po akci uživatele, ne až denním cronem);
+   plánovač má hlavně spolehlivě opakovat neúspěšné operace. Pokud ne, oprav.
+E. Ruční volání /api/kalendar/fronta ≠ důkaz plánovače. Ověř obě věci zvlášť (Vercel cron 17 5 * * *,
+   GitHub schedule */10 – ten běží jen z výchozí větve main; zdokumentuj omezení, do main NIC nemergovat).
+F. Po uvolnění limitu: jedno ucelené ověřené nasazení (nejdřív lokální testy, nepushovat drobnosti zbytečně),
+   pak všechny živé testy, opravy, dokumentace, finální kontrola.
+
 ## Úkoly (pořadí)
 1. HOTOVO: CI PR #97 zelené na ff5b12f (Kontrola kódu + bezpečnosti).
 2. ČÁSTEČNĚ (relace 114): Vercel Production env nastaveno – CRON_SECRET a CALENDAR_WORKER_TOKEN (sensitive,
